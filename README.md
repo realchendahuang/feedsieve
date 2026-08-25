@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/brand/avatar.png" width="96" alt="FeedSieve avatar" />
+</p>
+
 # 福滤娃 FeedSieve
 
 > **不信你看。看不见就对了。**
@@ -12,7 +16,7 @@
 
 ## What is FeedSieve?
 
-FeedSieve is an AI-powered X feed cleaner for bot spam, copy-paste replies, engagement bait and other things you were never supposed to see.
+FeedSieve is an open-source X feed cleaner for bot spam, copy-paste replies, engagement bait and other things you were never supposed to see.
 
 The product follows a simple rule:
 
@@ -124,12 +128,10 @@ Local Stats + Feedback
 - 多个独立用户都屏蔽同一账号
 - 举报原因高度一致
 - 举报者本身具有可信度
-- 误判恢复票会降低分数
+- 误判 Rescue 会降低分数
 - 短时间刷票和异常行为会被降权
 
 社区清单默认用于 **FeedSieve 本地过滤**，用户可以一键订阅，不需要逐个操作 X Block List。
-
-一个简单但重要的原则：
 
 > **一个人发现垃圾，所有人都可以少看一次。**
 
@@ -147,6 +149,70 @@ Local Stats + Feedback
 - 自然语言定义的过滤规则
 
 特点：**更聪明，但不应该每条推文都调用模型。**
+
+## 开源的不只是代码
+
+FeedSieve 希望做到：
+
+> **Open Code + Open Rules + Open Lists + Open Governance**
+
+也就是浏览器插件、Filter Engine、社区后端、评分算法、社区名单、Schema、构建脚本和治理规则尽可能公开。
+
+核心理念：
+
+> **过滤权属于用户。**
+
+> **连黑名单本身都应该晒在阳光下。**
+
+详细治理见 [`docs/OPEN_SOURCE_GOVERNANCE.md`](docs/OPEN_SOURCE_GOVERNANCE.md)。
+
+## YAML for humans, JSON for machines
+
+社区过滤名单同时提供 YAML 和 JSON，但职责不同。
+
+### YAML：公开可读源
+
+[`community/source/recommended.yaml`](community/source/recommended.yaml)
+
+用于：
+
+- GitHub 阅读
+- PR Review
+- Diff 审计
+- Fork
+- 社区治理
+
+### JSON：插件运行产物
+
+[`community/lists/recommended.json`](community/lists/recommended.json)
+
+用于：
+
+- Browser Extension 下载
+- 本地缓存
+- Schema 校验
+- CDN / Release 分发
+- 后续 checksum / signature
+
+推荐链路：
+
+```text
+Community Reports
+      ↓
+Open Scoring Algorithm
+      ↓
+Safeguards
+      ↓
+YAML Snapshot
+      ↓
+Validate + Compile
+      ↓
+JSON Artifact
+      ↓
+Local Cache
+```
+
+插件不应该在刷 X 时为每个账号实时请求服务器，而是定期更新公开名单，然后全天本地查询。
 
 ## MVP
 
@@ -167,11 +233,14 @@ Local Stats + Feedback
 
 - [ ] Community Report API
 - [ ] 社区候选账号池
+- [ ] `>= 5` 独立有效报告进入 Candidate
 - [ ] Community Score
 - [ ] Reporter Trust
+- [ ] Report / Rescue
+- [ ] YAML canonical snapshot
+- [ ] JSON generated artifact
 - [ ] Community Filter Packs
 - [ ] 一键启用社区清单
-- [ ] “这条还能抢救”反向反馈
 
 ### v0.3 — AI 会认
 
@@ -221,7 +290,7 @@ FeedSieve 最值得做的传播功能之一，是让“过滤垃圾”本身变�
 
 增长循环：
 
-**过滤 → 统计 → 生成梗图 → 发 X → 新用户安装 → 继续过滤**
+**过滤 → 统计 → 生成梗图 → 发 X → 新用户安装 → 贡献社区信号 → 过滤更准**
 
 ## 推荐技术栈
 
@@ -231,11 +300,11 @@ FeedSieve 最值得做的传播功能之一，是让“过滤垃圾”本身变�
 - **TypeScript**
 - **React**
 - **WebExtension / Manifest V3**
-- **Browser Storage**
+- **Browser Storage / IndexedDB**
 - Optional FeedSieve Community API
 - Optional OpenAI-compatible AI Adapter
 
-详细设计见 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)。
+详细技术落地见 [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md)。
 
 ## 产品原则
 
@@ -265,10 +334,12 @@ FeedSieve 最值得做的传播功能之一，是让“过滤垃圾”本身变�
 
 ## Docs
 
+- [`IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) — 完整实现思路、协议、API、评分与开发顺序
 - [`VISION.md`](docs/VISION.md) — 产品定位与长期方向
 - [`PRODUCT.md`](docs/PRODUCT.md) — 产品说明
 - [`ARCHITECTURE.md`](docs/ARCHITECTURE.md) — 技术架构
 - [`COMMUNITY_FILTERING.md`](docs/COMMUNITY_FILTERING.md) — 社区过滤网络
+- [`OPEN_SOURCE_GOVERNANCE.md`](docs/OPEN_SOURCE_GOVERNANCE.md) — 开源与治理
 - [`ROADMAP.md`](docs/ROADMAP.md) — Roadmap
 - [`BRAND.md`](docs/BRAND.md) — 品牌语言
 
