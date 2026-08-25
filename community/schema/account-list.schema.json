@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://feedsieve.dev/schema/account-list.schema.json",
+  "title": "FeedSieve Community Account List",
+  "type": "object",
+  "required": ["schema_version", "list_version", "entries"],
+  "properties": {
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "list_version": { "type": "string", "minLength": 1 },
+    "generated_at": { "type": ["string", "null"], "format": "date-time" },
+    "description": { "type": "string" },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "x_user_id",
+          "handle",
+          "category",
+          "status",
+          "community_score",
+          "report_count",
+          "rescue_count",
+          "first_seen_at",
+          "updated_at"
+        ],
+        "properties": {
+          "x_user_id": { "type": "string", "pattern": "^[0-9]+$" },
+          "handle": { "type": "string", "minLength": 1 },
+          "category": {
+            "type": "string",
+            "enum": [
+              "bot_spam",
+              "copy_paste",
+              "ai_slop",
+              "advertising",
+              "adult_gray_traffic",
+              "scam_phishing",
+              "engagement_bait",
+              "other"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["candidate", "recommended", "strong"]
+          },
+          "community_score": { "type": "number", "minimum": 0, "maximum": 1 },
+          "report_count": { "type": "integer", "minimum": 0 },
+          "rescue_count": { "type": "integer", "minimum": 0 },
+          "first_seen_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" },
+          "evidence_post_ids": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^[0-9]+$" },
+            "uniqueItems": true
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
