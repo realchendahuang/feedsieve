@@ -1,0 +1,32 @@
+# FeedSieve Community Recommended List
+#
+# This YAML file is the human-readable canonical public snapshot.
+# The browser extension should consume the generated JSON artifact in
+# ../lists/recommended.json rather than parsing this file on every page.
+#
+# Pipeline:
+# reports -> open scoring -> safeguards -> YAML snapshot -> validate -> JSON
+
+schema_version: 1
+list_version: "0.0.1"
+generated_at: null
+
+description: >-
+  FeedSieve community recommended filter list. This file is intentionally
+  empty until community moderation data exists.
+
+entries: []
+
+# Example entry:
+# entries:
+#   - x_user_id: "123456789"
+#     handle: example_spam
+#     category: bot_spam
+#     status: recommended
+#     community_score: 0.91
+#     report_count: 27
+#     rescue_count: 2
+#     first_seen_at: "2026-08-20T12:00:00Z"
+#     updated_at: "2026-08-26T00:00:00Z"
+#     evidence_post_ids:
+#       - "0000000000000000000"
