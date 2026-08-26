@@ -4,19 +4,26 @@
 
 MVP 采用浏览器扩展，但核心过滤逻辑必须和浏览器 UI、X DOM、AI Provider 解耦。
 
+同时明确一个重要技术原则：
+
+> **FeedSieve 不把 X OAuth / X Developer API 作为 Block / Mute 等原生动作的核心依赖。**
+
+因为 FeedSieve 本身运行在用户已经登录的 `x.com` 页面中。X 已经提供给用户的 Block、Mute、Unblock、Unmute 等操作，应优先通过浏览器页面交互完成。
+
 推荐拆成：
 
 ```text
 apps/
-  extension/           # WXT browser extension
+  extension/                # WXT browser extension
 
 packages/
-  filter-engine/       # 独立过滤核心
-  x-adapter/           # X DOM / account / post extraction
-  shared/              # types / schemas / utils
+  filter-engine/            # 独立过滤核心
+  x-adapter/                # X Reader + Native Actions
+  community-client/         # 社区名单下载、缓存、校验
+  shared/                   # types / schemas / utils
 
 services/
-  community-api/       # 可选社区过滤后端
+  community-api/            # 开源社区后端，只负责 FeedSieve 社区数据
 ```
 
 推荐技术栈：
@@ -29,45 +36,37 @@ services/
 - Optional FeedSieve Community API
 - Optional OpenAI-compatible provider
 
-## 过滤链路
+## 总体链路
 
 ```text
-X Page
-  |
-  v
-Content Observer
-  |
-  v
-X Adapter / Post Extractor
-  |
-  v
-Feature Normalizer
-  |
-  +------> Personal Allowlist -> Keep
-  |
-  v
-Layer 1: Local Rule Engine
-  |
-  +------> confident spam -> Hide
-  |
-  v
-Layer 2: Community Reputation
-  |
-  +------> community-listed account -> Hide / Collapse
-  |
-  v
-Layer 3: Optional AI Classifier
-  |
-  v
-Decision
-  |
-  +------> keep
-  +------> collapse
-  +------> hide
-  |
-  v
-Local Stats + Explicit Feedback
+                         FeedSieve
+                             │
+            ┌────────────────┴────────────────┐
+            │                                 │
+      Filter Engine                   X Browser Adapter
+            │                                 │
+            │                      ┌──────────┴──────────┐
+            │                      │                     │
+       Filter Decision          Reader               Actions
+            │                      │                     │
+            │                  Timeline               Block
+            │                  Replies                Mute
+            │                  Search                 Unblock
+            │                  Account                Unmute
+            │                                         Not interested
+            │                                             │
+            │                                      Native Action Queue
+            │
+            ├── Personal Rules
+            ├── Community Reputation
+            ├── Content Fingerprints
+            ├── Domain Reputation
+            └── Optional AI
 ```
+
+核心原则：
+
+> **Read the page. Filter locally. Act through the page.**
 
 ## 1. Content Observer
 
@@ -81,11 +80,13 @@ Local Stats + Explicit Feedback
 - X DOM 结构变化后容易维护
 - Observer 只负责发现内容，不承担过滤业务逻辑
 
-## 2. X Adapter
+## 2. X Adapter = Reader + Actions
 
-负责把 X 页面转成稳定的内部结构。
+X Adapter 不再只负责读取页面，而是明确拆成两个能力。
 
-尽量提取：
+### Reader
+
+负责把 X 页面转成稳定内部结构：
 
 - post id
 - author handle
@@ -97,8 +98,6 @@ Local Stats + Explicit Feedback
 - reply / repost context
 - page context
 - visible metadata
-
-不要让 `filter-engine` 直接依赖具体 CSS selector。
 
 内部建议统一为：
 
@@ -117,11 +116,53 @@ type FeedItem = {
 };
 ```
 
-## 3. Filter Engine
+### Actions
+
+负责帮用户执行 X 页面本来就允许的原生动作：
+
+- block
+- unblock
+- mute
+- unmute
+- not interested
+
+FeedSieve 不需要为了这些动作获得用户的 X OAuth Token。
+
+更不应该把用户 Cookie、密码或 X 登录凭证上传到 FeedSieve 后端。
+
+详细设计见 [`X_ACTION_ADAPTER.md`](X_ACTION_ADAPTER.md)。
+
+## 3. Locator Layer
+
+X 的 DOM 经常变化，因此 `x-adapter` 必须维护独立 Locator 层。
+
+优先级建议：
+
+1. `data-testid`
+2. `role`
+3. `aria-*`
+4. 稳定 DOM 相对结构
+5. 文本匹配作为 fallback
+
+禁止 `filter-engine` 直接依赖具体 selector。
+
+例如：
+
+```ts
+interface XLocators {
+  findPostMenu(article: HTMLElement): HTMLElement | null;
+  findMenuItem(action: XNativeAction): HTMLElement | null;
+  findConfirmDialog(action: XNativeAction): HTMLElement | null;
+}
+```
+
+X 改版时优先修 Locator，而不是污染 Filter Engine。
+
+## 4. Filter Engine
 
 这是 FeedSieve 真正的技术本体。
 
-它不应该知道自己运行在 Chrome、Firefox 还是未来其他信息流里。
+它不应该知道自己运行在 Chrome、Firefox，甚至不应该知道当前信息流一定来自 X。
 
 输入：
 
@@ -137,13 +178,67 @@ type Decision = {
   reason: string;
   category?: string;
   confidence?: number;
-  source?: "personal" | "community" | "ai";
+  source?: "personal" | "local_rule" | "community" | "heuristic" | "ai";
 };
 ```
 
-### Layer 1: Local Rules
+### 推荐优先级
 
-本地规则支持：
+```text
+Personal Allowlist
+    > Personal Blocklist
+    > Local Rules
+    > Community Rules
+    > Heuristics
+    > AI
+```
+
+用户自己的明确选择永远拥有最高优先级。
+
+## 5. 三层过滤链路
+
+```text
+X Page
+  |
+  v
+Content Observer
+  |
+  v
+X Reader / Post Extractor
+  |
+  v
+Feature Normalizer
+  |
+  +------> Personal Allowlist -> Keep
+  |
+  v
+Layer 1: Local Rules
+  |
+  +------> confident spam -> Hide
+  |
+  v
+Layer 2: Community Reputation
+  |
+  +------> community-listed entity -> Hide / Collapse
+  |
+  v
+Duplicate / Fingerprint / Domain Heuristics
+  |
+  v
+Layer 3: Optional AI
+  |
+  v
+Decision
+  |
+  +------> keep
+  +------> collapse
+  +------> hide
+  |
+  v
+Local Stats + Explicit Feedback
+```
+
+### Layer 1: Local Rules
 
 - keyword
 - regex
@@ -154,29 +249,43 @@ type Decision = {
 - user-generated rules
 - local filter packs
 
-优先级建议：
+### Layer 2: Community Reputation
 
-```text
-Personal Allowlist
-    > Personal Blocklist
-    > Local Rules
-    > Community Rules
-    > AI
-```
+不只维护账号信誉，长期建议逐步支持四类实体：
 
-用户自己的明确决定永远拥有最高优先级。
+- Account Reputation
+- Content Fingerprint Reputation
+- Domain Reputation
+- Campaign Reputation
 
-## 4. Community Reputation
+这样垃圾账号换号以后，相同模板、相同域名和相同 Campaign 仍然可以被识别。
 
-社区层不需要实时请求服务端。
+### Layer 3: Optional AI
 
-推荐工作方式：
+AI 只处理规则、信誉和启发式仍然无法判断的模糊内容。
+
+默认不要求 AI Key。
+
+## 6. Community Reputation
+
+社区层不需要在 Timeline 滚动时实时请求服务端。
+
+推荐：
 
 ```text
 FeedSieve Community API
        |
        v
-Versioned Filter Snapshot
+Open Scoring
+       |
+       v
+YAML Canonical Snapshot
+       |
+       v
+CI Validate / Build
+       |
+       v
+Versioned JSON Snapshot
        |
        v
 Extension periodically downloads
@@ -188,26 +297,11 @@ Local cache
 Filter Engine local lookup
 ```
 
-这样 Timeline 滚动时仍然是纯本地匹配，不会因为服务器响应速度影响页面。
-
-快照建议包含：
-
-```ts
-type CommunityAccountEntry = {
-  accountId?: string;
-  handle: string;
-  category: string;
-  score: number;
-  status: "candidate" | "recommended" | "strong";
-  updatedAt: string;
-};
-```
-
 ### 用户贡献
 
-只有用户明确点击“抬走这个账号”时，才向服务端提交报告。
+只有用户明确点击“抬走这个账号”等贡献动作时，才提交报告。
 
-建议最小 payload：
+最小 payload：
 
 ```ts
 {
@@ -224,9 +318,9 @@ type CommunityAccountEntry = {
 
 详细设计见 [`COMMUNITY_FILTERING.md`](COMMUNITY_FILTERING.md)。
 
-## 5. Community API
+## 7. Community API
 
-社区共创需要一个很小的后端，而不是大型平台。
+社区后端只负责 FeedSieve 自己的数据，不负责替用户调用 X。
 
 第一版可以使用：
 
@@ -242,13 +336,104 @@ type CommunityAccountEntry = {
 - Community Score
 - Sybil / Burst detection
 - 生成版本化社区清单
-- 提供增量 / 全量下载
+- 提供全量 / 增量下载
 
-浏览器扩展不应该在滚动 Timeline 时逐条查询 Community API。
+明确边界：
 
-## 6. AI Adapter
+```text
+X Session Credentials
+    -> 永远留在用户浏览器
 
-AI Provider 必须可插拔，而且只负责第三层模糊判断。
+FeedSieve Community API
+    -> 不需要 X Cookie / Password / OAuth Token
+```
+
+## 8. Native Action Queue
+
+单账号 Block/Mute 可以直接执行页面动作。
+
+但“一键同步社区名单到 X”必须经过队列。
+
+推荐状态：
+
+```ts
+type QueueItem = {
+  action: "block_account" | "mute_account" | "unblock_account" | "unmute_account";
+  handle: string;
+  accountId?: string;
+  status: "pending" | "running" | "success" | "failed" | "skipped";
+  attempts: number;
+  error?: string;
+};
+```
+
+默认串行执行：
+
+```text
+pending
+  ↓
+running
+  ↓
+等待菜单 / Dialog / 页面反馈
+  ↓
+success / failed
+  ↓
+next
+```
+
+原因不是为了伪装真人，而是 X UI 本身是有状态的，不适合多个 Dropdown / Dialog 并发操作。
+
+用户必须可以：
+
+- 查看进度
+- 暂停
+- 继续
+- 停止
+- 重试失败项
+
+出现 Challenge、页面结构异常或连续失败时，自动暂停，而不是继续乱点。
+
+## 9. Local Hide 与 X Native Block 分离
+
+这是 FeedSieve 的关键产品边界。
+
+### FeedSieve Local Hide
+
+默认、即时、可撤销：
+
+```text
+Community List
+   ↓
+Local Cache
+   ↓
+Filter Engine
+   ↓
+Hide / Collapse
+```
+
+### X Native Block / Mute
+
+只有用户明确要求同步时才执行：
+
+```text
+User clicks Sync to X
+   ↓
+Native Action Queue
+   ↓
+X Browser UI
+   ↓
+Block / Mute
+```
+
+一句话：
+
+> **Hide 是 FeedSieve 自己的能力；Block / Mute 是 FeedSieve 帮用户操作 X 的能力。**
+
+两者都不要求把 FeedSieve 设计成 X API 客户端。
+
+## 10. AI Adapter
+
+AI Provider 必须可插拔，而且只负责模糊判断。
 
 首版可以支持 OpenAI-compatible API：
 
@@ -263,9 +448,9 @@ Provider
 
 AI 请求只发送完成判断所需的最小信息。
 
-建议加入 Decision Cache，避免同一内容重复消耗模型调用。
+建议 Decision Cache，避免同一内容重复消耗模型调用。
 
-## 7. Storage
+## 11. Storage
 
 ### Extension Local
 
@@ -277,31 +462,36 @@ AI 请求只发送完成判断所需的最小信息。
 - stats
 - cached decisions
 - anonymous reporter identity
+- native action queue
 
 ### Community Backend
 
 - accounts
+- fingerprints
+- domains
+- campaigns
 - reporters
 - reports
 - list entries
 - snapshot versions
 
-## 8. UI
+## 12. UI
 
 ### Inline Action
 
-在 X 推文 / 账号附近提供极简操作：
+推文 / 账号附近提供极简操作：
 
 > 抬走
 
-点击后可选择原因，并允许用户决定：
+本地立即隐藏后，可追加：
 
-- 只对我隐藏
-- 同时匿名贡献给社区
+> 已滤。要不要顺手让 X 也别再给你看？
+
+- 不用
+- Mute
+- Block
 
 ### Inline Placeholder
-
-内容被折叠时只显示：
 
 > 已滤，别看了 · 为什么？ · 我偏要看
 
@@ -310,6 +500,7 @@ AI 请求只发送完成判断所需的最小信息。
 - 今日过滤数量
 - 当前过滤强度
 - Community Filter 开关
+- Native Action Queue 状态
 - 今日战报
 
 ### Options
@@ -318,24 +509,38 @@ AI 请求只发送完成判断所需的最小信息。
 - 黑白名单
 - Filter Packs
 - 社区过滤强度
+- Native Action 默认策略
 - AI Provider
 - 隐私设置
 - 数据导入导出
 
-## 9. Action 与 X 原生 Block 分离
+## 13. X 改版与测试
 
-FeedSieve 自己的 `hide / collapse` 是核心动作。
+`x-adapter` 是最容易因为 X 改版失效的模块。
 
-X 原生的 `mute / block` 应该作为可选同步能力，而不是核心依赖。
+仓库建议维护：
 
-这样可以：
+```text
+fixtures/x/
+├── timeline/
+├── replies/
+├── post-menu/
+├── block-dialog/
+├── mute-state/
+└── account-page/
+```
 
-- 不依赖 X 写 API
-- 一键撤销社区清单
-- 避免批量修改用户账号状态
-- 让过滤在没有 X Developer API 的情况下正常工作
+测试：
 
-## 10. 后续扩展
+- Locator Unit Tests
+- Filter Engine Unit Tests
+- Action Queue State Tests
+- Extension + Mock DOM Integration Tests
+- 每个 Release 的 X Manual Smoke Test
+
+详细 Action 测试规则见 [`X_ACTION_ADAPTER.md`](X_ACTION_ADAPTER.md)。
+
+## 14. 后续扩展
 
 架构从一开始给以下能力留接口：
 
@@ -348,3 +553,7 @@ X 原生的 `mute / block` 应该作为可选同步能力，而不是核心依�
 - 多语言
 - Filter SDK
 - Reddit / YouTube / 其他信息流 Adapter
+
+最终原则：
+
+> **Filter Engine 决定“要不要看”；X Action Adapter 帮用户完成“要不要在 X 本身也处理掉”。**
