@@ -11,7 +11,8 @@
     "typecheck": "pnpm -r run typecheck",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build:extension": "pnpm --filter @feedsieve/extension build"
+    "build:extension": "pnpm --filter @feedsieve/extension build",
+    "verify": "sh scripts/verify.sh"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -68,7 +68,7 @@ docs/
 - Vitest
 - Playwright
 - ESLint / formatter / typecheck
-- GitHub Actions
+- 本地质量门禁（git pre-push 钩子：lint / typecheck / test / build）
 
 验收：
 

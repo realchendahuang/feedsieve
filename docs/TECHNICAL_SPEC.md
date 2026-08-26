@@ -1108,30 +1108,24 @@ render tweet
 
 ---
 
-## 17. CI
+## 17. 本地质量门禁
 
-PR 必跑：
+不使用 GitHub Actions，检查全部在本地完成。git `pre-push` 钩子（`.githooks/pre-push`）在每次 push 前自动执行：
 
 ```text
 pnpm lint
 pnpm typecheck
 pnpm test
-pnpm test:fixtures
 pnpm build:extension
-pnpm community:validate
-pnpm community:build
 ```
 
-Community list PR：
+手动全量验证：`pnpm verify`。跳过钩子：`git push --no-verify`（仅限紧急）。
 
-1. validate YAML
-2. build JSON
-3. JSON Schema validate
-4. ensure deterministic output
-5. generate checksum
-6. show entry count diff
+克隆后一次性启用钩子：`git config core.hooksPath .githooks`。
 
-以后可以增加 GitHub Bot 自动评论：
+Community list PR 的检查（validate / build / checksum / diff）后续以本地脚本形式加入同一钩子。
+
+以后可以增加本地脚本自动生成条目差异摘要：
 
 ```text
 +12 accounts

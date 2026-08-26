@@ -2,6 +2,15 @@
 
 欢迎提交 PR、Issue、垃圾样本、规则建议，以及任何你在 X 上见过的离谱话术。
 
+## 环境搭建（克隆后一次性）
+
+```sh
+pnpm install
+git config core.hooksPath .githooks   # 启用 pre-push 本地质量门禁
+```
+
+push 前会自动跑 lint / typecheck / test / build（即 `pnpm verify`）。本项目不用 GitHub Actions，所有检查在本地完成。
+
 ## 最有价值的贡献
 
 - X DOM 兼容性修复
