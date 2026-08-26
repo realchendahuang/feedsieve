@@ -1,559 +1,325 @@
 # FeedSieve Architecture
 
-## 总体原则
+> Canonical implementation details: [`TECHNICAL_SPEC.md`](TECHNICAL_SPEC.md)
 
-MVP 采用浏览器扩展，但核心过滤逻辑必须和浏览器 UI、X DOM、AI Provider 解耦。
+## 1. 总体原则
 
-同时明确一个重要技术原则：
+FeedSieve 的第一产品形态是浏览器扩展，真正的技术本体是独立 Filter Engine。
 
-> **FeedSieve 不把 X OAuth / X Developer API 作为 Block / Mute 等原生动作的核心依赖。**
+核心原则：
 
-因为 FeedSieve 本身运行在用户已经登录的 `x.com` 页面中。X 已经提供给用户的 Block、Mute、Unblock、Unmute 等操作，应优先通过浏览器页面交互完成。
+> **Local first. Community second. AI third. Browser-native actions when needed.**
 
-推荐拆成：
+也就是：
+
+- 本地规则先过滤
+- 社区公开信誉其次
+- AI 只处理模糊内容
+- X 原生 Block / Mute 等动作通过当前已登录的网页完成
+- 不把 X OAuth / Developer API 作为核心依赖
+
+## 2. 总体架构
+
+```text
+                          FeedSieve
+                              │
+        ┌─────────────────────┴─────────────────────┐
+        │                                           │
+ Browser Extension                           Open Community
+        │                                           │
+   ┌────┴─────┐                              Reports / Rescue
+   │          │                                    │
+Reader     Actions                                  │
+Adapter    Adapter                                  │
+   │          │                                     │
+   v          v                                     │
+FeedItem   X Native UI                              │
+   │                                                │
+   └──────────────────> Filter Engine <─────────────┘
+                             │
+               ┌─────────────┼─────────────┐
+               │             │             │
+          Personal       Community      Optional AI
+               │             │
+               │        Local Snapshot
+               │             │
+               └─────── Decision ──────────┘
+                             │
+                    KEEP / COLLAPSE / HIDE
+```
+
+## 3. Monorepo
 
 ```text
 apps/
-  extension/                # WXT browser extension
+  extension/               # WXT + React + Manifest V3
 
 packages/
-  filter-engine/            # 独立过滤核心
-  x-adapter/                # X Reader + Native Actions
-  community-client/         # 社区名单下载、缓存、校验
-  shared/                   # types / schemas / utils
+  filter-engine/           # 与 X / 浏览器解耦的核心判断
+  x-adapter/               # X Reader + Action Adapter
+  community-client/        # 快照下载 / 缓存 / 校验
+  list-format/             # YAML / JSON / Schema
+  shared/
 
 services/
-  community-api/            # 开源社区后端，只负责 FeedSieve 社区数据
+  community-api/           # Report / Rescue / Score / Snapshot
+
+community/
+  source/                  # 人类可读 YAML
+  lists/                   # Extension 读取的 JSON
+  policy/                  # 公开评分阈值
+  schema/
+  changelog/
+
+fixtures/x/                # X DOM 回归测试
 ```
 
-推荐技术栈：
+## 4. Browser Extension 上下文
 
-- WXT
-- TypeScript
-- React
-- Manifest V3
-- WebExtension Storage
-- Optional FeedSieve Community API
-- Optional OpenAI-compatible provider
+### Content Script
 
-## 总体链路
+负责：
+
+- 观察 X SPA DOM
+- 提取 FeedItem
+- 调用 Filter Engine
+- Inline UI
+- Hide / Collapse
+- X Action Adapter 页面动作
+
+默认使用 isolated world。
+
+### Service Worker
+
+负责：
+
+- Community Snapshot 更新
+- 设置迁移
+- Report / Rescue 网络请求
+- Action Queue 持久化协调
+- Popup / Content Script 消息
+
+Manifest V3 service worker 会休眠，关键状态不能只保存在内存。
+
+### Popup / Options
+
+Popup 做高频操作，Options 做规则、名单、隐私、Filter Pack 等高级配置。
+
+## 5. X Reader Adapter
+
+Reader Adapter 把不断变化的 X DOM 转成稳定内部模型：
+
+```ts
+type FeedItem = {
+  source: 'x';
+  postId?: string;
+  author: {
+    xUserId?: string;
+    handle: string;
+    displayName?: string;
+  };
+  text: string;
+  links: Array<{ href: string; display?: string }>;
+  context: 'timeline' | 'reply' | 'search' | 'profile' | 'other';
+};
+```
+
+`xUserId` 允许为空。插件不应为了获取稳定 ID 强依赖 X API 或私有 runtime。
+
+Selector 必须集中维护：
 
 ```text
-                         FeedSieve
-                             │
-            ┌────────────────┴────────────────┐
-            │                                 │
-      Filter Engine                   X Browser Adapter
-            │                                 │
-            │                      ┌──────────┴──────────┐
-            │                      │                     │
-       Filter Decision          Reader               Actions
-            │                      │                     │
-            │                  Timeline               Block
-            │                  Replies                Mute
-            │                  Search                 Unblock
-            │                  Account                Unmute
-            │                                         Not interested
-            │                                             │
-            │                                      Native Action Queue
-            │
-            ├── Personal Rules
-            ├── Community Reputation
-            ├── Content Fingerprints
-            ├── Domain Reputation
-            └── Optional AI
+packages/x-adapter/src/selectors/
 ```
+
+优先级：
+
+1. data-testid / role
+2. href / DOM 语义
+3. aria label
+4. locale text fallback
+
+不要依赖单个易变 CSS class。
+
+## 6. Filter Engine
+
+固定优先级：
+
+```text
+Personal Allowlist
+    > Personal Blocklist
+    > Keyword / Regex / Domain
+    > Content Fingerprint
+    > Community Reputation
+    > Heuristic
+    > Optional AI
+```
+
+输出必须可解释：
+
+```ts
+type Decision = {
+  action: 'keep' | 'collapse' | 'hide';
+  source: string;
+  reason: string;
+  category?: string;
+  confidence?: number;
+  ruleId?: string;
+};
+```
+
+## 7. Community Snapshot
+
+Timeline 滚动时不实时访问后端。
+
+```text
+Community API / GitHub
+       ↓
+manifest.json
+       ↓
+version changed?
+       ↓
+recommended.json
+       ↓
+schema + checksum
+       ↓
+local index
+       ↓
+Filter Engine lookup
+```
+
+服务器挂掉时继续使用上一个有效 Snapshot。
+
+### YAML / JSON
+
+- `community/source/*.yaml`: 可读、可 Review、可 Fork
+- `community/lists/*.json`: 运行时构建产物
+- `community/policy/v1.yaml`: 公开评分政策
+
+`x_user_id` 为 optional，`handle` 是 MVP 必需字段。
+
+## 8. Community API
+
+只负责 FeedSieve 自己的社区系统：
+
+```text
+POST /v1/reports
+POST /v1/rescues
+GET  /v1/snapshots/latest
+```
+
+不负责替用户操作 X，也不需要用户 X OAuth。
+
+只上传用户主动贡献的数据，不上传完整浏览历史。
+
+## 9. X Action Adapter
+
+详见 [`X_ACTION_ADAPTER.md`](X_ACTION_ADAPTER.md)。
 
 核心原则：
 
 > **Read the page. Filter locally. Act through the page.**
 
-## 1. Content Observer
+### v0.1
 
-监听 X 的动态页面更新。
-
-要求：
-
-- 支持 SPA 路由
-- 避免重复处理同一 DOM 节点
-- 尽量在内容进入视野前判断
-- X DOM 结构变化后容易维护
-- Observer 只负责发现内容，不承担过滤业务逻辑
-
-## 2. X Adapter = Reader + Actions
-
-X Adapter 不再只负责读取页面，而是明确拆成两个能力。
-
-### Reader
-
-负责把 X 页面转成稳定内部结构：
-
-- post id
-- author handle
-- author stable id（如果能可靠获得）
-- display name
-- text
-- links
-- media presence
-- reply / repost context
-- page context
-- visible metadata
-
-内部建议统一为：
-
-```ts
-type FeedItem = {
-  source: "x";
-  postId?: string;
-  author: {
-    id?: string;
-    handle: string;
-    displayName?: string;
-  };
-  text: string;
-  links: string[];
-  context: "timeline" | "reply" | "search" | "other";
-};
-```
-
-### Actions
-
-负责帮用户执行 X 页面本来就允许的原生动作：
-
-- block
-- unblock
-- mute
-- unmute
-- not interested
-
-FeedSieve 不需要为了这些动作获得用户的 X OAuth Token。
-
-更不应该把用户 Cookie、密码或 X 登录凭证上传到 FeedSieve 后端。
-
-详细设计见 [`X_ACTION_ADAPTER.md`](X_ACTION_ADAPTER.md)。
-
-## 3. Locator Layer
-
-X 的 DOM 经常变化，因此 `x-adapter` 必须维护独立 Locator 层。
-
-优先级建议：
-
-1. `data-testid`
-2. `role`
-3. `aria-*`
-4. 稳定 DOM 相对结构
-5. 文本匹配作为 fallback
-
-禁止 `filter-engine` 直接依赖具体 selector。
-
-例如：
-
-```ts
-interface XLocators {
-  findPostMenu(article: HTMLElement): HTMLElement | null;
-  findMenuItem(action: XNativeAction): HTMLElement | null;
-  findConfirmDialog(action: XNativeAction): HTMLElement | null;
-}
-```
-
-X 改版时优先修 Locator，而不是污染 Filter Engine。
-
-## 4. Filter Engine
-
-这是 FeedSieve 真正的技术本体。
-
-它不应该知道自己运行在 Chrome、Firefox，甚至不应该知道当前信息流一定来自 X。
-
-输入：
-
-```ts
-FeedItem + UserRules + CommunitySnapshot + Settings
-```
-
-输出：
-
-```ts
-type Decision = {
-  action: "keep" | "collapse" | "hide";
-  reason: string;
-  category?: string;
-  confidence?: number;
-  source?: "personal" | "local_rule" | "community" | "heuristic" | "ai";
-};
-```
-
-### 推荐优先级
+先实现单账号：
 
 ```text
-Personal Allowlist
-    > Personal Blocklist
-    > Local Rules
-    > Community Rules
-    > Heuristics
-    > AI
+抬走
+-> Local Hide
+-> 可选「顺手拉黑」
+-> 打开 X 原生菜单
+-> Block
+-> 等待页面成功反馈
 ```
 
-用户自己的明确选择永远拥有最高优先级。
+### 批量原生动作
 
-## 5. 三层过滤链路
+后续使用持久化 `Native Action Queue`，不是简单 for-loop。
+
+必须：
+
+- 用户显式启动
+- 进度
+- 暂停 / 恢复 / 取消
+- 页面成功反馈
+- 异常自动停止
+- MV3 service worker 重启后可恢复
+
+默认“一键启用社区名单”只做 FeedSieve 本地过滤，不自动执行成千上万次 X Block。
+
+## 10. Local Storage
+
+- `chrome.storage.local`: settings / personal rules / small lists / queue metadata
+- `chrome.storage.sync`: 少量可同步设置
+- IndexedDB: large snapshot / fingerprint index / large history
+
+## 11. Content Fingerprint / Domain
+
+账号会换，垃圾模板和诈骗域名可能继续存在。
+
+因此长期 Community Entity 设计为：
 
 ```text
-X Page
-  |
-  v
-Content Observer
-  |
-  v
-X Reader / Post Extractor
-  |
-  v
-Feature Normalizer
-  |
-  +------> Personal Allowlist -> Keep
-  |
-  v
-Layer 1: Local Rules
-  |
-  +------> confident spam -> Hide
-  |
-  v
-Layer 2: Community Reputation
-  |
-  +------> community-listed entity -> Hide / Collapse
-  |
-  v
-Duplicate / Fingerprint / Domain Heuristics
-  |
-  v
-Layer 3: Optional AI
-  |
-  v
-Decision
-  |
-  +------> keep
-  +------> collapse
-  +------> hide
-  |
-  v
-Local Stats + Explicit Feedback
+Account
+Content Fingerprint
+Domain
+Campaign
 ```
 
-### Layer 1: Local Rules
+第一阶段只实施 Account；接口从一开始保留扩展能力。
 
-- keyword
-- regex
-- account denylist
-- account allowlist
-- domain list
-- repeated content fingerprints
-- user-generated rules
-- local filter packs
+## 12. Testing
 
-### Layer 2: Community Reputation
+### Unit
 
-不只维护账号信誉，长期建议逐步支持四类实体：
+Filter Engine 纯单测。
 
-- Account Reputation
-- Content Fingerprint Reputation
-- Domain Reputation
-- Campaign Reputation
+### Fixture Contract
 
-这样垃圾账号换号以后，相同模板、相同域名和相同 Campaign 仍然可以被识别。
+```text
+X fixture HTML -> expected FeedItem
+```
 
-### Layer 3: Optional AI
+### Action Mock
 
-AI 只处理规则、信誉和启发式仍然无法判断的模糊内容。
+X 原生菜单使用 fixture 测试，不在 CI 中真实 Block。
 
-默认不要求 AI Key。
+### Manual Smoke
 
-## 6. Community Reputation
+发布前真实 X 检查：
 
-社区层不需要在 Timeline 滚动时实时请求服务端。
+- Home
+- Replies
+- Search
+- Profile
+- 中文 / 英文
+- Light / Dark
+
+## 13. 技术基线
 
 推荐：
 
-```text
-FeedSieve Community API
-       |
-       v
-Open Scoring
-       |
-       v
-YAML Canonical Snapshot
-       |
-       v
-CI Validate / Build
-       |
-       v
-Versioned JSON Snapshot
-       |
-       v
-Extension periodically downloads
-       |
-       v
-Local cache
-       |
-       v
-Filter Engine local lookup
-```
-
-### 用户贡献
-
-只有用户明确点击“抬走这个账号”等贡献动作时，才提交报告。
-
-最小 payload：
-
-```ts
-{
-  accountId?: string,
-  handle: string,
-  reason: string,
-  evidencePostId?: string,
-  reporterInstallationId: string,
-  timestamp: string
-}
-```
-
-默认不上传完整浏览历史。
-
-详细设计见 [`COMMUNITY_FILTERING.md`](COMMUNITY_FILTERING.md)。
-
-## 7. Community API
-
-社区后端只负责 FeedSieve 自己的数据，不负责替用户调用 X。
-
-第一版可以使用：
-
-- Cloudflare Workers
-- D1 / PostgreSQL
-- KV / CDN for versioned filter snapshots
-
-职责：
-
-- 接收显式报告
-- 去重
-- Reporter Trust
-- Community Score
-- Sybil / Burst detection
-- 生成版本化社区清单
-- 提供全量 / 增量下载
-
-明确边界：
-
-```text
-X Session Credentials
-    -> 永远留在用户浏览器
-
-FeedSieve Community API
-    -> 不需要 X Cookie / Password / OAuth Token
-```
-
-## 8. Native Action Queue
-
-单账号 Block/Mute 可以直接执行页面动作。
-
-但“一键同步社区名单到 X”必须经过队列。
-
-推荐状态：
-
-```ts
-type QueueItem = {
-  action: "block_account" | "mute_account" | "unblock_account" | "unmute_account";
-  handle: string;
-  accountId?: string;
-  status: "pending" | "running" | "success" | "failed" | "skipped";
-  attempts: number;
-  error?: string;
-};
-```
-
-默认串行执行：
-
-```text
-pending
-  ↓
-running
-  ↓
-等待菜单 / Dialog / 页面反馈
-  ↓
-success / failed
-  ↓
-next
-```
-
-原因不是为了伪装真人，而是 X UI 本身是有状态的，不适合多个 Dropdown / Dialog 并发操作。
-
-用户必须可以：
-
-- 查看进度
-- 暂停
-- 继续
-- 停止
-- 重试失败项
-
-出现 Challenge、页面结构异常或连续失败时，自动暂停，而不是继续乱点。
-
-## 9. Local Hide 与 X Native Block 分离
-
-这是 FeedSieve 的关键产品边界。
-
-### FeedSieve Local Hide
-
-默认、即时、可撤销：
-
-```text
-Community List
-   ↓
-Local Cache
-   ↓
-Filter Engine
-   ↓
-Hide / Collapse
-```
-
-### X Native Block / Mute
-
-只有用户明确要求同步时才执行：
-
-```text
-User clicks Sync to X
-   ↓
-Native Action Queue
-   ↓
-X Browser UI
-   ↓
-Block / Mute
-```
-
-一句话：
-
-> **Hide 是 FeedSieve 自己的能力；Block / Mute 是 FeedSieve 帮用户操作 X 的能力。**
-
-两者都不要求把 FeedSieve 设计成 X API 客户端。
-
-## 10. AI Adapter
-
-AI Provider 必须可插拔，而且只负责模糊判断。
-
-首版可以支持 OpenAI-compatible API：
-
-```text
-Provider
-- baseURL
-- apiKey
-- model
-- timeout
-- prompt template
-```
-
-AI 请求只发送完成判断所需的最小信息。
-
-建议 Decision Cache，避免同一内容重复消耗模型调用。
-
-## 11. Storage
-
-### Extension Local
-
-- settings
-- allowlist
-- personal blocklist
-- custom rules
-- community snapshot
-- stats
-- cached decisions
-- anonymous reporter identity
-- native action queue
-
-### Community Backend
-
-- accounts
-- fingerprints
-- domains
-- campaigns
-- reporters
-- reports
-- list entries
-- snapshot versions
-
-## 12. UI
-
-### Inline Action
-
-推文 / 账号附近提供极简操作：
-
-> 抬走
-
-本地立即隐藏后，可追加：
-
-> 已滤。要不要顺手让 X 也别再给你看？
-
-- 不用
-- Mute
-- Block
-
-### Inline Placeholder
-
-> 已滤，别看了 · 为什么？ · 我偏要看
-
-### Popup
-
-- 今日过滤数量
-- 当前过滤强度
-- Community Filter 开关
-- Native Action Queue 状态
-- 今日战报
-
-### Options
-
-- 关键词 / 正则
-- 黑白名单
-- Filter Packs
-- 社区过滤强度
-- Native Action 默认策略
-- AI Provider
-- 隐私设置
-- 数据导入导出
-
-## 13. X 改版与测试
-
-`x-adapter` 是最容易因为 X 改版失效的模块。
-
-仓库建议维护：
-
-```text
-fixtures/x/
-├── timeline/
-├── replies/
-├── post-menu/
-├── block-dialog/
-├── mute-state/
-└── account-page/
-```
-
-测试：
-
-- Locator Unit Tests
-- Filter Engine Unit Tests
-- Action Queue State Tests
-- Extension + Mock DOM Integration Tests
-- 每个 Release 的 X Manual Smoke Test
-
-详细 Action 测试规则见 [`X_ACTION_ADAPTER.md`](X_ACTION_ADAPTER.md)。
-
-## 14. 后续扩展
-
-架构从一开始给以下能力留接口：
-
-- Firefox
-- Safari
-- Community Filter Packs
-- 自定义 AI Provider
-- 本地模型
-- 规则导入导出
-- 多语言
-- Filter SDK
-- Reddit / YouTube / 其他信息流 Adapter
-
-最终原则：
-
-> **Filter Engine 决定“要不要看”；X Action Adapter 帮用户完成“要不要在 X 本身也处理掉”。**
+- WXT
+- TypeScript
+- React
+- Manifest V3
+- Vitest
+- Playwright
+- Cloudflare Workers + Hono + D1
+- JSON Schema
+- YAML + deterministic JSON build
+
+## 14. 设计非目标
+
+第一阶段不做：
+
+- 完整第三方 X 客户端
+- X OAuth 作为必需能力
+- X Developer API 作为核心依赖
+- 每条 Tweet 调 AI
+- 默认上传浏览历史
+- 后台偷偷批量 Block
+- “观点正确性”审核
+
+后续开发请优先遵循 [`TECHNICAL_SPEC.md`](TECHNICAL_SPEC.md) 的阶段和验收标准。
