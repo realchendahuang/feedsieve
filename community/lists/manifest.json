@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "snapshot_version": "0.0.1",
+  "generated_at": null,
+  "files": [
+    {
+      "path": "recommended.json",
+      "sha256": null,
+      "entries": 0
+    }
+  ]
+}
