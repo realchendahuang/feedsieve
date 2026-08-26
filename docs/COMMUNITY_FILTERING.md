@@ -1,6 +1,6 @@
 # Community Filtering
 
-## 核心想法
+## 1. 核心想法
 
 FeedSieve 不应该只是每个用户各自维护一套关键词和黑名单。
 
@@ -14,274 +14,418 @@ FeedSieve 不应该只是每个用户各自维护一套关键词和黑名单。
 
 ---
 
-## 用户侧交互
+## 2. 用户侧交互
 
-在 X 的推文或账号旁增加一个极简操作：
+在 X 推文 / 账号旁提供极简动作：
 
 - `抬走这个账号`
 - `这条还能抢救`
 - `自己人，别开枪`
 
-当用户点击“抬走这个账号”时，可以选择一个原因：
+当用户点击“抬走”时，先立即加入 Personal Blocklist。
 
-- Bot / 自动化刷屏
-- Copy-paste / 复制怪
-- AI slop / 低质量 AI 灌水
-- 广告 / 营销
-- 色情 / 灰产引流
-- Scam / 钓鱼 / 诈骗
-- Engagement bait / 互动钓鱼
-- 其他
+然后用户可以选择是否贡献社区信号。
 
-默认只提交用户明确触发的操作，不上传完整浏览历史。
+推荐原因：
+
+- `bot_spam`
+- `copy_paste`
+- `ai_slop`
+- `advertising`
+- `adult_gray_traffic`
+- `scam_phishing`
+- `engagement_bait`
+- `other`
+
+默认只上传用户明确触发的贡献，不上传完整浏览历史。
 
 ---
 
-## 不建议只用“5 个人屏蔽”作为最终规则
+## 3. “5 个人屏蔽”只作为 Candidate 门槛
 
-`5 个用户屏蔽 -> 自动进入全局黑名单` 很适合冷启动验证，但长期存在明显风险：
+`5 个用户屏蔽 -> 自动永久进入全球黑名单` 风险太大：
 
 - 恶意刷票
 - 小号批量举报
-- 群体围攻 / brigading
+- brigading
 - 竞争对手恶意举报
-- 有争议但并非垃圾的正常账号被误伤
+- 争议账号被当垃圾号
 
-因此“5 人”更适合作为 **候选池门槛**，而不是永久自动封禁门槛。
-
-推荐状态：
+因此状态分层：
 
 ```text
-0 - 4 个独立有效报告
-    -> 普通账号
+0 - 4 independent reports
+    -> normal
 
->= 5 个独立有效报告
-    -> Candidate / 社区候选
+>= 5 independent reports
+    -> candidate
 
-可信度达到阈值
-    -> Recommended Filter / 推荐过滤
+score + time spread + rescue ratio
+    -> recommended
 
-高可信度 + 大量独立报告
-    -> Strong Filter / 强过滤
+higher score + longer spread + low rescue
+    -> strong
 ```
 
-用户可以选择：
+具体阈值不硬编码在后端，公开在：
 
-- 保守：只过滤 Strong Filter
-- 默认：过滤 Recommended + Strong
-- 激进：Candidate 也折叠
+[`../community/policy/v1.yaml`](../community/policy/v1.yaml)
+
+用户过滤强度：
+
+- 清爽：Strong
+- 标准：Strong hide + Recommended collapse
+- 大扫除：Recommended / Strong hide，Candidate collapse
 
 ---
 
-## Community Score
+## 4. Community Score
 
-最终判断不应该只看举报数量，而应该形成一个社区可信度分数。
-
-建议输入信号：
-
-### 正向信号
-
-- 独立举报用户数量
-- 举报者自身 Trust Score
-- 多个不同时间段出现相同判断
-- 多个不同地区 / 独立安装来源的判断
-- 举报原因的一致性
-- 是否存在多个公开垃圾样本
-
-### 负向信号
-
-- 用户点击“这条还能抢救”
-- 用户主动加入白名单
-- 大量举报集中在极短时间
-- 新安装设备短时间大量举报
-- 多个举报来源高度相关
-- 举报原因主要是观点、立场或个人喜好
-
-概念上可以理解为：
+第一版使用可解释算法：
 
 ```text
-Community Score
-= Weighted Reports
-- Weighted Rescue Votes
-- Sybil / Burst Penalty
+effective score
+= weighted reports
+- weighted rescues
++ consistency bonus
++ temporal spread bonus
+- burst penalty
+- abuse penalty
 ```
 
-第一版不需要复杂机器学习，简单可解释的评分模型就够了。
+输入建议：
+
+### 正向
+
+- 独立有效 Report 数
+- Reporter Trust
+- 原因一致性
+- 多个日期持续出现
+- 可选公开 evidence post id
+
+### 负向
+
+- Rescue
+- 短时间集中举报
+- 新 installation 异常大量举报
+- 多个高度相关来源的机械行为
+- 举报原因明显属于观点 / 立场冲突
+
+第一版不需要 ML 黑盒。
 
 ---
 
-## Reporter Trust
+## 5. Reporter Trust
 
-每个参与共创的安装实例维护一个匿名 Trust Score。
+每个参与共创的安装实例维护匿名 Trust Score。
 
-可以参考：
+v1 原则：
 
-- 安装时间越长，权重逐步提高
-- 历史举报和社区最终判断一致，权重提高
-- 经常举报后被大量恢复，权重下降
-- 短时间疯狂举报大量账号，权重下降
-- 一个设备对同一个账号只能贡献一次有效票
+- 默认 trust = 1.0
+- 一个 installation 对一个账号只能有一个当前有效 vote
+- 长期和社区结果一致可缓慢提升
+- 经常被 Rescue 推翻则下降
+- 短时间疯狂举报则下降
+- 设置公开 min / max
 
-为了隐私，扩展可以本地生成匿名密钥对 / installation id，不需要一开始就要求用户注册账号。
+不要求第一天注册账号。
 
-后续如果需要更强的防刷票能力，可以再加入可选登录。
+插件本地生成随机 installation id；后端只存 hash / opaque identity。
+
+后续遇到严重 Sybil 问题再增强身份系统。
 
 ---
 
-## Community Filter Packs
+## 6. Rescue / Appeal
 
-不建议把所有东西塞进一个“全球总黑名单”。
+`我偏要看` 不等于 Rescue。
 
-更好的产品形态是多个可订阅 Filter Pack：
+区别：
 
-- Bot Spam
-- Crypto Scam
-- Adult / Gray Traffic
-- AI Slop
-- Engagement Bait
-- Copy-paste Replies
+```text
+我偏要看
+-> local temporary reveal
+-> 不上传社区
 
-用户可以自由订阅。
+这条还能抢救
+-> explicit Rescue Vote
+-> 上传社区
+```
 
-这样可以降低“一个全球标准替所有人做决定”的风险，也更符合 FeedSieve 的原则：
+社区必须同时支持：
+
+- Report
+- Rescue
+- Appeal
+- Removal
+- Personal Allowlist
+- Score decay（后续）
+
+名单不是永久刑罚。
+
+---
+
+## 7. Community Filter Packs
+
+不维护一个“宇宙总黑名单”。
+
+官方可维护：
+
+```text
+Bot Spam
+Copy-paste Replies
+AI Slop
+Crypto Scam
+Adult / Gray Traffic Spam
+Engagement Bait
+```
+
+用户自由订阅。
+
+高度主观内容：
+
+- 政治立场
+- 价值观
+- 兴趣领域
+- 语言偏好
+
+默认留在 Personal Rules 或第三方可选 Pack。
+
+核心原则：
 
 > **Hide garbage, not opinions.**
 
-政治观点、兴趣偏好、语言偏好等高度主观内容，应优先留在用户自己的 Personal Rules，而不是进入默认社区黑名单。
+---
+
+## 8. Account Identity：handle required, X User ID optional
+
+浏览器插件从当前 X DOM 通常可以稳定获取 `@handle`，但不应该为了获取 stable X User ID 而强依赖 X OAuth / Developer API / 私有页面 runtime。
+
+因此协议 v1：
+
+```text
+handle       required
+x_user_id    optional
+aliases      optional
+```
+
+示例：
+
+```yaml
+- handle: example_spam
+  x_user_id: "123456789" # optional
+  aliases:
+    - old_handle
+```
+
+当未来可靠获得 stable ID 时，再把历史 handle 合并。
 
 ---
 
-## 一键屏蔽应该分成两层
+## 9. 一键启用社区名单 ≠ 批量 X Block
 
-### 1. FeedSieve Local Block — 默认方案
+这是一个非常重要的产品边界。
+
+### 默认：FeedSieve Local Filter
 
 用户点击：
 
 > **一键启用社区清单**
 
-FeedSieve 下载社区过滤清单，在浏览器本地匹配账号并隐藏对应内容。
+实际行为：
+
+```text
+Community Snapshot
+-> local index
+-> Timeline hide / collapse
+```
 
 优点：
 
-- 不需要逐个调用 X 接口
-- 速度快
-- 免费
-- 可随时撤销
-- 不修改用户 X 账号本身的 Block List
-- 不依赖 X API 的写权限
+- 瞬时生效
+- 可撤销
+- 不需要 X API
+- 不需要 OAuth
+- 不修改用户 X Block List
+- 平台页面结构临时变化时，Community 数据仍然存在
 
-这是 MVP 最推荐的实现。
+### 可选：Native X Sync
 
-### 2. Sync to X — 可选高级能力
+用户另外选择：
 
-以后可以考虑：
+> **同步部分社区账号到 X Block / Mute**
 
-- 同步到 X Mute List
-- 同步到 X Block List
+才通过 X Action Adapter 执行浏览器页面动作。
 
-但这属于独立能力，不能成为 FeedSieve 核心过滤链路的依赖。
+批量 Sync 必须使用 Native Action Queue，详见：
+
+[`X_ACTION_ADAPTER.md`](X_ACTION_ADAPTER.md)
 
 ---
 
-## 最小后端
+## 10. YAML / JSON Open List
 
-社区共创需要一个非常轻量的服务端。
+FeedSieve 名单不是后端黑箱。
 
-建议第一版：
+```text
+community/source/*.yaml
+```
+
+给人：
+
+- Review
+- Diff
+- Fork
+- Appeal
+
+```text
+community/lists/*.json
+```
+
+给 Extension：
+
+- download
+- validate
+- cache
+- local lookup
+
+构建链：
+
+```text
+Community DB
+  ↓
+Open Scoring Policy
+  ↓
+YAML Snapshot
+  ↓
+Schema Validate
+  ↓
+Deterministic JSON
+  ↓
+manifest + checksum
+```
+
+---
+
+## 11. 最小后端
+
+推荐：
 
 ```text
 Browser Extension
        |
-       | explicit report only
+       | explicit report / rescue only
        v
-FeedSieve API
+Cloudflare Worker + Hono
        |
-       +---- reports
        +---- accounts
-       +---- reporter trust
-       +---- community scores
+       +---- aliases
+       +---- reporters
+       +---- votes
+       +---- snapshots
        |
        v
-Versioned Filter Snapshot
-       |
-       v
-Browser Extension local cache
+D1
 ```
 
-可以使用 Cloudflare Workers + D1/KV，或者任何简单的 Serverless + SQL 方案。
-
-建议最少数据表：
+API：
 
 ```text
-accounts
-- id
-- x_user_id / handle
-- first_seen_at
-- community_score
-- status
-
-reporters
-- installation_id
-- trust_score
-- created_at
-
-reports
-- reporter_id
-- account_id
-- reason
-- evidence_post_id (optional)
-- created_at
-
-list_entries
-- account_id
-- category
-- score
-- status
-- updated_at
+POST /v1/reports
+POST /v1/rescues
+GET  /v1/snapshots/latest
 ```
 
 ---
 
-## 隐私原则
+## 12. Snapshot 本地化
+
+Timeline 滚动时不实时请求 Community API。
+
+```text
+startup / alarm
+   ↓
+manifest
+   ↓
+new version?
+   ↓
+JSON snapshot
+   ↓
+validate
+   ↓
+local index
+   ↓
+all-day local lookup
+```
+
+服务器失败时继续使用 last-known-good snapshot。
+
+---
+
+## 13. 隐私原则
 
 默认只上传用户主动贡献的过滤信号。
 
-不要默认上传：
+不要上传：
 
 - 用户完整浏览记录
 - 所有看过的推文
 - 私信
 - Cookie
+- X OAuth Token
 - X 登录凭证
 
-社区报告建议只包含：
+Report payload 建议只包含：
 
 ```text
-目标账号 + 分类原因 + 时间 + 匿名报告者 ID + 可选公开 Post ID
+handle
+optional x_user_id
+reason
+optional evidence_post_id
+anonymous installation id
+time
+client version
 ```
 
 ---
 
-## 网络效应
+## 14. 长期不只是一张 Account List
 
-FeedSieve 最有意思的增长飞轮不是 AI，而是社区信号：
+Account 会换，垃圾模式可能继续存在。
+
+长期 Community Entity：
+
+```text
+Account
+Content Fingerprint
+Domain
+Campaign
+```
+
+网络效应最终应该从“垃圾账号黑名单”升级成“公开垃圾信誉图谱”。
+
+---
+
+## 15. 网络效应
 
 ```text
 更多用户
    ↓
-更多人发现垃圾账号
+更多高质量 Report / Rescue
    ↓
-社区过滤清单更准确
+信誉数据更准确
    ↓
-新用户安装后立即获得价值
+Snapshot 更好
    ↓
-过滤效果更好
+新用户安装后直接受益
+   ↓
+产品价值更强
    ↓
 更多用户
 ```
 
-最终 FeedSieve 可以形成一种“垃圾账号信誉层”。
+FeedSieve 不决定谁是好人，也不判断观点正确与否。
 
-它不决定谁是好人，也不判断观点正确与否，只回答一个更简单的问题：
+它只回答一个更窄的问题：
 
-> **这个账号是不是正在以大量用户都认为低价值的方式消耗注意力？**
+> **这个账号或内容模式，是否正在以大量用户都认为低价值的方式持续消耗注意力？**
