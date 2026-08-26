@@ -5,16 +5,28 @@ description: >-
   FeedSieve community reputation policy. These values are intentionally public
   and are cold-start defaults that may evolve through review and pull requests.
 
+score:
+  report_weight: 1.0
+  rescue_weight: 1.25
+  temporal_spread_bonus_per_extra_day: 0.5
+  temporal_spread_bonus_max: 1.5
+  burst_window_minutes: 30
+  burst_ratio_threshold: 0.70
+  burst_penalty: 2.0
+  normalization:
+    method: one_minus_exp
+    scale: 8.0
+
 candidate:
   min_independent_reports: 5
 
 recommended:
-  min_effective_score: 8
+  min_effective_score: 8.0
   min_distinct_days: 2
   max_rescue_ratio: 0.25
 
 strong:
-  min_effective_score: 20
+  min_effective_score: 20.0
   min_distinct_days: 3
   max_rescue_ratio: 0.15
 
