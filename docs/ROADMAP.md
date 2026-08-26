@@ -1,80 +1,156 @@
 # FeedSieve Roadmap
 
-## v0.1 — 先把个人过滤做对
+> 实施细节见 [`TECHNICAL_SPEC.md`](TECHNICAL_SPEC.md) 与 [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md)。
 
-目标：不依赖后端、不依赖 AI，也能明显改善 X 浏览体验。
+## v0.1 — 能真正用
 
-- 浏览器扩展基础架构
+目标：**没有后端、没有 AI，也能明显改善 X。**
+
+- WXT + TypeScript + React 基础架构
+- 独立 `filter-engine`
+- 独立 `x-adapter`
 - X Home Timeline
 - Replies
-- 关键词 / 正则
-- 个人黑名单 / 白名单
-- 重复内容识别
-- 一键“抬走这个账号”
-- “我偏要看”恢复
+- Personal Allowlist / Blocklist
+- Keyword / Exact phrase / Regex
+- Inline「抬走」
+- Hide / Collapse
+- 「我偏要看」
+- 「为什么？」可解释原因
 - 本地统计
+- 单账号「顺手拉黑」Browser-native Action
+- X DOM fixtures
+- Filter Engine unit tests
 
 成功标准：
 
-> 用户安装后 5 分钟内能明显看到垃圾减少。
+> 用户安装后 5 分钟内能明显看到垃圾减少，而且断网仍然能工作。
 
-## v0.2 — 社区共创
+## v0.2 — 社区名单开始产生网络效应
 
-目标：让一个用户发现的垃圾账号，帮助更多用户少看一次。
+目标：**新用户不用配置规则也能直接受益。**
+
+- Community Snapshot Manifest
+- Versioned JSON List
+- YAML public source
+- Schema validation
+- Local Community Index
+- Filter strength：清爽 / 标准 / 大扫除
+- Community Filter Packs 基础
+- Last-known-good offline cache
+- PureTwitter / 外部简单名单导入研究
+
+成功标准：
+
+> 新安装用户只开启官方 Community Pack，就能立刻过滤已知垃圾账号。
+
+## v0.3 — 社区共创与公开信誉
+
+目标：**一个人发现垃圾，所有人都可以少看一次。**
 
 - Community Report API
-- Community Candidate Pool
-- Community Score
-- Reporter Trust
-- 反向恢复票
-- Community Filter Packs
-- 版本化社区过滤快照
-- 一键启用社区清单
-- 本地缓存与离线过滤
+- Rescue API
+- Candidate Pool
+- Community Score v1
+- Reporter Trust v1
+- `community/policy/v1.yaml`
+- Report / Rescue idempotency
+- Basic burst / abuse detection
+- YAML Snapshot Generator
+- JSON deterministic build
+- Changelog
+- Account aliases
+- `handle` required / `x_user_id` optional
 
 成功标准：
 
-> 新用户即使没有配置任何规则，也能因为社区清单立即获得明显过滤效果。
+> 任意社区名单条目都能从 GitHub 看懂来源、分类、分数和变更历史。
 
-## v0.3 — AI 会认
+## v0.4 — Native Action Queue
 
-目标：处理规则和社区信号无法可靠判断的模糊内容。
+目标：**把“批量同步到 X”做成一个安全、可恢复的用户任务。**
 
-- OpenAI-compatible API
+- Persistent Native Action Queue
+- Progress
+- Pause / Resume / Cancel
+- Error state
+- MV3 worker restart recovery
+- Incremental Snapshot diff
+- Small-batch Native Block Sync
+- Mute / Unblock / Unmute
+
+原则：
+
+> 一键启用社区名单默认是 Local Hide；Native Block Sync 永远是用户额外选择。
+
+## v0.5 — 从账号名单升级成垃圾网络识别
+
+- Content Fingerprint
+- Normalized template hash
+- Domain Reputation
+- Account / Fingerprint / Domain entity model
+- Campaign foundation
+- Duplicate / copy-paste clustering
+
+成功标准：
+
+> 垃圾号换了账号但继续复用同一话术 / 域名时，FeedSieve 仍然能够识别。
+
+## v0.6 — AI 会认
+
+目标：只处理规则、社区和模板仍然不能可靠判断的模糊内容。
+
+- OpenAI-compatible Provider
 - 自定义 Endpoint / Model
-- AI 垃圾分类
-- Engagement bait
 - AI slop
-- 营销 / 引流
+- Soft advertising
+- Engagement bait
 - 自然语言过滤偏好
 - AI Decision Cache
 
 原则：
 
-> AI 是第三层过滤，不是每条推文的第一道门。
+> AI 是最后一层增强，不是 FeedSieve 的基础依赖。
 
-## v0.4 — 会整活
+## v0.7 — 会整活
 
-目标：让产品自己传播。
+目标：让过滤过程产生传播。
 
-- 今日战报
+- 福滤娃今日战报
 - 分享卡片
-- 随机梗文案
 - 类型统计
 - 社区贡献统计
+- 估算「替你少看了多少垃圾时间」
 - 一键分享到 X
 
-成功标准：
+## v0.8 — Filter Pack 生态
 
-> 用户愿意主动把过滤战报发到 X。
-
-## v0.5 — 会进化
-
-- 社区 Filter Pack 生态
-- 规则导入 / 导出
-- 多语言
+- Third-party Filter Pack
+- Pack metadata / maintainer / version
+- Pack subscription
+- Import / Export
+- Public Pack Registry（如有必要）
 - Firefox
 - Safari 评估
-- 本地模型
 - Developer Filter API / SDK
 - 更多信息流 Adapter
+
+## 当前实施顺序
+
+如果现在开始开发，严格按照：
+
+```text
+v0.1 Local Filter
+  ↓
+v0.2 Community Snapshot Reader
+  ↓
+v0.3 Report / Rescue / Open Reputation
+  ↓
+v0.4 Native Action Queue
+  ↓
+v0.5 Fingerprint / Domain
+  ↓
+v0.6 AI
+```
+
+不要为了 AI 或批量 Block 推迟第一个可用版本。
