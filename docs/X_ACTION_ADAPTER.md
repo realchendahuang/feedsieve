@@ -1,604 +1,413 @@
 # FeedSieve X Action Adapter
 
+> Implementation baseline for browser-native X actions.
+
 ## 1. 核心结论
 
-FeedSieve 是运行在 `x.com` 页面上的浏览器扩展，因此对于 X 已经暴露给登录用户的原生操作，默认不需要把产品设计成一个 X API 客户端。
+FeedSieve 运行在 `x.com` 页面里，因此对 X 已经暴露给登录用户的原生操作，默认不需要把产品设计成 X API / OAuth 客户端。
 
 核心原则：
 
 > **Read the page. Filter locally. Act through the page.**
 
-也就是说：
+- 读取 X 页面：Content Script / Reader Adapter
+- FeedSieve Hide / Collapse：完全本地
+- X 原生 Block / Mute / Unblock / Unmute：通过当前已登录的 X 页面完成
+- Community API：只处理 FeedSieve 的 Report / Rescue / Score / Snapshot
+- 不要求 X Access Token
+- 不读取用户 X Cookie
 
-- 读取 X 页面：通过 Content Script / DOM Adapter
-- FeedSieve 自己的 Hide / Collapse：完全本地完成
-- X 原生 Mute / Block / Unmute / Unblock：通过用户当前已登录的 X 页面完成
-- Community API：只负责 FeedSieve 自己的社区报告、评分、名单发布，不负责替用户调用 X
-- 不把 X OAuth / X Developer API 作为核心依赖
+## 2. 为什么 Action Adapter 必须独立
 
-FeedSieve 不需要获得用户的 X Access Token，也不需要存储用户的 X Cookie、密码或 OAuth Credential。
+X 页面会不断变化。
 
----
+如果 Filter Engine 直接写：
 
-## 2. 为什么浏览器 Action Adapter 更合理
-
-用户安装 FeedSieve 后，本来就在浏览器中登录并使用 X。
-
-X 网页已经允许用户手动完成：
-
-- Block
-- Mute
-- Unblock
-- Unmute
-- Not interested / Show fewer
-- Follow / Unfollow
-- Report
-
-因此 FeedSieve 可以把这些原本需要多次点击的操作封装成更快、更清晰的浏览器交互。
-
-例如用户看到垃圾账号时：
-
-```text
-用户点击「抬走」
-      ↓
-FeedSieve 本地立即隐藏
-      ↓
-是否顺手同步到 X？
-      ↓
-[不用]        [Mute]        [Block]
-                             ↓
-                    X Action Adapter
-                             ↓
-                      打开原生菜单
-                             ↓
-                       点击 Block
-                             ↓
-                        点击确认
-                             ↓
-                    等待页面成功反馈
+```ts
+document.querySelector(...).click()
 ```
 
-这条链路不要求 X OAuth。
+很快会变成不可维护代码。
 
----
-
-## 3. 两类动作必须严格分开
-
-### A. FeedSieve Local Actions
-
-这是核心能力，完全由插件掌控：
-
-- `hide`
-- `collapse`
-- `show`
-- `personal_block`
-- `personal_allow`
-- `community_rescue`
-
-特点：
-
-- 极快
-- 可撤销
-- 不修改用户 X 账号状态
-- 不依赖网络
-- 不依赖 X API
-- X 原生功能变化时仍然可以工作
-
-### B. X Native Actions
-
-这是增强能力，通过页面交互帮助用户执行 X 原生动作：
-
-- `mute_account`
-- `unmute_account`
-- `block_account`
-- `unblock_account`
-- `not_interested`
-- 后续可评估 `report_account`
-
-原则：
-
-> **Native Action 是用户明确要求 FeedSieve 帮他完成的一组浏览器操作，不是 FeedSieve 过滤引擎的必要条件。**
-
-即使全部 Native Action 失效，FeedSieve 的核心过滤仍然必须正常工作。
-
----
-
-## 4. X Adapter 拆成 Reader 与 Actions
-
-推荐包结构：
+正确边界：
 
 ```text
 packages/x-adapter/
-├── src/
-│   ├── reader/
-│   │   ├── observer.ts
-│   │   ├── post-extractor.ts
-│   │   ├── account-extractor.ts
-│   │   ├── timeline.ts
-│   │   ├── replies.ts
-│   │   └── search.ts
-│   │
-│   ├── actions/
-│   │   ├── block.ts
-│   │   ├── unblock.ts
-│   │   ├── mute.ts
-│   │   ├── unmute.ts
-│   │   ├── not-interested.ts
-│   │   └── shared.ts
-│   │
-│   ├── locators/
-│   │   ├── post.ts
-│   │   ├── menus.ts
-│   │   ├── dialogs.ts
-│   │   └── account.ts
-│   │
-│   ├── action-queue/
-│   │   ├── queue.ts
-│   │   ├── state-machine.ts
-│   │   ├── executor.ts
-│   │   └── persistence.ts
-│   │
-│   └── types.ts
+├── reader/
+├── actions/
+│   ├── block.ts
+│   ├── mute.ts
+│   ├── unblock.ts
+│   ├── unmute.ts
+│   ├── menu.ts
+│   └── result.ts
+├── selectors/
+└── observer/
 ```
 
-`reader/` 只负责理解 X。
+Filter Engine 永远不知道 X 菜单长什么样。
 
-`actions/` 只负责操作 X。
+## 3. v0.1 只做单账号 Action
 
-`filter-engine/` 不允许直接 import X DOM selector。
+第一版最重要的是稳定，而不是批量数量。
 
----
-
-## 5. 不依赖脆弱 CSS Class
-
-X 的前端结构会变化，因此 Action Adapter 不应该大量依赖自动生成的 class name。
-
-优先级建议：
-
-1. 稳定的 `data-testid`
-2. `role`
-3. `aria-*`
-4. DOM 相对结构
-5. 文本匹配作为最后 fallback
-
-不要：
-
-```ts
-document.querySelector('.css-1dbjc4n.r-18u37iz...')
-```
-
-更推荐由统一 Locator 层提供：
-
-```ts
-interface XLocators {
-  findPostMenu(article: HTMLElement): HTMLElement | null;
-  findMenuItem(action: XNativeAction): HTMLElement | null;
-  findConfirmDialog(action: XNativeAction): HTMLElement | null;
-}
-```
-
-如果 X 改版，只修 Locator，而不是修改整个 Filter Engine。
-
----
-
-## 6. 页面点击策略
-
-优先使用页面真实存在、用户本来可以点击的控件。
-
-典型流程：
+用户流程：
 
 ```text
-找到目标 Post / Account
-      ↓
-找到真实菜单按钮
-      ↓
-.click()
-      ↓
-等待 Dropdown 出现
-      ↓
-找到 Block / Mute MenuItem
-      ↓
-.click()
-      ↓
-如存在确认 Dialog，点击确认
-      ↓
-观察 DOM / Toast / 状态变化
-      ↓
-返回 ActionResult
+Tweet / Profile
+     ↓
+点击「抬走」
+     ↓
+Local Hide 立即成功
+     ↓
+可选「顺手拉黑」
+     ↓
+Action Adapter
+     ↓
+打开 X 原生菜单
+     ↓
+找到 Block action
+     ↓
+点击
+     ↓
+处理 confirmation
+     ↓
+等待成功 UI / state
 ```
 
-第一实现优先使用 `HTMLElement.click()`。
+即使 Block 失败，Local Hide 也已经成功。
 
-如果某些组件要求更完整的事件链，可由统一 Event Helper 发送浏览器事件，但目标依然必须是页面真实 UI 控件。
+不要把两个动作绑成一个事务。
 
-FeedSieve 不应该实现绕过验证码、绕过平台安全检查、隐藏自动化痕迹等机制。
-
-平台要求用户重新确认、出现 Challenge 或无法继续时，应停止队列并提示用户。
-
----
-
-## 7. Action Result
-
-所有 X 原生动作必须返回统一结果：
+## 4. Action API
 
 ```ts
-type XNativeAction =
-  | 'mute_account'
-  | 'unmute_account'
-  | 'block_account'
-  | 'unblock_account'
-  | 'not_interested';
+export type NativeActionType =
+  | 'block'
+  | 'mute'
+  | 'unblock'
+  | 'unmute';
 
-type XActionResult = {
-  action: XNativeAction;
-  targetAccountId?: string;
-  targetHandle: string;
-  status: 'success' | 'failed' | 'needs_user' | 'cancelled';
-  reason?: string;
-  startedAt: number;
-  finishedAt: number;
+export type NativeActionRequest = {
+  type: NativeActionType;
+  handle: string;
+  source: 'tweet' | 'profile' | 'queue';
 };
+
+export type NativeActionResult =
+  | {
+      ok: true;
+      handle: string;
+      type: NativeActionType;
+    }
+  | {
+      ok: false;
+      handle: string;
+      type: NativeActionType;
+      code:
+        | 'target_not_found'
+        | 'menu_not_found'
+        | 'action_not_found'
+        | 'confirmation_not_found'
+        | 'timeout'
+        | 'auth_required'
+        | 'unexpected_ui';
+      message?: string;
+    };
 ```
 
-失败原因示例：
+Action Adapter 必须返回真实结果，不允许“点了就算成功”。
 
-- `target_not_found`
-- `menu_not_found`
-- `action_not_found`
-- `confirm_dialog_not_found`
-- `timeout`
-- `x_ui_changed`
-- `user_intervention_required`
+## 5. Selector 策略
 
-不要悄悄失败。
+寻找动作的优先级：
 
----
+1. stable `data-testid`
+2. semantic `role=menuitem`
+3. aria label
+4. locale text fallback
+
+文本 fallback 至少维护：
+
+```text
+zh-CN
+zh-TW
+en
+```
+
+不要仅使用 `innerText.includes('Block')` 作为唯一逻辑。
+
+菜单通常是 portal 动态插入 DOM，因此 Action Adapter 需要：
+
+```text
+click trigger
+-> waitFor(menu)
+-> find action
+-> click
+-> waitFor(confirm or result)
+```
+
+## 6. 等待机制
+
+禁止大量固定 `sleep(1000)` 拼接。
+
+建议封装：
+
+```ts
+waitForElement(...)
+waitForGone(...)
+waitForTextOrTestId(...)
+```
+
+每一步有独立 timeout。
+
+例如：
+
+```text
+open menu       2s
+find action     2s
+confirmation    2s
+success state   4s
+```
+
+具体值以后通过真实测试调整。
+
+## 7. 不优先使用 MAIN world
+
+Content Script 默认 isolated world 已经可以读取和点击 DOM。
+
+只有未来证明某个动作必须调用页面 JavaScript runtime 时，才单独建立最小化 MAIN-world bridge。
+
+不要为了方便直接把整个扩展逻辑暴露在 host page world。
 
 ## 8. Native Action Queue
 
-单个账号的 Block/Mute 很简单，但社区名单可能有几十、几百甚至更多账号。
+批量原生动作是后续独立模块。
 
-因此批量同步不能写成：
+研究现有共享黑名单脚本后可以确认：
 
-```text
-for every account -> click immediately
-```
+> **批量操作必须是可恢复的 Queue，不是 for-loop。**
 
-应该建立一个可暂停、可恢复、可观察的 Native Action Queue。
-
-### Queue State
+结构：
 
 ```ts
-type QueueItem = {
+export type NativeActionTask = {
   id: string;
-  action: XNativeAction;
+  type: NativeActionType;
   handle: string;
-  accountId?: string;
-  status: 'pending' | 'running' | 'success' | 'failed' | 'skipped';
+  status:
+    | 'pending'
+    | 'running'
+    | 'success'
+    | 'failed'
+    | 'cancelled';
   attempts: number;
-  error?: string;
+  createdAt: number;
+  updatedAt: number;
+  lastError?: string;
 };
 ```
 
-队列默认单任务串行执行：
+## 9. Manifest V3 Queue 设计
+
+Service Worker 随时可能休眠，因此：
+
+- 队列不能只在全局变量
+- 每个 task 状态变化要持久化
+- browser / extension 重启后能恢复 pending 状态
+
+建议：
 
 ```text
-pending
-   ↓
-running
-   ↓
-等待 X 页面反馈
-   ↓
-success / failed
-   ↓
-next
+chrome.storage.local
+  - queue metadata
+  - current run settings
+
+chrome.storage.session
+  - 当前短生命周期 running context
+
+IndexedDB
+  - 大型 queue history（需要时）
 ```
 
-不是为了模拟“真人节奏”，而是因为 X UI 是有状态的：Dropdown、Dialog、路由和 DOM 更新不能安全地并行操作。
+Content Script 负责真实 DOM Action，Service Worker 负责协调和持久化。
 
----
+## 10. Queue Runner
 
-## 9. 批量同步的产品体验
-
-Community Pack 例如包含 387 个 Strong Spam Accounts。
-
-用户点击：
-
-> **同步到 X 黑名单**
-
-必须先展示：
+批量 Native Sync 建议使用明确的 Runner 模式。
 
 ```text
-将帮助你在 X 上 Block 387 个账号。
-
-FeedSieve 会通过当前浏览器中的 X 页面依次完成操作。
-你可以随时暂停或取消。
-
-[取消] [开始大扫除]
-```
-
-执行界面：
-
-```text
-福滤娃正在大扫除
-
-37 / 387
-
-@spam001     已抬走
-@spam002     已抬走
-@spam003     失败，可重试
-@spam004     正在处理
-
-[暂停] [停止]
-```
-
-用户需要始终知道插件正在修改其 X 原生 Block/Mute 状态。
-
----
-
-## 10. Community List 与 X Native Block 的关系
-
-社区 Filter List 默认不应该等于 X 原生 Block List。
-
-推荐默认行为：
-
-```text
-Community YAML/JSON
+User starts Native Sync
        ↓
-Extension Local Cache
+Build diff tasks
        ↓
-FeedSieve Local Hide
-```
-
-这个动作可以瞬间完成。
-
-X 原生 Block/Mute 只有用户明确选择时才运行：
-
-```text
-Community List
+Queue persisted
        ↓
-User clicks "Sync to X"
+Runner has usable x.com tab
        ↓
-Native Action Queue
+Service Worker dispatches one task
        ↓
-X Browser UI
+Content Script executes
+       ↓
+Result persisted
+       ↓
+Next task
 ```
 
-因此 FeedSieve 有两层：
+如果没有可用 X 页面：
 
-### 一键启用社区清单
+- 暂停
+- 提示用户打开 X
 
-- 快
-- 本地
-- 默认推荐
-- 可瞬间撤销
+不要偷偷在不可见上下文执行大量动作。
 
-### 同步到 X
+## 11. Batch 规则
 
-- 可选
-- 修改 X 账号自身状态
-- 使用 Action Queue
-- 必须有明确进度和用户控制
+必须：
 
----
+- 用户显式启动
+- 显示总数 / 已完成 / 失败
+- Pause
+- Resume
+- Cancel
+- 每一步确认页面状态
+- 异常登录 / Challenge 立即暂停
+- 失败 task 有明确原因
 
-## 11. 页面上下文与执行窗口
+不要：
 
-Action Adapter 依赖 X 页面，因此需要明确执行上下文。
+- 承诺某个固定批量数量一定安全
+- 为绕过平台检测设计隐蔽行为
+- 无提示持续后台操作
 
-推荐：
+## 12. Community Snapshot 与 Native Sync 分离
 
-- 插件检测当前是否存在可用 `x.com` Tab
-- 如没有，可提示用户打开一个 X Tab
-- 批量队列在指定工作 Tab 中执行
-- Action Queue 与普通用户浏览行为隔离，避免用户滚动页面导致菜单上下文丢失
+用户点：
 
-后续可以设计专门的“清扫工作页”：
+> **一键启用社区清单**
+
+默认含义：
 
 ```text
-x.com 页面
-+
-FeedSieve Queue Panel
+Community Snapshot
+-> local index
+-> X Timeline hide/collapse
 ```
 
-但不要创建隐藏的远程浏览器或要求用户额外登录。
+这是瞬时、可撤销、稳定的核心能力。
 
----
+用户另外选择：
 
-## 12. 幂等与状态检查
+> **同步部分名单到 X Block**
 
-Action Adapter 在执行 Block/Mute 前，最好尽可能确认当前状态。
+才生成 Native Action Queue。
 
-例如：
+这两个功能必须在 UI 和数据结构上分开。
 
-- 已 Block → `block_account` 可以直接返回 success/already_done
-- 已 Mute → 不重复执行
-- 账号不存在 / Suspended → 标记 skipped / unavailable
+## 13. 增量同步
 
-避免不必要的 UI 操作。
-
-统一结果可扩展：
-
-```ts
-status: 'success' | 'already_done' | 'failed' | 'needs_user' | 'cancelled'
-```
-
----
-
-## 13. 重试原则
-
-只重试“可能因为页面加载失败而产生”的错误，例如：
-
-- Dropdown 加载超时
-- Dialog 尚未出现
-- SPA Navigation 正在进行
-
-不要无限重试。
-
-建议默认最大尝试次数很低，并在连续失败后暂停整个 Queue：
+Snapshot 有版本：
 
 ```text
-连续多个 x_ui_changed
-      ↓
-暂停任务
-      ↓
-提示：X 页面可能已经改版，福滤娃先不乱点。
+v41 -> v42
 ```
 
-这比继续盲目点击安全得多。
+Native Sync 不应该每次重新处理全名单。
 
----
-
-## 14. 国际化问题
-
-FeedSieve 不应该主要靠英文 `Block @xxx` 文本定位菜单。
-
-因为 X 页面可能是中文、英文、日文等不同语言。
-
-Locator 优先使用：
-
-- data-testid
-- role
-- aria metadata
-- 结构关系
-
-文本只作为 fallback，并集中维护 i18n action dictionary。
-
----
-
-## 15. 安全与隐私边界
-
-Action Adapter 明确禁止：
-
-- 上传 X Cookie
-- 保存 X Password
-- 导出 Access Token
-- 向 FeedSieve 后端传递登录凭证
-- 注入凭证窃取逻辑
-
-Community API 只接收 FeedSieve 自己的数据：
+本地保存：
 
 ```text
-account / reason / evidence / anonymous reporter identity / timestamp
+nativeSyncedHandles
+lastSyncedSnapshotVersion
 ```
 
-X Native Action 在用户浏览器本地执行。
-
-因此架构边界非常清楚：
+新版本只计算：
 
 ```text
-X Session
-   ↓
-Only browser-local Action Adapter
-
-FeedSieve Community Server
-   ↓
-Never needs X session credentials
+new strong/recommended entries
+- already synced
+- personal allowlist
+= queue candidates
 ```
 
----
+用户确认后再执行。
 
-## 16. 测试策略
+## 14. Unblock / Rollback
 
-X Action Adapter 是最容易因为 X 改版失效的模块，必须单独测试。
+不能只支持“加进去”。
 
-推荐：
+如果：
+
+- 社区移除账号
+- 用户 Rescue
+- 用户误操作
+
+FeedSieve 应至少能告诉用户：
+
+> 这个账号已经不在当前社区名单。
+
+是否自动 Native Unblock 不应默认执行，因为用户可能在 FeedSieve 之外也有自己的 Block 原因。
+
+因此默认：
 
 ```text
-fixtures/x/
-├── timeline/
-├── post-menu/
-├── block-dialog/
-├── mute-state/
-└── account-page/
+Community removal
+-> Local Hide stops
+-> Native Block remains until user explicitly chooses to undo
 ```
 
-测试分三层：
+这是用户控制原则。
 
-### Unit
+## 15. Action Fixture Tests
 
-- Locator 对 fixture 能否找到目标
-- 状态机转换
-- Queue retry / pause / cancel
-
-### Integration
-
-- Extension + mock X DOM
-- 点击流程
-- Dialog 确认
-
-### Manual Smoke Test
-
-每个 Release 至少检查：
-
-- 单账号 Mute
-- 单账号 Block
-- Unmute / Unblock
-- Queue 5-item run
-- 中文 / 英文 X UI
-
----
-
-## 17. 与 Filter Engine 的接口
-
-Filter Engine 只能产生过滤决定，不直接点 X：
-
-```ts
-const decision = filterEngine.evaluate(item);
-```
-
-例如：
-
-```ts
-{
-  action: 'hide',
-  source: 'community',
-  category: 'bot_spam',
-  confidence: 0.94
-}
-```
-
-用户随后可以额外触发：
-
-```ts
-xActions.enqueue({
-  action: 'block_account',
-  handle: item.author.handle,
-});
-```
-
-这样 Filter Engine 与 X Native Action 永远解耦。
-
----
-
-## 18. 最终架构定位
+必须维护：
 
 ```text
-                    FeedSieve
-                        │
-        ┌───────────────┴────────────────┐
-        │                                │
-   Filter Engine                  X Browser Adapter
-        │                                │
-        │                      ┌─────────┴─────────┐
-        │                      │                   │
-        │                   Reader              Actions
-        │                      │                   │
-        │                 Timeline             Block
-        │                 Replies              Mute
-        │                 Account              Unblock
-        │                 Search               Unmute
-        │                                      Not interested
-        │                                          │
-        │                                   Native Action Queue
-        │
-        ├── Personal Rules
-        ├── Community Reputation
-        ├── Content Fingerprints
-        ├── Domain Reputation
-        └── Optional AI
+fixtures/x/menus/block-en.html
+fixtures/x/menus/block-zh-cn.html
+fixtures/x/menus/block-zh-tw.html
+fixtures/x/menus/confirm-block.html
 ```
 
-一句话：
+测试：
 
-> **Hide 是 FeedSieve 自己的能力；Block / Mute 是 FeedSieve 帮用户操作 X 的能力。两者都不要求把 FeedSieve 变成 X API 客户端。**
+- menu trigger
+- action lookup
+- confirmation
+- result
+- timeout
+- locale fallback
+
+CI 不允许对真实 X 账号执行 Block。
+
+## 16. 实施顺序
+
+### v0.1
+
+- block current account
+- clear error result
+- zh-CN + en fixture
+
+### v0.2+
+
+- mute
+- unblock / unmute
+- persistent action queue
+- progress UI
+- incremental community sync
+
+### Future
+
+- not interested
+- follow / unfollow（只有明确产品需求再做）
+- report（谨慎，避免自动化滥用）
+
+## 17. 最终原则
+
+X Action Adapter 的定位不是“模拟一个 API 客户端”。
+
+它的定位是：
+
+> **把用户本来需要在 X 页面上点很多次才能完成的操作，变成可理解、可暂停、可恢复的辅助动作。**
+
+FeedSieve 的核心过滤永远不依赖这些原生动作成功。
