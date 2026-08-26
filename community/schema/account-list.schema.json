@@ -14,7 +14,6 @@
       "items": {
         "type": "object",
         "required": [
-          "x_user_id",
           "handle",
           "category",
           "status",
@@ -25,8 +24,23 @@
           "updated_at"
         ],
         "properties": {
-          "x_user_id": { "type": "string", "pattern": "^[0-9]+$" },
-          "handle": { "type": "string", "minLength": 1 },
+          "x_user_id": {
+            "type": ["string", "null"],
+            "pattern": "^[0-9]+$"
+          },
+          "handle": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_]{1,15}$"
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_]{1,15}$"
+            },
+            "uniqueItems": true
+          },
           "category": {
             "type": "string",
             "enum": [
