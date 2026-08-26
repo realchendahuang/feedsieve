@@ -14,6 +14,11 @@ export interface FeedItemAuthor {
 
 export interface FeedItemLink {
   href: string;
+  /**
+   * Reader 已解析好的 hostname；仅在 http(s) 且可解析时提供。
+   * Detector 只消费这个字段，自己不做任何 URL 解析（保持纯逻辑）。
+   */
+  hostname?: string;
   display?: string;
 }
 

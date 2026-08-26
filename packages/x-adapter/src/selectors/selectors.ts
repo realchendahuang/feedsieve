@@ -5,7 +5,7 @@
  * 多级策略：稳定 data-testid / role -> DOM 结构 + href 语义 -> aria label -> locale text；
  * 禁止仅依赖易变 CSS class。
  *
- * Phase 0 先立边界；真实 selector 将在 Phase 1 配合 fixtures/x 脱敏样本固化。
+ * selector 改动必须配合 fixtures/x 脱敏样本验证。
  */
 
 export const tweetSelectors = {
@@ -13,6 +13,10 @@ export const tweetSelectors = {
   article: 'article[data-testid="tweet"]',
   /** 作者信息区（含 displayName 与 @handle 链接）。 */
   authorNameArea: '[data-testid="User-Name"]',
+  /** 作者行里指向 /handle 的链接（displayName 同样包在一个用户链接里）。 */
+  authorLink: '[data-testid="User-Name"] a[href^="/"]',
+  /** 正文文本区。 */
+  text: '[data-testid="tweetText"]',
 } as const;
 
 export const menuSelectors = {

@@ -1,5 +1,6 @@
+// @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest';
-import { extractHandleFromPath } from './handle';
+import { contextFromPath, extractHandleFromPath } from './handle';
 
 describe('extractHandleFromPath', () => {
   it.each([
@@ -22,5 +23,18 @@ describe('extractHandleFromPath', () => {
     ['https://evil.example.com/kim/status/1'],
   ])('rejects non-account input %s', (input) => {
     expect(extractHandleFromPath(input)).toBeNull();
+  });
+});
+
+describe('contextFromPath', () => {
+  it.each([
+    ['/home', 'timeline'],
+    ['/search?q=x', 'search'],
+    ['/kim/status/123', 'reply'],
+    ['/notifications', 'other'],
+    ['/kim/following', 'profile'],
+    ['/i/flow/login', 'other'],
+  ] as const)('%s -> %s', (path, expected) => {
+    expect(contextFromPath(path)).toBe(expected);
   });
 });

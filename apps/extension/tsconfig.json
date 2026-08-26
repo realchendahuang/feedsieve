@@ -2,6 +2,7 @@
   "extends": "./.wxt/tsconfig.json",
   "compilerOptions": {
     "jsx": "react-jsx",
+    "resolveJsonModule": true,
     "noUncheckedIndexedAccess": true
   }
 }

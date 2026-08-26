@@ -49,8 +49,21 @@ export function extractHandleFromPath(pathname: string): string | null {
   return decoded;
 }
 
-/** URL 中的 context 归类。Phase 1 由 route observer 维护，这里先给纯函数基础。 */
+/** X 的 handle 合法字符集（含中文等 Unicode 时 X 实际允许更宽，这里按 ASCII 协议处理）。 */
+const CONTEXT_BY_PREFIX: ReadonlyArray<readonly [RegExp, FeedContext]> = [
+  [/^\/home/, 'timeline'],
+  [/^\/search/, 'search'],
+  [/^\/[^/]+\/status\//, 'reply'],
+  [/^\/notifications|^\/messages|^\/explore/, 'other'],
+];
+
+/** URL path -> FeedItem.context。v0.1 只区分四类，其余归 other。 */
 export function contextFromPath(pathname: string): FeedContext {
-  if (/^\/search/.test(pathname)) return 'search';
-  return 'timeline';
+  for (const [pattern, context] of CONTEXT_BY_PREFIX) {
+    if (pattern.test(pathname)) {
+      return context;
+    }
+  }
+  // 剩下的形如 /handle 或 /handle/following 视为 profile
+  return extractHandleFromPath(pathname) ? 'profile' : 'other';
 }

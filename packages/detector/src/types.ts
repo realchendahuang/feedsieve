@@ -18,6 +18,8 @@ export interface Detection {
   /** true 表示黄框标注；FeedSieve 标注绝不隐藏内容。 */
   marked: boolean;
   source: DetectionSource;
-  /** 人可读的标注理由，如「名单命中 · bot_spam」。 */
+  /** 人可读的标注理由，如「名单命中」「启发式：默认名 + 随机数字」。 */
   reason: string;
+  /** 命中的具体规则 ID，便于统计与调参（如 'list'、'default-name-digits'）。 */
+  ruleId?: string;
 }
