@@ -1,0 +1,31 @@
+version: 1
+updated_at: "2026-08-26T00:00:00Z"
+
+description: >-
+  FeedSieve community reputation policy. These values are intentionally public
+  and are cold-start defaults that may evolve through review and pull requests.
+
+candidate:
+  min_independent_reports: 5
+
+recommended:
+  min_effective_score: 8
+  min_distinct_days: 2
+  max_rescue_ratio: 0.25
+
+strong:
+  min_effective_score: 20
+  min_distinct_days: 3
+  max_rescue_ratio: 0.15
+
+reporter_trust:
+  default: 1.0
+  min: 0.25
+  max: 1.5
+
+principles:
+  - personal_allowlist_always_wins
+  - report_and_rescue_are_explicit_actions
+  - opinion_disagreement_is_not_spam
+  - burst_reports_may_be_downweighted
+  - list_entries_are_not_permanent_sentences
