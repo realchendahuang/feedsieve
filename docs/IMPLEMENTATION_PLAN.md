@@ -1,771 +1,465 @@
 # FeedSieve Implementation Plan
 
-## 0. 一句话架构
+> 详细工程规范见 [`TECHNICAL_SPEC.md`](TECHNICAL_SPEC.md)。  
+> 本文件用于回答：**按什么顺序开发，做到什么程度可以进入下一阶段。**
 
-> **产品形态：浏览器插件。技术本体：独立 Filter Engine。第一战场：X。长期方向：用户自己的互联网注意力过滤层。**
+## 0. 最终架构决定
 
-FeedSieve 不应该做成一个依赖 X API 的第三方客户端，也不应该把所有内容都交给 AI。
+FeedSieve 不做成一个依赖 X API 的第三方客户端。
 
-推荐总原则：
+总原则：
 
 > **Local first. Community second. AI third. Browser-native actions when needed.**
 
-也就是：
+具体决定：
 
-1. 本地规则先判断
-2. 社区信誉其次
-3. AI 只处理模糊情况
-4. 需要 X 原生 Block / Mute 时，直接通过用户当前浏览器中的 X 页面完成
+- 浏览器插件是第一产品形态
+- `filter-engine` 是技术本体
+- `x-adapter` 同时包含 Reader Adapter 和 Action Adapter
+- FeedSieve 自己的 Hide / Collapse 永远本地优先
+- X 原生 Block / Mute 通过用户当前已登录的网页完成
+- Community API 只负责 FeedSieve 社区报告 / 评分 / Snapshot
+- 不把 X OAuth / Developer API 作为核心依赖
+- YAML 是公开审计源，JSON 是 Extension 运行时产物
+- `x_user_id` 可选，`handle` 是 MVP 可稳定获得的身份字段
+- Community Snapshot 在本地查询，不在滚动 Timeline 时逐条请求服务器
 
----
-
-## 1. 为什么第一产品形态是浏览器扩展
-
-垃圾信息真正造成注意力损失的时刻，是它进入用户视野的那一刻。
-
-FeedSieve 最自然的体验：
-
-```text
-用户照常打开 x.com
-      ↓
-FeedSieve 在页面内读取 Timeline / Replies / Search
-      ↓
-垃圾内容在进入视野前被折叠或隐藏
-      ↓
-用户想进一步处理时，插件帮助完成 X 原生 Mute / Block
-```
-
-浏览器插件的优势：
-
-- 不要求用户换 X 客户端
-- 不需要重新登录
-- 不需要 X OAuth 才能产生核心价值
-- 可以直接处理原生 Timeline / Replies / Search
-- 可以操作用户本来就能点击的 X 页面控件
-- 安装和开源分发成本低
-- Chrome / Edge / Firefox / Safari 可逐步扩展
-
----
-
-## 2. 总体模块
+## 1. 推荐仓库结构
 
 ```text
-                         FeedSieve
-                             │
-        ┌────────────────────┼────────────────────┐
-        │                    │                    │
-  Browser Extension      Filter Engine       Open Community
-        │                    │                    │
-  X Browser Adapter          │              Reports / Rescue
-        │                    │                    │
-  ┌─────┴─────┐              │                    │
-  │           │              │              Community API
-Reader      Actions          │                    │
-  │           │              │                 Database
-Timeline   Block             │                    │
-Replies    Mute              │              Open Scoring
-Search     Unblock           │                    │
-Account    Unmute            │               YAML Source
-            │                │                    │
-      Native Action Queue    │                CI Build
-            │                │                    │
-            └────────┬───────┴────────────── JSON Snapshot
-                     │
-                     ↓
-                 Local Cache
-                     ↓
-                   x.com
+apps/
+  extension/
+
+packages/
+  filter-engine/
+  x-adapter/
+  community-client/
+  list-format/
+  shared/
+
+services/
+  community-api/
+
+community/
+  source/
+  lists/
+  policy/
+  schema/
+  changelog/
+
+fixtures/x/
+scripts/
+docs/
 ```
 
-推荐仓库结构：
+## 2. Phase 0 — 工程骨架
 
-```text
-feedsieve/
-├── apps/
-│   └── extension/
-│
-├── packages/
-│   ├── filter-engine/
-│   ├── x-adapter/
-│   │   ├── reader/
-│   │   ├── actions/
-│   │   ├── locators/
-│   │   └── action-queue/
-│   ├── community-client/
-│   └── shared/
-│
-├── services/
-│   └── community-api/
-│
-├── community/
-│   ├── source/
-│   ├── lists/
-│   ├── schema/
-│   └── changelog/
-│
-├── fixtures/
-│   └── x/
-│
-├── scripts/
-├── assets/
-├── docs/
-└── .github/workflows/
-```
+目标：建立以后不需要推倒重来的边界。
 
----
+实施：
 
-## 3. X Browser Adapter
+- pnpm workspace
+- WXT + React + TypeScript
+- `packages/filter-engine`
+- `packages/x-adapter`
+- Vitest
+- Playwright
+- ESLint / formatter / typecheck
+- GitHub Actions
 
-这是浏览器端最重要的适配层。
+验收：
 
-它分两部分：
+- unpacked extension 可正常加载
+- `x.com` 能注入 content script
+- workspace package 能互相引用
+- CI build / test 通过
 
-### 3.1 Reader
+## 3. Phase 1 — X Reader + Local Filter
 
-负责读取 X 页面并标准化：
+这是第一个真正有用户价值的版本。
 
-```ts
-type FeedItem = {
-  source: 'x';
-  postId?: string;
-  author: {
-    id?: string;
-    handle: string;
-    displayName?: string;
-  };
-  text: string;
-  links: string[];
-  context: 'timeline' | 'reply' | 'search' | 'profile' | 'other';
-};
-```
+### Reader Adapter
 
-Reader 负责：
+实现：
 
-- SPA MutationObserver
-- Timeline item 发现
-- Replies 发现
-- Search item 发现
-- Account / Post 提取
-- 链接 / 域名提取
-- 后续 Fingerprint 输入准备
+- Home Timeline
+- Replies
+- 基础 Search
+- Tweet handle / post id / text / links
+- SPA route change
+- MutationObserver
+- 去重处理
 
-### 3.2 Actions
+Selector 全部放到 `packages/x-adapter/src/selectors`。
 
-Actions 负责帮助用户执行 X 页面已经存在的原生操作：
+### Filter Engine
 
-- Block
-- Unblock
-- Mute
-- Unmute
-- Not interested
+实现：
 
-核心原则：
-
-> **FeedSieve 不需要为了这些动作成为 X API Client。**
-
-用户已经在浏览器里登录 X。插件只需要操作当前页面真实存在的菜单、按钮和确认对话框。
-
-FeedSieve 后端不应该获得：
-
-- X Password
-- X Cookie
-- X OAuth Token
-- X Access Token
-
-详细方案见 [`X_ACTION_ADAPTER.md`](X_ACTION_ADAPTER.md)。
-
----
-
-## 4. Locator 与 X 改版隔离
-
-不要让整个项目散落大量 X selector。
-
-统一由 `packages/x-adapter/locators` 管理。
-
-优先：
-
-1. `data-testid`
-2. `role`
-3. `aria-*`
-4. 稳定相对结构
-5. 文本 fallback
-
-不要依赖长 CSS class。
-
-目标：
-
-> X 改版时只修 x-adapter，不动 Filter Engine。
-
----
-
-## 5. Filter Engine
-
-这是 FeedSieve 真正长期可复用的技术本体。
-
-输入：
-
-```text
-FeedItem
-+ Personal Rules
-+ Community Snapshot
-+ Fingerprint / Domain Data
-+ Settings
-```
-
-输出：
-
-```ts
-type Decision = {
-  action: 'keep' | 'collapse' | 'hide';
-  source: 'personal' | 'local_rule' | 'community' | 'heuristic' | 'ai';
-  reason: string;
-  category?: string;
-  confidence?: number;
-  ruleId?: string;
-};
-```
-
-Filter Engine 不允许直接点击 X 页面。
-
-它只回答一个问题：
-
-> **这条内容要不要给用户看？**
-
----
-
-## 6. 过滤优先级
-
-### Layer 0 — User Override
-
-最高优先级：
-
-```text
-Personal Allowlist
-Personal Blocklist
-Temporary Show / Hide
-```
-
-用户明确选择必须覆盖社区和 AI。
-
-### Layer 1 — Local Rules
-
-本地完成：
-
-- keyword
-- exact phrase
-- regex
-- account allow/deny list
-- domain rules
-- template rules
-- repeated content fingerprint
-- local filter packs
-
-优点：
-
-- 快
-- 免费
-- 可解释
-- 离线可用
-- 隐私好
-
-### Layer 2 — Community Reputation
-
-社区逐步维护四种信誉实体：
-
-```text
-Account
-Content Fingerprint
-Domain
-Campaign
-```
-
-这样垃圾号换账号以后，模板和域名仍然可以暴露同一 Campaign。
-
-### Layer 3 — Optional AI
-
-AI 只处理前面仍然无法可靠判断的模糊内容：
-
-- AI slop
-- 软广告
-- engagement bait
-- 隐蔽营销
-- 用户自然语言偏好
-
-AI 不是必需依赖。
-
----
-
-## 7. 页面处理流程
-
-```text
-DOM Mutation
-   ↓
-X Reader
-   ↓
-Normalize FeedItem
-   ↓
-Personal Allowlist? ─── yes ──> KEEP
-   ↓ no
-Personal Blocklist? ─── yes ──> HIDE
-   ↓ no
-Local Rules
-   ↓
-Community Reputation
-   ↓
-Fingerprint / Domain / Campaign Heuristics
-   ↓
-Optional AI
-   ↓
-Decision
-   ↓
-KEEP / COLLAPSE / HIDE
-   ↓
-Explainability + Local Stats
-```
-
-隐藏后必须允许：
-
-> 已滤，别看了 · 为什么？ · 我偏要看
-
----
-
-## 8. “抬走”操作
-
-用户看到垃圾账号时：
-
-```text
-点击「抬走」
-    ↓
-立即加入 Personal Blocklist
-    ↓
-当前页面立即 Hide
-    ↓
-用户开启社区共创？
-    ├── yes -> 提交 Community Report
-    └── no  -> 仅本地
-    ↓
-可选：是否同步到 X？
-    ├── 不用
-    ├── Mute
-    └── Block
-```
-
-这样一个动作同时覆盖：
-
-- 个人体验
-- 社区贡献
-- 可选 X 原生状态
-
-三者互相独立。
-
----
-
-## 9. Community Report
-
-推荐分类：
-
-- `bot_spam`
-- `copy_paste`
-- `ai_slop`
-- `advertising`
-- `adult_spam`
-- `scam`
-- `engagement_bait`
-- `other`
-
-最小 payload：
-
-```ts
-{
-  accountId?: string;
-  handle: string;
-  reason: string;
-  evidencePostId?: string;
-  reporterInstallationId: string;
-  timestamp: string;
-}
-```
-
-默认不上传：
-
-- 完整浏览历史
-- 全部看过的 Tweet
-- DM
-- X Cookie
-- X Credential
-
----
-
-## 10. Candidate / Recommended / Strong
-
-“5 人屏蔽”适合作为候选门槛，不适合作为长期全球封禁规则。
-
-```text
-0-4 个独立有效报告
-   -> normal
-
->= 5
-   -> candidate
-
-Community Score 达标
-   -> recommended
-
-大量高可信、时间分散的一致报告
-   -> strong
-```
-
-插件模式：
-
-- 清爽模式：只隐藏 Strong
-- 标准清扫：Strong Hide + Recommended Collapse
-- 大扫除：Candidate 也 Collapse
-
-所有阈值公开。
-
----
-
-## 11. Community Score
-
-第一版使用可解释算法：
-
-```text
-Community Score
-= Weighted Reports
-+ Consistency Bonus
-+ Temporal Spread Bonus
-- Weighted Rescue Votes
-- Burst Penalty
-- Sybil Penalty
-```
-
-不要一开始就上黑箱 ML。
-
-### 正向
-
-- 独立报告人数
-- Reporter Trust
-- 原因一致
-- 多时间段持续出现
-- 可公开 Evidence
-
-### 负向
-
-- Rescue Vote
-- 短时间集中举报
-- 新安装实例异常大量举报
-- 原因高度混乱
-
----
-
-## 12. Reporter Trust
-
-插件首次安装生成匿名 identity。
-
-后续可升级本地密钥对，对报告签名。
-
-Trust 参考：
-
-- 使用历史
-- 举报最终一致率
-- Rescue 反向反馈
-- 举报频率异常
-- 同一 installation 对同一对象只算一份有效意见
-
-第一阶段不强制注册。
-
----
-
-## 13. Rescue / Appeal / Decay
-
-社区系统必须支持：
-
-- Report
-- Rescue
-- Appeal
-- Removal
 - Personal Allowlist
-- Score Decay
+- Personal Blocklist
+- Keyword
+- Exact phrase
+- Regex
 
-“我偏要看”只是临时展开，不自动等于 Rescue。
-
-Rescue 必须是用户显式动作：
-
-> **这条还能抢救**
-
-名单不是永久刑罚。
-
----
-
-## 14. YAML + JSON
-
-### YAML = 人类可读源
+优先级：
 
 ```text
-community/source/*.yaml
+Allowlist
+> Personal Blocklist
+> Local Rules
+> Community
+> AI
 ```
 
-用于：
+### UI
 
-- GitHub Review
-- PR
-- Diff
-- Audit
-- Fork
-- 人工理解
-
-### JSON = Runtime Artifact
+实现：
 
 ```text
-community/lists/*.json
+抬走
+已滤，别看了
+为什么？
+我偏要看
+自己人，别开枪
 ```
 
-用于：
+验收：
 
-- Extension 下载
-- 本地缓存
-- Schema validation
-- Hash / signature
-- 高效解析
+- 完全断网仍可过滤
+- 滚动 Timeline 不明显掉帧
+- 每条过滤结果能解释原因
+- 用户恢复内容后页面不崩
 
-推荐流水线：
+## 4. Phase 2 — Single X Native Action
+
+目标：验证 Browser-native Action Adapter。
+
+只做**单账号**，不要一开始批量。
+
+流程：
 
 ```text
-Community Reports
+用户点击「抬走」
       ↓
-Open Scoring
+FeedSieve 本地 Hide
       ↓
-Safeguards
+可选「顺手拉黑」
       ↓
-YAML Snapshot
+X Action Adapter 打开原生 ... 菜单
       ↓
-Schema Validate
+找到 Block
       ↓
-JSON Build
+点击确认
       ↓
-Checksum / Signature
-      ↓
-GitHub Release / CDN
-      ↓
-Extension Local Cache
+等待 UI 成功状态
 ```
 
----
+Action Adapter 必须：
 
-## 15. Filter Packs
+- 识别当前 handle
+- 有 timeout
+- 有 error reason
+- 不成功不假装成功
+- 中文 / 英文至少有 fixture
 
-官方不维护一个覆盖所有偏好的“宇宙总黑名单”。
+验收：
+
+- 用户显式触发一次 Block 能稳定完成
+- 页面 DOM 不匹配时安全失败
+- 不读取 Cookie / OAuth Token
+
+## 5. Phase 3 — Community Snapshot Consumer
+
+此阶段可以先没有社区写入后端。
+
+实现：
+
+```text
+community/lists/manifest.json
+community/lists/recommended.json
+```
+
+Extension：
+
+- 定期读取 manifest
+- 版本变化才下载 snapshot
+- schema validate
+- checksum verify（生成流程完成后启用）
+- 本地 index
+- 网络失败使用 last-known-good snapshot
+
+第一版社区模式：
+
+- 清爽：Strong
+- 标准：Strong hide + Recommended collapse
+- 大扫除：Recommended / Strong hide，Candidate collapse
+
+验收：
+
+> 一个全新安装、没有任何用户自定义规则的 FeedSieve，也可以因为公开名单立刻产生过滤效果。
+
+## 6. Phase 4 — Community Contribution Backend
 
 推荐：
 
 ```text
-Bot Spam
-Copy-paste Replies
-AI Slop
-Crypto Scam
-Adult / Gray Traffic Spam
-Engagement Bait
+Cloudflare Worker
++ Hono
++ D1
 ```
 
-以后第三方可以发布自己的 Pack。
-
-用户自己选择订阅。
-
-核心原则：
-
-> **Hide garbage, not opinions.**
-
----
-
-## 16. Native Action Queue
-
-FeedSieve Local Hide 可以瞬间启用整个 Community List。
-
-但是把清单同步成 X 原生 Block/Mute 时，必须排队。
-
-```ts
-type QueueItem = {
-  action: 'block_account' | 'mute_account' | 'unblock_account' | 'unmute_account';
-  handle: string;
-  accountId?: string;
-  status: 'pending' | 'running' | 'success' | 'failed' | 'skipped';
-  attempts: number;
-  error?: string;
-};
-```
-
-默认串行执行，因为 X 的 Dropdown / Dialog / SPA 状态不能安全并发。
-
-用户界面：
+API：
 
 ```text
-福滤娃正在大扫除
-37 / 387
-
-@spam001   已抬走
-@spam002   已抬走
-@spam003   失败
-@spam004   正在处理
-
-[暂停] [停止]
+POST /v1/reports
+POST /v1/rescues
+GET  /v1/snapshots/latest
 ```
 
-连续出现 X UI 结构错误、Challenge 或需要用户操作时，自动暂停。
+Report 只在用户明确点击“贡献给社区”时发送。
 
-不实现绕过平台验证或隐藏自动化行为的功能。
+不上传完整浏览历史。
 
----
-
-## 17. FeedSieve Hide 与 X Block 的区别
-
-### 一键启用社区清单
-
-默认推荐：
+后端最低数据：
 
 ```text
-Community JSON
-   ↓
-Local Cache
-   ↓
-Filter Engine
-   ↓
-Hide / Collapse
+accounts
+account_aliases
+reporters
+votes
+snapshots
 ```
 
-特点：瞬时、可撤销、不修改 X 账号状态。
+必须实现：
 
-### 同步到 X
+- idempotency
+- rate limit
+- 一个 installation 对同目标一个当前有效意见
+- reason enum
+- basic burst detection
 
-用户显式触发：
+验收：
+
+- 同一用户重复点不会无限加票
+- Report / Rescue 可以相互覆盖
+- 数据库可以重新计算账号状态
+
+## 7. Phase 5 — Open Reputation Pipeline
+
+目标：真正形成“公开透明的黑名单”。
+
+Policy：
 
 ```text
-User confirms
-   ↓
-Native Action Queue
-   ↓
-X Browser UI
-   ↓
-Block / Mute
+community/policy/v1.yaml
 ```
 
-一句话：
-
-> **Hide 是 FeedSieve 的基础能力；Block / Mute 是 FeedSieve 帮用户操作 X 的增强能力。**
-
----
-
-## 18. Community API 的职责边界
-
-Community API 只负责：
-
-- reports
-- rescue votes
-- reporter trust
-- entity reputation
-- snapshots
-- changelog
-
-它不负责：
-
-- 保存用户 X 登录状态
-- 保存 X Cookie
-- 保存 X OAuth Token
-- 替用户调用 X Block API
-
-因此服务器被攻破时，也不应该存在用户的 X 登录凭证可泄露。
-
----
-
-## 19. X 改版测试
-
-维护 Fixture：
+默认：
 
 ```text
-fixtures/x/
-├── timeline/
-├── replies/
-├── search/
-├── post-menu/
-├── block-dialog/
-├── mute-state/
-└── account-page/
+>= 5 independent reports -> candidate
+score + time spread -> recommended
+higher score + lower rescue -> strong
 ```
 
-测试层：
+生成：
 
-- Locator Unit Test
-- Filter Engine Unit Test
-- Queue State Test
-- Extension + Mock DOM Integration
-- 每个 Release Manual Smoke Test
+```text
+DB
+ ↓
+Open Scoring
+ ↓
+YAML Snapshot
+ ↓
+Schema Validation
+ ↓
+Deterministic JSON
+ ↓
+Checksum
+ ↓
+Git / Release
+```
 
-X 改版时优先修 `x-adapter`。
+公开字段：
 
----
+- handle
+- optional x_user_id
+- aliases
+- category
+- status
+- community_score
+- report_count
+- rescue_count
+- first_seen_at
+- updated_at
+- optional evidence_post_ids
 
-## 20. MVP 开发顺序
+验收：
 
-### v0.1 — 能滤
+- 任意人可以仅从 GitHub 看懂某账号为什么进入名单
+- JSON 可以从 YAML 确定性生成
+- Policy 改动有 Git Diff
 
-- WXT Extension
-- X Reader
-- Keyword / Regex
-- Personal Block / Allow List
-- Inline Hide / Show
-- 一键“抬走”
-- Local Stats
+## 8. Phase 6 — Native Action Queue
 
-### v0.2 — 会共创
+这一阶段才做批量 X 原生操作。
 
-- Community API
-- YAML / JSON Pipeline
-- Candidate / Recommended / Strong
-- Reporter Trust
-- Rescue
-- Community Packs
-- Local community snapshot
+研究 PureTwitter / Twitter-Block-Porn 后确认：批量动作必须作为一个**持久化队列系统**实现，而不是 `for (...) click()`。
 
-### v0.3 — 会操作 X
+Queue 要求：
 
-- Block Action
-- Mute Action
-- Unblock / Unmute
-- Native Action Queue
-- 批量同步进度 UI
+```text
+pending
+running
+success
+failed
+cancelled
+```
 
-### v0.4 — 会认
+必须：
 
-- Content Fingerprint
-- Domain Reputation
-- Campaign Reputation
-- Optional AI
+- 用户显式启动
+- 显示进度
+- 暂停
+- 恢复
+- 取消
+- 页面反馈后再进入下一项
+- 验证 / 登录异常立即停
+- Manifest V3 service worker 被回收后状态不丢
 
-### v0.5 — 会整活
+默认“一键启用社区清单”仍然只是 Local Hide。
+
+Native Block Sync 是高级可选能力。
+
+## 9. Phase 7 — Fingerprint + Domain Reputation
+
+Pure account list 有天然缺点：垃圾号会不断换号。
+
+加入：
+
+### Content Fingerprint
+
+```text
+normalize text
+-> URL / mention placeholder
+-> deterministic fingerprint
+```
+
+先 exact normalized fingerprint，后续再做 SimHash / MinHash。
+
+### Domain
+
+当能从 DOM 稳定拿到目标 URL 时记录 hostname。
+
+长期实体：
+
+```text
+Account
+Fingerprint
+Domain
+Campaign
+```
+
+验收：新垃圾账号复制已知垃圾模板时，能够被模板规则识别。
+
+## 10. Phase 8 — Optional AI
+
+到这里才加入 AI。
+
+AI 用于：
+
+- 隐蔽 AI slop
+- 软广告
+- 语义型 engagement bait
+- 自然语言个人偏好
+
+AI 不处理：
+
+- 已知 Personal Block
+- Strong Community Account
+- 明确 Keyword / Regex
+- 已知 Fingerprint
+
+必须有 Decision Cache。
+
+## 11. Phase 9 — Growth
 
 - 今日战报
-- 注意力节省估算
-- 分享卡片
-- 社区增长机制
+- 估算“替你少看了多少垃圾时间”
+- X 分享卡片
+- Filter Pack 订阅生态
+- Third-party Packs
+- PureTwitter / 外部列表导入
 
----
+## 12. v0.1 的明确范围
 
-## 21. 最终定位
+v0.1 **不要等后端**。
 
-FeedSieve 最终不是一个简单的“关键词屏蔽插件”。
+发布条件：
 
-它应该形成：
+- Chrome / Edge
+- Home Timeline
+- Replies
+- Account allow/block
+- Keyword / Regex
+- 抬走
+- Collapse / Hide
+- 我偏要看
+- 为什么
+- 本地统计
+- 单账号“顺手拉黑”
+- Reader fixtures
+- Filter Engine unit tests
 
-```text
-Open Filter Engine
-+
-Open Reputation Graph
-+
-Open Filter Pack Ecosystem
-+
-Browser-native X Actions
-+
-Optional AI
-```
+做到这一点就发第一个版本。
 
-最终一句话：
+## 13. 竞争产品带来的实施原则
 
-> **Filter Engine 决定“要不要看”；X Action Adapter 帮用户完成“要不要在 X 本身也处理掉”；Community 让一个人踩过的坑，后面的人不用再踩。**
+### PureTwitter
+
+证明：
+
+- Keyword + Blacklist 有真实价值
+- 用户需要共享名单
+- 用户强烈在意误杀
+
+因此 FeedSieve 必须把：
+
+- Allowlist precedence
+- Explainability
+- Rescue
+- Open List
+
+作为基础能力。
+
+### Twitter-Block-Porn
+
+证明：
+
+- GitHub JSON 名单能实际工作
+- 批量 Block 有真实需求
+- Queue / progress / incremental update 是必须的
+
+因此 FeedSieve：
+
+- 用 GitHub / CDN 发布 Snapshot
+- Native batch action 必须 Queue 化
+- 只对新增 Snapshot entry 生成可选同步任务
+
+## 14. 开工前不要再改的核心决策
+
+除非实测证明不可行，以下先冻结：
+
+1. WXT + TypeScript + React
+2. Filter Engine 独立 package
+3. X Reader / Action Adapter 独立 package
+4. Local Hide 是核心
+5. Browser-native X actions，不以 OAuth 为主
+6. Community Snapshot 本地查询
+7. YAML source + JSON runtime
+8. `handle` required / `x_user_id` optional
+9. Community Policy 公开 YAML
+10. AI 最后接入
+
+先把 v0.1 跑起来，再根据真实 X DOM 和用户数据调整。
