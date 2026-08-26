@@ -6,7 +6,7 @@ FeedSieve 不只开源浏览器插件代码。
 
 > **Open Code + Open Rules + Open Lists + Open Governance**
 
-也就是：前端开源、后端开源、过滤规则开源、社区名单公开、评分逻辑公开、名单变更可追踪。
+也就是：前端开源、后端开源、识别规则开源、社区名单公开、评分逻辑公开、名单变更可追踪。
 
 透明不是附加功能，而是 FeedSieve 与传统平台黑箱审核机制的重要区别。
 
@@ -15,19 +15,19 @@ FeedSieve 不只开源浏览器插件代码。
 计划公开：
 
 - Browser Extension
-- Filter Engine
+- Block Engine（Detector + Block Queue）
 - X Adapter
 - Community API
 - Community Score 算法
 - Reporter Trust 算法
-- Filter Pack 定义
-- JSON 社区过滤名单
+- Block Pack 定义
+- JSON 社区名单
 - JSON Schema
 - 生成名单的脚本
 - CI 校验规则
 - 名单变更记录
 
-原则上，任何会影响“为什么某个账号被过滤”的核心逻辑，都应该能被社区查看和讨论。
+原则上，任何会影响“为什么某个账号被标注 / 进入名单”的核心逻辑，都应该能被社区查看和讨论。
 
 ## 2. 公开名单不是一个神秘黑盒
 
@@ -129,7 +129,7 @@ community/
 - 原始匿名设备标识
 - 可以反推出举报者身份的敏感数据
 
-透明针对的是 **过滤决策**，不是举报者隐私。
+透明针对的是 **标注与名单决策**，不是举报者隐私。
 
 ## 6. 名单最好由程序生成
 
@@ -163,7 +163,7 @@ Extension downloads snapshot
 - 谁修改了什么可以追踪
 - 可以通过 Issue / PR 讨论误判
 - 可以 Fork
-- 可以建立第三方 Filter Pack
+- 可以建立第三方 Block Pack
 - 社区可以独立审计
 
 未来还可以给每个名单版本生成 SHA-256 checksum / signature，扩展只加载通过校验的快照。
@@ -175,7 +175,7 @@ FeedSieve 不应该只有“加入黑名单”。
 同样重要的是：
 
 - Rescue Vote
-- Whitelist
+- 本地撤销（放回来）
 - Appeal
 - Removal
 - Score decay
@@ -186,7 +186,7 @@ FeedSieve 不应该只有“加入黑名单”。
 
 ## 9. 不把观点变成垃圾标签
 
-社区默认 Filter Packs 应优先处理相对客观的模式：
+社区默认 Block Packs 应优先处理相对客观的模式：
 
 - Bot spam
 - Scam / phishing
@@ -197,13 +197,13 @@ FeedSieve 不应该只有“加入黑名单”。
 
 政治立场、价值观、兴趣领域、语言偏好等高度主观内容，不应进入默认全球名单。
 
-这些更适合 Personal Rules 或用户主动订阅的第三方 Filter Pack。
+这些更适合用户主动订阅的第三方 Block Pack。
 
 ## 10. FeedSieve 的治理目标
 
 FeedSieve 不需要成为“互联网法官”。
 
-它只需要把过滤过程做到：
+它只需要把标注与拉黑过程做到：
 
 - 用户可控
 - 算法可解释

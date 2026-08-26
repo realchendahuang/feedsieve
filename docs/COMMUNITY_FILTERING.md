@@ -4,7 +4,7 @@
 
 FeedSieve 不应该只是每个用户各自维护一套关键词和黑名单。
 
-更有价值的方向，是把用户每天主动“抬走”的垃圾账号沉淀为一个 **Community Filter Network**：
+更有价值的方向，是把用户每天主动拉黑的垃圾账号沉淀为一个 **Community Network**：
 
 > **一个人发现垃圾，所有人都可以少看一次。**
 
@@ -18,13 +18,11 @@ FeedSieve 不应该只是每个用户各自维护一套关键词和黑名单。
 
 在 X 推文 / 账号旁提供极简动作：
 
-- `抬走这个账号`
-- `这条还能抢救`
-- `自己人，别开枪`
+- `顺手拉黑`（原生 Block）
+- `放回来`（原生 Unblock）
+- `这条还能抢救`（Community Rescue Vote）
 
-当用户点击“抬走”时，先立即加入 Personal Blocklist。
-
-然后用户可以选择是否贡献社区信号。
+拉黑成功后，用户可以选择是否把这次识别贡献给社区。
 
 推荐原因：
 
@@ -71,11 +69,11 @@ higher score + longer spread + low rescue
 
 [`../community/policy/v1.yaml`](../community/policy/v1.yaml)
 
-用户过滤强度：
+用户标注强度：
 
-- 清爽：Strong
-- 标准：Strong hide + Recommended collapse
-- 大扫除：Recommended / Strong hide，Candidate collapse
+- 清爽：仅 Strong 名单命中标注
+- 标准：Strong + Recommended 标注
+- 大扫除：Strong + Recommended + Candidate 标注
 
 ---
 
@@ -138,13 +136,13 @@ v1 原则：
 
 ## 6. Rescue / Appeal
 
-`我偏要看` 不等于 Rescue。
+`放回来` 不等于 Rescue。
 
 区别：
 
 ```text
-我偏要看
--> local temporary reveal
+放回来
+-> 本地原生 Unblock，恢复误伤
 -> 不上传社区
 
 这条还能抢救
@@ -158,7 +156,7 @@ v1 原则：
 - Rescue
 - Appeal
 - Removal
-- Personal Allowlist
+- 本地撤销（放回来）
 - Score decay（后续）
 
 名单不是永久刑罚。
@@ -189,11 +187,11 @@ Engagement Bait
 - 兴趣领域
 - 语言偏好
 
-默认留在 Personal Rules 或第三方可选 Pack。
+默认留在第三方可选 Pack。
 
 核心原则：
 
-> **Hide garbage, not opinions.**
+> **Block garbage, not opinions.**
 
 ---
 
@@ -222,42 +220,37 @@ aliases      optional
 
 ---
 
-## 9. 一键启用社区名单 ≠ 批量 X Block
+## 9. 名单命中标注 ≠ 批量 X Block
 
 这是一个非常重要的产品边界。
 
-### 默认：FeedSieve Local Filter
+### 默认：黄框标注
 
-用户点击：
-
-> **一键启用社区清单**
-
-实际行为：
+名单命中的账号：
 
 ```text
 Community Snapshot
 -> local index
--> Timeline hide / collapse
+-> Detector 黄框标注（带理由）
 ```
 
 优点：
 
 - 瞬时生效
-- 可撤销
+- 零风险（不修改用户 X Block List）
 - 不需要 X API
 - 不需要 OAuth
-- 不修改用户 X Block List
 - 平台页面结构临时变化时，Community 数据仍然存在
 
-### 可选：Native X Sync
+### 用户显式启动：批量拉黑
 
-用户另外选择：
+用户按下：
 
-> **同步部分社区账号到 X Block / Mute**
+> **一键批量拉黑**
 
 才通过 X Action Adapter 执行浏览器页面动作。
 
-批量 Sync 必须使用 Native Action Queue，详见：
+批量拉黑必须使用 Block Queue，详见：
 
 [`X_ACTION_ADAPTER.md`](X_ACTION_ADAPTER.md)
 

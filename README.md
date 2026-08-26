@@ -6,40 +6,48 @@
 
 > **不信你看。看不见就对了。**
 
-**FeedSieve / 福滤娃** 是一个专门清理 X（Twitter）垃圾信息的开源工具。
+**FeedSieve / 福滤娃** 是一个专门清理 X（Twitter）垃圾账号的开源工具：在你已登录的 `x.com` 页面上，自动识别垃圾账号并用黄框标注，你按一下按钮，它就把它们**批量真拉黑**。
 
-机器人刷屏、复制粘贴、色情引流、广告轰炸、互动钓鱼、低质量 AI 灌水和币圈老师，刚开口就被抬走。
+机器人刷屏、色情引流、广告轰炸、互动钓鱼、币圈老师——拉黑发生在 X 服务器上：**手机端同步消失，被拉黑的号再也无法回复你、@ 你、关注你。**
 
-你还没看见，它已经没了。
-
-**X 赛博清洁工。**
+**X 赛博清洁工。看不到之前，先送走。**
 
 ## What is FeedSieve?
 
-FeedSieve is an open-source X feed cleaner for bot spam, copy-paste replies, engagement bait and other things you were never supposed to see.
+FeedSieve is an open-source X spam account cleaner: it detects spam accounts on your logged-in `x.com` page, marks them with a yellow box, and batch-blocks them through X's native UI — on your explicit click.
 
 The technical rule is simple:
 
-> **Local first. Community second. AI third. Browser-native actions when needed.**
+> **可见优先，拉黑唯一。Local detect. Community list. AI last. Native Block through the page.**
 
-明显垃圾先本地处理；社区已经认识的垃圾不需要再问模型；AI 只处理模糊情况；需要 X 原生 Block / Mute 时，浏览器插件直接辅助用户在当前已登录页面中完成。
+黄框标注永不隐藏内容；社区公开名单提供识别弹药；AI 只识别模糊案例；所有拉黑通过用户已登录页面的原生菜单完成，不依赖 X API。
 
-## 为什么做它
+## 为什么是「拉黑」而不是「隐藏」
 
-X 的问题已经不只是“信息太多”，而是越来越多内容根本不值得进入你的注意力：
+| 方案 | 生效范围 | 阻断互动 |
+| --- | --- | --- |
+| 本地隐藏 | 只有装了插件的这个浏览器 | 不能 |
+| X 原生 Block | 全端（手机同步消失） | 能（无法再回复 / @ / 关注） |
 
-- 机器人批量刷屏
-- 复制粘贴式回复
-- Engagement bait / 互动钓鱼
-- 色情与灰产引流
-- 广告轰炸
-- 低质量 AI 灌水
-- 重复内容和模板化账号
-- 你明确不想再看到的人、关键词和话术
+隐藏是自欺欺人，拉黑才是真清理。误伤也不用怕：**原生 Unblock 一键放回。**
 
-FeedSieve 想做的事情很简单：
+## 产品怎么用
 
-> **先把垃圾抬走，再把注意力还给你。**
+```text
+刷 X
+  ↓
+垃圾账号被黄框标注（带理由：名单命中 / 疑似机器人 / 垃圾链接）
+  ↓
+标注账号进入「待拉黑列表」（Popup 可查看、可移除）
+  ↓
+按下「一键拉黑 N 个」
+  ↓
+Block Queue 通过 X 原生菜单逐个执行（进度 / 暂停 / 恢复）
+  ↓
+完成：已送走 N 个，手机端已同步
+```
+
+单账号场景：看到垃圾号，点「顺手拉黑」。误伤场景：一键「放回来」。
 
 ## 品牌定位
 
@@ -50,18 +58,16 @@ FeedSieve 想做的事情很简单：
 | GitHub | `feedsieve` |
 | 产品定位 | X 赛博清洁工 |
 | 核心口号 | **不信你看。看不见就对了。** |
-| 辅助口号 | **没有人比福滤娃更懂过滤。** |
-| 人设 | 常年混迹 X 垃圾区，什么黑话都懂，垃圾号刚开口就被它抬走 |
+| 辅助口号 | **没有人比福滤娃更懂清理。** |
+| 人设 | 常年混迹 X 垃圾区，什么黑话都懂，垃圾号刚开口就被它送走 |
 
 ## 产品形态与长期定位
 
 第一阶段优先做 Chrome / Edge / Chromium 浏览器扩展，后续再支持 Firefox / Safari。
 
-用户不需要换 X 客户端。FeedSieve 直接作用于 Home Timeline、Replies、Search 等原生页面，在垃圾内容进入视野前完成折叠或隐藏。
+但浏览器插件只是产品外壳，真正长期维护的是独立 **Block Engine（Detector + Block Queue）**。
 
-但浏览器插件只是产品外壳，真正长期维护的是独立 Filter Engine。
-
-> **产品形态：浏览器插件。技术本体：Filter Engine。第一战场：X。长期方向：用户自己的互联网注意力过滤层。**
+> **产品形态：浏览器插件。技术本体：Block Engine。第一战场：X。长期方向：用户自己的垃圾账号防御网络。**
 
 详细定位见 [`docs/VISION.md`](docs/VISION.md)。
 
@@ -73,99 +79,48 @@ x.com
   ├── X Reader Adapter ──> FeedItem
   │                           │
   │                           v
-  │                    Filter Engine
-  │                ┌──────────┼──────────┐
-  │                │          │          │
-  │             Personal   Community   Optional AI
-  │                │          │
-  │                └──── Decision ──────┘
-  │                           │
-  │                  KEEP / COLLAPSE / HIDE
-  │
-  └── X Action Adapter ──> user-initiated Block / Mute
+  │                      Detector
+  │                 ┌─────────┼─────────┐
+  │                 │         │         │
+  │            Community  Heuristic  Optional AI
+  │                 │
+  │            黄框标注（带理由，不隐藏）
+  │                 │
+  │            待拉黑列表（持久，可增删）
+  │                 │
+  └── X Action Adapter <── Block Queue（用户按下「一键拉黑」）
+                            │
+                      原生 Block / Unblock
+                      全端生效 + 阻断互动
 ```
 
-### Layer 0 — User Override
+### 识别来源分层
 
-用户自己的明确选择优先级最高：
+**Layer 1 — 社区名单**：本地快照查询，Strong / Recommended / Candidate 分级命中。
+
+**Layer 2 — 本地启发式**：机器人账号特征（默认名 + 随机数字）、垃圾域名链接、模板化文本。
+
+**Layer 3 — Optional AI**：只识别前两层拿不准的模糊案例。没有 AI Key，FeedSieve 也必须完整可用。
+
+### 分层原则
+
+标注永远不隐藏内容；拉黑永远由用户显式触发。
+
+## 一键批量拉黑怎么做
 
 ```text
-Personal Allowlist
-> Personal Blocklist
-> Local Rules
-> Community Reputation
-> Optional AI
+用户按下「一键拉黑 N 个」
+   ↓
+Block Queue 持久化全部任务
+   ↓
+逐项通过 X 原生菜单执行 Block
+   ↓
+验证页面成功反馈后再进入下一项
+   ↓
+进度 / 暂停 / 恢复 / 取消
 ```
 
-### Layer 1 — Local Rules
-
-本地完成：
-
-- Account Allow / Block
-- Keyword
-- Exact phrase
-- Regex
-- 后续 Domain
-- 后续 Content Fingerprint
-
-快、免费、离线可用。
-
-### Layer 2 — Community Reputation
-
-用户可以一键“抬走”垃圾账号，并选择匿名贡献给社区。
-
-社区不是简单的 5 人永久黑名单：
-
-```text
->= 5 independent reports -> Candidate
-score + time spread       -> Recommended
-higher trust + low rescue -> Strong
-```
-
-阈值公开在 [`community/policy/v1.yaml`](community/policy/v1.yaml)。
-
-> **一个人发现垃圾，所有人都可以少看一次。**
-
-详细设计见 [`docs/COMMUNITY_FILTERING.md`](docs/COMMUNITY_FILTERING.md)。
-
-### Layer 3 — Optional AI
-
-只处理前两层无法可靠判断的模糊内容：
-
-- AI slop
-- 软广告
-- 隐蔽 engagement bait
-- 自然语言个人过滤偏好
-
-没有 AI Key，FeedSieve 也必须完整可用。
-
-## X 原生 Block / Mute 怎么做
-
-FeedSieve 是运行在用户已登录 `x.com` 页面里的浏览器插件。
-
-因此默认路线不是 X OAuth / Developer API，而是：
-
-> **Read the page. Filter locally. Act through the page.**
-
-例如：
-
-```text
-用户点「抬走」
-   ↓
-FeedSieve Local Hide
-   ↓
-可选「顺手拉黑」
-   ↓
-X Action Adapter 打开 X 原生菜单
-   ↓
-Block
-   ↓
-确认页面结果
-```
-
-批量原生动作以后使用持久化 Native Action Queue，不做简单 for-loop。
-
-详见 [`docs/X_ACTION_ADAPTER.md`](docs/X_ACTION_ADAPTER.md)。
+批量原生动作必须走持久化队列，绝不做 `for (...) click()`。详见 [`docs/X_ACTION_ADAPTER.md`](docs/X_ACTION_ADAPTER.md)。
 
 ## 开源的不只是代码
 
@@ -176,7 +131,7 @@ FeedSieve 希望做到：
 公开范围包括：
 
 - Browser Extension
-- Filter Engine
+- Block Engine（Detector + Block Queue）
 - X Adapter
 - Community Backend
 - Community Score / Policy
@@ -257,28 +212,25 @@ Schema：[`community/schema/account-list.schema.json`](community/schema/account-
 
 ## Roadmap
 
-### v0.1 — 能真正用
+### v0.1 — 能真正拉黑
 
 - Chrome / Edge
-- Home Timeline / Replies
-- Account Allow / Block
-- Keyword / Regex
-- 抬走
-- Hide / Collapse
-- 我偏要看
-- 为什么
+- Home Timeline / Replies / Search 基础
+- 黄框标注（内置名单 + 启发式，带理由）
+- 待拉黑列表（持久、可增删）
+- 一键批量拉黑（Block Queue）
+- 单账号顺手拉黑
+- 一键撤销（Unblock）
 - 本地统计
-- 单账号「顺手拉黑」
-- X DOM fixtures
-- Filter Engine tests
+- X DOM fixtures + Detector / Queue 单测
 
 ### v0.2 — Community Snapshot
 
 - Manifest
 - YAML / JSON List
 - Local Community Index
-- Filter strength
-- Filter Pack foundation
+- 标注强度（清爽 / 标准 / 大扫除）
+- Block Pack 基础
 
 ### v0.3 — Community Contribution
 
@@ -288,20 +240,23 @@ Schema：[`community/schema/account-list.schema.json`](community/schema/account-
 - Candidate / Recommended / Strong
 - Open Snapshot pipeline
 
-### v0.4 — Native Action Queue
+### v0.4 — 垃圾网络识别
 
-- Persistent queue
-- Progress
-- Pause / Resume / Cancel
-- Incremental Native Sync
+- Content Fingerprint
+- Domain Reputation
+- Account / Fingerprint / Domain / Campaign
 
-### v0.5 — Fingerprint / Domain
-
-从“垃圾账号名单”升级成“垃圾网络识别”。
-
-### v0.6 — Optional AI
+### v0.5 — Optional AI
 
 最后再接 AI。
+
+### v0.6 — 生态与增长
+
+- 今日战报
+- 分享卡片
+- Third-party Block Pack
+- Firefox / Safari
+- 更多平台 Adapter
 
 完整路线见 [`docs/ROADMAP.md`](docs/ROADMAP.md)。
 
@@ -309,33 +264,31 @@ Schema：[`community/schema/account-list.schema.json`](community/schema/account-
 
 | 使用场景 | 文案 |
 | --- | --- |
-| 开始检测 | 正在鉴定这条推文的成分 |
-| 确认垃圾 | 这条味儿不对，抬走 |
-| 隐藏成功 | 已滤，别看了 |
-| 用户想恢复 | 你非看不可？ |
-| 恢复按钮 | 我偏要看 |
-| 加入白名单 | 自己人，别开枪 |
-| 加入黑名单 | 下次见一次抬一次 |
+| 检测标注 | 这个号味儿不对，框起来 |
+| 黄框标签 | 疑似垃圾：名单命中 |
+| 一键拉黑 | 送走 N 个 |
+| 拉黑成功 | 已送走，全端清净 |
+| 撤销误伤 | 拉错了？放回来 |
 | 误判反馈 | 这条还能抢救 |
-| 今日无垃圾 | 今天的 X 居然挺像人 |
-| 过滤统计 | 今日替你遭罪 38 条 |
+| 待拉黑列表空 | 今天的 X 居然挺像人 |
+| 过滤统计 | 今日替你送走 38 个垃圾号 |
 
 更多品牌语言见 [`docs/BRAND.md`](docs/BRAND.md)。
 
 ## 福滤娃今日战报
 
-> **福滤娃今日战绩**  
-> 替你看了 428 条推文  
-> 抬走机器人 31 个  
-> 过滤复制怪 22 条  
-> 请走色情引流 18 条  
-> 送走币圈老师 7 位  
+> **福滤娃今日战绩**
+> 替你看了 428 条推文
+> 标注垃圾号 45 个
+> 送走机器人 31 个
+> 请走色情引流 18 条
+> 送走币圈老师 7 位
 >
 > **我的眼睛脏了，你的没有。**
 
 增长循环：
 
-**过滤 → 统计 → 分享 → 新用户 → 社区信号 → 过滤更准**
+**拉黑 → 统计 → 分享 → 新用户 → 社区信号 → 识别更准**
 
 ## 推荐技术栈
 
@@ -351,25 +304,25 @@ Schema：[`community/schema/account-list.schema.json`](community/schema/account-
 
 ## 产品原则
 
-### Local-first
+### 可见优先，拉黑唯一
 
-能在本地判断的，不上传。
+插件永不隐藏内容。它只做两件事：认出垃圾（黄框），执行拉黑（队列）。
 
 ### Community is opt-in
 
-只有用户主动贡献的过滤信号才进入社区系统。
+只有用户主动贡献的识别信号才进入社区系统。
 
-### Explainable filtering
+### Explainable blocking
 
-用户应该知道一条内容为什么被隐藏。
+每个黄框都有理由，用户应该知道为什么这个号被标注。
 
 ### User controls the filter
 
-福滤娃可以嘴损，但不能替用户永久做主。
+福滤娃只负责标注，拉黑永远由用户按下按钮。
 
-### Hide garbage, not opinions
+### Block garbage, not opinions
 
-过滤垃圾模式，而不是替用户决定观点正确与否。
+清理垃圾账号，而不是替用户决定观点正确与否。
 
 ## 开发从这里开始
 

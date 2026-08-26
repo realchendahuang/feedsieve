@@ -2,84 +2,102 @@
 
 ## 核心定位
 
-FeedSieve 的第一产品形态是 **浏览器扩展**，但浏览器扩展只是它最先落地的产品外壳。
+FeedSieve 的第一产品形态是 **浏览器扩展**，真正的技术本体是一个独立的 **Block Engine**：
 
-真正应该长期维护的核心，是一个独立的 **Filter Engine（过滤引擎）**。
+> **Detector（识别标注）+ Block Queue（拉黑队列）。**
 
 一句话：
 
-> **产品形态：浏览器插件。技术本体：Filter Engine。第一战场：X。长期方向：用户自己的互联网注意力过滤层。**
+> **产品形态：浏览器插件。技术本体：Block Engine。第一战场：X。长期方向：属于自己的垃圾账号防御网络。**
+
+## 为什么是「拉黑」而不是「过滤」
+
+本地隐藏类方案（Hide / Collapse）有两个无法回避的硬伤：
+
+1. **只在本浏览器生效**：手机端、其他设备上的垃圾内容原样存在，属于自欺欺人。
+2. **不妨碍对方继续骚扰**：内容虽然看不见了，垃圾账号依然可以回复你、@ 你、关注你。
+
+X 原生 Block 是账号级、服务器端的动作：
+
+- **全端生效**：在桌面插件里拉黑一个号，手机端同步消失。
+- **阻断互动**：被拉黑的账号无法再回复你、@ 你、关注你。
+
+因此 FeedSieve 的核心价值不是「帮你看不见」，而是「帮你真正送走」。
+
+## 产品循环
+
+```text
+刷 X
+  ↓
+Detector 黄框标注垃圾账号（带理由，什么都不隐藏）
+  ↓
+标注账号进入「待拉黑列表」（持久，可增删）
+  ↓
+用户按下「一键批量拉黑」
+  ↓
+Block Queue 通过 X 原生菜单逐个执行 Block
+  ↓
+全端生效 + 阻断互动
+```
+
+## 可见优先，拉黑唯一
+
+- 插件**永不隐藏任何内容**。标注阶段一切原样可见，只有黄框和理由。
+- 插件只做两件事：**认出垃圾**（黄框标注），**执行拉黑**（原生 Block 队列）。
+- 每个 Block 都由用户显式触发；插件只是代点原生菜单。
+- 误伤可撤销：原生 Unblock 一键放回。
+
+「不信你看。看不见就对了。」不是隐藏的承诺，而是拉黑之后的结果。
 
 ## 为什么第一阶段是浏览器插件
 
-FeedSieve 解决问题的最佳时机，是垃圾信息准备进入用户视野的那一刻。
+FeedSieve 解决问题的最佳姿势，是直接作用于用户已登录的 `x.com` 页面：
 
-用户不需要换掉 X，不需要复制链接到另一个 App，也不需要学习一个新的客户端。照常打开 `x.com`，FeedSieve 在原生页面上完成过滤即可。
-
-这和品牌口号天然闭环：
-
-> **不信你看。看不见就对了。**
-
-浏览器扩展的优势：
-
-- 直接作用于 X Home Timeline / Replies / Search
-- 不要求用户迁移到第三方 X 客户端
-- 可以在内容进入视野前折叠或隐藏
-- 本地规则延迟低、隐私友好
+- 用户不需要换 X 客户端，不需要复制链接到另一个 App
+- X 原生 Block 通过页面菜单即可完成，不需要 X API / OAuth
 - 安装成本低，适合开源传播
-- 可以逐步扩展到 Chrome / Edge / Firefox / Safari
+- 可以先支持 Chrome / Edge，再扩展到 Firefox / Safari
 
 ## 真正的技术本体
-
-核心过滤逻辑不应该写死在 X DOM 或 Chrome Extension 中。
-
-建议拆分为：
 
 ```text
 FeedSieve
 │
-├── Filter Engine
-│   ├── Keyword / Regex Rules
-│   ├── Account Rules
-│   ├── Community Reputation
-│   ├── Spam / Duplicate Detector
-│   ├── Optional AI Classifier
-│   └── User Preference
+├── Block Engine（技术本体）
+│   ├── Detector — 识别标注（名单 + 启发式 + 未来指纹 / AI）
+│   └── Block Queue — 持久化拉黑队列（进度 / 暂停 / 恢复 / 撤销）
 │
 ├── X Adapter
-│   ├── Timeline
-│   ├── Replies
-│   └── Search
+│   ├── Reader（Timeline / Replies / Search）
+│   └── Action（原生 Block / Unblock）
 │
 ├── Browser Extension
-│   ├── Popup
-│   ├── Options
-│   └── Inline UI
+│   ├── 黄框标注 UI
+│   ├── Popup（待拉黑列表 / 今日战报）
+│   └── Options（名单 / 启发式 / 强度）
 │
-├── Community Filter Network
-│   ├── Reports
+├── Community Network
+│   ├── Reports / Rescue
 │   ├── Trust Score
-│   ├── Shared Lists
-│   └── Filter Packs
+│   ├── 公开名单（YAML / JSON）
+│   └── Block Packs
 │
 └── Share
-    └── 福滤娃今日战报
+    └── 福滤娃今日战报（今日送走 N 个）
 ```
 
 ## 长期方向
 
-今天 FeedSieve 先解决 X 的垃圾信息。
+今天 FeedSieve 先解决 X 的垃圾账号。
 
-未来同一套 Filter Engine 可以适配更多信息流和评论区，而不需要重做过滤核心。
+未来同一套 Block Engine 可以适配更多平台的评论区和信息流（YouTube、Instagram、Reddit…），而不需要重做识别和队列核心。
 
-因此长期定位可以理解为：
+长期定位：
 
-> **Personal Attention Filter — 属于用户自己的互联网注意力过滤层。**
+> **属于自己的垃圾账号防御网络。**
 
-但对外传播第一阶段不要讲得太大。
+对外传播第一阶段不要讲得太大，第一枪只讲：
 
-第一枪只讲：
-
-> **福滤娃 FeedSieve：把 X 的垃圾抬走。**
+> **福滤娃 FeedSieve：把 X 的垃圾账号送走。**
 
 先把一个问题做到非常好，再向外扩展。

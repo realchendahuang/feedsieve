@@ -9,20 +9,21 @@ FeedSieve 不做成一个依赖 X API 的第三方客户端。
 
 总原则：
 
-> **Local first. Community second. AI third. Browser-native actions when needed.**
+> **可见优先，拉黑唯一。Local detect. Community list. AI last. Native Block through the page.**
 
 具体决定：
 
 - 浏览器插件是第一产品形态
-- `filter-engine` 是技术本体
+- `Block Engine` 是技术本体 = Detector（识别标注）+ Block Queue（拉黑队列）
 - `x-adapter` 同时包含 Reader Adapter 和 Action Adapter
-- FeedSieve 自己的 Hide / Collapse 永远本地优先
-- X 原生 Block / Mute 通过用户当前已登录的网页完成
+- 产品**不做任何 Hide / Collapse**。一切保持可见，直到用户按下拉黑
+- X 原生 Block / Unblock 通过用户当前已登录的网页完成
+- 所有批量动作由持久化 Block Queue 执行，绝不做 for-loop 点击
 - Community API 只负责 FeedSieve 社区报告 / 评分 / Snapshot
 - 不把 X OAuth / Developer API 作为核心依赖
 - YAML 是公开审计源，JSON 是 Extension 运行时产物
 - `x_user_id` 可选，`handle` 是 MVP 可稳定获得的身份字段
-- Community Snapshot 在本地查询，不在滚动 Timeline 时逐条请求服务器
+- 名单在本地查询，滚动 Timeline 时绝不逐条请求服务器
 
 ## 1. 推荐仓库结构
 
@@ -31,10 +32,11 @@ apps/
   extension/
 
 packages/
-  filter-engine/
-  x-adapter/
-  community-client/
-  list-format/
+  detector/           # 识别标注（纯逻辑：名单 + 启发式）
+  x-adapter/          # X Reader + Action Adapter
+  block-queue/        # 持久化拉黑队列
+  community-client/   # 快照下载 / 缓存 / 校验
+  list-format/        # YAML / JSON / Schema
   shared/
 
 services/
@@ -60,8 +62,9 @@ docs/
 
 - pnpm workspace
 - WXT + React + TypeScript
-- `packages/filter-engine`
+- `packages/detector`
 - `packages/x-adapter`
+- `packages/block-queue`
 - Vitest
 - Playwright
 - ESLint / formatter / typecheck
@@ -74,9 +77,9 @@ docs/
 - workspace package 能互相引用
 - CI build / test 通过
 
-## 3. Phase 1 — X Reader + Local Filter
+## 3. Phase 1 — X Reader + Detector 标注
 
-这是第一个真正有用户价值的版本。
+这是第一个真正有用户价值的版本：能认出垃圾。
 
 ### Reader Adapter
 
@@ -92,59 +95,38 @@ docs/
 
 Selector 全部放到 `packages/x-adapter/src/selectors`。
 
-### Filter Engine
+### Detector
 
-实现：
+输入 FeedItem，输出标注结论（mark + reason + source）：
 
-- Personal Allowlist
-- Personal Blocklist
-- Keyword
-- Exact phrase
-- Regex
+- 社区名单命中（v0.1 先用内置 `community/lists/recommended.json`）
+- 账号启发式 v1：默认名 + 随机数字、垃圾域名链接、模板化文本
+- **每个标注必须可解释**
 
-优先级：
+### 标注 UI
 
-```text
-Allowlist
-> Personal Blocklist
-> Local Rules
-> Community
-> AI
-```
-
-### UI
-
-实现：
-
-```text
-抬走
-已滤，别看了
-为什么？
-我偏要看
-自己人，别开枪
-```
+- 黄框 + 理由标签（如「名单命中 · bot_spam」）
+- 可勾选 / 取消勾选
+- 「顺手拉黑」入口
+- 标注绝不改动页面任何内容显示
 
 验收：
 
-- 完全断网仍可过滤
+- 完全断网仍可标注
 - 滚动 Timeline 不明显掉帧
-- 每条过滤结果能解释原因
-- 用户恢复内容后页面不崩
+- 每个标注能解释原因
+- 页面内容除黄框外零改动
 
-## 4. Phase 2 — Single X Native Action
+## 4. Phase 2 — 单账号原生 Block / Unblock
 
 目标：验证 Browser-native Action Adapter。
-
-只做**单账号**，不要一开始批量。
 
 流程：
 
 ```text
-用户点击「抬走」
+黄框标注的账号
       ↓
-FeedSieve 本地 Hide
-      ↓
-可选「顺手拉黑」
+用户点「顺手拉黑」
       ↓
 X Action Adapter 打开原生 ... 菜单
       ↓
@@ -154,6 +136,8 @@ X Action Adapter 打开原生 ... 菜单
       ↓
 等待 UI 成功状态
 ```
+
+同时实现反向动作「放回来」（Unblock），误伤一键恢复。
 
 Action Adapter 必须：
 
@@ -166,10 +150,57 @@ Action Adapter 必须：
 验收：
 
 - 用户显式触发一次 Block 能稳定完成
+- 用户显式触发一次 Unblock 能稳定完成
 - 页面 DOM 不匹配时安全失败
 - 不读取 Cookie / OAuth Token
 
-## 5. Phase 3 — Community Snapshot Consumer
+## 5. Phase 3 — Block Queue 批量拉黑
+
+这是 v0.1 的核心交付。
+
+实现：
+
+```text
+待拉黑列表（持久，跨页面 / 会话累积）
+Popup 可查看、增删
+用户按下「一键拉黑 N 个」
+      ↓
+Block Queue 持久化全部任务
+      ↓
+逐项执行原生 Block
+      ↓
+验证页面反馈后再进入下一项
+      ↓
+进度 / 暂停 / 恢复 / 取消
+```
+
+Queue 要求：
+
+```text
+pending
+running
+success
+failed
+cancelled
+```
+
+必须：
+
+- 用户显式启动
+- 显示进度
+- 暂停 / 恢复 / 取消
+- 页面反馈后再进入下一项
+- 登录异常 / 风控页面立即停
+- Manifest V3 service worker 被回收后状态不丢
+- 失败任务有明确原因
+
+验收：
+
+- 跨会话状态不丢（关闭浏览器后能恢复）
+- 中途取消后 pending 任务保持可重新执行
+- 不承诺某个固定批量数量一定安全
+
+## 6. Phase 4 — Community Snapshot Consumer
 
 此阶段可以先没有社区写入后端。
 
@@ -186,20 +217,20 @@ Extension：
 - 版本变化才下载 snapshot
 - schema validate
 - checksum verify（生成流程完成后启用）
-- 本地 index
+- 本地 index（供 Detector 查询）
 - 网络失败使用 last-known-good snapshot
 
-第一版社区模式：
+标注强度：
 
-- 清爽：Strong
-- 标准：Strong hide + Recommended collapse
-- 大扫除：Recommended / Strong hide，Candidate collapse
+- 清爽：仅 Strong 名单命中标注
+- 标准：Strong + Recommended 标注
+- 大扫除：Strong + Recommended + Candidate 标注
 
 验收：
 
-> 一个全新安装、没有任何用户自定义规则的 FeedSieve，也可以因为公开名单立刻产生过滤效果。
+> 一个全新安装、没有任何用户自定义规则的 FeedSieve，也能立刻黄框标注公开名单上的垃圾账号。
 
-## 6. Phase 4 — Community Contribution Backend
+## 7. Phase 5 — Community Contribution Backend
 
 推荐：
 
@@ -245,7 +276,7 @@ snapshots
 - Report / Rescue 可以相互覆盖
 - 数据库可以重新计算账号状态
 
-## 7. Phase 5 — Open Reputation Pipeline
+## 8. Phase 6 — Open Reputation Pipeline
 
 目标：真正形成“公开透明的黑名单”。
 
@@ -301,40 +332,9 @@ Git / Release
 - JSON 可以从 YAML 确定性生成
 - Policy 改动有 Git Diff
 
-## 8. Phase 6 — Native Action Queue
+## 9. Phase 7 — Fingerprint + Domain 识别增强
 
-这一阶段才做批量 X 原生操作。
-
-研究 PureTwitter / Twitter-Block-Porn 后确认：批量动作必须作为一个**持久化队列系统**实现，而不是 `for (...) click()`。
-
-Queue 要求：
-
-```text
-pending
-running
-success
-failed
-cancelled
-```
-
-必须：
-
-- 用户显式启动
-- 显示进度
-- 暂停
-- 恢复
-- 取消
-- 页面反馈后再进入下一项
-- 验证 / 登录异常立即停
-- Manifest V3 service worker 被回收后状态不丢
-
-默认“一键启用社区清单”仍然只是 Local Hide。
-
-Native Block Sync 是高级可选能力。
-
-## 9. Phase 7 — Fingerprint + Domain Reputation
-
-Pure account list 有天然缺点：垃圾号会不断换号。
+纯账号名单有天然缺点：垃圾号会不断换号。
 
 加入：
 
@@ -361,36 +361,34 @@ Domain
 Campaign
 ```
 
-验收：新垃圾账号复制已知垃圾模板时，能够被模板规则识别。
+验收：新垃圾账号复制已知垃圾模板时，Detector 能够识别标注。
 
 ## 10. Phase 8 — Optional AI
 
 到这里才加入 AI。
 
-AI 用于：
+AI 用于识别：
 
 - 隐蔽 AI slop
 - 软广告
 - 语义型 engagement bait
-- 自然语言个人偏好
 
 AI 不处理：
 
-- 已知 Personal Block
-- Strong Community Account
-- 明确 Keyword / Regex
+- 社区名单强命中
+- 明确启发式命中
 - 已知 Fingerprint
 
 必须有 Decision Cache。
 
 ## 11. Phase 9 — Growth
 
-- 今日战报
+- 今日战报（今日送走 N 个）
 - 估算“替你少看了多少垃圾时间”
 - X 分享卡片
-- Filter Pack 订阅生态
+- Block Pack 订阅生态
 - Third-party Packs
-- PureTwitter / 外部列表导入
+- 更多平台 Adapter（YouTube / Instagram 评论区）
 
 ## 12. v0.1 的明确范围
 
@@ -399,18 +397,15 @@ v0.1 **不要等后端**。
 发布条件：
 
 - Chrome / Edge
-- Home Timeline
-- Replies
-- Account allow/block
-- Keyword / Regex
-- 抬走
-- Collapse / Hide
-- 我偏要看
-- 为什么
+- Home Timeline / Replies / Search 基础
+- 黄框标注（内置名单 + 启发式，带理由）
+- 待拉黑列表（持久、可增删）
+- 一键批量拉黑（Block Queue：进度 / 暂停 / 恢复 / 取消）
+- 单账号顺手拉黑
+- 一键撤销（Unblock）
 - 本地统计
-- 单账号“顺手拉黑”
-- Reader fixtures
-- Filter Engine unit tests
+- X DOM fixtures
+- Detector / Block Queue unit tests
 
 做到这一点就发第一个版本。
 
@@ -420,16 +415,15 @@ v0.1 **不要等后端**。
 
 证明：
 
-- Keyword + Blacklist 有真实价值
 - 用户需要共享名单
 - 用户强烈在意误杀
 
 因此 FeedSieve 必须把：
 
-- Allowlist precedence
-- Explainability
-- Rescue
-- Open List
+- 标注审查（用户确认后才拉黑）
+- Explainability（每个黄框有理由）
+- 一键撤销（Unblock）
+- 开放名单
 
 作为基础能力。
 
@@ -444,7 +438,7 @@ v0.1 **不要等后端**。
 因此 FeedSieve：
 
 - 用 GitHub / CDN 发布 Snapshot
-- Native batch action 必须 Queue 化
+- 批量拉黑必须队列化
 - 只对新增 Snapshot entry 生成可选同步任务
 
 ## 14. 开工前不要再改的核心决策
@@ -452,10 +446,10 @@ v0.1 **不要等后端**。
 除非实测证明不可行，以下先冻结：
 
 1. WXT + TypeScript + React
-2. Filter Engine 独立 package
-3. X Reader / Action Adapter 独立 package
-4. Local Hide 是核心
-5. Browser-native X actions，不以 OAuth 为主
+2. Block Engine 独立（detector / block-queue / x-adapter 独立 package）
+3. 产品永不隐藏内容（无 Hide / Collapse）
+4. 黄框标注 → 待拉黑列表 → 一键批量拉黑 的产品循环
+5. Browser-native Block，不以 OAuth 为主
 6. Community Snapshot 本地查询
 7. YAML source + JSON runtime
 8. `handle` required / `x_user_id` optional

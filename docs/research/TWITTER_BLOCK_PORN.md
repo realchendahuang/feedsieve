@@ -89,7 +89,7 @@ snapshot v41
 -> diff / new entries
 ```
 
-Local Hide 直接切新索引；Native Block Sync 只生成尚未处理的增量任务。
+Detector 直接切新索引做黄框标注；Block Queue 只生成尚未处理的增量任务。
 
 ## 4. 不建议照抄的地方
 
@@ -121,19 +121,19 @@ FeedSieve 应公开：
 
 并支持 Candidate / Recommended / Strong。
 
-### 4.3 不要把原生 Block 当核心过滤
+### 4.3 批量 Block 必须队列化
 
-Native Block 很慢，并且平台行为可能变化。
+Native Block 慢，并且平台行为可能变化。
 
-FeedSieve 的默认社区能力应该是：
+FeedSieve 的批量拉黑应该是：
 
 ```text
-下载名单
--> 本地索引
--> Timeline 直接 Hide / Collapse
+Detector 黄框标注（瞬时、零风险、不修改 Block List）
+-> 待拉黑列表（用户确认）
+-> Block Queue 逐个执行原生 Block
 ```
 
-Native Block 是用户可选的同步动作。
+Block 永远是用户显式触发的下一步动作，不是自动发生的“过滤”。
 
 ## 5. 对 FeedSieve 的直接技术影响
 
@@ -142,19 +142,19 @@ Native Block 是用户可选的同步动作。
 ```text
 Community Snapshot
        │
-       ├── Local Filter Index  <-- 核心、快速、可撤销
+       ├── Detector 本地索引  <-- 核心：黄框标注，零风险
        │
-       └── Native Action Diff  <-- 可选
+       └── Block Queue Diff   <-- 用户显式触发
                   │
                   v
-            Action Queue
+            Block Queue
                   │
               X Adapter
                   │
            Browser-native UI
 ```
 
-Action Queue 必须：
+Block Queue 必须：
 
 - 用户显式启动
 - 持久化
@@ -188,7 +188,7 @@ Campaign
 Official Packs
 Community Packs
 Third-party Packs
-Personal Rules
+用户本地待拉黑列表
 ```
 
 这就是 FeedSieve 和传统 X 黑名单脚本真正拉开差距的地方。

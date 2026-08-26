@@ -11,7 +11,7 @@ FeedSieve 运行在 `x.com` 页面里，因此对 X 已经暴露给登录用户�
 > **Read the page. Filter locally. Act through the page.**
 
 - 读取 X 页面：Content Script / Reader Adapter
-- FeedSieve Hide / Collapse：完全本地
+- FeedSieve 标注：完全本地，永不隐藏内容
 - X 原生 Block / Mute / Unblock / Unmute：通过当前已登录的 X 页面完成
 - Community API：只处理 FeedSieve 的 Report / Rescue / Score / Snapshot
 - 不要求 X Access Token
@@ -21,7 +21,7 @@ FeedSieve 运行在 `x.com` 页面里，因此对 X 已经暴露给登录用户�
 
 X 页面会不断变化。
 
-如果 Filter Engine 直接写：
+如果 Detector 直接写：
 
 ```ts
 document.querySelector(...).click()
@@ -45,7 +45,7 @@ packages/x-adapter/
 └── observer/
 ```
 
-Filter Engine 永远不知道 X 菜单长什么样。
+Detector 永远不知道 X 菜单长什么样。
 
 ## 3. v0.1 只做单账号 Action
 
@@ -54,13 +54,9 @@ Filter Engine 永远不知道 X 菜单长什么样。
 用户流程：
 
 ```text
-Tweet / Profile
+黄框标注账号
      ↓
-点击「抬走」
-     ↓
-Local Hide 立即成功
-     ↓
-可选「顺手拉黑」
+点击「顺手拉黑」
      ↓
 Action Adapter
      ↓
@@ -75,9 +71,9 @@ Action Adapter
 等待成功 UI / state
 ```
 
-即使 Block 失败，Local Hide 也已经成功。
+Block 失败时必须如实反馈失败原因，不假装成功。
 
-不要把两个动作绑成一个事务。
+v0.1 同时实现反向动作「放回来」（Unblock），Block / Unblock 是同等一等公民。
 
 ## 4. Action API
 
@@ -180,9 +176,9 @@ Content Script 默认 isolated world 已经可以读取和点击 DOM。
 
 不要为了方便直接把整个扩展逻辑暴露在 host page world。
 
-## 8. Native Action Queue
+## 8. Block Queue
 
-批量原生动作是后续独立模块。
+批量拉黑队列是 v0.1 的核心交付（见 [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) Phase 3），放在独立 package `block-queue`。
 
 研究现有共享黑名单脚本后可以确认：
 
@@ -280,29 +276,23 @@ Next task
 - 为绕过平台检测设计隐蔽行为
 - 无提示持续后台操作
 
-## 12. Community Snapshot 与 Native Sync 分离
+## 12. 标注与拉黑分离
 
-用户点：
-
-> **一键启用社区清单**
-
-默认含义：
+名单命中与拉黑是两个独立步骤：
 
 ```text
 Community Snapshot
 -> local index
--> X Timeline hide/collapse
+-> Detector 黄框标注（瞬时、可撤销、不隐藏内容）
 ```
-
-这是瞬时、可撤销、稳定的核心能力。
 
 用户另外选择：
 
-> **同步部分名单到 X Block**
+> **一键批量拉黑**
 
-才生成 Native Action Queue。
+才生成 Block Queue 任务。
 
-这两个功能必须在 UI 和数据结构上分开。
+标注与拉黑必须在 UI 和数据结构上分开。
 
 ## 13. 增量同步
 
@@ -326,7 +316,7 @@ lastSyncedSnapshotVersion
 ```text
 new strong/recommended entries
 - already synced
-- personal allowlist
+- 用户手动移除
 = queue candidates
 ```
 
@@ -334,25 +324,16 @@ new strong/recommended entries
 
 ## 14. Unblock / Rollback
 
-不能只支持“加进去”。
+不能只支持“加进去”。Unblock 是 v0.1 的一等公民：
 
-如果：
-
-- 社区移除账号
-- 用户 Rescue
-- 用户误操作
-
-FeedSieve 应至少能告诉用户：
-
-> 这个账号已经不在当前社区名单。
-
-是否自动 Native Unblock 不应默认执行，因为用户可能在 FeedSieve 之外也有自己的 Block 原因。
+- 用户误操作 -> 「放回来」一键 Native Unblock
+- 社区移除账号 / 用户 Rescue -> 提示用户，但不自动 Unblock（用户可能在 FeedSieve 之外也有自己的 Block 原因）
 
 因此默认：
 
 ```text
 Community removal
--> Local Hide stops
+-> Detector 不再标注
 -> Native Block remains until user explicitly chooses to undo
 ```
 
@@ -385,15 +366,14 @@ CI 不允许对真实 X 账号执行 Block。
 ### v0.1
 
 - block current account
+- unblock（一键放回）
 - clear error result
 - zh-CN + en fixture
+- persistent block queue + progress UI
 
 ### v0.2+
 
-- mute
-- unblock / unmute
-- persistent action queue
-- progress UI
+- mute / unmute
 - incremental community sync
 
 ### Future
@@ -410,4 +390,4 @@ X Action Adapter 的定位不是“模拟一个 API 客户端”。
 
 > **把用户本来需要在 X 页面上点很多次才能完成的操作，变成可理解、可暂停、可恢复的辅助动作。**
 
-FeedSieve 的核心过滤永远不依赖这些原生动作成功。
+FeedSieve 的标注永远不依赖这些原生动作成功；拉黑结果必须如实反馈。

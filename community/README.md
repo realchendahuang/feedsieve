@@ -1,8 +1,8 @@
 # FeedSieve Community Lists
 
-这里存放 FeedSieve 的公开社区过滤数据和治理政策。
+这里存放 FeedSieve 的公开社区名单数据和治理政策。
 
-目标不是维护一个神秘的“封禁名单”，而是让社区能够看到、审计、讨论、申诉和 Fork 过滤结果。
+目标不是维护一个神秘的“封禁名单”，而是让社区能够看到、审计、讨论、申诉和 Fork 名单结果。
 
 核心原则：
 
@@ -35,7 +35,7 @@ community/
 - PR Review 友好
 - Diff 清楚
 - 容易审计
-- 容易 Fork 和维护第三方 Filter Pack
+- 容易 Fork 和维护第三方 Block Pack
 
 ### JSON
 
@@ -175,14 +175,14 @@ schema + checksum
    ↓
 local index
    ↓
-X Timeline local lookup
+X Timeline -> Detector local lookup
 ```
 
 服务器不可用时继续使用最后一个有效 Snapshot。
 
-## Filter Packs
+## Block Packs
 
-后续计划允许官方和第三方维护独立 Filter Pack，例如：
+后续计划允许官方和第三方维护独立 Block Pack，例如：
 
 - Bot Spam
 - Copy-paste Replies
@@ -193,9 +193,9 @@ X Timeline local lookup
 
 用户自己决定订阅哪些 Pack。
 
-> **Hide garbage, not opinions.**
+> **Block garbage, not opinions.**
 
-政治立场、价值观、兴趣领域等高度主观偏好默认不进入官方全球垃圾名单，更适合作为 Personal Rules 或第三方可选 Pack。
+政治立场、价值观、兴趣领域等高度主观偏好默认不进入官方全球垃圾名单，更适合作为第三方可选 Pack。
 
 ## 治理
 
@@ -205,7 +205,7 @@ X Timeline local lookup
 - 变更可追踪
 - 支持 Report / Rescue / Appeal / Removal
 - 不公开举报者敏感信息
-- 用户自己的 Allowlist 永远可以覆盖社区判断
+- 用户自己的判断永远可以覆盖社区标注（可移除、可放回）
 - 不把观点差异当成默认垃圾标签
 
 详细文档：

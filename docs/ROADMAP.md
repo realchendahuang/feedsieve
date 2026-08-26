@@ -2,51 +2,49 @@
 
 > 实施细节见 [`TECHNICAL_SPEC.md`](TECHNICAL_SPEC.md) 与 [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md)。
 
-## v0.1 — 能真正用
+## v0.1 — 能真正拉黑
 
-目标：**没有后端、没有 AI，也能明显改善 X。**
+目标：**没有后端、没有 AI，也能真正送走垃圾账号。**
 
 - WXT + TypeScript + React 基础架构
-- 独立 `filter-engine`
+- 独立 `detector`
 - 独立 `x-adapter`
-- X Home Timeline
-- Replies
-- Personal Allowlist / Blocklist
-- Keyword / Exact phrase / Regex
-- Inline「抬走」
-- Hide / Collapse
-- 「我偏要看」
-- 「为什么？」可解释原因
+- 独立 `block-queue`
+- X Home Timeline / Replies / Search 基础
+- 黄框标注（内置名单 + 启发式，带理由）
+- 待拉黑列表（持久、可增删）
+- 一键批量拉黑（Block Queue）
+- 单账号「顺手拉黑」
+- 一键撤销（Unblock）
 - 本地统计
-- 单账号「顺手拉黑」Browser-native Action
 - X DOM fixtures
-- Filter Engine unit tests
+- Detector / Block Queue unit tests
 
 成功标准：
 
-> 用户安装后 5 分钟内能明显看到垃圾减少，而且断网仍然能工作。
+> 用户安装后 5 分钟内能把第一批垃圾账号真正拉黑，手机端同步清净，而且断网仍然能标注。
 
 ## v0.2 — 社区名单开始产生网络效应
 
-目标：**新用户不用配置规则也能直接受益。**
+目标：**新用户不用配置也能直接受益。**
 
 - Community Snapshot Manifest
 - Versioned JSON List
 - YAML public source
-- Schema validation
-- Local Community Index
-- Filter strength：清爽 / 标准 / 大扫除
-- Community Filter Packs 基础
+- Schema validation + checksum
+- Local Community Index（供 Detector 查询）
+- 标注强度：清爽 / 标准 / 大扫除
+- Block Pack 基础
 - Last-known-good offline cache
 - PureTwitter / 外部简单名单导入研究
 
 成功标准：
 
-> 新安装用户只开启官方 Community Pack，就能立刻过滤已知垃圾账号。
+> 新安装用户只开启官方名单，就能立刻黄框标注已知垃圾账号。
 
 ## v0.3 — 社区共创与公开信誉
 
-目标：**一个人发现垃圾，所有人都可以少看一次。**
+目标：**一个人送走垃圾，所有人都可以少看一次。**
 
 - Community Report API
 - Rescue API
@@ -66,24 +64,9 @@
 
 > 任意社区名单条目都能从 GitHub 看懂来源、分类、分数和变更历史。
 
-## v0.4 — Native Action Queue
+## v0.4 — 从账号名单升级成垃圾网络识别
 
-目标：**把“批量同步到 X”做成一个安全、可恢复的用户任务。**
-
-- Persistent Native Action Queue
-- Progress
-- Pause / Resume / Cancel
-- Error state
-- MV3 worker restart recovery
-- Incremental Snapshot diff
-- Small-batch Native Block Sync
-- Mute / Unblock / Unmute
-
-原则：
-
-> 一键启用社区名单默认是 Local Hide；Native Block Sync 永远是用户额外选择。
-
-## v0.5 — 从账号名单升级成垃圾网络识别
+目标：**垃圾号换号但复用话术 / 域名时，仍然能识别。**
 
 - Content Fingerprint
 - Normalized template hash
@@ -94,63 +77,60 @@
 
 成功标准：
 
-> 垃圾号换了账号但继续复用同一话术 / 域名时，FeedSieve 仍然能够识别。
+> 垃圾号换了账号但继续复用同一话术 / 域名时，FeedSieve 仍然能够识别标注。
 
-## v0.6 — AI 会认
+## v0.5 — AI 会认
 
-目标：只处理规则、社区和模板仍然不能可靠判断的模糊内容。
+目标：只识别名单、启发式和模板仍然拿不准的模糊内容。
 
 - OpenAI-compatible Provider
 - 自定义 Endpoint / Model
 - AI slop
 - Soft advertising
 - Engagement bait
-- 自然语言过滤偏好
 - AI Decision Cache
 
 原则：
 
-> AI 是最后一层增强，不是 FeedSieve 的基础依赖。
+> AI 是最后一层识别增强，不是 FeedSieve 的基础依赖。
 
-## v0.7 — 会整活
+## v0.6 — 会整活
 
-目标：让过滤过程产生传播。
+目标：让清理过程产生传播。
 
-- 福滤娃今日战报
+- 福滤娃今日战报（今日送走 N 个）
 - 分享卡片
 - 类型统计
 - 社区贡献统计
 - 估算「替你少看了多少垃圾时间」
 - 一键分享到 X
 
-## v0.8 — Filter Pack 生态
+## v0.7 — Block Pack 生态
 
-- Third-party Filter Pack
+- Third-party Block Pack
 - Pack metadata / maintainer / version
 - Pack subscription
 - Import / Export
 - Public Pack Registry（如有必要）
 - Firefox
 - Safari 评估
-- Developer Filter API / SDK
-- 更多信息流 Adapter
+- Developer Adapter API / SDK
+- 更多平台 Adapter（YouTube / Instagram 评论区）
 
 ## 当前实施顺序
 
 如果现在开始开发，严格按照：
 
 ```text
-v0.1 Local Filter
+v0.1 标注 + 批量拉黑（含 Block Queue）
   ↓
 v0.2 Community Snapshot Reader
   ↓
 v0.3 Report / Rescue / Open Reputation
   ↓
-v0.4 Native Action Queue
+v0.4 Fingerprint / Domain
   ↓
-v0.5 Fingerprint / Domain
-  ↓
-v0.6 AI
+v0.5 AI
 ```
 
-不要为了 AI 或批量 Block 推迟第一个可用版本。
+批量拉黑队列已经放进 v0.1；不要为了 AI 推迟第一个可用版本。

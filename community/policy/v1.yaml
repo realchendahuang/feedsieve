@@ -36,7 +36,8 @@ reporter_trust:
   max: 1.5
 
 principles:
-  - personal_allowlist_always_wins
+  - user_undo_always_wins
+  - blocking_requires_explicit_user_action
   - report_and_rescue_are_explicit_actions
   - opinion_disagreement_is_not_spam
   - burst_reports_may_be_downweighted
