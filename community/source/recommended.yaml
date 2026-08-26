@@ -1,8 +1,13 @@
 # FeedSieve Community Recommended List
 #
-# This YAML file is the human-readable canonical public snapshot.
+# Human-readable public source.
 # The browser extension should consume the generated JSON artifact in
 # ../lists/recommended.json rather than parsing this file on every page.
+#
+# Identity rule for schema v1:
+# - handle: required
+# - x_user_id: optional
+# - aliases: optional
 #
 # Pipeline:
 # reports -> open scoring -> safeguards -> YAML snapshot -> validate -> JSON
@@ -19,8 +24,10 @@ entries: []
 
 # Example entry:
 # entries:
-#   - x_user_id: "123456789"
-#     handle: example_spam
+#   - handle: example_spam
+#     x_user_id: "123456789" # optional
+#     aliases:
+#       - old_handle
 #     category: bot_spam
 #     status: recommended
 #     community_score: 0.91
