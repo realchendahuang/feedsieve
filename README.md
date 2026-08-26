@@ -18,11 +18,11 @@
 
 FeedSieve is an open-source X feed cleaner for bot spam, copy-paste replies, engagement bait and other things you were never supposed to see.
 
-The product follows a simple rule:
+The technical rule is simple:
 
-> **Fast local filtering first. Community intelligence second. Optional AI judgment third.**
+> **Local first. Community second. AI third. Browser-native actions when needed.**
 
-Obvious junk should never need a model call. AI is reserved for ambiguous content that rules and community signals cannot reliably classify.
+明显垃圾先本地处理；社区已经认识的垃圾不需要再问模型；AI 只处理模糊情况；需要 X 原生 Block / Mute 时，浏览器插件直接辅助用户在当前已登录页面中完成。
 
 ## 为什么做它
 
@@ -55,100 +55,117 @@ FeedSieve 想做的事情很简单：
 
 ## 产品形态与长期定位
 
-### 第一阶段：浏览器扩展
+第一阶段优先做 Chrome / Edge / Chromium 浏览器扩展，后续再支持 Firefox / Safari。
 
-MVP 优先做 Chrome / Edge / Chromium 浏览器扩展，后续再支持 Firefox / Safari。
+用户不需要换 X 客户端。FeedSieve 直接作用于 Home Timeline、Replies、Search 等原生页面，在垃圾内容进入视野前完成折叠或隐藏。
 
-用户不需要更换 X 客户端。FeedSieve 直接作用于 Home Timeline、Replies、Search 等原生页面，在垃圾内容进入用户视野前完成折叠或隐藏。
-
-但 **浏览器插件只是产品外壳，真正应该长期维护的是独立的 Filter Engine。**
+但浏览器插件只是产品外壳，真正长期维护的是独立 Filter Engine。
 
 > **产品形态：浏览器插件。技术本体：Filter Engine。第一战场：X。长期方向：用户自己的互联网注意力过滤层。**
 
-长期来看，同一套过滤引擎可以适配其他信息流和评论区；但第一阶段对外只讲一件事：
-
-> **福滤娃 FeedSieve：把 X 的垃圾抬走。**
-
 详细定位见 [`docs/VISION.md`](docs/VISION.md)。
 
-## 三层过滤体系
+## 核心架构
 
 ```text
-X Page
-  |
-  v
-Content Observer + Post Extractor
-  |
-  +------> Personal Allowlist
-  |
-  v
-Layer 1: Local Rules
-  |
-  +------> confident spam -> Hide
-  |
-  v
-Layer 2: Community Reputation
-  |
-  +------> community-listed account -> Hide / Collapse
-  |
-  v
-Layer 3: Optional AI Classifier
-  |
-  v
-Decision
-  |
-  +------> keep
-  +------> collapse
-  +------> hide
-  |
-  v
-Local Stats + Feedback
+x.com
+  │
+  ├── X Reader Adapter ──> FeedItem
+  │                           │
+  │                           v
+  │                    Filter Engine
+  │                ┌──────────┼──────────┐
+  │                │          │          │
+  │             Personal   Community   Optional AI
+  │                │          │
+  │                └──── Decision ──────┘
+  │                           │
+  │                  KEEP / COLLAPSE / HIDE
+  │
+  └── X Action Adapter ──> user-initiated Block / Mute
+```
+
+### Layer 0 — User Override
+
+用户自己的明确选择优先级最高：
+
+```text
+Personal Allowlist
+> Personal Blocklist
+> Local Rules
+> Community Reputation
+> Optional AI
 ```
 
 ### Layer 1 — Local Rules
 
-优先在本地完成明显垃圾判断：
+本地完成：
 
-- 关键词 / 正则
-- 重复文本
-- 高重复回复模式
-- 个人黑名单 / 白名单
-- 常见营销模板
-- 用户自定义规则
-- 页面结构与行为特征
+- Account Allow / Block
+- Keyword
+- Exact phrase
+- Regex
+- 后续 Domain
+- 后续 Content Fingerprint
 
-特点：**快、便宜、隐私友好。**
+快、免费、离线可用。
 
-### Layer 2 — Community Filter Network
+### Layer 2 — Community Reputation
 
-用户可以在 X 页面上一键“抬走这个账号”。
+用户可以一键“抬走”垃圾账号，并选择匿名贡献给社区。
 
-用户主动贡献的信号会进入社区过滤网络，形成共享账号信誉：
+社区不是简单的 5 人永久黑名单：
 
-- 多个独立用户都屏蔽同一账号
-- 举报原因高度一致
-- 举报者本身具有可信度
-- 误判 Rescue 会降低分数
-- 短时间刷票和异常行为会被降权
+```text
+>= 5 independent reports -> Candidate
+score + time spread       -> Recommended
+higher trust + low rescue -> Strong
+```
 
-社区清单默认用于 **FeedSieve 本地过滤**，用户可以一键订阅，不需要逐个操作 X Block List。
+阈值公开在 [`community/policy/v1.yaml`](community/policy/v1.yaml)。
 
 > **一个人发现垃圾，所有人都可以少看一次。**
 
 详细设计见 [`docs/COMMUNITY_FILTERING.md`](docs/COMMUNITY_FILTERING.md)。
 
-### Layer 3 — AI Classifier
+### Layer 3 — Optional AI
 
-对规则和社区信号难以判断的内容再交给 AI：
+只处理前两层无法可靠判断的模糊内容：
 
-- 低质量 AI 灌水
-- Engagement bait
-- 广告软文
-- 色情 / 灰产 / 社群引流
-- 与用户偏好严重无关的内容
-- 自然语言定义的过滤规则
+- AI slop
+- 软广告
+- 隐蔽 engagement bait
+- 自然语言个人过滤偏好
 
-特点：**更聪明，但不应该每条推文都调用模型。**
+没有 AI Key，FeedSieve 也必须完整可用。
+
+## X 原生 Block / Mute 怎么做
+
+FeedSieve 是运行在用户已登录 `x.com` 页面里的浏览器插件。
+
+因此默认路线不是 X OAuth / Developer API，而是：
+
+> **Read the page. Filter locally. Act through the page.**
+
+例如：
+
+```text
+用户点「抬走」
+   ↓
+FeedSieve Local Hide
+   ↓
+可选「顺手拉黑」
+   ↓
+X Action Adapter 打开 X 原生菜单
+   ↓
+Block
+   ↓
+确认页面结果
+```
+
+批量原生动作以后使用持久化 Native Action Queue，不做简单 for-loop。
+
+详见 [`docs/X_ACTION_ADAPTER.md`](docs/X_ACTION_ADAPTER.md)。
 
 ## 开源的不只是代码
 
@@ -156,7 +173,18 @@ FeedSieve 希望做到：
 
 > **Open Code + Open Rules + Open Lists + Open Governance**
 
-也就是浏览器插件、Filter Engine、社区后端、评分算法、社区名单、Schema、构建脚本和治理规则尽可能公开。
+公开范围包括：
+
+- Browser Extension
+- Filter Engine
+- X Adapter
+- Community Backend
+- Community Score / Policy
+- YAML Lists
+- JSON Runtime Artifacts
+- Schema
+- Build Scripts
+- Changelog
 
 核心理念：
 
@@ -164,13 +192,9 @@ FeedSieve 希望做到：
 
 > **连黑名单本身都应该晒在阳光下。**
 
-详细治理见 [`docs/OPEN_SOURCE_GOVERNANCE.md`](docs/OPEN_SOURCE_GOVERNANCE.md)。
-
 ## YAML for humans, JSON for machines
 
-社区过滤名单同时提供 YAML 和 JSON，但职责不同。
-
-### YAML：公开可读源
+### YAML — 公开审计源
 
 [`community/source/recommended.yaml`](community/source/recommended.yaml)
 
@@ -178,85 +202,108 @@ FeedSieve 希望做到：
 
 - GitHub 阅读
 - PR Review
-- Diff 审计
+- Diff
 - Fork
-- 社区治理
+- Appeal / Governance
 
-### JSON：插件运行产物
+### JSON — Extension 运行产物
 
 [`community/lists/recommended.json`](community/lists/recommended.json)
 
 用于：
 
-- Browser Extension 下载
+- Extension 下载
 - 本地缓存
 - Schema 校验
-- CDN / Release 分发
-- 后续 checksum / signature
+- CDN / Release
 
-推荐链路：
+更新入口：
+
+[`community/lists/manifest.json`](community/lists/manifest.json)
+
+链路：
 
 ```text
 Community Reports
       ↓
-Open Scoring Algorithm
-      ↓
-Safeguards
+Open Scoring Policy
       ↓
 YAML Snapshot
       ↓
-Validate + Compile
+Validate
       ↓
-JSON Artifact
+Deterministic JSON
       ↓
-Local Cache
+manifest + checksum
+      ↓
+Extension local cache
 ```
 
-插件不应该在刷 X 时为每个账号实时请求服务器，而是定期更新公开名单，然后全天本地查询。
+插件刷 X 时不会为每个账号实时请求服务器。
 
-## MVP
+## Account Identity
 
-### v0.1 — 先把个人过滤做对
+浏览器插件通常能稳定获取 `@handle`，但不应该为了拿 stable X user id 强依赖 X API / 私有 runtime。
 
-- [ ] Chrome / Edge 扩展
-- [ ] Home Timeline 过滤
-- [ ] Replies 过滤
-- [ ] 个人账号黑名单 / 白名单
-- [ ] 关键词与正则过滤
-- [ ] 重复回复识别
-- [ ] 一键“抬走这个账号”
-- [ ] “我偏要看”恢复入口
-- [ ] 本地过滤统计
-- [ ] 所有个人规则默认本地存储
+因此协议 v1：
 
-### v0.2 — 社区共创
+```text
+handle       required
+x_user_id    optional
+aliases      optional
+```
 
-- [ ] Community Report API
-- [ ] 社区候选账号池
-- [ ] `>= 5` 独立有效报告进入 Candidate
-- [ ] Community Score
-- [ ] Reporter Trust
-- [ ] Report / Rescue
-- [ ] YAML canonical snapshot
-- [ ] JSON generated artifact
-- [ ] Community Filter Packs
-- [ ] 一键启用社区清单
+Schema：[`community/schema/account-list.schema.json`](community/schema/account-list.schema.json)
 
-### v0.3 — AI 会认
+## Roadmap
 
-- [ ] 可选 AI 分类器
-- [ ] 自然语言过滤规则
-- [ ] OpenAI-compatible API
-- [ ] 自定义模型与 Endpoint
-- [ ] 更细粒度垃圾类型标签
+### v0.1 — 能真正用
 
-### v0.4 — 会整活
+- Chrome / Edge
+- Home Timeline / Replies
+- Account Allow / Block
+- Keyword / Regex
+- 抬走
+- Hide / Collapse
+- 我偏要看
+- 为什么
+- 本地统计
+- 单账号「顺手拉黑」
+- X DOM fixtures
+- Filter Engine tests
 
-- [ ] **福滤娃今日战报**
-- [ ] 一键生成 X 分享卡片
-- [ ] 垃圾类型统计
-- [ ] 今日替你遭罪数量
-- [ ] 可分享但不泄露原始推文内容
+### v0.2 — Community Snapshot
+
+- Manifest
+- YAML / JSON List
+- Local Community Index
+- Filter strength
+- Filter Pack foundation
+
+### v0.3 — Community Contribution
+
+- Report / Rescue API
+- Community Score
+- Reporter Trust
+- Candidate / Recommended / Strong
+- Open Snapshot pipeline
+
+### v0.4 — Native Action Queue
+
+- Persistent queue
+- Progress
+- Pause / Resume / Cancel
+- Incremental Native Sync
+
+### v0.5 — Fingerprint / Domain
+
+从“垃圾账号名单”升级成“垃圾网络识别”。
+
+### v0.6 — Optional AI
+
+最后再接 AI。
+
+完整路线见 [`docs/ROADMAP.md`](docs/ROADMAP.md)。
 
 ## 福滤娃说人话
 
@@ -277,8 +324,6 @@ Local Cache
 
 ## 福滤娃今日战报
 
-FeedSieve 最值得做的传播功能之一，是让“过滤垃圾”本身变成分享素材。
-
 > **福滤娃今日战绩**  
 > 替你看了 428 条推文  
 > 抬走机器人 31 个  
@@ -290,21 +335,19 @@ FeedSieve 最值得做的传播功能之一，是让“过滤垃圾”本身变�
 
 增长循环：
 
-**过滤 → 统计 → 生成梗图 → 发 X → 新用户安装 → 贡献社区信号 → 过滤更准**
+**过滤 → 统计 → 分享 → 新用户 → 社区信号 → 过滤更准**
 
 ## 推荐技术栈
-
-首版建议保持轻量：
 
 - **WXT**
 - **TypeScript**
 - **React**
-- **WebExtension / Manifest V3**
-- **Browser Storage / IndexedDB**
-- Optional FeedSieve Community API
+- **Manifest V3**
+- **Vitest**
+- **Playwright**
+- Browser Storage / IndexedDB
+- **Cloudflare Workers + Hono + D1**（社区后端）
 - Optional OpenAI-compatible AI Adapter
-
-详细技术落地见 [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md)。
 
 ## 产品原则
 
@@ -314,11 +357,7 @@ FeedSieve 最值得做的传播功能之一，是让“过滤垃圾”本身变�
 
 ### Community is opt-in
 
-只有用户主动贡献的过滤信号才进入社区系统；默认不上传完整浏览历史。
-
-### AI is optional
-
-没有 AI Key，FeedSieve 也应该能正常工作。
+只有用户主动贡献的过滤信号才进入社区系统。
 
 ### Explainable filtering
 
@@ -330,24 +369,23 @@ FeedSieve 最值得做的传播功能之一，是让“过滤垃圾”本身变�
 
 ### Hide garbage, not opinions
 
-目标是过滤垃圾模式、机器人和用户主动定义的低价值内容，而不是替用户决定什么观点“正确”。
+过滤垃圾模式，而不是替用户决定观点正确与否。
 
-## Docs
+## 开发从这里开始
 
-- [`IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) — 完整实现思路、协议、API、评分与开发顺序
-- [`VISION.md`](docs/VISION.md) — 产品定位与长期方向
-- [`PRODUCT.md`](docs/PRODUCT.md) — 产品说明
-- [`ARCHITECTURE.md`](docs/ARCHITECTURE.md) — 技术架构
-- [`COMMUNITY_FILTERING.md`](docs/COMMUNITY_FILTERING.md) — 社区过滤网络
-- [`OPEN_SOURCE_GOVERNANCE.md`](docs/OPEN_SOURCE_GOVERNANCE.md) — 开源与治理
-- [`ROADMAP.md`](docs/ROADMAP.md) — Roadmap
-- [`BRAND.md`](docs/BRAND.md) — 品牌语言
+如果准备正式实施，按这个顺序看：
 
-## Status
+1. [`TECHNICAL_SPEC.md`](docs/TECHNICAL_SPEC.md) — **主技术规范，开工基线**
+2. [`IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) — 分阶段开发顺序与验收
+3. [`ARCHITECTURE.md`](docs/ARCHITECTURE.md) — 架构边界
+4. [`X_ACTION_ADAPTER.md`](docs/X_ACTION_ADAPTER.md) — 浏览器原生 X 操作
+5. [`COMMUNITY_FILTERING.md`](docs/COMMUNITY_FILTERING.md) — 社区信誉
+6. [`ROADMAP.md`](docs/ROADMAP.md) — 版本路线
 
-FeedSieve is currently in the **design / MVP stage**.
+## Research
 
-PRs, filter ideas, cursed X screenshots and better garbage-detection heuristics are welcome.
+- [`research/PURETWITTER.md`](docs/research/PURETWITTER.md)
+- [`research/TWITTER_BLOCK_PORN.md`](docs/research/TWITTER_BLOCK_PORN.md)
 
 ## License
 
