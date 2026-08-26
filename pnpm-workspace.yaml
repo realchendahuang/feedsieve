@@ -1,0 +1,7 @@
+packages:
+  - apps/*
+  - packages/*
+
+# esbuild 的 postinstall 需要显式批准（pnpm v10+ 默认不执行依赖构建脚本）
+onlyBuiltDependencies:
+  - esbuild

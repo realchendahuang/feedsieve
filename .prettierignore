@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.output/
+.wxt/
+coverage/
+pnpm-lock.yaml
+fixtures/

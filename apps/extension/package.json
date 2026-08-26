@@ -1,0 +1,27 @@
+{
+  "name": "@feedsieve/extension",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "zip": "wxt zip",
+    "postinstall": "wxt prepare",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "@wxt-dev/module-react": "^1.2.2",
+    "typescript": "^5.9.3",
+    "wxt": "^0.21.4"
+  },
+  "dependencies": {
+    "@feedsieve/block-queue": "workspace:*",
+    "@feedsieve/detector": "workspace:*",
+    "@feedsieve/x-adapter": "workspace:*",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  }
+}

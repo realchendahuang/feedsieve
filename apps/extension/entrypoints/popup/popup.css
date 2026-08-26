@@ -1,0 +1,79 @@
+body {
+  margin: 0;
+}
+
+.popup {
+  width: 280px;
+  padding: 16px;
+  box-sizing: border-box;
+  font-family:
+    system-ui,
+    -apple-system,
+    'PingFang SC',
+    sans-serif;
+  color: #1a1a1a;
+}
+
+.popup-header h1 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.popup-sub {
+  color: #9a8b00;
+}
+
+.tagline {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #888;
+}
+
+.stat-card {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid #f2c94c;
+  border-radius: 8px;
+  background: #fffbe6;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: #8a7500;
+}
+
+.stat-value {
+  margin-top: 2px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.stat-hint {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #a58f00;
+}
+
+.primary-action {
+  margin-top: 14px;
+  width: 100%;
+  padding: 9px 0;
+  border: none;
+  border-radius: 8px;
+  background: #111;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.primary-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.popup-footer {
+  margin-top: 12px;
+  font-size: 10px;
+  color: #bbb;
+  text-align: center;
+}
