@@ -71,6 +71,20 @@ const TEMPLATED_PATTERNS: ReadonlyArray<readonly [RegExp, string]> = [
     '英文 DM 引流 + 变现关键词',
   ],
   [/free\s+(?:crypto|bitcoin|eth|nft|gift\s?cards?)\b/i, '「免费加密货币/礼品卡」模板'],
+  // 2026-08 真实样本：大量「500 USDT Giveaway」Tron 假抽奖，giveaway 拼写变体（giweaway）一并覆盖
+  [
+    /\b\d{1,7}\s*(?:usdt|usdc|btc|eth|sol|trx|tron|xrp|doge)\b[\s\S]{0,80}g[i1](?:v|w)?e?away/i,
+    '加密货币 Giveaway 假抽奖模板',
+  ],
+  [
+    /g[i1](?:v|w)?e?away[\s\S]{0,80}\b\d{1,7}\s*(?:usdt|usdc|btc|eth|sol|trx|tron|xrp|doge)\b/i,
+    '加密货币 Giveaway 假抽奖模板',
+  ],
+  // 要求 repost/retweet/follow 这类强互动引流动词，避免误伤日常 "like ... win" 表述
+  [
+    /(?:follow|repost|retweet)\b[\s\S]{0,60}(?:claim|win)\b/i,
+    '关注-转发抽奖引流话术',
+  ],
 ];
 
 const templatedText: HeuristicRule = {

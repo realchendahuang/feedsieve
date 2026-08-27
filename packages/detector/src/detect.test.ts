@@ -111,8 +111,43 @@ describe('heuristic: templated-text', () => {
     expect(result?.reason).toContain('模板化垃圾话术');
   });
 
-  it('keeps ordinary mentions of crypto clean', () => {
-    expect(detect({ handle: 'dev', text: 'crypto taxes are painful' })).toBeNull();
+  describe('crypto giveaway template (2026-08 real-world samples, anonymized)', () => {
+    it.each([
+      [
+        '🚀 500 USDT Giveaway! Clock\'s ticking—act fast! 💎 Instant claim on Tron ⚡️ No KYC, just repost 🔥 Free entry, win big Join, follow, like, repost & comment now!',
+      ],
+      [
+        '🚨 Massive 500 USDT Giveaway! Don\'t miss out! 🚀 Instant win chance on Tron network 🔥 No purchase—just follow, like, comment & repost Claim your share now—time\'s ticking!',
+      ],
+    ])('flags real spam copy', (text) => {
+      const result = detect({ handle: 'spamuser1', text });
+      expect(result?.ruleId).toBe('templated-text');
+      expect(result?.reason).toContain('Giveaway');
+    });
+
+    it('flags reversed word order and spelling variants', () => {
+      expect(
+        detect({ handle: 's', text: 'GIWEAWAY time! Get 500 USDT now' })?.marked,
+      ).toBe(true);
+    });
+
+    it('flags follow/repost + claim bait', () => {
+      const result = detect({
+        handle: 's',
+        text: 'just follow & retweet, then claim your reward',
+      });
+      expect(result?.reason).toContain('关注-转发抽奖');
+    });
+
+    it('keeps normal crypto and giveaway mentions clean', () => {
+      expect(detect({ handle: 'dev', text: 'crypto taxes are painful' })).toBeNull();
+      expect(
+        detect({ handle: 'shop', text: 'we give away swag at the conference booth' }),
+      ).toBeNull();
+      expect(
+        detect({ handle: 'friend', text: 'I like how you claim your mornings' }),
+      ).toBeNull();
+    });
   });
 });
 
