@@ -81,7 +81,9 @@ export default function App() {
           <span className="list-count">{count === null ? '…' : `${count} 个`}</span>
         </div>
 
-        {count === 0 ? (
+        {count === null ? (
+          <p className="list-empty">…</p>
+        ) : count === 0 ? (
           <p className="list-empty">
             {running ? '正在拉黑…' : '在 Timeline 黄框里勾选垃圾账号，会累积到这里'}
           </p>
