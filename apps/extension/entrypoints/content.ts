@@ -7,7 +7,8 @@ import {
   tweetSelectors,
   type ParsedApiData,
 } from '@feedsieve/x-adapter';
-import { isPending, setPendingBlock } from '../src/lib/pending-blocks';
+import { isPending, removePendingBlock, setPendingBlock } from '../src/lib/pending-blocks';
+import { collectCellsByHandle, removeCellsSoon } from '../src/lib/remove-tweets';
 import { getUserId, saveUserIds } from '../src/lib/user-ids';
 import builtinListJson from '../../../community/lists/recommended.json';
 
@@ -215,6 +216,8 @@ export default defineContentScript({
      * 顺手拉黑（Phase 2）：查缓存的 rest_id -> 调 X 网页端原拉黑端点。
      * 缓存 miss 不再让用户等刷新：按 UserByScreenName 当场解析（TBWL 同款），
      * 解析成功顺手回填缓存；只有解析也失败才如实提示。
+     * 成功后：从待拉黑列表移除该账号，并把页面上该账号的推文移除
+     * （对齐 X 原生拉黑行为，见 src/lib/remove-tweets.ts）。
      * 按钮文字实时反映状态，绝不假装成功。
      */
     async function runBlockNow(
@@ -247,7 +250,11 @@ export default defineContentScript({
         const result = await runNativeAction('block', xUserId);
         if (result.ok) {
           button.textContent = '已拉黑 ✓';
-          await setPendingBlock(handle, true, '手动顺手拉黑', xUserId);
+          // 已拉黑就不该再留在待拉黑列表里，否则批量执行会重复拉黑
+          await removePendingBlock(handle);
+          // 对齐 X 原生拉黑行为：确认成功后把该账号页面上可见的推文一并移除，
+          // 让「已拉黑」立刻有可见效果，而不是等刷新
+          removeCellsSoon(collectCellsByHandle(handle));
         } else {
           // 如实反馈失败原因（auth_required / rate_limited / network_error…）
           button.textContent = `失败 ${result.code}`;
