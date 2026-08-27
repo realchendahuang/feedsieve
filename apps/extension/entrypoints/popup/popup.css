@@ -54,6 +54,115 @@ body {
   color: #a58f00;
 }
 
+/* 待拉黑列表 */
+.list-card {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid #f2c94c;
+  border-radius: 8px;
+  background: #fffbe6;
+}
+
+.list-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.list-count {
+  font-size: 11px;
+  color: #8a7500;
+}
+
+.list-empty {
+  margin: 10px 0 4px;
+  font-size: 12px;
+  color: #a58f00;
+}
+
+.pending-list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.pending-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px dashed #e6d48f;
+}
+
+.pending-item:last-child {
+  border-bottom: none;
+}
+
+.pending-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pending-handle {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pending-reason {
+  font-size: 11px;
+  color: #8a7500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remove-btn {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #a58f00;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.remove-btn:hover:not(:disabled) {
+  background: #f2c94c;
+  color: #3d3200;
+}
+
+.remove-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.batch-summary {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: #3d6320;
+  word-break: break-all;
+}
+
+.batch-fail {
+  color: #a03b1e;
+}
+
+.notice-error {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: #a03b1e;
+}
+
 .primary-action {
   margin-top: 14px;
   width: 100%;
@@ -67,6 +176,28 @@ body {
 }
 
 .primary-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.secondary-action {
+  margin-top: 8px;
+  width: 100%;
+  padding: 7px 0;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  background: #fff;
+  color: #666;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.secondary-action:hover:not(:disabled) {
+  border-color: #f2c94c;
+  color: #8a7500;
+}
+
+.secondary-action:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }

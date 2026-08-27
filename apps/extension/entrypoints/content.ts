@@ -9,6 +9,7 @@ import {
 } from '@feedsieve/x-adapter';
 import { isPending, removePendingBlock, setPendingBlock } from '../src/lib/pending-blocks';
 import { collectCellsByHandle, removeCellsSoon } from '../src/lib/remove-tweets';
+import { runPendingBlockBatch } from '../src/lib/run-block-batch';
 import { getUserId, saveUserIds } from '../src/lib/user-ids';
 import builtinListJson from '../../../community/lists/recommended.json';
 
@@ -48,6 +49,17 @@ export default defineContentScript({
     ensureStyles();
     refreshPendingCache();
     listenXhrBridge();
+
+    /**
+     * popup「一键拉黑」入口：这里执行需要页面会话的原生拉黑，
+     * 返回 Promise 作为 sendMessage 的响应（批量汇总见 run-block-batch.ts）。
+     */
+    browser.runtime.onMessage.addListener((message: unknown) => {
+      if ((message as { type?: string } | null)?.type === 'feedsieve:run-block-batch') {
+        return runPendingBlockBatch();
+      }
+      return undefined;
+    });
 
     /** 消费 MAIN world XHR 桥的数据：rest_id 入库（LRU 上限内），bio 进内存缓存。 */
     function listenXhrBridge(): void {

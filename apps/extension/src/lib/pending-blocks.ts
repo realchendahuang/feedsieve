@@ -68,6 +68,11 @@ export async function removePendingBlock(handle: string): Promise<void> {
   await browser.storage.local.set({ [STORAGE_KEY]: remaining });
 }
 
+/** 清空整张列表（用户主动清理）。幂等。 */
+export async function clearPendingBlocks(): Promise<void> {
+  await browser.storage.local.set({ [STORAGE_KEY]: [] });
+}
+
 /** 订阅变化（popup 打开时实时刷新）。返回解绑函数。 */
 export function subscribePending(
   onChange: (blocks: PendingBlock[]) => void,
