@@ -124,6 +124,33 @@ describe('parseXApiResponse', () => {
     expect(retweet?.author.handle).toBe('original01');
   });
 
+  it('parses SearchTimeline (search f=live) with rest_id and bio', () => {
+    const body = {
+      data: {
+        search_by_raw_query: {
+          search_timeline: {
+            timeline: {
+              instructions: [
+                {
+                  entries: [
+                    entry('tweet-1720000000000000001', tweetResult()),
+                    entry('promoted-tweet-2', tweetResult({ rest_id: '1720000000000000002' })),
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      },
+    };
+    const parsed = parseXApiResponse('https://x.com/i/api/graphql/xxx/SearchTimeline?variables=', body);
+    expect(parsed.matchedEndpoints).toEqual(['SearchTimeline']);
+    expect(parsed.tweets).toHaveLength(1);
+    expect(parsed.promoted).toHaveLength(1);
+    expect(parsed.tweets[0]?.author.xUserId).toBe('900000000000000001');
+    expect(parsed.tweets[0]?.author.bio).toBe('giveaway expert');
+  });
+
   it('parses ListMembers with rest_id and blocking state', () => {
     const body = {
       data: {

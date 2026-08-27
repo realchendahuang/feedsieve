@@ -33,7 +33,7 @@ const ENDPOINTS: Record<NativeActionType, string> = {
   unblock: 'https://x.com/i/api/1.1/blocks/destroy.json',
 };
 
-function readCsrfToken(): string | null {
+export function readCsrfToken(): string | null {
   for (const part of document.cookie.split(';')) {
     const trimmed = part.trim();
     if (trimmed.startsWith('ct0=')) {

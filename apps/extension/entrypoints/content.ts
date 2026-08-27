@@ -2,6 +2,7 @@ import { detect, toHandleSet } from '@feedsieve/detector';
 import {
   contextFromPath,
   extractFeedItem,
+  resolveUserIdByHandle,
   runNativeAction,
   tweetSelectors,
   type ParsedApiData,
@@ -212,7 +213,9 @@ export default defineContentScript({
 
     /**
      * 顺手拉黑（Phase 2）：查缓存的 rest_id -> 调 X 网页端原拉黑端点。
-     * 按钮文字实时反映状态；rest_id 未缓存时明确提示，不假装成功。
+     * 缓存 miss 不再让用户等刷新：按 UserByScreenName 当场解析（TBWL 同款），
+     * 解析成功顺手回填缓存；只有解析也失败才如实提示。
+     * 按钮文字实时反映状态，绝不假装成功。
      */
     async function runBlockNow(
       handle: string,
@@ -221,17 +224,26 @@ export default defineContentScript({
       const original = button.textContent;
       button.disabled = true;
       try {
-        const xUserId = await getUserId(handle);
+        button.textContent = '拉黑中…';
+        let xUserId: string | undefined | null = await getUserId(handle);
         if (!xUserId) {
-          button.textContent = '缺ID 刷新后试';
+          xUserId = await resolveUserIdByHandle(handle);
+          if (xUserId) {
+            void saveUserIds([{ handle, xUserId }]).catch(() => {
+              // 回填失败不影响本次拉黑
+            });
+          }
+        }
+        if (!xUserId) {
+          button.textContent = '失败 无ID';
+          console.warn(`[FeedSieve] resolve rest_id for @${handle} failed`);
           setTimeout(() => {
             button.textContent = original;
             button.disabled = false;
-          }, 2500);
+          }, 3000);
           return;
         }
 
-        button.textContent = '拉黑中…';
         const result = await runNativeAction('block', xUserId);
         if (result.ok) {
           button.textContent = '已拉黑 ✓';

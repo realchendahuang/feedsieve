@@ -150,6 +150,17 @@ function parseListTimeline(body: Json): ParsedApiData {
   return data;
 }
 
+function parseSearchTimeline(body: Json): ParsedApiData {
+  const instructions =
+    body?.data?.search_by_raw_query?.search_timeline?.timeline?.instructions;
+  const entries = instructions?.[0]?.entries;
+  const all = collectTimelineTweets(entries);
+  const data = emptyWith(['SearchTimeline']);
+  data.tweets = all.filter((t) => !t.isPromoted);
+  data.promoted = all.filter((t) => t.isPromoted);
+  return data;
+}
+
 function parseListMembers(body: Json): ParsedApiData {
   const data = emptyWith(['ListMembers']);
   for (const instruction of body?.data?.list?.members_timeline?.timeline
@@ -219,6 +230,9 @@ export function parseXApiResponse(url: string, body: Json): ParsedApiData {
     }
     if (url.includes('ListLatestTweetsTimeline')) {
       return parseListTimeline(body);
+    }
+    if (url.includes('SearchTimeline')) {
+      return parseSearchTimeline(body);
     }
     if (url.includes('/ListMembers')) {
       return parseListMembers(body);
