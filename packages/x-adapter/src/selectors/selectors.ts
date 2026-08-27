@@ -11,6 +11,8 @@
 export const tweetSelectors = {
   /** 单条推文容器：X 对 article + data-testid="tweet" 相当稳定。 */
   article: 'article[data-testid="tweet"]',
+  /** 时间线格子（article 的外层 cell）。标注边框打在这层，绝不进 article 内部破坏其 grid 布局。 */
+  timelineCell: 'div[data-testid="cellInnerDiv"]',
   /** 作者信息区（含 displayName 与 @handle 链接）。 */
   authorNameArea: '[data-testid="User-Name"]',
   /** 作者行里指向 /handle 的链接（displayName 同样包在一个用户链接里）。 */

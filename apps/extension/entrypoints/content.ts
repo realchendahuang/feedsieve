@@ -22,7 +22,11 @@ const STYLE_ELEMENT_ID = 'feedsieve-mark-styles';
  * Phase 1 content script：黄框标注（带理由）+ 勾选加入待拉黑列表。
  *
  * - ISOLATED world（冻结决策）
- * - 标注绝不改动页面内容显示：只有黄色描边、微弱底色和自绘徽章
+ * - 标注绝不改动页面内容显示，也不破坏 X 布局。
+ *   借鉴成熟方案（PureTwitter / TBWL）：
+ *   1. 黄圈打在 article 的外层 cellInnerDiv 上 —— 纯 border，无背景色；
+ *      绝不往 article（CSS grid 容器）里塞元素。
+ *   2. 理由徽章作为 cellInnerDiv 的块级子元素排在推文下方，不覆盖任何内容。
  * - MutationObserver 只发现候选节点，WeakSet 去重，debounce 批量扫描
  */
 export default defineContentScript({
@@ -81,7 +85,9 @@ export default defineContentScript({
           continue;
         }
 
-        markArticle(article as HTMLElement, detection);
+        // 标注打在外层时间线格子上（PureTwitter 同款目标层）；找不到才退回 article
+        const cell = article.closest(tweetSelectors.timelineCell) ?? article;
+        markCell(cell as HTMLElement, detection);
       }
     }
 
@@ -103,16 +109,19 @@ export default defineContentScript({
 
     // ---------- 标注 UI ----------
 
-    function markArticle(article: HTMLElement, detection: NonNullable<ReturnType<typeof detect>>): void {
-      article.setAttribute(MARK_ATTRIBUTE, detection.source);
-      attachBadge(article, detection);
+    function markCell(
+      cell: HTMLElement,
+      detection: NonNullable<ReturnType<typeof detect>>,
+    ): void {
+      cell.setAttribute(MARK_ATTRIBUTE, detection.source);
+      attachBadge(cell, detection);
     }
 
     function attachBadge(
-      article: HTMLElement,
+      cell: HTMLElement,
       detection: NonNullable<ReturnType<typeof detect>>,
     ): void {
-      if (article.querySelector('.fs-badge')) {
+      if (cell.querySelector('.fs-badge')) {
         return;
       }
 
@@ -128,7 +137,6 @@ export default defineContentScript({
       checkbox.className = 'fs-pick';
       const input = document.createElement('input');
       input.type = 'checkbox';
-      input.checked = pendingCache.has(detection.handle);
       input.addEventListener('change', () => {
         void setPendingBlock(detection.handle, input.checked, detection.reason).catch(
           () => {
@@ -140,10 +148,11 @@ export default defineContentScript({
       checkbox.appendChild(document.createTextNode('待拉黑'));
 
       badge.append(label, checkbox);
-      article.appendChild(badge);
+      // cellInnerDiv 是普通块容器：徽章作为新块级子元素排在推文下方，
+      // 处于文档流内但不进入 article 的 grid，不覆盖、不挤压任何 X 内容。
+      cell.appendChild(badge);
 
-      // X 可能整棵替换 article（re-render）；补挂缓存可能未及时刷新，
-      // 新节点重新扫描时会再次走到这里，checked 状态以上方 pendingCache 为准。
+      // X 可能整棵重渲染节点；异步对齐一次勾选态，防 pendingCache 未及时刷新
       void isPending(detection.handle).then((isOn) => {
         input.checked = isOn;
       });
@@ -158,28 +167,30 @@ function ensureStyles(): void {
   const style = document.createElement('style');
   style.id = STYLE_ELEMENT_ID;
   style.textContent = `
+    /* PureTwitter 同款策略：只画一圈黄边框，无背景色、无 outline。
+       border + box-sizing 让格子内容微缩而不破坏整体布局。 */
     [${MARK_ATTRIBUTE}] {
-      outline: 3px solid #f2c94c !important;
-      outline-offset: 2px;
+      border: 4px solid #f2c94c !important;
       border-radius: 16px;
-      background-color: rgba(242, 201, 76, 0.06) !important;
+      box-sizing: border-box !important;
+      overflow: hidden !important;
     }
     .fs-badge {
       display: flex;
-      gap: 12px;
+      gap: 10px;
       align-items: center;
-      padding: 4px 10px;
-      margin: 6px 16px;
+      padding: 3px 10px;
+      margin: 2px 12px 8px;
       width: fit-content;
+      max-width: calc(100% - 24px);
       border: 1px solid #f2c94c;
-      border-radius: 8px;
+      border-radius: 999px;
       background: #fffbe6;
       color: #5c4d00;
-      font-size: 13px;
-      line-height: 1.4;
-      z-index: 9;
+      font-size: 12px;
+      line-height: 1.5;
     }
-    .fs-reason { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 360px; }
+    .fs-reason { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .fs-pick { display: flex; align-items: center; gap: 4px; white-space: nowrap; cursor: pointer; user-select: none; }
     .fs-pick input { accent-color: #d4a900; cursor: pointer; }
   `;
