@@ -2,6 +2,7 @@ import { detect, toHandleSet } from '@feedsieve/detector';
 import {
   contextFromPath,
   extractFeedItem,
+  runNativeAction,
   tweetSelectors,
   type ParsedApiData,
 } from '@feedsieve/x-adapter';
@@ -48,27 +49,34 @@ export default defineContentScript({
 
     /** 消费 MAIN world XHR 桥的数据：rest_id 入库（LRU 上限内），bio 进内存缓存。 */
     function listenXhrBridge(): void {
-      window.addEventListener('feedsieve:xhr-items', (event) => {
-        const parsed = (event as CustomEvent<ParsedApiData>).detail;
-        if (!parsed?.tweets && !parsed?.listMembers) {
-          return;
-        }
-        const idEntries: Array<{ handle: string; xUserId: string }> = [];
-        for (const tweet of parsed.tweets ?? []) {
-          if (tweet.author.xUserId) {
-            idEntries.push({ handle: tweet.author.handle, xUserId: tweet.author.xUserId });
+      // 注意：桥 dispatch 在共享的 document 上；window 是各 world 独立的，监听 window 收不到
+      document.addEventListener('feedsieve:xhr-items', (event) => {
+        try {
+          const parsed = JSON.parse(
+            (event as CustomEvent<string>).detail,
+          ) as ParsedApiData;
+          if (!parsed?.tweets && !parsed?.listMembers) {
+            return;
           }
-          if (tweet.author.bio) {
-            bioCache.set(tweet.author.handle, tweet.author.bio);
+          const idEntries: Array<{ handle: string; xUserId: string }> = [];
+          for (const tweet of parsed.tweets ?? []) {
+            if (tweet.author.xUserId) {
+              idEntries.push({ handle: tweet.author.handle, xUserId: tweet.author.xUserId });
+            }
+            if (tweet.author.bio) {
+              bioCache.set(tweet.author.handle, tweet.author.bio);
+            }
           }
-        }
-        for (const member of parsed.listMembers ?? []) {
-          idEntries.push({ handle: member.handle, xUserId: member.xUserId });
-        }
-        if (idEntries.length > 0) {
-          void saveUserIds(idEntries).catch(() => {
-            // 存储失败不阻塞浏览；下次同账号出现会重试
-          });
+          for (const member of parsed.listMembers ?? []) {
+            idEntries.push({ handle: member.handle, xUserId: member.xUserId });
+          }
+          if (idEntries.length > 0) {
+            void saveUserIds(idEntries).catch(() => {
+              // 存储失败不阻塞浏览；下次同账号出现会重试
+            });
+          }
+        } catch {
+          // detail 非法 JSON：静默
         }
       });
     }
@@ -183,7 +191,15 @@ export default defineContentScript({
       checkbox.appendChild(input);
       checkbox.appendChild(document.createTextNode('待拉黑'));
 
-      badge.append(label, checkbox);
+      const blockBtn = document.createElement('button');
+      blockBtn.className = 'fs-block-now';
+      blockBtn.type = 'button';
+      blockBtn.textContent = '顺手拉黑';
+      blockBtn.addEventListener('click', () => {
+        void runBlockNow(detection.handle, blockBtn);
+      });
+
+      badge.append(label, checkbox, blockBtn);
       // cellInnerDiv 是普通块容器：徽章作为新块级子元素排在推文下方，
       // 处于文档流内但不进入 article 的 grid，不覆盖、不挤压任何 X 内容。
       cell.appendChild(badge);
@@ -192,6 +208,51 @@ export default defineContentScript({
       void isPending(detection.handle).then((isOn) => {
         input.checked = isOn;
       });
+    }
+
+    /**
+     * 顺手拉黑（Phase 2）：查缓存的 rest_id -> 调 X 网页端原拉黑端点。
+     * 按钮文字实时反映状态；rest_id 未缓存时明确提示，不假装成功。
+     */
+    async function runBlockNow(
+      handle: string,
+      button: HTMLButtonElement,
+    ): Promise<void> {
+      const original = button.textContent;
+      button.disabled = true;
+      try {
+        const xUserId = await getUserId(handle);
+        if (!xUserId) {
+          button.textContent = '缺ID 刷新后试';
+          setTimeout(() => {
+            button.textContent = original;
+            button.disabled = false;
+          }, 2500);
+          return;
+        }
+
+        button.textContent = '拉黑中…';
+        const result = await runNativeAction('block', xUserId);
+        if (result.ok) {
+          button.textContent = '已拉黑 ✓';
+          await setPendingBlock(handle, true, '手动顺手拉黑', xUserId);
+        } else {
+          // 如实反馈失败原因（auth_required / rate_limited / network_error…）
+          button.textContent = `失败 ${result.code}`;
+          console.warn(`[FeedSieve] block @${handle} failed:`, result.code, result.message);
+          setTimeout(() => {
+            button.textContent = original;
+            button.disabled = false;
+          }, 3000);
+        }
+      } catch (error) {
+        button.textContent = '失败 未知';
+        console.error(`[FeedSieve] block @${handle} threw:`, error);
+        setTimeout(() => {
+          button.textContent = original;
+          button.disabled = false;
+        }, 3000);
+      }
     }
   },
 });
@@ -203,13 +264,16 @@ function ensureStyles(): void {
   const style = document.createElement('style');
   style.id = STYLE_ELEMENT_ID;
   style.textContent = `
-    /* PureTwitter 同款策略：只画一圈黄边框，无背景色、无 outline。
-       border + box-sizing 让格子内容微缩而不破坏整体布局。 */
+    /* 纯黄环标注：outline 不占布局空间（区别于 border），不挤压格子内容；
+       outline-offset 让环浮在格子外缘，相邻两条标注的环之间自然留出缝隙，不再上下重叠。 */
     [${MARK_ATTRIBUTE}] {
-      border: 4px solid #f2c94c !important;
+      outline: 3px solid #f2c94c !important;
+      outline-offset: -3px;
       border-radius: 16px;
-      box-sizing: border-box !important;
-      overflow: hidden !important;
+    }
+    /* 相邻都是标注格子时，压缩格子间分隔产生的重叠观感 */
+    [${MARK_ATTRIBUTE}] + [${MARK_ATTRIBUTE}] {
+      outline-offset: -6px;
     }
     .fs-badge {
       display: flex;
@@ -229,6 +293,19 @@ function ensureStyles(): void {
     .fs-reason { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .fs-pick { display: flex; align-items: center; gap: 4px; white-space: nowrap; cursor: pointer; user-select: none; }
     .fs-pick input { accent-color: #d4a900; cursor: pointer; }
+    .fs-block-now {
+      padding: 2px 10px;
+      border: 1px solid #d4a900;
+      border-radius: 999px;
+      background: #f2c94c;
+      color: #3d3200;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .fs-block-now:hover:not(:disabled) { background: #ffd950; }
+    .fs-block-now:disabled { opacity: 0.6; cursor: wait; }
   `;
   document.documentElement.appendChild(style);
 }
