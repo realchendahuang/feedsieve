@@ -46,13 +46,27 @@ curl https://你的域名/healthz
 
 注意：中国大陆访问 `*.workers.dev` 不可靠，务必绑定自定义域。
 
-## 端点（随 v0.2 各阶段上线）
+## 端点
 
-| 端点 | 阶段 | 说明 |
+| 端点 | 状态 | 说明 |
 | --- | --- | --- |
-| `GET /healthz` | ✅ Phase A | 存活检查 |
-| `POST /v1/reports` | Phase B | 显式上报（匿名安装哈希、去重、限速） |
-| `GET /v1/snapshots/latest` + `/v1/snapshots/:version/:file` | Phase C | 版本化快照 + manifest + sha256 |
-| `POST /admin/*` | Phase D | 人工审核（ADMIN_TOKEN 保护） |
+| `GET /healthz` | ✅ | 存活检查 |
+| `POST /v1/reports` | ✅ | 显式上报（匿名安装哈希、去重、限速，批量 ≤50） |
+| `GET /v1/snapshots/latest` | ✅ | manifest（版本 + sha256 + 条目数，短缓存） |
+| `GET /v1/snapshots/:version/:file` | ✅ | 快照文件（immutable 缓存） |
+| `POST /admin/publish` | ✅ | 生成并发布新快照版本 |
+| `GET /admin/candidates` | ✅ | 待审队列（new + candidate，按票数降序） |
+| `POST /admin/promote` | ✅ | 人工提升/驳回：`recommended` / `strong` / `dismissed` |
 
-审核闸门：自动化只能把账号标到 `candidate`；`recommended` / `strong` 必须人工提升。
+审核闸门：自动化只能把账号标到 `candidate`；`recommended` / `strong` 必须人工提升，
+`dismissed` = 人工驳回（永不出现在快照里）。`new` = 票数未达阈值（当前 3 票）。
+
+## 管理 CLI
+
+```sh
+apps/community-api/scripts/admin.sh candidates          # 待审队列
+apps/community-api/scripts/admin.sh promote @handle strong
+apps/community-api/scripts/admin.sh publish             # 发布新快照
+```
+
+令牌读 `FEEDSIEVE_ADMIN_TOKEN` 或 `~/.feedsieve-secrets.txt`；`FEEDSIEVE_API` 可指向自部署实例。

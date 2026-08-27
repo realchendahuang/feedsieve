@@ -3,9 +3,6 @@ import { sha256Hex } from './lib/hash';
 export const SNAPSHOT_SCHEMA_VERSION = 1;
 export const SNAPSHOT_PACK = 'official.json';
 
-// 公开快照里只进 candidate 及以上；'new'（票数不足）和 'dismissed' 永不出库
-const PUBLISHED_STATUSES = ['candidate', 'recommended', 'strong'] as const;
-
 export interface SnapshotEntry {
   handle: string;
   x_user_id: string | null;
