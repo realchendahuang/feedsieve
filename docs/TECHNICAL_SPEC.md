@@ -236,10 +236,16 @@ host_permissions:
 
 不要申请：
 
-- cookies
+- cookies 权限（`ct0` 等非 httpOnly cookie 在页面上下文可直接读，无需申请）
 - webRequest（除非出现无法替代的明确需求）
 - X OAuth credential
 - 用户密码
+
+会话要素使用边界（2026-08-27 修订，经 PureTwitter / TBWL 实证）：
+
+- 拉黑走 X 网页端自己的 `1.1/blocks/*.json` 端点，使用页面已登录会话
+- 只在页面上下文读取 `ct0`（页面本身可见），与公开 web client bearer 一起构成与用户手点 Block 相同的请求
+- 凭证绝不出页面：不发往 FeedSieve 后端、不写入 storage、不打日志
 
 原则：
 

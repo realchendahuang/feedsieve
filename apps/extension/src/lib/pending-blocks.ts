@@ -11,6 +11,8 @@ export interface PendingBlock {
   addedAt: number;
   /** 记录来源标注，用于 Popup 里解释「这个号为什么在列表里」。 */
   markedReason: string;
+  /** X 内部用户 ID（rest_id）。拉黑 API 需要；XHR 桥在用户浏览时已缓存。 */
+  xUserId?: string;
 }
 
 const STORAGE_KEY = 'pendingBlocks';
@@ -31,6 +33,7 @@ export async function setPendingBlock(
   handle: string,
   on: boolean,
   markedReason = '',
+  xUserId?: string,
 ): Promise<void> {
   const normalized = normalize(handle);
   if (!normalized) {
@@ -41,10 +44,21 @@ export async function setPendingBlock(
     return;
   }
   const blocks = await getPendingBlocks();
-  if (blocks.some((b) => b.handle === normalized)) {
+  const existing = blocks.find((b) => b.handle === normalized);
+  if (existing) {
+    // 已存在时补齐 xUserId（勾选时可能还没拿到 ID）
+    if (!existing.xUserId && xUserId) {
+      existing.xUserId = xUserId;
+      await browser.storage.local.set({ [STORAGE_KEY]: blocks });
+    }
     return;
   }
-  blocks.push({ handle: normalized, addedAt: Date.now(), markedReason });
+  blocks.push({
+    handle: normalized,
+    addedAt: Date.now(),
+    markedReason,
+    ...(xUserId ? { xUserId } : {}),
+  });
   await browser.storage.local.set({ [STORAGE_KEY]: blocks });
 }
 

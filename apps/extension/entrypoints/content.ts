@@ -3,8 +3,10 @@ import {
   contextFromPath,
   extractFeedItem,
   tweetSelectors,
+  type ParsedApiData,
 } from '@feedsieve/x-adapter';
 import { isPending, setPendingBlock } from '../src/lib/pending-blocks';
+import { getUserId, saveUserIds } from '../src/lib/user-ids';
 import builtinListJson from '../../../community/lists/recommended.json';
 
 /**
@@ -28,16 +30,48 @@ const STYLE_ELEMENT_ID = 'feedsieve-mark-styles';
  *      绝不往 article（CSS grid 容器）里塞元素。
  *   2. 理由徽章作为 cellInnerDiv 的块级子元素排在推文下方，不覆盖任何内容。
  * - MutationObserver 只发现候选节点，WeakSet 去重，debounce 批量扫描
+ * - XHR 桥（xhr-bridge.content.ts，MAIN world）通过 CustomEvent 送来
+ *   GraphQL 权威数据：在这里缓存 rest_id（拉黑 API 必需）与 bio（检测增强）。
  */
 export default defineContentScript({
   matches: ['https://x.com/*'],
   main() {
     const seenArticles = new WeakSet<Element>();
     const pendingCache = new Set<string>();
+    /** handle -> bio（XHR 桥提供，检测用；DOM 拿不到简介） */
+    const bioCache = new Map<string, string>();
     let scanTimer: number | undefined;
 
     ensureStyles();
     refreshPendingCache();
+    listenXhrBridge();
+
+    /** 消费 MAIN world XHR 桥的数据：rest_id 入库（LRU 上限内），bio 进内存缓存。 */
+    function listenXhrBridge(): void {
+      window.addEventListener('feedsieve:xhr-items', (event) => {
+        const parsed = (event as CustomEvent<ParsedApiData>).detail;
+        if (!parsed?.tweets && !parsed?.listMembers) {
+          return;
+        }
+        const idEntries: Array<{ handle: string; xUserId: string }> = [];
+        for (const tweet of parsed.tweets ?? []) {
+          if (tweet.author.xUserId) {
+            idEntries.push({ handle: tweet.author.handle, xUserId: tweet.author.xUserId });
+          }
+          if (tweet.author.bio) {
+            bioCache.set(tweet.author.handle, tweet.author.bio);
+          }
+        }
+        for (const member of parsed.listMembers ?? []) {
+          idEntries.push({ handle: member.handle, xUserId: member.xUserId });
+        }
+        if (idEntries.length > 0) {
+          void saveUserIds(idEntries).catch(() => {
+            // 存储失败不阻塞浏览；下次同账号出现会重试
+          });
+        }
+      });
+    }
 
     function refreshPendingCache(): void {
       void browser.storage.local
@@ -78,6 +112,7 @@ export default defineContentScript({
           handle: item.author.handle,
           displayName: item.author.displayName,
           text: item.text,
+          bio: bioCache.get(item.author.handle),
           links: item.links,
         }, { list: BUILTIN_LIST, listSource: 'builtin-list' });
 
@@ -138,11 +173,12 @@ export default defineContentScript({
       const input = document.createElement('input');
       input.type = 'checkbox';
       input.addEventListener('change', () => {
-        void setPendingBlock(detection.handle, input.checked, detection.reason).catch(
-          () => {
-            input.checked = !input.checked; // 写入失败回滚勾选态
-          },
-        );
+        void (async () => {
+          const xUserId = await getUserId(detection.handle);
+          await setPendingBlock(detection.handle, input.checked, detection.reason, xUserId);
+        })().catch(() => {
+          input.checked = !input.checked; // 写入失败回滚勾选态
+        });
       });
       checkbox.appendChild(input);
       checkbox.appendChild(document.createTextNode('待拉黑'));

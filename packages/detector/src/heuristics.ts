@@ -90,11 +90,13 @@ const TEMPLATED_PATTERNS: ReadonlyArray<readonly [RegExp, string]> = [
 const templatedText: HeuristicRule = {
   id: 'templated-text',
   check(input) {
-    if (!input.text) {
+    // 正文与简介一起查（PureTwitter 覆盖 full_text/description 的实证：垃圾号爱在 bio 埋引流）
+    const haystack = [input.text, input.bio].filter(Boolean).join('\n');
+    if (!haystack) {
       return null;
     }
     for (const [pattern, label] of TEMPLATED_PATTERNS) {
-      if (pattern.test(input.text)) {
+      if (pattern.test(haystack)) {
         return `模板化垃圾话术：${label}`;
       }
     }

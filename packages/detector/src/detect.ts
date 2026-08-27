@@ -11,6 +11,8 @@ export interface DetectInput {
   handle: string;
   displayName?: string;
   text?: string;
+  /** 账号简介。XHR 桥可稳定提供（PureTwitter 证明垃圾号常在 bio 埋话术）。 */
+  bio?: string;
   /** hostname 由 Reader 预先解析好，Detector 不做 URL 解析。 */
   links?: ReadonlyArray<{ href: string; hostname?: string; display?: string }>;
 }

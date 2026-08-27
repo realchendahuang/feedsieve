@@ -1,6 +1,8 @@
 # FeedSieve X Action Adapter
 
-> Implementation baseline for browser-native X actions.
+> Implementation baseline for browser-native X actions.  
+> 2026-08-27 修订：经 PureTwitter / TBWL 两个成熟项目实证，批量拉黑的基准实现
+> 从「DOM 菜单点击流程」改为「页面同源 Web API」。原 DOM 流程降级为 fallback。
 
 ## 1. 核心结论
 
@@ -10,12 +12,32 @@ FeedSieve 运行在 `x.com` 页面里，因此对 X 已经暴露给登录用户�
 
 > **Read the page. Filter locally. Act through the page.**
 
-- 读取 X 页面：Content Script / Reader Adapter
+- 读取 X 页面：Content Script / Reader Adapter；数据权威源是 X 自己的 GraphQL 响应（XHR 桥），DOM 只做兜底
 - FeedSieve 标注：完全本地，永不隐藏内容
-- X 原生 Block / Mute / Unblock / Unmute：通过当前已登录的 X 页面完成
+- X 原生 Block / Unblock：调用 X 网页端自己的 `1.1/blocks/*.json` 端点（与用户在页面点 Block 时浏览器发出的请求相同），使用页面自身登录会话
 - Community API：只处理 FeedSieve 的 Report / Rescue / Score / Snapshot
-- 不要求 X Access Token
-- 不读取用户 X Cookie
+- 不要求 X OAuth / Developer API / Access Token
+- 只读取 X 网页端本身已暴露给页面的会话要素（`ct0` cookie、公开 web client bearer）；绝不把凭证发往 FeedSieve 之外的任何服务器
+
+## 1.1 基准实现（实证来源）
+
+PureTwitter（闭源，3000+ 用户）与 Twitter-Block-With-Love（MIT，vendored 于
+`third_party/tbwl/`）独立收敛到同一实现：
+
+```text
+POST https://x.com/i/api/1.1/blocks/create.json    （unblock 用 destroy.json）
+Headers:
+  Authorization: <X 网页端公开 web client bearer>
+  X-Twitter-Auth-Type: OAuth2Session
+  X-Twitter-Active-User: yes
+  X-Csrf-Token: <document.cookie 中的 ct0>
+Body: user_id=<rest_id>
+```
+
+前置条件：拿到目标账号的 `rest_id`（x_user_id）。来源是 XHR 桥解析的 GraphQL
+响应（`x-adapter/src/api/parse.ts`），随用户浏览增量缓存（`src/lib/user-ids.ts`）。
+
+已实现的 TS 代码：`x-adapter/src/actions/block.ts`（runNativeAction）。
 
 ## 2. 为什么 Action Adapter 必须独立
 
@@ -47,29 +69,29 @@ packages/x-adapter/
 
 Detector 永远不知道 X 菜单长什么样。
 
-## 3. v0.1 只做单账号 Action
+## 3. v0.1 单账号 Action
 
 第一版最重要的是稳定，而不是批量数量。
 
-用户流程：
+用户流程（基准路径，非 DOM 菜单流程）：
 
 ```text
 黄框标注账号
      ↓
-点击「顺手拉黑」
+用户点「顺手拉黑」
      ↓
-Action Adapter
+查 user-ids 缓存拿 rest_id
+  （未命中：打开该用户 profile 触发一次 GraphQL 响应，或退回 DOM 菜单流程）
      ↓
-打开 X 原生菜单
+runNativeAction('block', restId)
      ↓
-找到 Block action
+检查 HTTP 结果
      ↓
-点击
-     ↓
-处理 confirmation
-     ↓
-等待成功 UI / state
+如实反馈成功 / 失败原因
 ```
+
+DOM 菜单流程（打开 ... 菜单 → 找 Block → 确认）保留为 fallback：
+当 `rest_id` 不可得或 API 路径被 X 变更时启用。
 
 Block 失败时必须如实反馈失败原因，不假装成功。
 
@@ -168,13 +190,19 @@ success state   4s
 
 具体值以后通过真实测试调整。
 
-## 7. 不优先使用 MAIN world
+## 7. MAIN world：只允许最小化 XHR 桥
 
-Content Script 默认 isolated world 已经可以读取和点击 DOM。
+Content Script 默认 ISOLATED world。
 
-只有未来证明某个动作必须调用页面 JavaScript runtime 时，才单独建立最小化 MAIN-world bridge。
+唯一允许进入 MAIN world 的代码是 XHR 桥（`xhr-bridge.content.ts`）：
+劫持 `XMLHttpRequest` 读取 X 自己的 GraphQL JSON 响应，把结构化数据
+（handle / rest_id / bio）用 CustomEvent 送回 ISOLATED world。
+这是拿到 `rest_id`（拉黑必需）与简介（检测增强）的唯一稳定途径，
+PureTwitter 用同一机制跑了数年。桥只读网络响应，不调用页面 JS runtime，
+不暴露任何扩展能力给页面。
 
-不要为了方便直接把整个扩展逻辑暴露在 host page world。
+浏览器也提供 fetch/XHR 的 webRequest 类替代方案，但 MV3 下已不可用；
+`XMLHttpRequest` 劫持是当前成熟项目的标准做法。
 
 ## 8. Block Queue
 

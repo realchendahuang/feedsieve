@@ -148,6 +148,15 @@ describe('heuristic: templated-text', () => {
         detect({ handle: 'friend', text: 'I like how you claim your mornings' }),
       ).toBeNull();
     });
+
+    it('catches spam planted in bio even with clean tweets', () => {
+      const result = detect({
+        handle: 'cleanpost',
+        text: 'good morning everyone',
+        bio: 'DM me for invest signals',
+      });
+      expect(result?.ruleId).toBe('templated-text');
+    });
   });
 });
 
