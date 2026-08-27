@@ -158,6 +158,31 @@ describe('heuristic: templated-text', () => {
       expect(result?.ruleId).toBe('templated-text');
     });
   });
+
+  describe('porn-bait-zh (2026-08 real-world samples from a live thread)', () => {
+    it.each([
+      ['比我好看的没我骚 比我骚的没我好看🍑'],
+      ['应该没人比我玩的更开了吧🍒我福不黑不信你看'],
+      ['我果然太涩了🍑👑有人想批评一下我的福嘛'],
+    ])('flags porn-bait copy: %s', (text) => {
+      const result = detect({ handle: 'bait01', text });
+      expect(result?.ruleId).toBe('porn-bait-zh');
+      expect(result?.marked).toBe(true);
+    });
+
+    it('catches 福利-in-bio variant', () => {
+      expect(detect({ handle: 'bait02', bio: '福利在简介 自取' })?.ruleId).toBe(
+        'porn-bait-zh',
+      );
+    });
+
+    it('keeps normal Chinese text clean (single erogenous marker is not enough)', () => {
+      expect(detect({ handle: 'tea', text: '今天的茶有点涩，回甘不错' })).toBeNull();
+      expect(detect({ handle: 'gamer', text: '这个英雄机制玩得真开' })).toBeNull();
+      expect(detect({ handle: 'foodie', text: '桃子🍑熟了，快来摘' })).toBeNull();
+      expect(detect({ handle: 'student', text: '老师批评了一下我的方案，改' })).toBeNull();
+    });
+  });
 });
 
 describe('heuristics are individually explainable', () => {

@@ -104,9 +104,51 @@ const templatedText: HeuristicRule = {
   },
 };
 
+/**
+ * 黄推「福」隐语（2026-08 真实样本：「我福不黑不信你看」「有人想批评一下我的福嘛」）。
+ * 福 = 福利（露骨内容）；这类短语在正常中文语境几乎不出现，单命中即可标。
+ */
+const PORN_BAIT_FU_RE =
+  /福不黑|(?:批评|评价|点评|看看|欣赏|指导)(?:一下)?我的福|我的福(?:嘛|呢)|福利(?:在主页|在简介|已备好|自取)/;
+
+/**
+ * 擦边词。单独出现常见于正常语境（如「茶有点涩」「玩得开」），
+ * 因此要求两条以上组合才判，压误伤。
+ */
+const EROGENOUS_MARKERS: ReadonlyArray<readonly [RegExp, string]> = [
+  [/涩|色色/, '涩'],
+  [/没我骚|比我[^。]{0,8}骚/, '骚'],
+  [/玩[得的]{1,2}更?开/, '玩得开'],
+  [/[🍑🍒🍆💧💋🌹〕]/u, '擦边emoji'],
+];
+
+const pornBaitZh: HeuristicRule = {
+  id: 'porn-bait-zh',
+  check(input) {
+    const text = [input.text, input.bio].filter(Boolean).join('\n');
+    if (!text) {
+      return null;
+    }
+    if (PORN_BAIT_FU_RE.test(text)) {
+      return '「福利」引流域黄推话术';
+    }
+    const hits: string[] = [];
+    for (const [pattern, label] of EROGENOUS_MARKERS) {
+      if (pattern.test(text)) {
+        hits.push(label);
+        if (hits.length >= 2) {
+          return `擦边引流组合话术（${hits.join('+')}）`;
+        }
+      }
+    }
+    return null;
+  },
+};
+
 /** 默认启发式集合，按优先级排列（前面的先命中先解释）。 */
 export const DEFAULT_HEURISTICS: readonly HeuristicRule[] = [
   defaultNameDigits,
+  pornBaitZh,
   spamLinkHint,
   templatedText,
 ];
