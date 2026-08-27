@@ -1,0 +1,18 @@
+// 公开配置：任何 fork/clone 都能按 README 部署自己的实例。
+// database_id 是占位符 —— 真实部署配置放在 gitignored 的 wrangler.local.jsonc
+// （结构见 wrangler.local.example.jsonc）。密钥一律走 wrangler secret put。
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "feedsieve-community-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-01",
+  "observability": { "enabled": true },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "feedsieve-community",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

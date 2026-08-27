@@ -1,0 +1,21 @@
+{
+  "name": "@feedsieve/community-api",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "deploy": "wrangler deploy --config wrangler.local.jsonc"
+  },
+  "dependencies": {
+    "hono": "^4.13.5"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.1.0",
+    "@cloudflare/workers-types": "^5.20260826.1",
+    "vitest": "^4.1.11",
+    "wrangler": "^4.126.0"
+  }
+}

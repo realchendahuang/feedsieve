@@ -1,0 +1,19 @@
+// 私有部署配置模板：cp wrangler.local.example.jsonc wrangler.local.jsonc
+// 填入你自己的账号信息后用 `pnpm deploy` 部署。此文件已被 gitignore，绝不提交。
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "feedsieve-community-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-01",
+  "observability": { "enabled": true },
+  "account_id": "YOUR_CLOUDFLARE_ACCOUNT_ID",
+  "routes": [{ "pattern": "your-api.example.com", "custom_domain": true }],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "feedsieve-community",
+      "database_id": "RUN_npx_wrangler_d1_create_AND_PASTE_THE_ID",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

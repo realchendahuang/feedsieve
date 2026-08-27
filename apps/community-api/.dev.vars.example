@@ -1,0 +1,4 @@
+# 本地开发用（gitignored）：cp .dev.vars.example .dev.vars
+# 线上密钥用 wrangler secret put 设置，绝不写进任何被提交的文件。
+ADMIN_TOKEN=local-dev-admin-token
+INSTALLATION_SALT=local-dev-salt

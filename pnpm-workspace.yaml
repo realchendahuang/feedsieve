@@ -2,6 +2,11 @@ packages:
   - apps/*
   - packages/*
 
-# esbuild 的 postinstall 需要显式批准（pnpm v10+ 默认不执行依赖构建脚本）
+# esbuild / workerd 的构建脚本需要显式批准（pnpm v10+ 默认不执行依赖构建脚本）
+allowBuilds:
+  esbuild: true
+  workerd: true
+
 onlyBuiltDependencies:
   - esbuild
+  - workerd

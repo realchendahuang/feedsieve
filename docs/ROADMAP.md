@@ -24,45 +24,33 @@
 
 > 用户安装后 5 分钟内能把第一批垃圾账号真正拉黑，手机端同步清净，而且断网仍然能标注。
 
-## v0.2 — 社区名单开始产生网络效应
+## v0.2 — 社区名单闭环（带后端）
 
-目标：**新用户不用配置也能直接受益。**
+目标：**一个人拉黑，所有人的时间线自动黄框。**
 
-- Community Snapshot Manifest
-- Versioned JSON List
-- YAML public source
-- Schema validation + checksum
-- Local Community Index（供 Detector 查询）
+- Cloudflare Worker + Hono + D1 后端（代码同仓库开源，任何人可自部署）
+- Report API：拉黑后显式一键上报（匿名安装哈希、去重、限速）
+- 快照管线：聚合 → 确定性 JSON + manifest + sha256，版本化分发
+- 人工审核闸门：自动化只到 candidate（仅「大扫除」可见），recommended / strong 必须人工提升
+- 扩展消费端：manifest 比对 + 校验和 + last-known-good + 本地索引
 - 标注强度：清爽 / 标准 / 大扫除
-- Block Pack 基础
-- Last-known-good offline cache
-- PureTwitter / 外部简单名单导入研究
+- 个人白名单一票否决（误杀治理）
+- Seed：官方名单第一批真实条目
 
 成功标准：
 
-> 新安装用户只开启官方名单，就能立刻黄框标注已知垃圾账号。
+> 全新安装、零配置就能标注官方名单上的垃圾账号；任何一次拉黑都可以流向所有用户。
 
-## v0.3 — 社区共创与公开信誉
+## v0.3 — 治理升级（Report 基础已在 v0.2 落地）
 
-目标：**一个人送走垃圾，所有人都可以少看一次。**
+目标：**上报规模变大后，社区名单仍然可信。**
 
-- Community Report API
-- Rescue API
-- Candidate Pool
-- Community Score v1
+- Rescue API + Removal 流程（名单不是永久刑罚）
+- Community Score v1（置信加权、time spread、rescue 抵扣）
 - Reporter Trust v1
-- `community/policy/v1.yaml`
-- Report / Rescue idempotency
-- Basic burst / abuse detection
-- YAML Snapshot Generator
-- JSON deterministic build
-- Changelog
-- Account aliases
-- `handle` required / `x_user_id` optional
-
-成功标准：
-
-> 任意社区名单条目都能从 GitHub 看懂来源、分类、分数和变更历史。
+- burst / abuse 检测（v0.2 仅去重 + 限速兜底）
+- Candidate 自动化策略（`community/policy/v1.yaml`）
+- Changelog / Account aliases
 
 ## v0.4 — 从账号名单升级成垃圾网络识别
 
