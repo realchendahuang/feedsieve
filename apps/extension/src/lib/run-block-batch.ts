@@ -9,6 +9,8 @@
  */
 
 import { resolveUserIdByHandle, runNativeAction } from '@feedsieve/x-adapter';
+import { markBlocked } from './blocked-accounts';
+import { bumpStat } from './local-stats';
 import { getPendingBlocks, removePendingBlock, type PendingBlock } from './pending-blocks';
 import { getUserId } from './user-ids';
 import { collectCellsByHandle, removeCellsSoon } from './remove-tweets';
@@ -31,6 +33,8 @@ export async function runPendingBlockBatch(): Promise<BatchBlockResult> {
     if (outcome.ok) {
       blocked.push(item.handle);
       await removePendingBlock(item.handle);
+      await markBlocked(item.handle, item.xUserId);
+      await bumpStat('blocked');
       // 对齐「顺手拉黑」：该账号页面上可见的推文一并移除
       removeCellsSoon(collectCellsByHandle(item.handle));
     } else {

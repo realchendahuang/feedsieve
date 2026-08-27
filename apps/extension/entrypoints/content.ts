@@ -8,8 +8,11 @@ import {
   type ParsedApiData,
 } from '@feedsieve/x-adapter';
 import { isPending, removePendingBlock, setPendingBlock } from '../src/lib/pending-blocks';
+import { markBlocked } from '../src/lib/blocked-accounts';
+import { bumpStat } from '../src/lib/local-stats';
 import { collectCellsByHandle, removeCellsSoon } from '../src/lib/remove-tweets';
 import { runPendingBlockBatch } from '../src/lib/run-block-batch';
+import { runUnblockBatch } from '../src/lib/run-unblock-batch';
 import { getUserId, saveUserIds } from '../src/lib/user-ids';
 import builtinListJson from '../../../community/lists/recommended.json';
 
@@ -51,12 +54,16 @@ export default defineContentScript({
     listenXhrBridge();
 
     /**
-     * popup「一键拉黑」入口：这里执行需要页面会话的原生拉黑，
-     * 返回 Promise 作为 sendMessage 的响应（批量汇总见 run-block-batch.ts）。
+     * popup「一键拉黑 / 一键撤销」入口：这里执行需要页面会话的原生操作，
+     * 返回 Promise 作为 sendMessage 的响应（批量汇总见 run-block/run-unblock-batch.ts）。
      */
     browser.runtime.onMessage.addListener((message: unknown) => {
-      if ((message as { type?: string } | null)?.type === 'feedsieve:run-block-batch') {
+      const type = (message as { type?: string } | null)?.type;
+      if (type === 'feedsieve:run-block-batch') {
         return runPendingBlockBatch();
+      }
+      if (type === 'feedsieve:unblock') {
+        return runUnblockBatch((message as { handle?: string }).handle);
       }
       return undefined;
     });
@@ -172,6 +179,10 @@ export default defineContentScript({
     ): void {
       cell.setAttribute(MARK_ATTRIBUTE, detection.source);
       attachBadge(cell, detection);
+      // 本地统计：每次新标注 +1（seenArticles 保证每个 cell 只标一次）
+      void bumpStat('detected').catch(() => {
+        // 统计写入失败不影响标注
+      });
     }
 
     function attachBadge(
@@ -264,6 +275,9 @@ export default defineContentScript({
           button.textContent = '已拉黑 ✓';
           // 已拉黑就不该再留在待拉黑列表里，否则批量执行会重复拉黑
           await removePendingBlock(handle);
+          // 记账（撤销入口的数据源）+ 本地统计
+          await markBlocked(handle, xUserId);
+          await bumpStat('blocked');
           // 对齐 X 原生拉黑行为：确认成功后把该账号页面上可见的推文一并移除，
           // 让「已拉黑」立刻有可见效果，而不是等刷新
           removeCellsSoon(collectCellsByHandle(handle));

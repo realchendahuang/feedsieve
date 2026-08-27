@@ -16,6 +16,14 @@ vi.mock('./pending-blocks', async (importOriginal) => {
   };
 });
 
+vi.mock('./blocked-accounts', () => ({
+  markBlocked: vi.fn(),
+}));
+
+vi.mock('./local-stats', () => ({
+  bumpStat: vi.fn(),
+}));
+
 vi.mock('./user-ids', () => ({
   getUserId: vi.fn(),
 }));
@@ -33,6 +41,8 @@ vi.mock('./remove-tweets', () => ({
 import { getUserId } from './user-ids';
 import { resolveUserIdByHandle, runNativeAction } from '@feedsieve/x-adapter';
 import { collectCellsByHandle, removeCellsSoon } from './remove-tweets';
+import { markBlocked } from './blocked-accounts';
+import { bumpStat } from './local-stats';
 
 const mockedGetPending = vi.mocked(getPendingBlocks);
 const mockedRemove = vi.mocked(removePendingBlock);
@@ -41,6 +51,8 @@ const mockedResolve = vi.mocked(resolveUserIdByHandle);
 const mockedRun = vi.mocked(runNativeAction);
 const mockedCollect = vi.mocked(collectCellsByHandle);
 const mockedRemoveSoon = vi.mocked(removeCellsSoon);
+const mockedMarkBlocked = vi.mocked(markBlocked);
+const mockedBumpStat = vi.mocked(bumpStat);
 
 function pending(handle: string, xUserId?: string): PendingBlock {
   return { handle, addedAt: 0, markedReason: '测试', ...(xUserId ? { xUserId } : {}) };
@@ -74,6 +86,10 @@ describe('runPendingBlockBatch', () => {
     expect(mockedRun).toHaveBeenCalledWith('block', '2');
     expect(mockedRemove).toHaveBeenCalledWith('a');
     expect(mockedRemove).toHaveBeenCalledWith('b');
+    // 记账 + 统计：成功账号都进已拉黑记录并计入 blocked
+    expect(mockedMarkBlocked).toHaveBeenCalledWith('a', '1');
+    expect(mockedMarkBlocked).toHaveBeenCalledWith('b', '2');
+    expect(mockedBumpStat).toHaveBeenCalledWith('blocked');
   });
 
   it('falls back to cache, then live resolution, for missing rest_id', async () => {
