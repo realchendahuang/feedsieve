@@ -1,39 +1,43 @@
+# FeedSieve 社区治理政策 v1 —— 唯一公开事实源。
+# 这些值与 apps/community-api 的 POLICY / SCORE_POLICY 常量一一对应，
+# drift 由 apps/community-api/test/policy.test.ts 守卫（常量改动必须同步本文件）。
 version: 1
-updated_at: "2026-08-26T00:00:00Z"
+updated_at: "2026-08-28T00:00:00Z"
 
 description: >-
-  FeedSieve community reputation policy. These values are intentionally public
-  and are cold-start defaults that may evolve through review and pull requests.
+  冷启动默认值，通过公开 PR 演进。原则：标注自动、拉黑永远显式；
+  名单不是永久刑罚；不把观点差异当垃圾。
 
-score:
-  report_weight: 1.0
-  rescue_weight: 1.25
-  temporal_spread_bonus_per_extra_day: 0.5
-  temporal_spread_bonus_max: 1.5
-  burst_window_minutes: 30
-  burst_ratio_threshold: 0.70
-  burst_penalty: 2.0
-  normalization:
-    method: one_minus_exp
-    scale: 8.0
-
+# 上报 → 候选
 candidate:
-  min_independent_reports: 5
+  min_independent_reports: 3   # 独立安装数达到即自动进入 candidate
+  # 自动降级（对称闸门）：candidate 的 rescue_count >= report_count 时降回 new
 
-recommended:
-  min_effective_score: 8.0
-  min_distinct_days: 2
-  max_rescue_ratio: 0.25
+# 人工闸门：recommended / strong 只能由维护者提升（admin promote），
+# dismissed = 驳回（立即退出快照）。自动化永远到不了这两档。
 
-strong:
-  min_effective_score: 20.0
-  min_distinct_days: 3
-  max_rescue_ratio: 0.15
+# Community Score v1（可解释公式，快照条目 community_score 字段）
+score:
+  saturation: 3                # effective / (effective + 3)：3票=0.5，7票=0.7，17票=0.85
+  rescue_deduction: 1          # effective = report_count - rescue_count（1:1 抵扣）
+  temporal_spread_bonus_per_extra_day: 0.02
+  temporal_spread_bonus_max: 0.1
+  burst_min_reports: 5         # ≥5 票且全部落在 1 天内 →
+  burst_penalty_factor: 0.8    #   分数 × 0.8（单日集中爆发打折）
 
+# 举报者信任（内部数据，绝不公开到快照——治理文档 §5）
 reporter_trust:
   default: 1.0
-  min: 0.25
-  max: 1.5
+  floor: 0.2                   # trust 下限
+  burst_threshold: 30          # 单日报量首越此线 → trust -0.1（每次越线只衰减一次）
+  burst_decay: 0.1
+
+# 限速（实际限额 = base × trust，下限保护）
+limits:
+  daily_report_base: 100
+  daily_rescue_base: 50
+  daily_min: 10                # 无论 trust 多低保留基本参与能力
+  max_batch: 50                # 单请求条数上限
 
 principles:
   - user_undo_always_wins

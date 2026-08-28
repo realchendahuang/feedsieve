@@ -18,6 +18,27 @@ export function effectiveDailyLimit(baseLimit: number, trust: number): number {
   return Math.max(POLICY.minDailyLimit, Math.round(baseLimit * trust));
 }
 
+/** 公开政策快照（/v1/policy 与 manifest 内嵌；与 community/policy/v1.yaml 对应） */
+export function publicPolicy() {
+  return {
+    version: 1,
+    candidate: { min_independent_reports: POLICY.candidateThreshold },
+    auto_demote: 'candidate_rescue_ge_reports',
+    limits: {
+      daily_report_base: POLICY.dailyReportLimit,
+      daily_rescue_base: POLICY.rescueDailyLimit,
+      daily_min: POLICY.minDailyLimit,
+      max_batch: POLICY.maxBatch,
+    },
+    reporter_trust: {
+      default: 1,
+      floor: POLICY.trustFloor,
+      burst_threshold: POLICY.trustBurstThreshold,
+      burst_decay: POLICY.trustDecay,
+    },
+  };
+}
+
 export interface ReportResult {
   handle: string;
   status: 'recorded' | 'duplicate' | 'rejected';

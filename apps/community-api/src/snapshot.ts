@@ -1,5 +1,6 @@
 import { sha256Hex } from './lib/hash';
 import { computeScore } from './lib/score';
+import { publicPolicy } from './reports';
 
 export const SNAPSHOT_SCHEMA_VERSION = 1;
 export const SNAPSHOT_PACK = 'official.json';
@@ -151,6 +152,7 @@ export async function generateSnapshot(
     schema_version: SNAPSHOT_SCHEMA_VERSION,
     snapshot_version: version,
     generated_at: now.toISOString(),
+    policy: publicPolicy(),
     files: [{ path: file.path, sha256: file.sha256, entries: file.entries }],
   };
 

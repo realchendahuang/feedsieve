@@ -2,7 +2,7 @@ import { cors } from 'hono/cors';
 import { Hono } from 'hono';
 import { checkBearerToken } from './lib/auth';
 import { isAdminStatus } from './lib/admin';
-import { POLICY, processReportBatch } from './reports';
+import { POLICY, processReportBatch, publicPolicy } from './reports';
 import { processRescueBatch } from './rescues';
 import {
   generateSnapshot,
@@ -66,6 +66,9 @@ export function createApp() {
     }
     return c.json({ results: result.results });
   });
+
+  // 公开政策：阈值不藏在后端黑箱里
+  app.get('/v1/policy', (c) => c.json(publicPolicy()));
 
   // admin：ADMIN_TOKEN 保护；自动化只能到 candidate，提升/发布由人触发
   app.use('/admin/*', async (c, next) => {
