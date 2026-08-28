@@ -1,216 +1,84 @@
 # FeedSieve Community Lists
 
-这里存放 FeedSieve 的公开社区名单数据和治理政策。
+这里存放 FeedSieve 公开社区名单的**仓库镜像**与治理政策文档。
 
-目标不是维护一个神秘的“封禁名单”，而是让社区能够看到、审计、讨论、申诉和 Fork 名单结果。
+> 名单的权威来源是线上社区 API（`apps/community-api`，Worker + D1）：
+> 上报在这里聚合、人工审核闸门在这里生效、快照在这里生成。
+> 本目录由 `scripts/mirror-community-lists.sh` 从线上拉取并提交，**不要手改 lists/ 下的文件**。
 
-核心原则：
+核心原则不变：
 
-> **YAML for humans. JSON for machines.**
+> **连黑名单本身都应该晒在阳光下。**
+
+## 名单从哪来（v0.2 起的真实链路）
+
+```text
+用户拉黑（主动动作）
+      ↓ POST /v1/reports（匿名安装哈希，去重、限速）
+Community API D1 聚合
+      ↓ 自动只到 candidate（≥3 独立安装）
+人工审核（admin CLI）
+      ↓ recommended / strong 必须人工提升；dismissed = 驳回
+generateSnapshot：确定性 JSON + manifest + sha256
+      ↓ GET /v1/snapshots/latest
+官方实例分发（主源）
+      ├─→ 扩展运行时同步（manifest 比对 → 校验和 → last-known-good 本地索引）
+      └─→ scripts/mirror-community-lists.sh 拉回本目录并提交
+                └─→ GitHub diff = 公开审计日志；jsDelivr = 分发兜底源
+```
 
 ## 目录
 
 ```text
 community/
 ├── README.md
-├── source/
-│   └── recommended.yaml       # 人类可读、Git 可审计的公开源
 ├── lists/
-│   ├── manifest.json          # Snapshot 版本入口
-│   └── recommended.json       # 浏览器插件读取的构建产物
+│   ├── manifest.json          # 镜像：版本入口 + 每文件 sha256
+│   ├── official.json          # 镜像：快照本体（扩展的 jsDelivr 兜底源）
+│   └── recommended.json       # 内置兜底名单（构建期随扩展打包，当前为空）
 ├── policy/
-│   └── v1.yaml                # 公开社区评分政策
-├── schema/
-│   └── account-list.schema.json
-└── changelog/                 # 后续加入版本变更记录
+│   └── v1.yaml                # 公开评分政策（阈值当前在 API 的 POLICY 常量，v0.3 迁入）
+└── schema/
+    └── account-list.schema.json
 ```
 
-## 为什么同时有 YAML 和 JSON
+## 审计方式
 
-### YAML
+- **看变更**：`git log -p community/lists/official.json` —— 每次名单变化都有 diff
+- **看实时**：`curl https://feedsieve-api.chendahuang.com/v1/snapshots/latest`
+- **质疑条目**：开 Issue，附 handle 与理由；维护者核实后 `admin.sh promote <handle> dismissed` 并发布新快照
+- **自部署**：`apps/community-api/README.md` 有完整步骤，扩展设置可指向任意实例（协议相同）
 
-`source/*.yaml` 是 GitHub 上主要给人看的格式：
+## Account Identity v1
 
-- 可读性好
-- PR Review 友好
-- Diff 清楚
-- 容易审计
-- 容易 Fork 和维护第三方 Block Pack
+- `handle`: required（小写主键）
+- `x_user_id`: optional（稳定 ID，handle 改名后仍可命中）
+- `aliases`: v0.3
 
-### JSON
+## 快照条目字段（official.json）
 
-`lists/*.json` 是插件运行时使用的格式：
+每条 entry 都回答「它为什么在名单里」：
 
-- 解析简单
-- 容易缓存
-- 容易 Schema 校验
-- 适合 CDN / GitHub Release 分发
-- 后续可以生成 checksum / signature
+| 字段 | 含义 |
+| --- | --- |
+| `handle` / `x_user_id` | 身份 |
+| `category` | 垃圾分类（bot_spam / scam_phishing / adult_gray_traffic / copy_paste / …） |
+| `status` | candidate / recommended / strong（仅人工可授予后两者） |
+| `report_count` / `rescue_count` | 独立安装上报数 / 误判挽回数 |
+| `first_seen_at` / `updated_at` | 进入与更新时间 |
+| `evidence_post_ids` | 可选公开证据（≤5 条） |
 
-### Manifest
+## 不公开举报者侧数据
 
-`lists/manifest.json` 是 Extension 更新入口。
+公开的是**标注与名单决策**，不是举报者隐私。
 
-插件应先检查 Snapshot version，只有版本变化时才下载大名单。
+- 公开：聚合名单、分类、票数、状态、时间、可选证据、全部算法与阈值
+- 不公开：原始 installation id（服务端只存加盐哈希）、IP、Cookie、X 凭证、浏览历史
 
-推荐链路：
+## 治理红线
 
-```text
-Community Reports
-      ↓
-Open Scoring Algorithm
-      ↓
-community/policy/v1.yaml
-      ↓
-Safeguards
-      ↓
-source/recommended.yaml
-      ↓
-Schema Validate
-      ↓
-Deterministic Compile
-      ↓
-lists/recommended.json
-      ↓
-manifest + SHA-256
-      ↓
-Extension local cache
-```
+- 标注自动，拉黑永远用户显式触发
+- 名单不是永久刑罚：Rescue / Removal 在 v0.3 落地，此前人工 dismissed 立即生效
+- **Block garbage, not opinions.** 政治立场、价值观、兴趣偏好不进官方名单
 
-插件不需要在刷 X 时实时请求服务器，只需要按版本更新名单，然后全天本地查询。
-
-## Account Identity
-
-浏览器插件在 X 页面中通常可以稳定获得 `@handle`，但未必能在不依赖 X API / 私有 runtime 的情况下稳定获得 X User ID。
-
-因此 v1 协议明确：
-
-- `handle`: required
-- `x_user_id`: optional
-- `aliases`: optional
-
-当未来可靠得到稳定 User ID 时，可以通过 aliases / migration 合并历史 handle。
-
-示例：
-
-```yaml
-- handle: example_spam
-  x_user_id: "123456789" # optional
-  aliases:
-    - old_handle
-  category: bot_spam
-  status: recommended
-  community_score: 0.91
-  report_count: 27
-  rescue_count: 2
-  first_seen_at: "2026-08-20T12:00:00Z"
-  updated_at: "2026-08-26T00:00:00Z"
-  evidence_post_ids:
-    - "0000000000000000000"
-```
-
-每个公开条目应该尽可能回答：
-
-- 为什么这个账号在名单里？
-- 属于什么垃圾模式？
-- 有多少有效 Report？
-- 有多少 Rescue？
-- Community Score 是多少？
-- 什么时候进入？
-- 最近什么时候更新？
-
-## Policy
-
-评分阈值不隐藏在后端代码里。
-
-当前：
-
-[`policy/v1.yaml`](policy/v1.yaml)
-
-冷启动规则示例：
-
-```text
->= 5 independent reports -> candidate
-score + time spread -> recommended
-higher score + lower rescue -> strong
-```
-
-这些参数以后通过真实数据和公开 PR 调整。
-
-## 不公开举报者原始身份
-
-名单透明，不等于贡献者隐私也要公开。
-
-公开：
-
-- 聚合后的账号名单
-- 分类
-- 分数
-- 有效 Report 数
-- Rescue 数
-- 阈值和算法
-- 可选公开 evidence post ids
-- 版本与 Git diff
-
-不公开：
-
-- 用户真实身份
-- 原始 installation id
-- IP 地址
-- Cookie
-- X 登录凭证
-- 私信
-- 完整浏览历史
-
-## Extension 使用方式
-
-```text
-manifest
-   ↓
-version changed?
-   ↓
-JSON snapshot
-   ↓
-schema + checksum
-   ↓
-local index
-   ↓
-X Timeline -> Detector local lookup
-```
-
-服务器不可用时继续使用最后一个有效 Snapshot。
-
-## Block Packs
-
-后续计划允许官方和第三方维护独立 Block Pack，例如：
-
-- Bot Spam
-- Copy-paste Replies
-- AI Slop
-- Crypto Scam
-- Adult / Gray Traffic Spam
-- Engagement Bait
-
-用户自己决定订阅哪些 Pack。
-
-> **Block garbage, not opinions.**
-
-政治立场、价值观、兴趣领域等高度主观偏好默认不进入官方全球垃圾名单，更适合作为第三方可选 Pack。
-
-## 治理
-
-- 名单公开
-- 算法公开
-- Policy 公开
-- 变更可追踪
-- 支持 Report / Rescue / Appeal / Removal
-- 不公开举报者敏感信息
-- 用户自己的判断永远可以覆盖社区标注（可移除、可放回）
-- 不把观点差异当成默认垃圾标签
-
-详细文档：
-
-- [`../docs/TECHNICAL_SPEC.md`](../docs/TECHNICAL_SPEC.md)
-- [`../docs/IMPLEMENTATION_PLAN.md`](../docs/IMPLEMENTATION_PLAN.md)
-- [`../docs/COMMUNITY_FILTERING.md`](../docs/COMMUNITY_FILTERING.md)
-- [`../docs/OPEN_SOURCE_GOVERNANCE.md`](../docs/OPEN_SOURCE_GOVERNANCE.md)
+详细文档见 [`../docs/`](../docs/)（TECHNICAL_SPEC / COMMUNITY_FILTERING / OPEN_SOURCE_GOVERNANCE）。
