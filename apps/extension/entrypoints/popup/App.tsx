@@ -147,13 +147,13 @@ export default function App() {
       };
       const outcome = res?.outcome;
       if (outcome?.status === 'updated') {
-        setSyncMsg(`✅ 已同步 ${outcome.version}`);
+        setSyncMsg(`✅ ${outcome.version}`);
       } else if (outcome?.status === 'unchanged') {
         setSyncMsg('✅ 已是最新');
       } else if (outcome?.status === 'error') {
-        setSyncMsg(`⚠️ 同步失败：${outcome.error ?? ''}`);
+        setSyncMsg(`⚠️ ${outcome.error ?? '同步失败'}`);
       } else {
-        setSyncMsg('⚠️ 同步不可用');
+        setSyncMsg('⚠️ 不可用');
       }
     } catch {
       setSyncMsg('⚠️ 后台未就绪');
@@ -171,7 +171,7 @@ export default function App() {
       const result = (await sendToXPage(BLOCK_MESSAGE)) as BatchBlockResult;
       setBlockResult(result);
     } catch {
-      setNotice('没找到可用的 X 页面：请打开或刷新 x.com 后重试');
+      setNotice('请先打开或刷新 x.com');
     } finally {
       setRunning(false);
     }
@@ -190,7 +190,7 @@ export default function App() {
       })) as UnblockBatchResult;
       setUnblockResult(result);
     } catch {
-      setNotice('没找到可用的 X 页面：请打开或刷新 x.com 后再撤销');
+      setNotice('请先打开或刷新 x.com');
     } finally {
       setRunning(false);
     }
@@ -221,28 +221,27 @@ export default function App() {
         <h1>
           福滤娃 <span className="popup-sub">FeedSieve</span>
         </h1>
-        <p className="tagline">X 赛博清洁工 · 看不到之前，先送走</p>
       </header>
 
-      {/* 本地统计：全部动作只发生在你自己这台机器上 */}
+      {/* 本地统计（动作只发生在本机） */}
       <section className="stats-bar">
-        <span title="黄框标注次数">标注 {stats.detected}</span>
-        <span title="已拉黑账号数">拉黑 {stats.blocked}</span>
-        <span title="已撤销账号数">撤销 {stats.unblocked}</span>
+        <span title="标注">🟡 {stats.detected}</span>
+        <span title="拉黑">⛔ {stats.blocked}</span>
+        <span title="撤销">↩️ {stats.unblocked}</span>
       </section>
 
-      {/* 待拉黑列表：可单项移除、可清空；勾选在 Timeline 黄框里进行 */}
+      {/* 待拉黑列表：勾选在 Timeline 黄框里进行 */}
       <section className="list-card">
         <div className="list-head">
-          <span className="stat-label">待拉黑列表</span>
-          <span className="list-count">{count === null ? '…' : `${count} 个`}</span>
+          <span className="stat-label">待拉黑</span>
+          <span className="list-count">{count === null ? '…' : count}</span>
         </div>
 
         {count === null ? (
           <p className="list-empty">…</p>
         ) : count === 0 ? (
           <p className="list-empty">
-            {running ? '正在拉黑…' : '在 Timeline 黄框里勾选垃圾账号，会累积到这里'}
+            {running ? '处理中…' : '在 X 页面勾选黄框账号'}
           </p>
         ) : (
           <ul className="pending-list">
@@ -270,11 +269,11 @@ export default function App() {
 
         {blockResult ? (
           <p className="batch-summary">
-            ✅ 已拉黑 {blockResult.blocked.length} 个
+            ✅ 已拉黑 {blockResult.blocked.length}
             {failedSummary(blockResult) ? (
               <>
                 {' '}
-                · 失败 {blockResult.failed.length}：
+                · ⚠️ {blockResult.failed.length}
                 <span className="batch-fail">{failedSummary(blockResult)}</span>
               </>
             ) : null}
@@ -282,39 +281,40 @@ export default function App() {
         ) : null}
       </section>
 
-      <button
-        className="primary-action"
-        disabled={!count || running}
-        onClick={() => void runBatch()}
-      >
-        {running ? '处理中…' : `一键拉黑${count ? `（${count}）` : ''}`}
-      </button>
-      <button
-        className="secondary-action"
-        disabled={!count || running}
-        onClick={() => void clearAll()}
-      >
-        清空列表
-      </button>
+      <div className="action-row">
+        <button
+          className="primary-action"
+          disabled={!count || running}
+          onClick={() => void runBatch()}
+        >
+          {running ? '处理中…' : `一键拉黑${count ? `（${count}）` : ''}`}
+        </button>
+        <button
+          className="icon-action"
+          title="清空待拉黑"
+          disabled={!count || running}
+          onClick={() => void clearAll()}
+        >
+          🗑
+        </button>
+      </div>
 
-      {/* 已拉黑记录：撤销入口（误伤恢复用） */}
+      {/* 已拉黑记录：撤销入口 */}
       <section className="list-card blocked-card">
         <div className="list-head">
-          <span className="stat-label">已拉黑（可撤销）</span>
+          <span className="stat-label">已拉黑</span>
           <span className="list-count">
-            {blockedCount === null ? '…' : `${blockedCount} 个`}
+            {blockedCount === null ? '…' : blockedCount}
           </span>
         </div>
 
-        {blockedCount === null || blockedCount === 0 ? (
-          <p className="list-empty">暂无已拉黑记录</p>
-        ) : (
+        {blockedCount !== null && blockedCount > 0 ? (
           <ul className="pending-list">
             {blocked!.map((account) => (
               <li key={account.handle} className="pending-item">
                 <div className="pending-info">
                   <span className="pending-handle">@{account.handle}</span>
-                  <span className="pending-reason">{formatDate(account.blockedAt)} 拉黑</span>
+                  <span className="pending-reason">{formatDate(account.blockedAt)}</span>
                 </div>
                 <button
                   type="button"
@@ -327,15 +327,15 @@ export default function App() {
               </li>
             ))}
           </ul>
-        )}
+        ) : null}
 
         {unblockResult ? (
           <p className="batch-summary">
-            ↩️ 已撤销 {unblockResult.unblocked.length} 个
+            ↩️ 已撤销 {unblockResult.unblocked.length}
             {failedSummary(unblockResult) ? (
               <>
                 {' '}
-                · 失败 {unblockResult.failed.length}：
+                · ⚠️ {unblockResult.failed.length}
                 <span className="batch-fail">{failedSummary(unblockResult)}</span>
               </>
             ) : null}
@@ -357,23 +357,24 @@ export default function App() {
           <span className="stat-label">社区名单</span>
           <span className="list-count">
             {communityMeta
-              ? `v${communityMeta.version} · ${communityMeta.count} 条 · ${formatAgo(communityMeta.syncedAt)}`
-              : '同步中…'}
+              ? `v${communityMeta.version} · ${communityMeta.count} · ${formatAgo(communityMeta.syncedAt)}`
+              : '…'}
           </span>
+          <button
+            type="button"
+            className="icon-action"
+            title="立即同步"
+            disabled={syncing}
+            onClick={() => void syncCommunityNow()}
+          >
+            ⟳
+          </button>
         </div>
-        <button
-          type="button"
-          className="sync-btn"
-          disabled={syncing}
-          onClick={() => void syncCommunityNow()}
-        >
-          {syncing ? '同步中…' : '立即同步'}
-        </button>
         {syncMsg ? <p className="sync-msg">{syncMsg}</p> : null}
         {community ? (
           <div className="settings-rows">
             <label className="settings-row">
-              <span>启用社区名单标注</span>
+              <span>启用</span>
               <input
                 type="checkbox"
                 checked={community.enabled}
@@ -383,7 +384,7 @@ export default function App() {
               />
             </label>
             <div className="settings-row">
-              <span>标注强度</span>
+              <span>强度</span>
               <div className="seg">
                 {MARK_STRENGTHS.map((s: MarkStrength) => (
                   <button
@@ -398,7 +399,7 @@ export default function App() {
               </div>
             </div>
             <label className="settings-row">
-              <span>拉黑后自动贡献社区</span>
+              <span>自动贡献</span>
               <input
                 type="checkbox"
                 checked={community.autoContribute}
@@ -409,36 +410,28 @@ export default function App() {
                 }
               />
             </label>
-            <p className="settings-note">
-              贡献仅含：你拉黑的账号 + 垃圾分类（匿名）。绝无浏览记录。
-            </p>
+            <p className="settings-note">仅匿名上报：你拉黑的账号 + 分类</p>
           </div>
         ) : (
           <p className="list-empty">…</p>
         )}
       </section>
 
-      {/* 个人白名单：误标治理；「误标？」按钮在这里可见、可撤销 */}
+      {/* 个人白名单：误标治理 */}
       <section className="list-card">
         <div className="list-head">
-          <span className="stat-label">个人白名单</span>
+          <span className="stat-label">白名单</span>
           <span className="list-count">
-            {allowlist === null ? '…' : `${allowlist.length} 个`}
+            {allowlist === null ? '…' : allowlist.length}
           </span>
         </div>
-        {allowlist === null || allowlist.length === 0 ? (
-          <p className="list-empty">
-            空空的 · 遇到误标就点黄框上的「误标？」
-          </p>
-        ) : (
+        {allowlist !== null && allowlist.length > 0 ? (
           <ul className="pending-list">
             {allowlist.map((item) => (
               <li key={item.handle} className="pending-item">
                 <div className="pending-info">
                   <span className="pending-handle">@{item.handle}</span>
-                  <span className="pending-reason">
-                    {formatDate(item.addedAt)} 加入
-                  </span>
+                  <span className="pending-reason">{formatDate(item.addedAt)}</span>
                 </div>
                 <button
                   type="button"
@@ -451,11 +444,13 @@ export default function App() {
               </li>
             ))}
           </ul>
+        ) : (
+          <p className="list-empty">点黄框「误标？」加入</p>
         )}
       </section>
 
       {notice ? <p className="notice-error">{notice}</p> : null}
-      <footer className="popup-footer">标注永不隐藏内容 · 误伤可一键撤销</footer>
+      <footer className="popup-footer">标注永不隐藏 · 误伤可撤销</footer>
     </main>
   );
 }

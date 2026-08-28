@@ -38,10 +38,10 @@ describe('popup App 渲染冒烟', () => {
     await new Promise((r) => setTimeout(r, 50));
 
     expect(rootEl.textContent).toContain('福滤娃');
-    expect(rootEl.textContent).toContain('在 Timeline 黄框里勾选垃圾账号');
+    expect(rootEl.textContent).toContain('在 X 页面勾选黄框账号');
     expect(rootEl.textContent).toContain('一键拉黑');
-    expect(rootEl.textContent).toContain('已拉黑（可撤销）');
-    expect(rootEl.textContent).toContain('标注 0');
+    expect(rootEl.textContent).toContain('已拉黑');
+    expect(rootEl.textContent).toContain('🟡 0');
   });
 
   it('renders pending accounts after storage resolves', async () => {
