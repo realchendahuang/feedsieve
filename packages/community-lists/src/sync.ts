@@ -1,0 +1,98 @@
+import { sha256Hex } from './hash';
+import { parseManifest, parseSnapshotBody } from './validate';
+import type { StoredSnapshot } from './types';
+
+export const SYNC_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
+export type SyncOutcome =
+  | { status: 'updated'; version: string }
+  | { status: 'unchanged' }
+  | { status: 'skipped' }
+  | { status: 'error'; error: string };
+
+export type FetchLike = (url: string) => Promise<Response>;
+
+/** 宿主环境的存储适配器（扩展侧用 browser.storage.local 实现） */
+export interface SnapshotStore {
+  get(): Promise<StoredSnapshot | null>;
+  set(value: StoredSnapshot): Promise<void>;
+}
+
+export interface SyncOptions {
+  apiBase: string;
+  fetchImpl: FetchLike;
+  store: SnapshotStore;
+  now?: () => number;
+  /** 跳过 6h 节流（onInstalled / 用户手动刷新时用） */
+  force?: boolean;
+}
+
+/**
+ * 快照同步：manifest 比对版本 -> 变了才下载 -> sha256 校验 -> 结构校验 -> 整体写入。
+ * 任何一步失败都保持 last-known-good 不动（store.set 只在全部通过后调用）。
+ */
+export async function syncCommunitySnapshot(
+  options: SyncOptions,
+): Promise<SyncOutcome> {
+  const now = options.now ?? Date.now;
+  try {
+    const current = await options.store.get();
+    if (
+      !options.force &&
+      current &&
+      now() - current.synced_at < SYNC_INTERVAL_MS
+    ) {
+      return { status: 'skipped' };
+    }
+
+    const manifestRes = await options.fetchImpl(
+      `${options.apiBase}/v1/snapshots/latest`,
+    );
+    if (!manifestRes.ok) {
+      return { status: 'error', error: `manifest_http_${manifestRes.status}` };
+    }
+    const manifest = parseManifest(await manifestRes.json());
+    if (!manifest.ok) {
+      return { status: 'error', error: manifest.error };
+    }
+
+    if (current && manifest.value.snapshot_version === current.snapshot_version) {
+      await options.store.set({ ...current, synced_at: now() });
+      return { status: 'unchanged' };
+    }
+
+    const file = manifest.value.files[0];
+    if (!file) {
+      return { status: 'error', error: 'manifest_files_empty' };
+    }
+    const snapshotRes = await options.fetchImpl(
+      `${options.apiBase}/v1/snapshots/${manifest.value.snapshot_version}/${file.path}`,
+    );
+    if (!snapshotRes.ok) {
+      return { status: 'error', error: `snapshot_http_${snapshotRes.status}` };
+    }
+    const body = await snapshotRes.text();
+    if ((await sha256Hex(body)) !== file.sha256) {
+      return { status: 'error', error: 'checksum_mismatch' };
+    }
+    const snapshot = parseSnapshotBody(body);
+    if (!snapshot.ok) {
+      return { status: 'error', error: snapshot.error };
+    }
+    if (snapshot.value.snapshot_version !== manifest.value.snapshot_version) {
+      return { status: 'error', error: 'version_mismatch' };
+    }
+
+    await options.store.set({
+      snapshot_version: manifest.value.snapshot_version,
+      body,
+      synced_at: now(),
+    });
+    return { status: 'updated', version: manifest.value.snapshot_version };
+  } catch (error) {
+    return {
+      status: 'error',
+      error: error instanceof Error ? error.message : 'unknown',
+    };
+  }
+}

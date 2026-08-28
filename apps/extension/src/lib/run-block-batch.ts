@@ -14,6 +14,7 @@ import { bumpStat } from './local-stats';
 import { getPendingBlocks, removePendingBlock, type PendingBlock } from './pending-blocks';
 import { getUserId } from './user-ids';
 import { collectCellsByHandle, removeCellsSoon } from './remove-tweets';
+import { contributeBlocks, type ContributionItem } from './contribute';
 
 export interface BatchBlockResult {
   blocked: string[];
@@ -27,6 +28,7 @@ export async function runPendingBlockBatch(): Promise<BatchBlockResult> {
   const pending = await getPendingBlocks();
   const blocked: string[] = [];
   const failed: Array<{ handle: string; code: string }> = [];
+  const contributions: ContributionItem[] = [];
 
   for (const item of pending) {
     const outcome = await blockOne(item);
@@ -37,12 +39,19 @@ export async function runPendingBlockBatch(): Promise<BatchBlockResult> {
       await bumpStat('blocked');
       // 对齐「顺手拉黑」：该账号页面上可见的推文一并移除
       removeCellsSoon(collectCellsByHandle(item.handle));
+      // 摩擦设计：拉黑成功即自动贡献社区（全局开关在 contributeBlocks 内部判断）
+      contributions.push({
+        handle: item.handle,
+        ...(item.xUserId ? { xUserId: item.xUserId } : {}),
+        category: item.category ?? 'other',
+      });
     } else {
       failed.push({ handle: item.handle, code: outcome.code });
     }
     await sleep(PACE_MS);
   }
 
+  contributeBlocks(contributions);
   return { blocked, failed };
 }
 

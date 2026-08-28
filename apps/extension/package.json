@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@feedsieve/block-queue": "workspace:*",
+    "@feedsieve/community-lists": "workspace:*",
     "@feedsieve/detector": "workspace:*",
     "@feedsieve/x-adapter": "workspace:*",
     "react": "^19.2.8",

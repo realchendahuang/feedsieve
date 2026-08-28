@@ -13,6 +13,8 @@ export interface PendingBlock {
   markedReason: string;
   /** X 内部用户 ID（rest_id）。拉黑 API 需要；XHR 桥在用户浏览时已缓存。 */
   xUserId?: string;
+  /** 贡献分类（拉黑成功后自动上报社区用；来自标注来源自动推导） */
+  category?: string;
 }
 
 const STORAGE_KEY = 'pendingBlocks';
@@ -34,6 +36,7 @@ export async function setPendingBlock(
   on: boolean,
   markedReason = '',
   xUserId?: string,
+  category?: string,
 ): Promise<void> {
   const normalized = normalize(handle);
   if (!normalized) {
@@ -46,9 +49,14 @@ export async function setPendingBlock(
   const blocks = await getPendingBlocks();
   const existing = blocks.find((b) => b.handle === normalized);
   if (existing) {
-    // 已存在时补齐 xUserId（勾选时可能还没拿到 ID）
+    // 已存在时补齐 xUserId / category（勾选时可能还没拿到）
     if (!existing.xUserId && xUserId) {
       existing.xUserId = xUserId;
+    }
+    if (!existing.category && category) {
+      existing.category = category;
+    }
+    if (xUserId || category) {
       await browser.storage.local.set({ [STORAGE_KEY]: blocks });
     }
     return;
@@ -58,6 +66,7 @@ export async function setPendingBlock(
     addedAt: Date.now(),
     markedReason,
     ...(xUserId ? { xUserId } : {}),
+    ...(category ? { category } : {}),
   });
   await browser.storage.local.set({ [STORAGE_KEY]: blocks });
 }

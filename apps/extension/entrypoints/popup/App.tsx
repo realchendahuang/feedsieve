@@ -12,6 +12,19 @@ import {
   type BlockedAccount,
 } from '../../src/lib/blocked-accounts';
 import { getStats, subscribeStats, type LocalStats } from '../../src/lib/local-stats';
+import {
+  getCommunitySettings,
+  setCommunitySettings,
+  getCommunitySnapshot,
+  subscribeCommunity,
+  type CommunitySettings,
+} from '../../src/lib/community-store';
+import {
+  MARK_STRENGTHS,
+  STRENGTH_LABELS,
+  parseSnapshotBody,
+  type MarkStrength,
+} from '@feedsieve/community-lists';
 import type { BatchBlockResult } from '../../src/lib/run-block-batch';
 import type { UnblockBatchResult } from '../../src/lib/run-unblock-batch';
 
@@ -41,15 +54,36 @@ export default function App() {
   const [blockResult, setBlockResult] = useState<BatchBlockResult | null>(null);
   const [unblockResult, setUnblockResult] = useState<UnblockBatchResult | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [community, setCommunity] = useState<CommunitySettings | null>(null);
+  const [communityMeta, setCommunityMeta] = useState<{
+    version: string;
+    count: number;
+  } | null>(null);
 
   useEffect(() => {
     void getPendingBlocks().then(setBlocks);
     void getBlockedAccounts().then(setBlocked);
     void getStats().then(setStats);
+    void getCommunitySettings().then(setCommunity);
+    void getCommunitySnapshot().then(async (snapshot) => {
+      if (!snapshot) {
+        return;
+      }
+      const parsed = parseSnapshotBody(snapshot.body);
+      if (parsed.ok) {
+        setCommunityMeta({
+          version: snapshot.snapshot_version,
+          count: parsed.value.entries.length,
+        });
+      }
+    });
     const unsubs = [
       subscribePending(setBlocks),
       subscribeBlocked(setBlocked),
       subscribeStats(setStats),
+      subscribeCommunity(() => {
+        void getCommunitySettings().then(setCommunity);
+      }),
     ];
     return () => unsubs.forEach((unsub) => unsub());
   }, []);
@@ -252,6 +286,64 @@ export default function App() {
       >
         全部撤销
       </button>
+
+      {/* 社区名单：全局设置（无逐条弹窗；自动贡献默认开，关一次永远安静） */}
+      <section className="list-card settings-card">
+        <div className="list-head">
+          <span className="stat-label">社区名单</span>
+          <span className="list-count">
+            {communityMeta
+              ? `v${communityMeta.version} · ${communityMeta.count} 条`
+              : '同步中…'}
+          </span>
+        </div>
+        {community ? (
+          <div className="settings-rows">
+            <label className="settings-row">
+              <span>启用社区名单标注</span>
+              <input
+                type="checkbox"
+                checked={community.enabled}
+                onChange={(e) =>
+                  void setCommunitySettings({ enabled: e.target.checked })
+                }
+              />
+            </label>
+            <div className="settings-row">
+              <span>标注强度</span>
+              <div className="seg">
+                {MARK_STRENGTHS.map((s: MarkStrength) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className={community.strength === s ? 'seg-on' : ''}
+                    onClick={() => void setCommunitySettings({ strength: s })}
+                  >
+                    {STRENGTH_LABELS[s]}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <label className="settings-row">
+              <span>拉黑后自动贡献社区</span>
+              <input
+                type="checkbox"
+                checked={community.autoContribute}
+                onChange={(e) =>
+                  void setCommunitySettings({
+                    autoContribute: e.target.checked,
+                  })
+                }
+              />
+            </label>
+            <p className="settings-note">
+              贡献仅含：你拉黑的账号 + 垃圾分类（匿名）。绝无浏览记录。
+            </p>
+          </div>
+        ) : (
+          <p className="list-empty">…</p>
+        )}
+      </section>
 
       {notice ? <p className="notice-error">{notice}</p> : null}
       <footer className="popup-footer">标注永不隐藏内容 · 误伤可一键撤销</footer>

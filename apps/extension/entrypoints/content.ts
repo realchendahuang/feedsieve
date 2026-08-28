@@ -14,11 +14,26 @@ import { collectCellsByHandle, removeCellsSoon } from '../src/lib/remove-tweets'
 import { runPendingBlockBatch } from '../src/lib/run-block-batch';
 import { runUnblockBatch } from '../src/lib/run-unblock-batch';
 import { getUserId, saveUserIds } from '../src/lib/user-ids';
+import {
+  buildRuntimeCommunity,
+  subscribeCommunity,
+  type RuntimeCommunity,
+} from '../src/lib/community-store';
+import {
+  addAllowlist,
+  getAllowlist,
+  subscribeAllowlist,
+} from '../src/lib/allowlist';
+import {
+  categoryFromDetection,
+  contributeBlocks,
+} from '../src/lib/contribute';
 import builtinListJson from '../../../community/lists/recommended.json';
 
 /**
- * 内置社区名单（TECHNICAL_SPEC.md：YAML 公开源 -> 构建期直接引用 JSON 产物）。
- * 名单更新走 Phase 4 的 Snapshot Consumer，这里 v0.1 先随扩展打包。
+ * 内置名单（构建期打包，entries 目前为空）：离线兜底。
+ * 社区名单走运行时同步（background SW -> storage.local -> 这里建索引），
+ * 服务器快照永远是权威来源。
  */
 const BUILTIN_LIST = toHandleSet(
   (builtinListJson as { entries: unknown }).entries as never[],
@@ -47,11 +62,23 @@ export default defineContentScript({
     const pendingCache = new Set<string>();
     /** handle -> bio（XHR 桥提供，检测用；DOM 拿不到简介） */
     const bioCache = new Map<string, string>();
+    /** 白名单缓存：一票否决，最高优先级 */
+    const allowCache = new Set<string>();
+    /** 社区名单运行时状态（快照同步 + 强度过滤后的索引） */
+    let community: RuntimeCommunity | null = null;
     let scanTimer: number | undefined;
 
     ensureStyles();
     refreshPendingCache();
+    refreshAllowCache();
+    void refreshCommunity();
     listenXhrBridge();
+    // 请 background SW 同步快照（SW 侧 6h 节流；发消息顺便唤醒 SW）
+    void browser.runtime
+      .sendMessage({ type: 'feedsieve:community-sync' })
+      .catch(() => {
+        // SW 暂不可达（开发热重载等）：下次页面加载再试
+      });
 
     /**
      * popup「一键拉黑 / 一键撤销」入口：这里执行需要页面会话的原生操作，
@@ -124,6 +151,31 @@ export default defineContentScript({
       }
     });
 
+    // 快照/设置变化（同步、换强度档）实时生效到下一次扫描；只订阅一次
+    subscribeCommunity(() => {
+      void refreshCommunity().catch(() => {
+        // 刷新失败保持旧索引
+      });
+    });
+
+    function refreshAllowCache(): void {
+      const apply = (items: Array<{ handle: string }>): void => {
+        allowCache.clear();
+        for (const item of items) {
+          allowCache.add(item.handle);
+        }
+      };
+      void getAllowlist().then(apply).catch(() => {
+        // storage 异常保持旧缓存
+      });
+      // 初始订阅：后续白名单变化实时生效（订阅保持到页面卸载）
+      subscribeAllowlist(apply);
+    }
+
+    async function refreshCommunity(): Promise<void> {
+      community = await buildRuntimeCommunity();
+    }
+
     function scan(): void {
       const context = contextFromPath(location.pathname);
       for (const article of document.querySelectorAll(tweetSelectors.article)) {
@@ -137,21 +189,54 @@ export default defineContentScript({
           continue;
         }
 
-        const detection = detect({
+        const input = {
           handle: item.author.handle,
           displayName: item.author.displayName,
           text: item.text,
           bio: bioCache.get(item.author.handle),
           links: item.links,
-        }, { list: BUILTIN_LIST, listSource: 'builtin-list' });
+        };
 
+        // 识别顺序：社区快照名单 -> 内置名单兜底 -> 启发式
+        let detection = community
+          ? detect(input, { list: community.handleSet, listSource: 'community-list' })
+          : null;
+        if (!detection && BUILTIN_LIST.size > 0) {
+          detection = detect(input, { list: BUILTIN_LIST, listSource: 'builtin-list' });
+        }
+        if (!detection) {
+          detection = detect(input);
+        }
         if (!detection) {
           continue;
         }
 
+        // 白名单一票否决（误杀治理）：命中即洗白，绝不标注
+        if (allowCache.has(item.author.handle.toLowerCase())) {
+          continue;
+        }
+
+        // 社区名单命中：徽章带分类与票数，可解释性优先
+        let communityCategory: string | undefined;
+        if (detection.source === 'community-list' && community) {
+          const entry = community.index.lookup(item.author.handle);
+          if (entry) {
+            communityCategory = entry.category;
+            detection = {
+              ...detection,
+              reason: `社区名单：${entry.category} · ${entry.report_count} 举报`,
+            };
+          }
+        }
+
         // 标注打在外层时间线格子上（PureTwitter 同款目标层）；找不到才退回 article
         const cell = article.closest(tweetSelectors.timelineCell) ?? article;
-        markCell(cell as HTMLElement, detection);
+        const category = categoryFromDetection(
+          detection.source,
+          detection.ruleId,
+          communityCategory,
+        );
+        markCell(cell as HTMLElement, detection, category);
       }
     }
 
@@ -176,9 +261,10 @@ export default defineContentScript({
     function markCell(
       cell: HTMLElement,
       detection: NonNullable<ReturnType<typeof detect>>,
+      category: string,
     ): void {
       cell.setAttribute(MARK_ATTRIBUTE, detection.source);
-      attachBadge(cell, detection);
+      attachBadge(cell, detection, category);
       // 本地统计：每次新标注 +1（seenArticles 保证每个 cell 只标一次）
       void bumpStat('detected').catch(() => {
         // 统计写入失败不影响标注
@@ -188,6 +274,7 @@ export default defineContentScript({
     function attachBadge(
       cell: HTMLElement,
       detection: NonNullable<ReturnType<typeof detect>>,
+      category: string,
     ): void {
       if (cell.querySelector('.fs-badge')) {
         return;
@@ -208,7 +295,7 @@ export default defineContentScript({
       input.addEventListener('change', () => {
         void (async () => {
           const xUserId = await getUserId(detection.handle);
-          await setPendingBlock(detection.handle, input.checked, detection.reason, xUserId);
+          await setPendingBlock(detection.handle, input.checked, detection.reason, xUserId, category);
         })().catch(() => {
           input.checked = !input.checked; // 写入失败回滚勾选态
         });
@@ -221,10 +308,25 @@ export default defineContentScript({
       blockBtn.type = 'button';
       blockBtn.textContent = '顺手拉黑';
       blockBtn.addEventListener('click', () => {
-        void runBlockNow(detection.handle, blockBtn);
+        void runBlockNow(detection.handle, blockBtn, category);
       });
 
-      badge.append(label, checkbox, blockBtn);
+      const allowBtn = document.createElement('button');
+      allowBtn.className = 'fs-allow';
+      allowBtn.type = 'button';
+      allowBtn.textContent = '误标？';
+      allowBtn.title = '加入个人白名单：不再标注该账号（本地生效，优先级最高）';
+      allowBtn.addEventListener('click', () => {
+        void (async () => {
+          await addAllowlist(detection.handle);
+          cell.removeAttribute(MARK_ATTRIBUTE);
+          badge.remove();
+        })().catch(() => {
+          // 白名单写入失败：标注保持原状
+        });
+      });
+
+      badge.append(label, checkbox, blockBtn, allowBtn);
       // cellInnerDiv 是普通块容器：徽章作为新块级子元素排在推文下方，
       // 处于文档流内但不进入 article 的 grid，不覆盖、不挤压任何 X 内容。
       cell.appendChild(badge);
@@ -246,6 +348,7 @@ export default defineContentScript({
     async function runBlockNow(
       handle: string,
       button: HTMLButtonElement,
+      category: string,
     ): Promise<void> {
       const original = button.textContent;
       button.disabled = true;
@@ -278,6 +381,8 @@ export default defineContentScript({
           // 记账（撤销入口的数据源）+ 本地统计
           await markBlocked(handle, xUserId);
           await bumpStat('blocked');
+          // 摩擦设计：拉黑成功即自动贡献社区（无弹窗；全局开关在 contributeBlocks 内判断）
+          contributeBlocks([{ handle, xUserId, category }]);
           // 对齐 X 原生拉黑行为：确认成功后把该账号页面上可见的推文一并移除，
           // 让「已拉黑」立刻有可见效果，而不是等刷新
           removeCellsSoon(collectCellsByHandle(handle));
@@ -351,6 +456,17 @@ function ensureStyles(): void {
     }
     .fs-block-now:hover:not(:disabled) { background: #ffd950; }
     .fs-block-now:disabled { opacity: 0.6; cursor: wait; }
+    .fs-allow {
+      padding: 2px 8px;
+      border: 1px solid #d9d9d9;
+      border-radius: 999px;
+      background: #fff;
+      color: #999;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .fs-allow:hover { border-color: #b3b3b3; color: #666; }
   `;
   document.documentElement.appendChild(style);
 }

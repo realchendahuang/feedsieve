@@ -60,6 +60,9 @@ importers:
       '@feedsieve/block-queue':
         specifier: workspace:*
         version: link:../../packages/block-queue
+      '@feedsieve/community-lists':
+        specifier: workspace:*
+        version: link:../../packages/community-lists
       '@feedsieve/detector':
         specifier: workspace:*
         version: link:../../packages/detector
@@ -90,6 +93,12 @@ importers:
         version: 0.21.4(esbuild@0.28.1)(eslint@10.9.1(jiti@2.7.0))(rolldown@1.2.5)(typescript@5.9.3)(vite@8.2.2(@types/node@26.3.0)(esbuild@0.28.1)(jiti@2.7.0))
 
   packages/block-queue:
+    devDependencies:
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/community-lists:
     devDependencies:
       typescript:
         specifier: ^5.9.3
