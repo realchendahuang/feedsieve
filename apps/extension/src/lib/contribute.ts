@@ -130,6 +130,40 @@ export async function flushContributions(): Promise<void> {
   }
 }
 
+/**
+ * 抢救票（v0.3）：认为社区标注可能误伤时显式投票。
+ * 显式动作，但仍尊重 autoContribute 总开关（关 = 不参与社区）。
+ */
+export async function rescueHandle(handle: string): Promise<boolean> {
+  try {
+    const settings = await getCommunitySettings();
+    if (!settings.autoContribute) {
+      return false;
+    }
+    const installationId = await getInstallationId();
+    const version = browser.runtime.getManifest().version;
+    const response = await fetch(`${COMMUNITY_API_BASE}/v1/rescues`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        installation_id: installationId,
+        client_version: version,
+        rescues: [{ handle }],
+      }),
+    });
+    if (!response.ok) {
+      return false;
+    }
+    const body = (await response.json()) as {
+      results?: { status?: string }[];
+    };
+    const status = body.results?.[0]?.status;
+    return status === 'recorded' || status === 'duplicate';
+  } catch {
+    return false;
+  }
+}
+
 async function getBacklog(): Promise<ContributionItem[]> {
   const result = await browser.storage.local.get(BACKLOG_KEY);
   const value = result[BACKLOG_KEY];

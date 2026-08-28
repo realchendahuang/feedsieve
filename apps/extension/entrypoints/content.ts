@@ -31,7 +31,9 @@ import {
 import {
   categoryFromDetection,
   contributeBlocks,
+  rescueHandle,
 } from '../src/lib/contribute';
+import { getCommunitySettings } from '../src/lib/community-store';
 import builtinListJson from '../../../community/lists/recommended.json';
 
 /**
@@ -72,6 +74,8 @@ export default defineContentScript({
     const blockedCache = new Set<string>();
     /** 社区名单运行时状态（快照同步 + 强度过滤后的索引） */
     let community: RuntimeCommunity | null = null;
+    /** 自动贡献总开关（决定「抢救」按钮是否出现） */
+    let autoContribute = true;
     let scanTimer: number | undefined;
 
     ensureStyles();
@@ -194,6 +198,7 @@ export default defineContentScript({
 
     async function refreshCommunity(): Promise<void> {
       community = await buildRuntimeCommunity();
+      autoContribute = (await getCommunitySettings()).autoContribute;
     }
 
     function scan(): void {
@@ -253,9 +258,11 @@ export default defineContentScript({
           const entry = community.index.lookup(item.author.handle);
           if (entry) {
             communityCategory = entry.category;
+            const rescueSuffix =
+              entry.rescue_count > 0 ? ` · ${entry.rescue_count} 抢救` : '';
             detection = {
               ...detection,
-              reason: `社区名单：${entry.category} · ${entry.report_count} 举报`,
+              reason: `社区名单：${entry.category} · ${entry.report_count} 举报${rescueSuffix}`,
             };
           }
         }
@@ -377,7 +384,45 @@ export default defineContentScript({
         });
       });
 
-      badge.append(label, checkbox, blockBtn, allowBtn);
+      // 抢救：只对社区名单命中的条目出现（显式投票，名单不是永久刑罚）
+      const rescueBtn =
+        detection.source === 'community-list' && autoContribute
+          ? (() => {
+              const btn = document.createElement('button');
+              btn.className = 'fs-allow';
+              btn.type = 'button';
+              btn.textContent = '抢救';
+              btn.title = '向社区投票：这个标注可能误伤了';
+              btn.addEventListener('click', () => {
+                void (async () => {
+                  btn.disabled = true;
+                  btn.textContent = '…';
+                  const ok = await rescueHandle(detection.handle);
+                  if (ok) {
+                    btn.textContent = '已抢救 ✓';
+                    setTimeout(() => {
+                      btn.remove();
+                    }, 2000);
+                  } else {
+                    btn.textContent = '失败';
+                    setTimeout(() => {
+                      btn.disabled = false;
+                      btn.textContent = '抢救';
+                    }, 3000);
+                  }
+                })();
+              });
+              return btn;
+            })()
+          : null;
+
+      badge.append(
+        label,
+        checkbox,
+        blockBtn,
+        ...(rescueBtn ? [rescueBtn] : []),
+        allowBtn,
+      );
       // cellInnerDiv 是普通块容器：徽章作为新块级子元素排在推文下方，
       // 处于文档流内但不进入 article 的 grid，不覆盖、不挤压任何 X 内容。
       cell.appendChild(badge);

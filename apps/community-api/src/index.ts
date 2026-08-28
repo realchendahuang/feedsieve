@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import { checkBearerToken } from './lib/auth';
 import { isAdminStatus } from './lib/admin';
 import { POLICY, processReportBatch } from './reports';
+import { processRescueBatch } from './rescues';
 import {
   generateSnapshot,
   getLatestSnapshot,
@@ -55,6 +56,15 @@ export function createApp() {
     if (!body) return c.json({ error: 'not_found' }, 404);
     c.header('Cache-Control', 'public, max-age=31536000, immutable');
     return c.body(body, 200, { 'content-type': 'application/json' });
+  });
+
+  app.post('/v1/rescues', async (c) => {
+    const body = await c.req.json().catch(() => undefined);
+    const result = await processRescueBatch(c.env, body);
+    if (!result.ok) {
+      return c.json({ error: result.error }, result.httpStatus);
+    }
+    return c.json({ results: result.results });
   });
 
   // admin：ADMIN_TOKEN 保护；自动化只能到 candidate，提升/发布由人触发

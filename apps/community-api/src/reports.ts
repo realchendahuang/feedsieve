@@ -1,10 +1,11 @@
 import { hashInstallationId } from './lib/hash';
 import { validateReport, type ValidReport } from './lib/validate';
 
-// Phase D 会把阈值搬进 policy 文件/端点；v0.2 先集中放这里
+// Phase D 会把阈值搬进 policy 文件/端点；先集中放这里
 export const POLICY = {
   candidateThreshold: 3, // 独立安装数达到即自动进入 candidate
   dailyReportLimit: 100, // 单安装每日上报上限
+  rescueDailyLimit: 50, // 单安装每日抢救上限
   maxBatch: 50, // 单请求条数上限
 } as const;
 

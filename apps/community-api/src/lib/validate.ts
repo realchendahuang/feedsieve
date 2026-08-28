@@ -69,3 +69,33 @@ export function validateReport(raw: unknown): ReportValidation {
     },
   };
 }
+
+export type RescueValidation =
+  | { ok: true; handle: string; evidencePostId: string | null }
+  | { ok: false; error: string };
+
+/** 抢救票不需要 reason / x_user_id：handle 必填 + 可选证据即可 */
+export function validateRescue(raw: unknown): RescueValidation {
+  if (typeof raw !== 'object' || raw === null) {
+    return { ok: false, error: 'rescue_must_be_object' };
+  }
+  const r = raw as Record<string, unknown>;
+  if (typeof r.handle !== 'string' || !HANDLE_RE.test(r.handle)) {
+    return { ok: false, error: 'invalid_handle' };
+  }
+  let evidencePostId: string | null = null;
+  if (r.evidence_post_id !== undefined && r.evidence_post_id !== null) {
+    if (
+      typeof r.evidence_post_id !== 'string' ||
+      !POST_ID_RE.test(r.evidence_post_id)
+    ) {
+      return { ok: false, error: 'invalid_evidence_post_id' };
+    }
+    evidencePostId = r.evidence_post_id;
+  }
+  return {
+    ok: true,
+    handle: r.handle.replace(/^@/, '').toLowerCase(),
+    evidencePostId,
+  };
+}

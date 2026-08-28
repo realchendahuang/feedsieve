@@ -34,8 +34,9 @@ function renderApp(): HTMLElement {
 describe('popup App 渲染冒烟', () => {
   it('renders header and empty-list hint without throwing', async () => {
     const rootEl = renderApp();
-    // 等 storage 异步 resolve 完成（加载态「…」过渡到空态提示）
-    await new Promise((r) => setTimeout(r, 50));
+    // 等 storage 异步 resolve 完成（加载态「…」过渡到空态提示）；
+    // 全量 verify 高并发时 50ms 偶发不够，放宽到 150ms
+    await new Promise((r) => setTimeout(r, 150));
 
     expect(rootEl.textContent).toContain('福滤娃');
     expect(rootEl.textContent).toContain('在 X 页面勾选黄框账号');
