@@ -1,4 +1,5 @@
 import { sha256Hex } from './lib/hash';
+import { computeScore } from './lib/score';
 
 export const SNAPSHOT_SCHEMA_VERSION = 1;
 export const SNAPSHOT_PACK = 'official.json';
@@ -8,6 +9,7 @@ export interface SnapshotEntry {
   x_user_id: string | null;
   category: string;
   status: string;
+  community_score: number;
   report_count: number;
   rescue_count: number;
   first_seen_at: string;
@@ -48,12 +50,17 @@ function nextVersion(existing: string | null, dateStamp: string): string {
 }
 
 // 键按固定顺序写入（JS 字符串键保持插入序）+ 条目按 handle 排序 => 同一数据必然产出同字节 JSON
-function buildEntry(row: AccountRow, evidence: string[]) {
+function buildEntry(row: AccountRow, evidence: string[], distinctDays: number) {
   return {
     handle: row.handle,
     x_user_id: row.x_user_id,
     category: row.category,
     status: row.status,
+    community_score: computeScore({
+      reportCount: row.report_count,
+      rescueCount: row.rescue_count,
+      distinctDays,
+    }),
     report_count: row.report_count,
     rescue_count: row.rescue_count,
     first_seen_at: new Date(row.first_report_at * 1000).toISOString(),
@@ -97,9 +104,18 @@ export async function generateSnapshot(
   ).all<AccountRow>();
 
   const entries = [];
+  const dayRows = await env.DB.prepare(
+    `SELECT handle, COUNT(DISTINCT date(created_at, 'unixepoch')) AS days
+     FROM reports GROUP BY handle`,
+  ).all<{ handle: string; days: number }>();
+  const daysByHandle = new Map(
+    dayRows.results.map((r) => [r.handle, r.days] as const),
+  );
   for (const row of accounts.results) {
     const evidence = await collectEvidence(env, row.handle);
-    entries.push(buildEntry(row, evidence));
+    entries.push(
+      buildEntry(row, evidence, daysByHandle.get(row.handle) ?? 1),
+    );
   }
 
   const body = JSON.stringify({

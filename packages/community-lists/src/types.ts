@@ -23,8 +23,12 @@ export interface CommunityEntry {
   x_user_id: string | null;
   category: string;
   status: CommunityStatus;
+  /** 可解释分数 [0,1]（v0.3 起随快照下发；旧快照缓存可能没有，可选） */
+  community_score?: number;
   report_count: number;
   rescue_count: number;
+  /** 换号别名：同 x_user_id 的历史 handle（可选） */
+  aliases?: string[];
   first_seen_at: string;
   updated_at: string;
   evidence_post_ids: string[];

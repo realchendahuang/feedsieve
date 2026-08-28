@@ -103,6 +103,7 @@ describe('snapshot pipeline', () => {
       entries: {
         handle: string;
         status: string;
+        community_score: number;
         report_count: number;
         evidence_post_ids: string[];
       }[];
@@ -113,6 +114,8 @@ describe('snapshot pipeline', () => {
     expect(entry.handle).toBe('cand_user');
     expect(entry.status).toBe('candidate');
     expect(entry.report_count).toBe(4);
+    // 4 票同日：4/7 = 0.571 → 0.57（未达爆发线，不打折）
+    expect(entry.community_score).toBe(0.57);
     expect(entry.evidence_post_ids).toEqual(['18000000000000000']);
 
     const latest = (await (

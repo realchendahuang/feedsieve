@@ -128,13 +128,39 @@ function validateEntry(item: unknown): import('./types').CommunityEntry | null {
   ) {
     return null;
   }
+  if (
+    e.community_score !== undefined &&
+    e.community_score !== null &&
+    (typeof e.community_score !== 'number' ||
+      !Number.isFinite(e.community_score) ||
+      e.community_score < 0 ||
+      e.community_score > 1)
+  ) {
+    return null;
+  }
+  if (
+    e.aliases !== undefined &&
+    e.aliases !== null &&
+    (!Array.isArray(e.aliases) ||
+      !e.aliases.every(
+        (a) => typeof a === 'string' && HANDLE_RE.test(a),
+      ))
+  ) {
+    return null;
+  }
   return {
     handle: e.handle.toLowerCase(),
     x_user_id: typeof e.x_user_id === 'string' ? e.x_user_id : null,
     category: e.category,
     status: e.status as CommunityStatus,
+    ...(typeof e.community_score === 'number'
+      ? { community_score: e.community_score }
+      : {}),
     report_count: e.report_count,
     rescue_count: e.rescue_count,
+    ...(Array.isArray(e.aliases)
+      ? { aliases: e.aliases.map((a) => (a as string).toLowerCase()) }
+      : {}),
     first_seen_at: typeof e.first_seen_at === 'string' ? e.first_seen_at : '',
     updated_at: typeof e.updated_at === 'string' ? e.updated_at : '',
     evidence_post_ids: e.evidence_post_ids,
