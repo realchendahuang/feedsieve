@@ -4,10 +4,19 @@ import { validateReport, type ValidReport } from './lib/validate';
 // Phase D 会把阈值搬进 policy 文件/端点；先集中放这里
 export const POLICY = {
   candidateThreshold: 3, // 独立安装数达到即自动进入 candidate
-  dailyReportLimit: 100, // 单安装每日上报上限
-  rescueDailyLimit: 50, // 单安装每日抢救上限
+  dailyReportLimit: 100, // 单安装每日上报上限（实际限额 = 此值 × trust，见下）
+  rescueDailyLimit: 50, // 单安装每日抢救上限（同样乘 trust）
+  minDailyLimit: 10, // 限额下限：无论 trust 多低，保留基本参与能力
+  trustBurstThreshold: 30, // 单日报量越过此线 → 信任衰减一次
+  trustDecay: 0.1,
+  trustFloor: 0.2,
   maxBatch: 50, // 单请求条数上限
 } as const;
+
+/** 信任分作用于每日限额：低信任被收紧，但永不归零 */
+export function effectiveDailyLimit(baseLimit: number, trust: number): number {
+  return Math.max(POLICY.minDailyLimit, Math.round(baseLimit * trust));
+}
 
 export interface ReportResult {
   handle: string;
@@ -75,13 +84,14 @@ export async function processReportBatch(
   const now = nowSeconds();
 
   const installRow = await env.DB.prepare(
-    'SELECT reports_day, reports_today FROM installations WHERE id = ?1',
+    'SELECT reports_day, reports_today, trust FROM installations WHERE id = ?1',
   )
     .bind(installHash)
-    .first<{ reports_day: string; reports_today: number }>();
+    .first<{ reports_day: string; reports_today: number; trust: number }>();
+  const trust = installRow?.trust ?? 1;
   const usedToday =
     installRow && installRow.reports_day === today ? installRow.reports_today : 0;
-  if (usedToday + valid.length > POLICY.dailyReportLimit) {
+  if (usedToday + valid.length > effectiveDailyLimit(POLICY.dailyReportLimit, trust)) {
     return { ok: false, httpStatus: 429, error: 'rate_limited' };
   }
 
@@ -98,6 +108,18 @@ export async function processReportBatch(
     )
       .bind(installHash, now, today, usedToday + valid.length)
       .run();
+    // 爆发衰减：本轮越过爆发线（此前未越过）→ 信任降一档，后续限额随之收紧
+    const newUsed = usedToday + valid.length;
+    if (
+      newUsed >= POLICY.trustBurstThreshold &&
+      usedToday < POLICY.trustBurstThreshold
+    ) {
+      await env.DB.prepare(
+        'UPDATE installations SET trust = MAX(?2, trust - ?3) WHERE id = ?1',
+      )
+        .bind(installHash, POLICY.trustFloor, POLICY.trustDecay)
+        .run();
+    }
   }
 
   // 逐条 INSERT OR IGNORE：唯一索引 (installation_id, handle) 保证一个安装对一个账号只算一票

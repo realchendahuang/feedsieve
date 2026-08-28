@@ -1,6 +1,6 @@
 import { hashInstallationId } from './lib/hash';
 import { validateRescue } from './lib/validate';
-import { POLICY } from './reports';
+import { POLICY, effectiveDailyLimit } from './reports';
 
 interface ValidRescue {
   handle: string;
@@ -79,13 +79,14 @@ export async function processRescueBatch(
   const now = nowSeconds();
 
   const installRow = await env.DB.prepare(
-    'SELECT rescues_day, rescues_today FROM installations WHERE id = ?1',
+    'SELECT rescues_day, rescues_today, trust FROM installations WHERE id = ?1',
   )
     .bind(installHash)
-    .first<{ rescues_day: string; rescues_today: number }>();
+    .first<{ rescues_day: string; rescues_today: number; trust: number }>();
+  const trust = installRow?.trust ?? 1;
   const usedToday =
     installRow && installRow.rescues_day === today ? installRow.rescues_today : 0;
-  if (usedToday + valid.length > POLICY.rescueDailyLimit) {
+  if (usedToday + valid.length > effectiveDailyLimit(POLICY.rescueDailyLimit, trust)) {
     return { ok: false, httpStatus: 429, error: 'rate_limited' };
   }
 
