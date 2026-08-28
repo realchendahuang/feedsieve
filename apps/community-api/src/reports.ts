@@ -127,16 +127,40 @@ export async function processReportBatch(
   const firstReport = new Map<string, ValidReport>(); // handle -> 首条（定 category / x_user_id）
   for (let i = 0; i < valid.length; i++) {
     const r = valid[i];
+
+    // 换号追踪：同一 x_user_id 的已知账号换了个新 handle ——
+    // 票记到原账号（正主）头上，新 handle 进它的别名表，不给换号者重新洗白的机会
+    let canonical = r.handle;
+    if (r.xUserId) {
+      const known = await env.DB.prepare(
+        'SELECT handle, aliases FROM accounts WHERE x_user_id = ?1 LIMIT 1',
+      )
+        .bind(r.xUserId)
+        .first<{ handle: string; aliases: string }>();
+      if (known && known.handle !== r.handle) {
+        canonical = known.handle;
+        const aliases = JSON.parse(known.aliases) as string[];
+        if (!aliases.includes(r.handle)) {
+          aliases.push(r.handle);
+          await env.DB.prepare('UPDATE accounts SET aliases = ?2 WHERE handle = ?1')
+            .bind(known.handle, JSON.stringify(aliases))
+            .run();
+        }
+      }
+    }
+
     const res = await env.DB.prepare(
       `INSERT OR IGNORE INTO reports
          (handle, x_user_id, reason, evidence_post_id, installation_id, client_version, created_at)
        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
     )
-      .bind(r.handle, r.xUserId, r.reason, r.evidencePostId, installHash, clientVersion, now)
+      .bind(canonical, r.xUserId, r.reason, r.evidencePostId, installHash, clientVersion, now)
       .run();
     if ((res.meta.changes ?? 0) === 1) {
-      insertedHandles.set(r.handle, (insertedHandles.get(r.handle) ?? 0) + 1);
-      if (!firstReport.has(r.handle)) firstReport.set(r.handle, r);
+      insertedHandles.set(canonical, (insertedHandles.get(canonical) ?? 0) + 1);
+      if (!firstReport.has(canonical)) {
+        firstReport.set(canonical, { ...r, handle: canonical });
+      }
     } else {
       results[i].status = 'duplicate';
     }

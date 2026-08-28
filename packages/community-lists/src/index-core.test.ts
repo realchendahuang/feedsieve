@@ -32,6 +32,7 @@ const snapshot: SnapshotBody = {
     entry({}),
     entry({ handle: 'rec_user', status: 'recommended', x_user_id: '42' }),
     entry({ handle: 'cand_user', status: 'candidate', report_count: 3 }),
+    entry({ handle: 'spam_old', aliases: ['renamed_1', 'renamed_2'] }),
   ],
 };
 
@@ -53,15 +54,23 @@ describe('strength gating', () => {
 
 describe('buildIndex lookup', () => {
   it('filters entries by strength', () => {
-    expect(buildIndex(snapshot, 'refresh').size).toBe(1);
-    expect(buildIndex(snapshot, 'standard').size).toBe(2);
-    expect(buildIndex(snapshot, 'deep_clean').size).toBe(3);
+    expect(buildIndex(snapshot, 'refresh').size).toBe(2);
+    expect(buildIndex(snapshot, 'standard').size).toBe(3);
+    expect(buildIndex(snapshot, 'deep_clean').size).toBe(4);
   });
 
   it('looks up by handle case-insensitively and tolerates @', () => {
     const index = buildIndex(snapshot, 'deep_clean');
     expect(index.lookup('@SPAM_user')?.category).toBe('bot_spam');
     expect(index.lookup('rec_user')?.status).toBe('recommended');
+  });
+
+  it('matches renamed handles through the alias table', () => {
+    const index = buildIndex(snapshot, 'deep_clean');
+    expect(index.lookup('renamed_1')?.handle).toBe('spam_old');
+    expect(index.lookup('@Renamed_2')?.handle).toBe('spam_old');
+    // 别名不重复计入 size（size 数的是正主条目）
+    expect(index.size).toBe(4);
   });
 
   it('prefers x_user_id (stable across handle renames)', () => {

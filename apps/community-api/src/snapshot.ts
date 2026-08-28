@@ -20,6 +20,7 @@ export interface SnapshotEntry {
 interface AccountRow {
   handle: string;
   x_user_id: string | null;
+  aliases: string;
   category: string;
   status: string;
   report_count: number;
@@ -50,10 +51,24 @@ function nextVersion(existing: string | null, dateStamp: string): string {
 }
 
 // 键按固定顺序写入（JS 字符串键保持插入序）+ 条目按 handle 排序 => 同一数据必然产出同字节 JSON
-function buildEntry(row: AccountRow, evidence: string[], distinctDays: number) {
+function buildEntry(
+  row: AccountRow,
+  evidence: string[],
+  distinctDays: number,
+) {
+  let aliases: string[] = [];
+  try {
+    const parsed = JSON.parse(row.aliases) as unknown;
+    if (Array.isArray(parsed)) {
+      aliases = parsed.filter((a): a is string => typeof a === 'string');
+    }
+  } catch {
+    // 别名字段损坏时不阻塞快照
+  }
   return {
     handle: row.handle,
     x_user_id: row.x_user_id,
+    aliases,
     category: row.category,
     status: row.status,
     community_score: computeScore({
@@ -96,7 +111,7 @@ export async function generateSnapshot(
   const version = nextVersion(latest?.version ?? null, dateStamp);
 
   const accounts = await env.DB.prepare(
-    `SELECT handle, x_user_id, category, status, report_count, rescue_count,
+    `SELECT handle, x_user_id, aliases, category, status, report_count, rescue_count,
             first_report_at, updated_at
      FROM accounts
      WHERE status IN ('candidate', 'recommended', 'strong')

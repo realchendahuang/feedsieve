@@ -22,12 +22,18 @@ export function buildIndex(
   strength: MarkStrength,
 ): CommunityIndex {
   const byHandle = new Map<string, CommunityEntry>();
+  const byAlias = new Map<string, CommunityEntry>();
   const byUserId = new Map<string, CommunityEntry>();
   for (const entry of snapshot.entries) {
     if (!isStatusAllowed(entry.status, strength)) {
       continue;
     }
     byHandle.set(entry.handle, entry);
+    for (const alias of entry.aliases ?? []) {
+      if (!byAlias.has(alias)) {
+        byAlias.set(alias, entry);
+      }
+    }
     if (entry.x_user_id) {
       byUserId.set(entry.x_user_id, entry);
     }
@@ -44,7 +50,7 @@ export function buildIndex(
       }
       if (handle) {
         const normalized = handle.trim().replace(/^@+/, '').toLowerCase();
-        return byHandle.get(normalized) ?? null;
+        return byHandle.get(normalized) ?? byAlias.get(normalized) ?? null;
       }
       return null;
     },
