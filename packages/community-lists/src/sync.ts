@@ -12,6 +12,20 @@ export type SyncOutcome =
 
 export type FetchLike = (url: string) => Promise<Response>;
 
+/** 一个快照来源：manifest 地址 + 快照文件地址的拼装方式 */
+export interface SyncSource {
+  manifestUrl: string;
+  fileUrl: (version: string, path: string) => string;
+}
+
+/** 社区 API（Worker）来源 */
+export function workerSource(apiBase: string): SyncSource {
+  return {
+    manifestUrl: `${apiBase}/v1/snapshots/latest`,
+    fileUrl: (version, path) => `${apiBase}/v1/snapshots/${version}/${path}`,
+  };
+}
+
 /** 宿主环境的存储适配器（扩展侧用 browser.storage.local 实现） */
 export interface SnapshotStore {
   get(): Promise<StoredSnapshot | null>;
@@ -19,7 +33,8 @@ export interface SnapshotStore {
 }
 
 export interface SyncOptions {
-  apiBase: string;
+  /** 依次尝试的来源；前面的源报错时自动落到下一个（如 Worker -> jsDelivr 镜像） */
+  sources: SyncSource[];
   fetchImpl: FetchLike;
   store: SnapshotStore;
   now?: () => number;
@@ -44,10 +59,33 @@ export async function syncCommunitySnapshot(
     ) {
       return { status: 'skipped' };
     }
+  } catch (error) {
+    return {
+      status: 'error',
+      error: error instanceof Error ? error.message : 'unknown',
+    };
+  }
 
-    const manifestRes = await options.fetchImpl(
-      `${options.apiBase}/v1/snapshots/latest`,
-    );
+  let lastError: SyncOutcome = { status: 'error', error: 'no_sources' };
+  for (const source of options.sources) {
+    const outcome = await syncFromSource(source, options);
+    if (outcome.status !== 'error') {
+      return outcome;
+    }
+    lastError = outcome;
+  }
+  return lastError;
+}
+
+async function syncFromSource(
+  source: SyncSource,
+  options: SyncOptions,
+): Promise<SyncOutcome> {
+  const now = options.now ?? Date.now;
+  try {
+    const current = await options.store.get();
+
+    const manifestRes = await options.fetchImpl(source.manifestUrl);
     if (!manifestRes.ok) {
       return { status: 'error', error: `manifest_http_${manifestRes.status}` };
     }
@@ -66,7 +104,7 @@ export async function syncCommunitySnapshot(
       return { status: 'error', error: 'manifest_files_empty' };
     }
     const snapshotRes = await options.fetchImpl(
-      `${options.apiBase}/v1/snapshots/${manifest.value.snapshot_version}/${file.path}`,
+      source.fileUrl(manifest.value.snapshot_version, file.path),
     );
     if (!snapshotRes.ok) {
       return { status: 'error', error: `snapshot_http_${snapshotRes.status}` };

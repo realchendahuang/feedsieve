@@ -10,7 +10,9 @@ export type DetectionSource =
   | 'builtin-list'
   | 'heuristic'
   | 'fingerprint'
-  | 'ai';
+  | 'ai'
+  /** 用户已拉黑的账号仍出现在 feed（X 服务端行为），由本地已拉黑名单标注 */
+  | 'blocked';
 
 export interface Detection {
   /** 归一化后的 handle，不带 @ 前缀，小写。 */

@@ -8,13 +8,29 @@ import {
   isMarkStrength,
   isStatusAllowed,
   parseSnapshotBody,
+  workerSource,
   DEFAULT_MARK_STRENGTH,
   type CommunityIndex,
   type MarkStrength,
   type StoredSnapshot,
+  type SyncSource,
 } from '@feedsieve/community-lists';
 
 export const COMMUNITY_API_BASE = 'https://feedsieve-api.chendahuang.com';
+
+/**
+ * 快照双源：Worker 主源；jsDelivr 镜像兜底（Worker 不可达时）。
+ * 镜像内容 = 仓库 community/lists/ 最近一次提交（scripts/mirror-community-lists.sh 维护）。
+ */
+export const COMMUNITY_SYNC_SOURCES: SyncSource[] = [
+  workerSource(COMMUNITY_API_BASE),
+  {
+    manifestUrl:
+      'https://cdn.jsdelivr.net/gh/realchendahuang/feedsieve@main/community/lists/manifest.json',
+    fileUrl: (_version, path) =>
+      `https://cdn.jsdelivr.net/gh/realchendahuang/feedsieve@main/community/lists/${path}`,
+  },
+];
 
 const SNAPSHOT_KEY = 'communitySnapshot';
 const SETTINGS_KEY = 'communitySettings';

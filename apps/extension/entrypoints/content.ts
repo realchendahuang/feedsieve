@@ -8,7 +8,11 @@ import {
   type ParsedApiData,
 } from '@feedsieve/x-adapter';
 import { isPending, removePendingBlock, setPendingBlock } from '../src/lib/pending-blocks';
-import { markBlocked } from '../src/lib/blocked-accounts';
+import {
+  getBlockedAccounts,
+  markBlocked,
+  subscribeBlocked,
+} from '../src/lib/blocked-accounts';
 import { bumpStat } from '../src/lib/local-stats';
 import { collectCellsByHandle, removeCellsSoon } from '../src/lib/remove-tweets';
 import { runPendingBlockBatch } from '../src/lib/run-block-batch';
@@ -64,6 +68,8 @@ export default defineContentScript({
     const bioCache = new Map<string, string>();
     /** 白名单缓存：一票否决，最高优先级 */
     const allowCache = new Set<string>();
+    /** 已拉黑名单缓存：X 偶尔仍会展示已拉黑账号（f=live 等），需要标注 */
+    const blockedCache = new Set<string>();
     /** 社区名单运行时状态（快照同步 + 强度过滤后的索引） */
     let community: RuntimeCommunity | null = null;
     let scanTimer: number | undefined;
@@ -71,6 +77,7 @@ export default defineContentScript({
     ensureStyles();
     refreshPendingCache();
     refreshAllowCache();
+    refreshBlockedCache();
     void refreshCommunity();
     listenXhrBridge();
     // 请 background SW 同步快照（SW 侧 6h 节流；发消息顺便唤醒 SW）
@@ -151,6 +158,19 @@ export default defineContentScript({
       }
     });
 
+    function refreshBlockedCache(): void {
+      const apply = (items: Array<{ handle: string }>): void => {
+        blockedCache.clear();
+        for (const item of items) {
+          blockedCache.add(item.handle);
+        }
+      };
+      void getBlockedAccounts().then(apply).catch(() => {
+        // storage 异常保持旧缓存
+      });
+      subscribeBlocked(apply);
+    }
+
     // 快照/设置变化（同步、换强度档）实时生效到下一次扫描；只订阅一次
     subscribeCommunity(() => {
       void refreshCommunity().catch(() => {
@@ -206,6 +226,17 @@ export default defineContentScript({
         }
         if (!detection) {
           detection = detect(input);
+        }
+
+        // 已拉黑账号仍出现（X 服务端行为，f=live 常见）：如实标注，交给用户处置
+        if (!detection && blockedCache.has(item.author.handle.toLowerCase())) {
+          detection = {
+            handle: item.author.handle.toLowerCase(),
+            marked: true,
+            source: 'blocked',
+            reason: '已拉黑账号 · X 仍展示',
+            ruleId: 'blocked',
+          };
         }
         if (!detection) {
           continue;
@@ -265,10 +296,13 @@ export default defineContentScript({
     ): void {
       cell.setAttribute(MARK_ATTRIBUTE, detection.source);
       attachBadge(cell, detection, category);
-      // 本地统计：每次新标注 +1（seenArticles 保证每个 cell 只标一次）
-      void bumpStat('detected').catch(() => {
-        // 统计写入失败不影响标注
-      });
+      // 本地统计：每次新标注 +1（seenArticles 保证每个 cell 只标一次）；
+      // 已拉黑回显不是新发现，不计数
+      if (detection.source !== 'blocked') {
+        void bumpStat('detected').catch(() => {
+          // 统计写入失败不影响标注
+        });
+      }
     }
 
     function attachBadge(
@@ -287,6 +321,23 @@ export default defineContentScript({
       label.className = 'fs-reason';
       label.textContent = `🟡 ${detection.reason}`;
       label.title = `来源：${detection.source} · 规则：${detection.ruleId ?? '-'}`;
+
+      // 已拉黑回显：账号已经在黑名单里，重复的拉黑按钮没有意义，
+      // 给「移除推文」对齐 X 原生行为
+      if (detection.source === 'blocked') {
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'fs-block-now';
+        removeBtn.type = 'button';
+        removeBtn.textContent = '移除推文';
+        removeBtn.addEventListener('click', () => {
+          removeBtn.disabled = true;
+          removeBtn.textContent = '移除中…';
+          removeCellsSoon([cell]);
+        });
+        badge.append(label, removeBtn);
+        cell.appendChild(badge);
+        return;
+      }
 
       const checkbox = document.createElement('label');
       checkbox.className = 'fs-pick';

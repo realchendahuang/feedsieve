@@ -321,3 +321,32 @@ body {
   color: #b59f00;
   line-height: 1.5;
 }
+
+.sync-btn {
+  margin-top: 6px;
+  width: 100%;
+  padding: 5px 0;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  background: #fafafa;
+  color: #666;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.sync-btn:hover:not(:disabled) {
+  border-color: #f2c94c;
+  color: #8a7500;
+}
+
+.sync-btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.sync-msg {
+  margin: 6px 0 0;
+  font-size: 10px;
+  color: #8a7500;
+  text-align: center;
+}

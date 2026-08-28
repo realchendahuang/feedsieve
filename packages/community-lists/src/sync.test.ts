@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { sha256Hex } from './hash';
-import { syncCommunitySnapshot, type SnapshotStore } from './sync';
+import {
+  syncCommunitySnapshot,
+  workerSource,
+  type SnapshotStore,
+  type SyncSource,
+} from './sync';
 import { parseSnapshotBody } from './validate';
 import type { StoredSnapshot } from './types';
 
@@ -69,7 +74,7 @@ describe('syncCommunitySnapshot', () => {
     const fetchImpl = okFetch(body, manifest({ files: [{ path: 'official.json', sha256: await realSha(body), entries: 0 }] }));
 
     const outcome = await syncCommunitySnapshot({
-      apiBase: API,
+      sources: [workerSource(API)],
       fetchImpl,
       store,
       force: true,
@@ -85,7 +90,7 @@ describe('syncCommunitySnapshot', () => {
     const fetchImpl = okFetch(snapshotBodyText(), manifest());
 
     const outcome = await syncCommunitySnapshot({
-      apiBase: API,
+      sources: [workerSource(API)],
       fetchImpl,
       store,
       force: true,
@@ -105,7 +110,7 @@ describe('syncCommunitySnapshot', () => {
     const fetchImpl = vi.fn(async () => new Response('nope', { status: 500 })) as unknown as (url: string) => Promise<Response>;
 
     const outcome = await syncCommunitySnapshot({
-      apiBase: API,
+      sources: [workerSource(API)],
       fetchImpl,
       store,
       force: true,
@@ -115,6 +120,34 @@ describe('syncCommunitySnapshot', () => {
     expect(store.data?.snapshot_version).toBe('2026.08.27.3');
   });
 
+  it('falls back to the next source when the first one fails', async () => {
+    const body = snapshotBodyText();
+    const store = memoryStore();
+    const mirror: SyncSource = {
+      manifestUrl: 'https://mirror.example.com/manifest.json',
+      fileUrl: (_version, path) => `https://mirror.example.com/${path}`,
+    };
+    const fetchImpl = vi.fn(async (url: string) => {
+      if (url.startsWith(API)) {
+        return new Response('down', { status: 503 });
+      }
+      if (url === mirror.manifestUrl) {
+        return jsonResponse(manifest({ files: [{ path: 'official.json', sha256: await realSha(body), entries: 0 }] }));
+      }
+      return new Response(body, { status: 200 });
+    }) as unknown as (url: string) => Promise<Response>;
+
+    const outcome = await syncCommunitySnapshot({
+      sources: [workerSource(API), mirror],
+      fetchImpl,
+      store,
+      force: true,
+    });
+
+    expect(outcome).toEqual({ status: 'updated', version: VERSION });
+    expect(store.data?.snapshot_version).toBe(VERSION);
+  });
+
   it('skips when synced recently and not forced', async () => {
     const store = memoryStore({ snapshot_version: VERSION, body: '{}', synced_at: 1000 });
     const fetchImpl = vi.fn(async () => {
@@ -122,7 +155,7 @@ describe('syncCommunitySnapshot', () => {
     }) as unknown as (url: string) => Promise<Response>;
 
     const outcome = await syncCommunitySnapshot({
-      apiBase: API,
+      sources: [workerSource(API)],
       fetchImpl,
       store,
       now: () => 1000 + 60 * 60 * 1000,
@@ -141,7 +174,7 @@ describe('syncCommunitySnapshot', () => {
     const fetchImpl = okFetch(body, manifest({ files: [{ path: 'official.json', sha256: await realSha(body), entries: 0 }] }));
 
     const outcome = await syncCommunitySnapshot({
-      apiBase: API,
+      sources: [workerSource(API)],
       fetchImpl,
       store,
       force: true,
@@ -156,7 +189,7 @@ describe('syncCommunitySnapshot', () => {
   it('rejects malformed manifests and bodies', async () => {
     const store = memoryStore();
     const badManifest = await syncCommunitySnapshot({
-      apiBase: API,
+      sources: [workerSource(API)],
       fetchImpl: okFetch('{}', manifest({ snapshot_version: 'not-a-version' })),
       store,
       force: true,
@@ -165,7 +198,7 @@ describe('syncCommunitySnapshot', () => {
 
     const badBody = snapshotBodyText(VERSION, [{ handle: '!!!' }]);
     const badEntries = await syncCommunitySnapshot({
-      apiBase: API,
+      sources: [workerSource(API)],
       fetchImpl: okFetch(badBody, manifest({ files: [{ path: 'official.json', sha256: await realSha(badBody), entries: 1 }] })),
       store,
       force: true,

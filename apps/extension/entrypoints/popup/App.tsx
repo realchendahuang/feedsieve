@@ -13,6 +13,12 @@ import {
 } from '../../src/lib/blocked-accounts';
 import { getStats, subscribeStats, type LocalStats } from '../../src/lib/local-stats';
 import {
+  getAllowlist,
+  removeAllowed,
+  subscribeAllowlist,
+  type AllowlistItem,
+} from '../../src/lib/allowlist';
+import {
   getCommunitySettings,
   setCommunitySettings,
   getCommunitySnapshot,
@@ -46,6 +52,15 @@ function formatDate(timestamp: number): string {
   return `${d.getMonth() + 1}月${d.getDate()}日`;
 }
 
+function formatAgo(timestamp: number): string {
+  const minutes = Math.floor((Date.now() - timestamp) / 60000);
+  if (minutes < 1) return '刚刚';
+  if (minutes < 60) return `${minutes} 分钟前`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} 小时前`;
+  return `${Math.floor(hours / 24)} 天前`;
+}
+
 export default function App() {
   const [blocks, setBlocks] = useState<PendingBlock[] | null>(null);
   const [blocked, setBlocked] = useState<BlockedAccount[] | null>(null);
@@ -58,12 +73,17 @@ export default function App() {
   const [communityMeta, setCommunityMeta] = useState<{
     version: string;
     count: number;
+    syncedAt: number;
   } | null>(null);
+  const [allowlist, setAllowlist] = useState<AllowlistItem[] | null>(null);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     void getPendingBlocks().then(setBlocks);
     void getBlockedAccounts().then(setBlocked);
     void getStats().then(setStats);
+    void getAllowlist().then(setAllowlist);
     void getCommunitySettings().then(setCommunity);
     void getCommunitySnapshot().then(async (snapshot) => {
       if (!snapshot) {
@@ -74,6 +94,7 @@ export default function App() {
         setCommunityMeta({
           version: snapshot.snapshot_version,
           count: parsed.value.entries.length,
+          syncedAt: snapshot.synced_at,
         });
       }
     });
@@ -81,6 +102,7 @@ export default function App() {
       subscribePending(setBlocks),
       subscribeBlocked(setBlocked),
       subscribeStats(setStats),
+      subscribeAllowlist(setAllowlist),
       subscribeCommunity(() => {
         void getCommunitySettings().then(setCommunity);
       }),
@@ -88,14 +110,56 @@ export default function App() {
     return () => unsubs.forEach((unsub) => unsub());
   }, []);
 
+  /**
+   * 投递消息到任一可用的 x.com 标签：活动标签优先，其余依次兜底。
+   * 重载扩展后旧标签的 content script 不响应（Receiving end does not exist），
+   * 逐个尝试总能找到活着的会话（若有）。
+   */
   async function sendToXPage(
-    message: { type: string; handle?: string },
+    message: { type: string; handle?: string; force?: boolean },
   ): Promise<unknown> {
-    const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id) {
-      throw new Error('no active tab');
+    const tabs = await browser.tabs.query({ url: 'https://x.com/*' });
+    const ordered = [...tabs].sort(
+      (a, b) => Number(b.active ?? false) - Number(a.active ?? false),
+    );
+    for (const tab of ordered) {
+      if (!tab.id) {
+        continue;
+      }
+      try {
+        return await browser.tabs.sendMessage(tab.id, message);
+      } catch {
+        // 该标签没有接收方，试下一个
+      }
     }
-    return browser.tabs.sendMessage(tab.id, message);
+    throw new Error('no x.com receiver');
+  }
+
+  async function syncCommunityNow(): Promise<void> {
+    setSyncing(true);
+    setSyncMsg(null);
+    try {
+      const res = (await browser.runtime.sendMessage({
+        type: 'feedsieve:community-sync',
+        force: true,
+      })) as {
+        outcome?: { status: string; version?: string; error?: string };
+      };
+      const outcome = res?.outcome;
+      if (outcome?.status === 'updated') {
+        setSyncMsg(`✅ 已同步 ${outcome.version}`);
+      } else if (outcome?.status === 'unchanged') {
+        setSyncMsg('✅ 已是最新');
+      } else if (outcome?.status === 'error') {
+        setSyncMsg(`⚠️ 同步失败：${outcome.error ?? ''}`);
+      } else {
+        setSyncMsg('⚠️ 同步不可用');
+      }
+    } catch {
+      setSyncMsg('⚠️ 后台未就绪');
+    } finally {
+      setSyncing(false);
+    }
   }
 
   async function runBatch(): Promise<void> {
@@ -107,7 +171,7 @@ export default function App() {
       const result = (await sendToXPage(BLOCK_MESSAGE)) as BatchBlockResult;
       setBlockResult(result);
     } catch {
-      setNotice('没找到 X 页面会话：先打开 x.com，再点一键拉黑');
+      setNotice('没找到可用的 X 页面：请打开或刷新 x.com 后重试');
     } finally {
       setRunning(false);
     }
@@ -126,7 +190,7 @@ export default function App() {
       })) as UnblockBatchResult;
       setUnblockResult(result);
     } catch {
-      setNotice('没找到 X 页面会话：先打开 x.com，再撤销');
+      setNotice('没找到可用的 X 页面：请打开或刷新 x.com 后再撤销');
     } finally {
       setRunning(false);
     }
@@ -293,10 +357,19 @@ export default function App() {
           <span className="stat-label">社区名单</span>
           <span className="list-count">
             {communityMeta
-              ? `v${communityMeta.version} · ${communityMeta.count} 条`
+              ? `v${communityMeta.version} · ${communityMeta.count} 条 · ${formatAgo(communityMeta.syncedAt)}`
               : '同步中…'}
           </span>
         </div>
+        <button
+          type="button"
+          className="sync-btn"
+          disabled={syncing}
+          onClick={() => void syncCommunityNow()}
+        >
+          {syncing ? '同步中…' : '立即同步'}
+        </button>
+        {syncMsg ? <p className="sync-msg">{syncMsg}</p> : null}
         {community ? (
           <div className="settings-rows">
             <label className="settings-row">
@@ -342,6 +415,42 @@ export default function App() {
           </div>
         ) : (
           <p className="list-empty">…</p>
+        )}
+      </section>
+
+      {/* 个人白名单：误标治理；「误标？」按钮在这里可见、可撤销 */}
+      <section className="list-card">
+        <div className="list-head">
+          <span className="stat-label">个人白名单</span>
+          <span className="list-count">
+            {allowlist === null ? '…' : `${allowlist.length} 个`}
+          </span>
+        </div>
+        {allowlist === null || allowlist.length === 0 ? (
+          <p className="list-empty">
+            空空的 · 遇到误标就点黄框上的「误标？」
+          </p>
+        ) : (
+          <ul className="pending-list">
+            {allowlist.map((item) => (
+              <li key={item.handle} className="pending-item">
+                <div className="pending-info">
+                  <span className="pending-handle">@{item.handle}</span>
+                  <span className="pending-reason">
+                    {formatDate(item.addedAt)} 加入
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="remove-btn"
+                  title="移出白名单（恢复标注）"
+                  onClick={() => void removeAllowed(item.handle)}
+                >
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 
