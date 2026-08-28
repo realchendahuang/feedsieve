@@ -45,12 +45,11 @@
 
 目标：**上报规模变大后，社区名单仍然可信。**
 
-- Rescue API + Removal 流程（名单不是永久刑罚）
-- Community Score v1（置信加权、time spread、rescue 抵扣）
-- Reporter Trust v1
-- burst / abuse 检测（v0.2 仅去重 + 限速兜底）
-- Candidate 自动化策略（`community/policy/v1.yaml`）
-- Changelog / Account aliases
+状态（2026-08-28）：✅ Rescue API + 自动降级闸门（candidate 且 rescue ≥ report → 降回 new）；✅ Community Score v1（可解释公式入快照）；✅ Reporter Trust v1 + burst 检测（内部，不公开）；✅ aliases 换号追踪（同 rest_id 自动归并）；✅ `community/policy/v1.yaml` + `/v1/policy` 公开化 + drift 守卫。余：Changelog（后续版本）。
+
+成功标准（原）：
+
+> 任意社区名单条目都能看懂来源、分类、分数和变更历史。
 
 ## v0.4 — 从账号名单升级成垃圾网络识别
 
