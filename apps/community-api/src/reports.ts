@@ -172,10 +172,21 @@ export async function processReportBatch(
 
     const res = await env.DB.prepare(
       `INSERT OR IGNORE INTO reports
-         (handle, x_user_id, reason, evidence_post_id, installation_id, client_version, created_at)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
+         (handle, x_user_id, reason, evidence_post_id, installation_id, client_version, created_at,
+          content_fingerprint, link_domains)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)`,
     )
-      .bind(canonical, r.xUserId, r.reason, r.evidencePostId, installHash, clientVersion, now)
+      .bind(
+        canonical,
+        r.xUserId,
+        r.reason,
+        r.evidencePostId,
+        installHash,
+        clientVersion,
+        now,
+        r.contentFingerprint,
+        r.linkDomains.length > 0 ? JSON.stringify(r.linkDomains) : null,
+      )
       .run();
     if ((res.meta.changes ?? 0) === 1) {
       insertedHandles.set(canonical, (insertedHandles.get(canonical) ?? 0) + 1);

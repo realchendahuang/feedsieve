@@ -43,7 +43,8 @@ export interface CommunitySettings {
   /**
    * 拉黑后自动贡献给社区名单（默认开，全局开关，绝无逐条弹窗）。
    * 隐私承诺：只有用户主动拉黑才产生上报，上传内容仅限
-   * handle / x_user_id / 分类，绝无浏览历史等被动数据。
+   * handle / x_user_id / 分类 / 话术指纹哈希（原文不出设备）/
+   * 该推文外链域名，绝无浏览历史等被动数据。
    */
   autoContribute: boolean;
 }
@@ -124,6 +125,13 @@ export interface RuntimeCommunity {
   index: CommunityIndex;
   /** 当前强度下可见的 handle 集合（detect 的 list 入参用） */
   handleSet: Set<string>;
+  /**
+   * 已知垃圾模板指纹集合（v0.4）。间接证据：仅「大扫除」档聚合下发，
+   * 其余强度档为空集合 —— 门槛收口在这里，调用方无需重复判断。
+   */
+  fingerprintSet: ReadonlySet<string>;
+  /** 垃圾外链域名集合（v0.4，门槛同指纹） */
+  domainSet: ReadonlySet<string>;
   version: string;
 }
 
@@ -147,5 +155,20 @@ export async function buildRuntimeCommunity(): Promise<RuntimeCommunity | null> 
       handleSet.add(entry.handle);
     }
   }
-  return { index, handleSet, version: index.version };
+  // 指纹/域名是比名单弱的间接证据（换号复用话术、垃圾域名），
+  // 按用户拍板只在「大扫除」档启用；快照条目本身已按强度过滤。
+  const deepClean = settings.strength === 'deep_clean';
+  const fingerprintSet = new Set<string>();
+  const domainSet = new Set<string>();
+  if (deepClean) {
+    for (const entry of parsed.value.entries) {
+      for (const fp of entry.fingerprints ?? []) {
+        fingerprintSet.add(fp);
+      }
+      for (const domain of entry.domains ?? []) {
+        domainSet.add(domain);
+      }
+    }
+  }
+  return { index, handleSet, fingerprintSet, domainSet, version: index.version };
 }

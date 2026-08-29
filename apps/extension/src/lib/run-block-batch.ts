@@ -44,6 +44,12 @@ export async function runPendingBlockBatch(): Promise<BatchBlockResult> {
         handle: item.handle,
         ...(item.xUserId ? { xUserId: item.xUserId } : {}),
         category: item.category ?? 'other',
+        ...(item.contentFingerprint
+          ? { contentFingerprint: item.contentFingerprint }
+          : {}),
+        ...(item.linkDomains?.length
+          ? { linkDomains: item.linkDomains }
+          : {}),
       });
     } else {
       failed.push({ handle: item.handle, code: outcome.code });

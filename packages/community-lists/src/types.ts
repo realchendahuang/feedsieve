@@ -29,6 +29,13 @@ export interface CommunityEntry {
   rescue_count: number;
   /** 换号别名：同 x_user_id 的历史 handle（可选） */
   aliases?: string[];
+  /**
+   * 已知垃圾模板指纹（v0.4，可选）：≥2 个独立安装上报同一归一化话术哈希才下发。
+   * 间接证据 —— 扩展只在「大扫除」强度档用它标注（换号复用话术仍能认出）。
+   */
+  fingerprints?: string[];
+  /** 垃圾外链域名（v0.4，可选）：门槛同指纹 */
+  domains?: string[];
   first_seen_at: string;
   updated_at: string;
   evidence_post_ids: string[];

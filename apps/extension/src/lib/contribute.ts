@@ -1,10 +1,12 @@
 /**
- * 社区贡献上报（Phase F）。
+ * 社区贡献上报（Phase F；v0.4 载荷扩容）。
  *
  * 摩擦设计（用户拍板）：没有逐条弹窗。拉黑成功即自动上报，
  * 全局开关 autoContribute 默认开，关一次永远不打扰。
  * 隐私红线：只在用户主动拉黑成功后上报；payload 仅
- * handle / x_user_id / 分类 / 匿名安装哈希 / 版本号，绝无浏览数据。
+ * handle / x_user_id / 分类 / 匿名安装哈希 / 版本号，
+ * 外加 v0.4 内容证据 —— 话术指纹（归一化文本的单向哈希，原文不出设备）
+ * 与该推文外链域名（仅 hostname）。绝无浏览数据。
  *
  * 网络失败进本地积压队列，由 background 在启动时补交（尽力而为）。
  */
@@ -18,6 +20,38 @@ export interface ContributionItem {
   xUserId?: string;
   /** 贡献分类（detect 来源自动推导，用户无感知） */
   category: string;
+  /** 话术指纹（v0.4）：detector.contentFingerprint 的输出，16 位 hex */
+  contentFingerprint?: string;
+  /** 外链 hostname（v0.4）：已去自家域名并去重 */
+  linkDomains?: string[];
+}
+
+/** X 自家/媒体域名：无垃圾识别价值，不进指纹库也不随上报发送 */
+const SELF_DOMAINS = ['x.com', 'twitter.com', 't.co', 'twimg.com'];
+
+export function isSelfDomain(hostname: string): boolean {
+  const lower = hostname.toLowerCase();
+  return SELF_DOMAINS.some((d) => lower === d || lower.endsWith(`.${d}`));
+}
+
+/** 从推文链接收集上报用域名：去自家、去重、封顶（与服务端限额一致） */
+export function collectLinkDomains(
+  links: ReadonlyArray<{ hostname?: string }>,
+): string[] | undefined {
+  const domains: string[] = [];
+  for (const link of links) {
+    if (!link.hostname || isSelfDomain(link.hostname)) {
+      continue;
+    }
+    const hostname = link.hostname.toLowerCase();
+    if (!domains.includes(hostname)) {
+      domains.push(hostname);
+    }
+    if (domains.length >= 5) {
+      break;
+    }
+  }
+  return domains.length > 0 ? domains : undefined;
 }
 
 const INSTALLATION_KEY = 'installationId';
@@ -43,6 +77,13 @@ export function categoryFromDetection(
   communityCategory?: string,
 ): string {
   if (source !== 'heuristic') {
+    // v0.4 内容证据来源：没有对应名单条目，按证据类型定分类
+    if (source === 'fingerprint') {
+      return 'copy_paste';
+    }
+    if (source === 'domain') {
+      return 'scam_phishing';
+    }
     return communityCategory ?? 'other';
   }
   switch (ruleId) {
@@ -82,6 +123,12 @@ export function contributeBlocks(items: ContributionItem[]): void {
             handle: item.handle,
             ...(item.xUserId ? { x_user_id: item.xUserId } : {}),
             reason: item.category,
+            ...(item.contentFingerprint
+              ? { content_fingerprint: item.contentFingerprint }
+              : {}),
+            ...(item.linkDomains?.length
+              ? { link_domains: item.linkDomains }
+              : {}),
           })),
         }),
       });
@@ -119,6 +166,12 @@ export async function flushContributions(): Promise<void> {
           handle: item.handle,
           ...(item.xUserId ? { x_user_id: item.xUserId } : {}),
           reason: item.category,
+          ...(item.contentFingerprint
+            ? { content_fingerprint: item.contentFingerprint }
+            : {}),
+          ...(item.linkDomains?.length
+            ? { link_domains: item.linkDomains }
+            : {}),
         })),
       }),
     });

@@ -15,6 +15,16 @@ export interface PendingBlock {
   xUserId?: string;
   /** 贡献分类（拉黑成功后自动上报社区用；来自标注来源自动推导） */
   category?: string;
+  /** 话术指纹（v0.4，可选）：拉黑成功后随上报发送，原文不出设备 */
+  contentFingerprint?: string;
+  /** 外链 hostname（v0.4，可选）：已去自家域名并去重 */
+  linkDomains?: string[];
+}
+
+/** 标注时刻收集的内容证据（上报载荷，见 contribute.ts） */
+export interface BlockEvidence {
+  contentFingerprint?: string;
+  linkDomains?: string[];
 }
 
 const STORAGE_KEY = 'pendingBlocks';
@@ -37,6 +47,7 @@ export async function setPendingBlock(
   markedReason = '',
   xUserId?: string,
   category?: string,
+  evidence?: BlockEvidence,
 ): Promise<void> {
   const normalized = normalize(handle);
   if (!normalized) {
@@ -49,14 +60,25 @@ export async function setPendingBlock(
   const blocks = await getPendingBlocks();
   const existing = blocks.find((b) => b.handle === normalized);
   if (existing) {
-    // 已存在时补齐 xUserId / category（勾选时可能还没拿到）
+    // 已存在时补齐 xUserId / category / 证据（勾选时可能还没拿到）
+    let dirty = false;
     if (!existing.xUserId && xUserId) {
       existing.xUserId = xUserId;
+      dirty = true;
     }
     if (!existing.category && category) {
       existing.category = category;
+      dirty = true;
     }
-    if (xUserId || category) {
+    if (evidence?.contentFingerprint && !existing.contentFingerprint) {
+      existing.contentFingerprint = evidence.contentFingerprint;
+      dirty = true;
+    }
+    if (evidence?.linkDomains?.length && !existing.linkDomains?.length) {
+      existing.linkDomains = evidence.linkDomains;
+      dirty = true;
+    }
+    if (dirty) {
       await browser.storage.local.set({ [STORAGE_KEY]: blocks });
     }
     return;
@@ -67,6 +89,12 @@ export async function setPendingBlock(
     markedReason,
     ...(xUserId ? { xUserId } : {}),
     ...(category ? { category } : {}),
+    ...(evidence?.contentFingerprint
+      ? { contentFingerprint: evidence.contentFingerprint }
+      : {}),
+    ...(evidence?.linkDomains?.length
+      ? { linkDomains: evidence.linkDomains }
+      : {}),
   });
   await browser.storage.local.set({ [STORAGE_KEY]: blocks });
 }

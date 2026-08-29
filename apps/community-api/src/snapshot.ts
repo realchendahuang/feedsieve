@@ -5,6 +5,11 @@ import { publicPolicy } from './reports';
 export const SNAPSHOT_SCHEMA_VERSION = 1;
 export const SNAPSHOT_PACK = 'official.json';
 
+/** 单账号下发的指纹/域名证据上限，防快照膨胀 */
+const MAX_EVIDENCE_PER_ENTRY = 5;
+/** 证据门槛：一条指纹/域名至少要 2 个独立安装上报（reports 唯一索引保证一行 = 一个独立安装） */
+const MIN_INSTALLS_FOR_EVIDENCE = 2;
+
 export interface SnapshotEntry {
   handle: string;
   x_user_id: string | null;
@@ -56,6 +61,8 @@ function buildEntry(
   row: AccountRow,
   evidence: string[],
   distinctDays: number,
+  fingerprints: string[],
+  domains: string[],
 ) {
   let aliases: string[] = [];
   try {
@@ -82,6 +89,9 @@ function buildEntry(
     first_seen_at: new Date(row.first_report_at * 1000).toISOString(),
     updated_at: new Date(row.updated_at * 1000).toISOString(),
     evidence_post_ids: evidence,
+    // v0.4 内容证据：仅在有达标（≥2 独立安装）指纹/域名时携带
+    ...(fingerprints.length > 0 ? { fingerprints } : {}),
+    ...(domains.length > 0 ? { domains } : {}),
   };
 }
 
@@ -96,6 +106,76 @@ async function collectEvidence(
     .bind(handle)
     .all<{ evidence_post_id: string }>();
   return res.results.map((r) => r.evidence_post_id);
+}
+
+/**
+ * 内容证据聚合（v0.4）：指纹/域名只在「≥2 个独立安装上报」时随条目下发。
+ * 门槛的意义：单人重复上报制造不出指纹/域名证据，误拉黑也污染不了名单。
+ * 每账号取安装数最高的前 5 条，最终按字典序排序保证确定性 JSON。
+ */
+async function collectContentEvidence(
+  env: Cloudflare.Env,
+): Promise<{
+  fingerprintsByHandle: Map<string, string[]>;
+  domainsByHandle: Map<string, string[]>;
+}> {
+  const fpRows = await env.DB.prepare(
+    `SELECT handle, content_fingerprint AS fp
+     FROM reports
+     WHERE content_fingerprint IS NOT NULL
+     GROUP BY handle, content_fingerprint
+     HAVING COUNT(*) >= ?1
+     ORDER BY handle ASC, COUNT(*) DESC, content_fingerprint ASC`,
+  )
+    .bind(MIN_INSTALLS_FOR_EVIDENCE)
+    .all<{ handle: string; fp: string }>();
+  const fingerprintsByHandle = new Map<string, string[]>();
+  for (const row of fpRows.results) {
+    const list = fingerprintsByHandle.get(row.handle) ?? [];
+    if (list.length < MAX_EVIDENCE_PER_ENTRY) {
+      list.push(row.fp);
+      fingerprintsByHandle.set(row.handle, list);
+    }
+  }
+  for (const list of fingerprintsByHandle.values()) {
+    list.sort();
+  }
+
+  const domainRows = await env.DB.prepare(
+    'SELECT handle, link_domains FROM reports WHERE link_domains IS NOT NULL',
+  ).all<{ handle: string; link_domains: string }>();
+  const domainCounts = new Map<string, Map<string, number>>();
+  for (const row of domainRows.results) {
+    try {
+      const parsed = JSON.parse(row.link_domains) as unknown;
+      if (!Array.isArray(parsed)) {
+        continue;
+      }
+      const byDomain = domainCounts.get(row.handle) ?? new Map<string, number>();
+      for (const d of parsed) {
+        if (typeof d === 'string' && d) {
+          byDomain.set(d, (byDomain.get(d) ?? 0) + 1);
+        }
+      }
+      domainCounts.set(row.handle, byDomain);
+    } catch {
+      // 单行 link_domains 损坏不阻塞快照
+    }
+  }
+  const domainsByHandle = new Map<string, string[]>();
+  for (const [handle, byDomain] of domainCounts) {
+    const top = [...byDomain.entries()]
+      .filter(([, installs]) => installs >= MIN_INSTALLS_FOR_EVIDENCE)
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, MAX_EVIDENCE_PER_ENTRY)
+      .map(([domain]) => domain)
+      .sort();
+    if (top.length > 0) {
+      domainsByHandle.set(handle, top);
+    }
+  }
+
+  return { fingerprintsByHandle, domainsByHandle };
 }
 
 export async function generateSnapshot(
@@ -127,10 +207,18 @@ export async function generateSnapshot(
   const daysByHandle = new Map(
     dayRows.results.map((r) => [r.handle, r.days] as const),
   );
+  const { fingerprintsByHandle, domainsByHandle } =
+    await collectContentEvidence(env);
   for (const row of accounts.results) {
     const evidence = await collectEvidence(env, row.handle);
     entries.push(
-      buildEntry(row, evidence, daysByHandle.get(row.handle) ?? 1),
+      buildEntry(
+        row,
+        evidence,
+        daysByHandle.get(row.handle) ?? 1,
+        fingerprintsByHandle.get(row.handle) ?? [],
+        domainsByHandle.get(row.handle) ?? [],
+      ),
     );
   }
 

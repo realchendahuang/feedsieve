@@ -1,5 +1,6 @@
 import type { Detection, DetectionSource } from './types';
 import { DEFAULT_HEURISTICS, type HeuristicRule } from './heuristics';
+import { contentFingerprint } from './fingerprint';
 
 export function normalizeHandle(handle: string): string {
   return handle.trim().replace(/^@+/, '').toLowerCase();
@@ -43,12 +44,19 @@ export interface DetectorOptions {
   list?: ReadonlySet<string>;
   /** 名单来源会出现在标注理由里；默认按社区名单处理。 */
   listSource?: Extract<DetectionSource, 'builtin-list' | 'community-list'>;
-  /** 启发式集合；默认 DEFAULT_HEURISTICS。传 [] 可只跑名单。 */
+  /**
+   * 社区快照下发的已知垃圾模板指纹集合（v0.4）。
+   * 间接证据，默认只在「大扫除」强度档传入（门槛在扩展接线层）。
+   */
+  fingerprints?: ReadonlySet<string>;
+  /** 社区快照下发的垃圾外链域名集合（v0.4，同上按强度档启用）。 */
+  domains?: ReadonlySet<string>;
+  /** 启发式集合；默认 DEFAULT_HEURISTICS。传 [] 可只跑名单/指纹/域名。 */
   heuristics?: readonly HeuristicRule[];
 }
 
 /**
- * 统一检测管线：名单优先 -> 启发式按序 -> 全部未命中返回 null。
+ * 统一检测管线：名单优先 -> 社区指纹 -> 社区域名 -> 启发式按序 -> 全部未命中返回 null。
  *
  * 返回的每个 Detection 都带 source / reason / ruleId，满足「标注必须可解释」。
  * 干净账号返回 null（不产出任何 UI）。
@@ -70,6 +78,34 @@ export function detect(
       reason: '名单命中',
       ruleId: 'list',
     };
+  }
+
+  if (options.fingerprints?.size) {
+    const fp = contentFingerprint(input);
+    if (fp && options.fingerprints.has(fp)) {
+      return {
+        handle,
+        marked: true,
+        source: 'fingerprint',
+        reason: '已知垃圾模板 · 社区指纹命中',
+        ruleId: 'community-fingerprint',
+      };
+    }
+  }
+
+  if (options.domains?.size) {
+    for (const link of input.links ?? []) {
+      if (link.hostname && options.domains.has(link.hostname.toLowerCase())) {
+        const hostname = link.hostname.toLowerCase();
+        return {
+          handle,
+          marked: true,
+          source: 'domain',
+          reason: `链接指向社区名单域名（${hostname}）`,
+          ruleId: 'community-domain',
+        };
+      }
+    }
   }
 
   const heuristics = options.heuristics ?? DEFAULT_HEURISTICS;

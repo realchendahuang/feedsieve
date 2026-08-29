@@ -209,3 +209,60 @@ describe('syncCommunitySnapshot', () => {
     expect(stored.ok && stored.value.entries).toEqual([]);
   });
 });
+
+describe('parseSnapshotBody: content evidence (v0.4)', () => {
+  const baseEntry = {
+    handle: 'evidence_user',
+    x_user_id: null,
+    category: 'copy_paste',
+    status: 'candidate',
+    report_count: 5,
+    rescue_count: 0,
+    first_seen_at: '2026-08-28T00:00:00Z',
+    updated_at: '2026-08-28T00:00:00Z',
+    evidence_post_ids: [],
+  };
+
+  function parse(entries: unknown[]) {
+    const result = parseSnapshotBody(
+      JSON.stringify({
+        schema_version: 1,
+        snapshot_version: VERSION,
+        generated_at: '2026-08-28T00:00:00Z',
+        entries,
+      }),
+    );
+    expect(result.ok).toBe(true);
+    return result.ok ? result.value.entries : [];
+  }
+
+  it('keeps valid fingerprint/domain lists', () => {
+    const entries = parse([
+      {
+        ...baseEntry,
+        fingerprints: ['aaaaaaaaaaaaaaaa', 'abcdef0123456789'],
+        domains: ['Scam-Sity.Example'],
+      },
+    ]);
+    expect(entries[0]?.fingerprints).toEqual([
+      'aaaaaaaaaaaaaaaa',
+      'abcdef0123456789',
+    ]);
+    expect(entries[0]?.domains).toEqual(['scam-sity.example']);
+  });
+
+  it('drops the whole entry when evidence fields are malformed', () => {
+    const entries = parse([
+      { ...baseEntry, fingerprints: ['NOT-HEX'] }, // 指纹格式非法
+      { ...baseEntry, handle: 'second_user', domains: 'scam.example' }, // 非数组
+      { ...baseEntry, handle: 'third_user', fingerprints: ['a'.repeat(16)] }, // 合法对照
+    ]);
+    expect(entries.map((e) => e.handle)).toEqual(['third_user']);
+  });
+
+  it('tolerates entries without evidence fields (older snapshots)', () => {
+    const entries = parse([{ ...baseEntry }]);
+    expect(entries[0]?.fingerprints).toBeUndefined();
+    expect(entries[0]?.domains).toBeUndefined();
+  });
+});

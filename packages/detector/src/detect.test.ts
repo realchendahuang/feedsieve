@@ -1,8 +1,95 @@
 import { describe, expect, it } from 'vitest';
 import { detect, normalizeHandle, toHandleSet } from './detect';
 import { DEFAULT_HEURISTICS } from './heuristics';
+import { fingerprintText } from './fingerprint';
 
 const SEED_LIST = toHandleSet(['@SpamKing88', 'crypto_teacher']);
+const KNOWN_TEMPLATE_FP = fingerprintText(
+  '🚀 500 USDT Giveaway! DM @spamking88 Claim on Tron 👉 https://t.co/abc123 follow & repost 🔥',
+)!;
+const TEMPLATE_TWEET =
+  '🚨 500 usdt GIVEAWAY！DM @newaccount7 Claim on Tron 👉 https://t.co/zzz789 follow & repost 🔥🔥';
+
+describe('detect: community fingerprint (v0.4)', () => {
+  it('marks tweets matching a known community fingerprint', () => {
+    const result = detect(
+      { handle: 'brand_new_rebrand', text: TEMPLATE_TWEET },
+      { fingerprints: new Set([KNOWN_TEMPLATE_FP]) },
+    );
+    expect(result?.source).toBe('fingerprint');
+    expect(result?.ruleId).toBe('community-fingerprint');
+    expect(result?.reason).toContain('社区指纹');
+  });
+
+  it('fingerprint beats heuristics when both would hit', () => {
+    // TEMPLATE_TWEET 同时命中 crypto-giveaway 正则启发式，但社区指纹优先
+    const result = detect(
+      { handle: 'brand_new_rebrand', text: TEMPLATE_TWEET },
+      { fingerprints: new Set([KNOWN_TEMPLATE_FP]) },
+    );
+    expect(result?.source).toBe('fingerprint');
+  });
+
+  it('keeps unknown-template accounts clean when only fingerprints are set', () => {
+    expect(
+      detect(
+        { handle: 'kim', text: '今天写了一天 Rust，累但开心' },
+        { fingerprints: new Set([KNOWN_TEMPLATE_FP]) },
+      ),
+    ).toBeNull();
+  });
+
+  it('empty fingerprint set disables fingerprint marking (falls through to heuristics)', () => {
+    const result = detect(
+      { handle: 'spam', text: TEMPLATE_TWEET },
+      { fingerprints: new Set() },
+    );
+    expect(result?.source).toBe('heuristic');
+  });
+});
+
+describe('detect: community domain (v0.4)', () => {
+  it('marks links pointing at a listed domain, case-insensitively', () => {
+    const result = detect(
+      { handle: 'somebody', links: [{ href: 'https://scam-sity.example/', hostname: 'SCAM-Sity.Example' }] },
+      { domains: new Set(['scam-sity.example']) },
+    );
+    expect(result?.source).toBe('domain');
+    expect(result?.ruleId).toBe('community-domain');
+    expect(result?.reason).toContain('scam-sity.example');
+  });
+
+  it('fingerprint wins over domain when both match', () => {
+    const result = detect(
+      {
+        handle: 'rebranded_spam',
+        text: TEMPLATE_TWEET,
+        links: [{ href: 'https://scam-sity.example/', hostname: 'scam-sity.example' }],
+      },
+      {
+        fingerprints: new Set([KNOWN_TEMPLATE_FP]),
+        domains: new Set(['scam-sity.example']),
+      },
+    );
+    expect(result?.source).toBe('fingerprint');
+  });
+
+  it('list beats fingerprint and domain', () => {
+    const result = detect(
+      {
+        handle: '@SpamKing88',
+        text: TEMPLATE_TWEET,
+        links: [{ href: 'https://scam-sity.example/', hostname: 'scam-sity.example' }],
+      },
+      {
+        list: SEED_LIST,
+        fingerprints: new Set([KNOWN_TEMPLATE_FP]),
+        domains: new Set(['scam-sity.example']),
+      },
+    );
+    expect(result?.ruleId).toBe('list');
+  });
+});
 
 describe('normalizeHandle', () => {
   it('strips @ prefix and lowercases', () => {

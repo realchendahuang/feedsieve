@@ -6,6 +6,28 @@ const USER_ID_RE = /^\d{1,20}$/;
 const POST_ID_RE = /^\d{1,25}$/;
 const VERSION_RE = /^\d{4}\.\d{2}\.\d{2}\.\d{1,4}$/;
 const SHA256_RE = /^[0-9a-f]{64}$/;
+/** 内容指纹（v0.4）：16 位小写十六进制，与 detector 的 fingerprintText 输出对应 */
+const FINGERPRINT_RE = /^[0-9a-f]{16}$/;
+const HOSTNAME_RE = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
+/** 快照单条目指纹/域名证据上限（与服务端 MAX_EVIDENCE_PER_ENTRY 对应） */
+const MAX_EVIDENCE = 8;
+
+function validEvidenceList(
+  value: unknown,
+  itemCheck: (item: string) => boolean,
+): string[] | null {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  if (
+    !Array.isArray(value) ||
+    value.length > MAX_EVIDENCE ||
+    !value.every((item) => typeof item === 'string' && itemCheck(item))
+  ) {
+    return null;
+  }
+  return value as string[];
+}
 
 export type ParseResult<T> = { ok: true; value: T } | { ok: false; error: string };
 
@@ -148,6 +170,19 @@ function validateEntry(item: unknown): import('./types').CommunityEntry | null {
   ) {
     return null;
   }
+  // v0.4 内容证据：字段存在但内容非法 → 整条丢弃（防脏数据进索引）
+  const fingerprints = validEvidenceList(e.fingerprints, (item) =>
+    FINGERPRINT_RE.test(item),
+  );
+  if (e.fingerprints != null && fingerprints === null) {
+    return null;
+  }
+  const domains = validEvidenceList(e.domains, (item) =>
+    HOSTNAME_RE.test(item.toLowerCase()),
+  );
+  if (e.domains != null && domains === null) {
+    return null;
+  }
   return {
     handle: e.handle.toLowerCase(),
     x_user_id: typeof e.x_user_id === 'string' ? e.x_user_id : null,
@@ -161,6 +196,8 @@ function validateEntry(item: unknown): import('./types').CommunityEntry | null {
     ...(Array.isArray(e.aliases)
       ? { aliases: e.aliases.map((a) => (a as string).toLowerCase()) }
       : {}),
+    ...(fingerprints ? { fingerprints } : {}),
+    ...(domains ? { domains: domains.map((d) => d.toLowerCase()) } : {}),
     first_seen_at: typeof e.first_seen_at === 'string' ? e.first_seen_at : '',
     updated_at: typeof e.updated_at === 'string' ? e.updated_at : '',
     evidence_post_ids: e.evidence_post_ids,
