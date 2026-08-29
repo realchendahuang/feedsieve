@@ -43,6 +43,13 @@ const FAILURE_LABELS: Record<string, string> = {
   missing_csrf: '登录态缺失',
 };
 
+/** 强度档位悬停解释：与 community-lists 的 status 门槛一一对应 */
+const STRENGTH_HINTS: Record<MarkStrength, string> = {
+  refresh: '只标社区强证据账号',
+  standard: '强证据 + 推荐账号',
+  deep_clean: '全部候选都标（含指纹/域名）',
+};
+
 const BLOCK_MESSAGE = { type: 'feedsieve:run-block-batch' } as const;
 
 const EMPTY_STATS: LocalStats = { detected: 0, blocked: 0, unblocked: 0 };
@@ -147,7 +154,7 @@ export default function App() {
       };
       const outcome = res?.outcome;
       if (outcome?.status === 'updated') {
-        setSyncMsg(`✅ ${outcome.version}`);
+        setSyncMsg(`✅ 已更新 v${outcome.version}`);
       } else if (outcome?.status === 'unchanged') {
         setSyncMsg('✅ 已是最新');
       } else if (outcome?.status === 'error') {
@@ -352,12 +359,12 @@ export default function App() {
       </button>
 
       {/* 社区名单：全局设置（无逐条弹窗；自动贡献默认开，关一次永远安静） */}
-      <section className="list-card settings-card">
+      <section className="list-card">
         <div className="list-head">
           <span className="stat-label">社区名单</span>
           <span className="list-count">
             {communityMeta
-              ? `v${communityMeta.version} · ${communityMeta.count} · ${formatAgo(communityMeta.syncedAt)}`
+              ? `v${communityMeta.version} · ${communityMeta.count} 个 · ${formatAgo(communityMeta.syncedAt)}`
               : '…'}
           </span>
           <button
@@ -391,6 +398,7 @@ export default function App() {
                     key={s}
                     type="button"
                     className={community.strength === s ? 'seg-on' : ''}
+                    title={STRENGTH_HINTS[s]}
                     onClick={() => void setCommunitySettings({ strength: s })}
                   >
                     {STRENGTH_LABELS[s]}

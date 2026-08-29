@@ -42,7 +42,7 @@ The technical rule is simple:
   ↓
 按下「一键拉黑 N 个」
   ↓
-Block Queue 通过 X 原生菜单逐个执行（进度 / 暂停 / 恢复）
+逐个通过 X 原生菜单执行（成功即移除，失败如实保留）
   ↓
 完成：已送走 N 个，手机端已同步
 ```
@@ -111,16 +111,14 @@ x.com
 ```text
 用户按下「一键拉黑 N 个」
    ↓
-Block Queue 持久化全部任务
+逐个通过 X 原生菜单执行 Block
    ↓
-逐项通过 X 原生菜单执行 Block
+成功即从待拉黑列表移除，失败如实保留
    ↓
-验证页面成功反馈后再进入下一项
-   ↓
-进度 / 暂停 / 恢复 / 取消
+完成：汇总回报（已拉黑 N 个 · 失败 M 个）
 ```
 
-批量原生动作必须走持久化队列，绝不做 `for (...) click()`。详见 [`docs/X_ACTION_ADAPTER.md`](docs/X_ACTION_ADAPTER.md)。
+批量原生动作走持久化队列，绝不做 `for (...) click()`。详见 [`docs/X_ACTION_ADAPTER.md`](docs/X_ACTION_ADAPTER.md)。
 
 ## 开源的不只是代码
 
@@ -310,7 +308,8 @@ Schema：[`community/schema/account-list.schema.json`](community/schema/account-
 
 ### Community is opt-in
 
-只有用户主动贡献的识别信号才进入社区系统。
+只有用户主动贡献的识别信号才进入社区系统。上报内容仅限 handle / 分类 /
+话术指纹哈希（原文不出设备）/ 外链域名，绝无浏览历史等被动数据。
 
 ### Explainable blocking
 

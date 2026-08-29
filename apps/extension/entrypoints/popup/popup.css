@@ -1,3 +1,33 @@
+/* 设计令牌：与 content.ts 注入的徽章样式同名同值（isolated world 无法共享文件，
+   改主题时两处同步；值以这里为准）。 */
+:root {
+  --fs-yellow: #f2c94c;
+  --fs-yellow-hover: #ffd950;
+  --fs-yellow-strong: #d4a900;
+  --fs-yellow-bg: #fffbe6;
+  --fs-yellow-text: #8a7500;
+  --fs-yellow-text-soft: #a58f00;
+  --fs-yellow-ink: #3d3200;
+  --fs-yellow-border-soft: #e6d48f;
+  --fs-border: #d9d9d9;
+  --fs-border-soft: #eee;
+  --fs-bg-soft: #fafafa;
+  --fs-text: #1a1a1a;
+  --fs-text-soft: #666;
+  --fs-text-faint: #bbb;
+  --fs-ok: #3d6320;
+  --fs-danger: #a03b1e;
+  /* 已拉黑区冷色系：与黄色主色区分「已处理」状态 */
+  --fs-blue-border: #cfd8dc;
+  --fs-blue-border-strong: #90a4ae;
+  --fs-blue-bg: #f7fafb;
+  --fs-blue-text: #546e7a;
+  --fs-blue-ink: #455a64;
+  --fs-blue-hover-bg: #eceff1;
+  --fs-radius: 8px;
+  --fs-radius-pill: 999px;
+}
+
 body {
   margin: 0;
 }
@@ -11,7 +41,7 @@ body {
     -apple-system,
     'PingFang SC',
     sans-serif;
-  color: #1a1a1a;
+  color: var(--fs-text);
 }
 
 .popup-header h1 {
@@ -20,33 +50,7 @@ body {
 }
 
 .popup-sub {
-  color: #9a8b00;
-}
-
-
-.stat-card {
-  margin-top: 14px;
-  padding: 10px 12px;
-  border: 1px solid #f2c94c;
-  border-radius: 8px;
-  background: #fffbe6;
-}
-
-.stat-label {
-  font-size: 11px;
-  color: #8a7500;
-}
-
-.stat-value {
-  margin-top: 2px;
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.stat-hint {
-  margin-top: 4px;
-  font-size: 11px;
-  color: #a58f00;
+  color: var(--fs-yellow-text);
 }
 
 /* 本地统计条 */
@@ -56,54 +60,60 @@ body {
   justify-content: space-between;
   gap: 6px;
   padding: 6px 10px;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  background: #fafafa;
+  border: 1px solid var(--fs-border-soft);
+  border-radius: var(--fs-radius);
+  background: var(--fs-bg-soft);
   font-size: 11px;
-  color: #666;
+  color: var(--fs-text-soft);
 }
 
 .stats-bar span {
   white-space: nowrap;
 }
 
-/* 待拉黑列表 */
+/* 列表卡片 */
 .list-card {
   margin-top: 12px;
   padding: 10px 12px;
-  border: 1px solid #f2c94c;
-  border-radius: 8px;
-  background: #fffbe6;
+  border: 1px solid var(--fs-yellow);
+  border-radius: var(--fs-radius);
+  background: var(--fs-yellow-bg);
 }
 
 .blocked-card {
-  border-color: #cfd8dc;
-  background: #f7fafb;
+  border-color: var(--fs-blue-border);
+  background: var(--fs-blue-bg);
 }
 
-.blocked-card .stat-label {
-  color: #546e7a;
-}
-
+.blocked-card .stat-label,
 .blocked-card .list-count {
-  color: #546e7a;
+  color: var(--fs-blue-text);
 }
 
 .list-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--fs-yellow-text);
 }
 
 .list-count {
   font-size: 11px;
-  color: #8a7500;
+  color: var(--fs-yellow-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .list-empty {
   margin: 10px 0 4px;
   font-size: 12px;
-  color: #a58f00;
+  color: var(--fs-yellow-text-soft);
 }
 
 .pending-list {
@@ -120,7 +130,7 @@ body {
   justify-content: space-between;
   gap: 8px;
   padding: 6px 0;
-  border-bottom: 1px dashed #e6d48f;
+  border-bottom: 1px dashed var(--fs-yellow-border-soft);
 }
 
 .pending-item:last-child {
@@ -144,7 +154,7 @@ body {
 
 .pending-reason {
   font-size: 11px;
-  color: #8a7500;
+  color: var(--fs-yellow-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -157,14 +167,14 @@ body {
   border: none;
   border-radius: 50%;
   background: transparent;
-  color: #a58f00;
+  color: var(--fs-yellow-text-soft);
   font-size: 12px;
   cursor: pointer;
 }
 
 .remove-btn:hover:not(:disabled) {
-  background: #f2c94c;
-  color: #3d3200;
+  background: var(--fs-yellow);
+  color: var(--fs-yellow-ink);
 }
 
 .remove-btn:disabled {
@@ -176,10 +186,10 @@ body {
 .unblock-btn {
   flex: none;
   padding: 2px 10px;
-  border: 1px solid #90a4ae;
-  border-radius: 999px;
+  border: 1px solid var(--fs-blue-border-strong);
+  border-radius: var(--fs-radius-pill);
   background: #fff;
-  color: #455a64;
+  color: var(--fs-blue-ink);
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
@@ -187,7 +197,7 @@ body {
 }
 
 .unblock-btn:hover:not(:disabled) {
-  background: #eceff1;
+  background: var(--fs-blue-hover-bg);
 }
 
 .unblock-btn:disabled {
@@ -198,18 +208,18 @@ body {
 .batch-summary {
   margin: 10px 0 0;
   font-size: 12px;
-  color: #3d6320;
+  color: var(--fs-ok);
   word-break: break-all;
 }
 
 .batch-fail {
-  color: #a03b1e;
+  color: var(--fs-danger);
 }
 
 .notice-error {
   margin: 10px 0 0;
   font-size: 12px;
-  color: #a03b1e;
+  color: var(--fs-danger);
 }
 
 .primary-action {
@@ -217,7 +227,7 @@ body {
   width: 100%;
   padding: 9px 0;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--fs-radius);
   background: #111;
   color: #fff;
   font-size: 13px;
@@ -233,17 +243,17 @@ body {
   margin-top: 8px;
   width: 100%;
   padding: 7px 0;
-  border: 1px solid #d9d9d9;
-  border-radius: 8px;
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius);
   background: #fff;
-  color: #666;
+  color: var(--fs-text-soft);
   font-size: 12px;
   cursor: pointer;
 }
 
 .secondary-action:hover:not(:disabled) {
-  border-color: #f2c94c;
-  color: #8a7500;
+  border-color: var(--fs-yellow);
+  color: var(--fs-yellow-text);
 }
 
 .secondary-action:disabled {
@@ -254,15 +264,11 @@ body {
 .popup-footer {
   margin-top: 12px;
   font-size: 10px;
-  color: #bbb;
+  color: var(--fs-text-faint);
   text-align: center;
 }
 
 /* 社区名单设置卡片 */
-.settings-card {
-  margin-top: 10px;
-}
-
 .settings-rows {
   display: flex;
   flex-direction: column;
@@ -275,19 +281,19 @@ body {
   justify-content: space-between;
   gap: 8px;
   font-size: 12px;
-  color: #333;
+  color: var(--fs-text);
   cursor: pointer;
 }
 
 .settings-row input[type='checkbox'] {
-  accent-color: #d4a900;
+  accent-color: var(--fs-yellow-strong);
   cursor: pointer;
 }
 
 .seg {
   display: flex;
-  border: 1px solid #d9d9d9;
-  border-radius: 999px;
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius-pill);
   overflow: hidden;
 }
 
@@ -295,35 +301,32 @@ body {
   padding: 3px 10px;
   border: none;
   background: #fff;
-  color: #888;
+  color: var(--fs-text-soft);
   font-size: 11px;
   cursor: pointer;
 }
 
 .seg button + button {
-  border-left: 1px solid #eee;
+  border-left: 1px solid var(--fs-border-soft);
 }
 
 .seg button.seg-on {
-  background: #f2c94c;
-  color: #3d3200;
+  background: var(--fs-yellow);
+  color: var(--fs-yellow-ink);
   font-weight: 700;
 }
 
 .settings-note {
   margin: 0;
   font-size: 10px;
-  color: #b59f00;
+  color: var(--fs-yellow-text-soft);
   line-height: 1.5;
 }
-
-
-
 
 .sync-msg {
   margin: 6px 0 0;
   font-size: 10px;
-  color: #8a7500;
+  color: var(--fs-yellow-text);
   text-align: center;
 }
 
@@ -340,17 +343,17 @@ body {
 
 .icon-action {
   width: 34px;
-  border: 1px solid #d9d9d9;
-  border-radius: 8px;
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius);
   background: #fff;
   font-size: 13px;
   line-height: 1;
   cursor: pointer;
-  color: #666;
+  color: var(--fs-text-soft);
 }
 
 .icon-action:hover:not(:disabled) {
-  border-color: #f2c94c;
+  border-color: var(--fs-yellow);
 }
 
 .icon-action:disabled {

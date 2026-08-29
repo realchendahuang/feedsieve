@@ -1,4 +1,9 @@
-import { detect, toHandleSet } from '@feedsieve/detector';
+import {
+  contentFingerprint,
+  createRepetitionTracker,
+  detect,
+  toHandleSet,
+} from '@feedsieve/detector';
 import {
   contextFromPath,
   extractFeedItem,
@@ -7,7 +12,12 @@ import {
   tweetSelectors,
   type ParsedApiData,
 } from '@feedsieve/x-adapter';
-import { isPending, removePendingBlock, setPendingBlock } from '../src/lib/pending-blocks';
+import {
+  isPending,
+  removePendingBlock,
+  setPendingBlock,
+  type BlockEvidence,
+} from '../src/lib/pending-blocks';
 import {
   getBlockedAccounts,
   markBlocked,
@@ -30,6 +40,7 @@ import {
 } from '../src/lib/allowlist';
 import {
   categoryFromDetection,
+  collectLinkDomains,
   contributeBlocks,
   rescueHandle,
 } from '../src/lib/contribute';
@@ -76,6 +87,13 @@ export default defineContentScript({
     let community: RuntimeCommunity | null = null;
     /** 自动贡献总开关（决定「抢救」按钮是否出现） */
     let autoContribute = true;
+    /**
+     * 「大扫除」档开关：本地复读标注（v0.4）只在档案启用。
+     * 社区指纹/域名的档位门槛收口在 buildRuntimeCommunity，这里无需重复判断。
+     */
+    let deepClean = false;
+    /** 本地复读追踪（会话内存，不持久不上传）：同一模板文本 >=3 次 → 黄框 */
+    const repetition = createRepetitionTracker();
     let scanTimer: number | undefined;
 
     ensureStyles();
@@ -198,7 +216,10 @@ export default defineContentScript({
 
     async function refreshCommunity(): Promise<void> {
       community = await buildRuntimeCommunity();
-      autoContribute = (await getCommunitySettings()).autoContribute;
+      const settings = await getCommunitySettings();
+      autoContribute = settings.autoContribute;
+      // 复读标注跟随社区设置：总开关关掉时一并关闭
+      deepClean = settings.enabled && settings.strength === 'deep_clean';
     }
 
     function scan(): void {
@@ -222,15 +243,55 @@ export default defineContentScript({
           links: item.links,
         };
 
+        // v0.4 内容证据：指纹每条推文只 track 一次（复读判定），
+        // 域名收集一次（上报载荷）。证据与是否标注无关，命中与否都带着走。
+        const evidence: BlockEvidence = {};
+        const fp = contentFingerprint(input);
+        if (fp) {
+          evidence.contentFingerprint = fp;
+        }
+        const linkDomains = collectLinkDomains(item.links);
+        if (linkDomains) {
+          evidence.linkDomains = linkDomains;
+        }
+        const isRepeat = fp ? repetition.track(fp) : false;
+
         // 识别顺序：社区快照名单 -> 内置名单兜底 -> 启发式
+        // 社区指纹/域名集合由 buildRuntimeCommunity 按强度档准备（大扫除档才有内容）
+        const evidenceOptions = {
+          ...(community?.fingerprintSet.size
+            ? { fingerprints: community.fingerprintSet }
+            : {}),
+          ...(community?.domainSet.size ? { domains: community.domainSet } : {}),
+        };
         let detection = community
-          ? detect(input, { list: community.handleSet, listSource: 'community-list' })
+          ? detect(input, {
+              list: community.handleSet,
+              listSource: 'community-list',
+              ...evidenceOptions,
+            })
           : null;
         if (!detection && BUILTIN_LIST.size > 0) {
-          detection = detect(input, { list: BUILTIN_LIST, listSource: 'builtin-list' });
+          detection = detect(input, {
+            list: BUILTIN_LIST,
+            listSource: 'builtin-list',
+            ...evidenceOptions,
+          });
         }
         if (!detection) {
-          detection = detect(input);
+          detection = detect(input, evidenceOptions);
+        }
+
+        // 本地复读（大扫除档）：换号复读同一段模板、正则又没覆盖时仍能标注。
+        // 纯会话内存，不持久、不上传。
+        if (!detection && deepClean && isRepeat) {
+          detection = {
+            handle: item.author.handle.toLowerCase(),
+            marked: true,
+            source: 'fingerprint',
+            reason: '模板复读 · 同一文本多次出现',
+            ruleId: 'local-repeat',
+          };
         }
 
         // 已拉黑账号仍出现（X 服务端行为，f=live 常见）：如实标注，交给用户处置
@@ -274,7 +335,7 @@ export default defineContentScript({
           detection.ruleId,
           communityCategory,
         );
-        markCell(cell as HTMLElement, detection, category);
+        markCell(cell as HTMLElement, detection, category, evidence);
       }
     }
 
@@ -300,9 +361,10 @@ export default defineContentScript({
       cell: HTMLElement,
       detection: NonNullable<ReturnType<typeof detect>>,
       category: string,
+      evidence: BlockEvidence,
     ): void {
       cell.setAttribute(MARK_ATTRIBUTE, detection.source);
-      attachBadge(cell, detection, category);
+      attachBadge(cell, detection, category, evidence);
       // 本地统计：每次新标注 +1（seenArticles 保证每个 cell 只标一次）；
       // 已拉黑回显不是新发现，不计数
       if (detection.source !== 'blocked') {
@@ -316,6 +378,7 @@ export default defineContentScript({
       cell: HTMLElement,
       detection: NonNullable<ReturnType<typeof detect>>,
       category: string,
+      evidence: BlockEvidence,
     ): void {
       if (cell.querySelector('.fs-badge')) {
         return;
@@ -326,7 +389,7 @@ export default defineContentScript({
 
       const label = document.createElement('span');
       label.className = 'fs-reason';
-      label.textContent = `🟡 ${detection.reason}`;
+      label.textContent = detection.reason;
       label.title = `来源：${detection.source} · 规则：${detection.ruleId ?? '-'}`;
 
       // 已拉黑回显：账号已经在黑名单里，重复的拉黑按钮没有意义，
@@ -346,6 +409,10 @@ export default defineContentScript({
         return;
       }
 
+      // 主操作组：勾选入列 + 顺手拉黑（高频，视觉突出）
+      const primaryGroup = document.createElement('span');
+      primaryGroup.className = 'fs-actions';
+
       const checkbox = document.createElement('label');
       checkbox.className = 'fs-pick';
       const input = document.createElement('input');
@@ -353,7 +420,14 @@ export default defineContentScript({
       input.addEventListener('change', () => {
         void (async () => {
           const xUserId = await getUserId(detection.handle);
-          await setPendingBlock(detection.handle, input.checked, detection.reason, xUserId, category);
+          await setPendingBlock(
+            detection.handle,
+            input.checked,
+            detection.reason,
+            xUserId,
+            category,
+            evidence,
+          );
         })().catch(() => {
           input.checked = !input.checked; // 写入失败回滚勾选态
         });
@@ -366,8 +440,13 @@ export default defineContentScript({
       blockBtn.type = 'button';
       blockBtn.textContent = '顺手拉黑';
       blockBtn.addEventListener('click', () => {
-        void runBlockNow(detection.handle, blockBtn, category);
+        void runBlockNow(detection.handle, blockBtn, category, evidence);
       });
+      primaryGroup.append(checkbox, blockBtn);
+
+      // 次操作组：抢救 / 误标？（低频治理，弱化样式）
+      const secondaryGroup = document.createElement('span');
+      secondaryGroup.className = 'fs-actions fs-actions-soft';
 
       const allowBtn = document.createElement('button');
       allowBtn.className = 'fs-allow';
@@ -416,13 +495,12 @@ export default defineContentScript({
             })()
           : null;
 
-      badge.append(
-        label,
-        checkbox,
-        blockBtn,
+      secondaryGroup.append(
         ...(rescueBtn ? [rescueBtn] : []),
         allowBtn,
       );
+
+      badge.append(label, primaryGroup, secondaryGroup);
       // cellInnerDiv 是普通块容器：徽章作为新块级子元素排在推文下方，
       // 处于文档流内但不进入 article 的 grid，不覆盖、不挤压任何 X 内容。
       cell.appendChild(badge);
@@ -445,6 +523,7 @@ export default defineContentScript({
       handle: string,
       button: HTMLButtonElement,
       category: string,
+      evidence: BlockEvidence,
     ): Promise<void> {
       const original = button.textContent;
       button.disabled = true;
@@ -478,7 +557,7 @@ export default defineContentScript({
           await markBlocked(handle, xUserId);
           await bumpStat('blocked');
           // 摩擦设计：拉黑成功即自动贡献社区（无弹窗；全局开关在 contributeBlocks 内判断）
-          contributeBlocks([{ handle, xUserId, category }]);
+          contributeBlocks([{ handle, xUserId, category, ...evidence }]);
           // 对齐 X 原生拉黑行为：确认成功后把该账号页面上可见的推文一并移除，
           // 让「已拉黑」立刻有可见效果，而不是等刷新
           removeCellsSoon(collectCellsByHandle(handle));
@@ -509,6 +588,7 @@ function ensureStyles(): void {
   }
   const style = document.createElement('style');
   style.id = STYLE_ELEMENT_ID;
+  // 设计令牌与 popup.css 同名同值（isolated world 无法共享文件，改主题两处同步）
   style.textContent = `
     /* 纯黄环标注：outline 不占布局空间（区别于 border），不挤压格子内容；
        outline-offset 让环浮在格子外缘，相邻两条标注的环之间自然留出缝隙，不再上下重叠。 */
@@ -537,6 +617,10 @@ function ensureStyles(): void {
       line-height: 1.5;
     }
     .fs-reason { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* 主操作组：勾选 + 顺手拉黑（高频，视觉突出） */
+    .fs-actions { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+    /* 次操作组：抢救 / 误标？（低频治理，弱化） */
+    .fs-actions-soft { gap: 4px; }
     .fs-pick { display: flex; align-items: center; gap: 4px; white-space: nowrap; cursor: pointer; user-select: none; }
     .fs-pick input { accent-color: #d4a900; cursor: pointer; }
     .fs-block-now {
