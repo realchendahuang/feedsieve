@@ -183,6 +183,24 @@ function validateEntry(item: unknown): import('./types').CommunityEntry | null {
   if (e.domains != null && domains === null) {
     return null;
   }
+  // v0.5 campaign：entry_id 是 handle 格式、size 是正整数；非法 → 整条丢弃
+  if (
+    e.campaign_entry_id !== undefined &&
+    e.campaign_entry_id !== null &&
+    (typeof e.campaign_entry_id !== 'string' ||
+      !HANDLE_RE.test(e.campaign_entry_id))
+  ) {
+    return null;
+  }
+  if (
+    e.campaign_size !== undefined &&
+    e.campaign_size !== null &&
+    (typeof e.campaign_size !== 'number' ||
+      !Number.isInteger(e.campaign_size) ||
+      e.campaign_size < 2)
+  ) {
+    return null;
+  }
   return {
     handle: e.handle.toLowerCase(),
     x_user_id: typeof e.x_user_id === 'string' ? e.x_user_id : null,
@@ -198,6 +216,10 @@ function validateEntry(item: unknown): import('./types').CommunityEntry | null {
       : {}),
     ...(fingerprints ? { fingerprints } : {}),
     ...(domains ? { domains: domains.map((d) => d.toLowerCase()) } : {}),
+    ...(typeof e.campaign_entry_id === 'string'
+      ? { campaign_entry_id: e.campaign_entry_id.toLowerCase() }
+      : {}),
+    ...(typeof e.campaign_size === 'number' ? { campaign_size: e.campaign_size } : {}),
     first_seen_at: typeof e.first_seen_at === 'string' ? e.first_seen_at : '',
     updated_at: typeof e.updated_at === 'string' ? e.updated_at : '',
     evidence_post_ids: e.evidence_post_ids,

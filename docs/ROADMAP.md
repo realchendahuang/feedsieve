@@ -55,22 +55,15 @@
 
 目标：**垃圾号换号但复用话术 / 域名时，仍然能识别。**
 
-状态（2026-08-28）：✅ Content Fingerprint（归一化 + 64bit 哈希，detector 纯函数）；✅ 社区指纹/域名库（上报载荷扩容，≥2 独立安装才下发，快照条目携带）；✅ 指纹/域名命中仅「大扫除」档生效（用户拍板）；✅ 本地复读标注（同模板 ≥3 次，会话内存不上传，大扫除档）；✅ 快照 schema / 校验 / 索引全链路。余：Campaign 实体与评分（v0.4.x）、SimHash / MinHash 模糊匹配。
+状态（2026-08-30）：✅ 全部完成 —— Content Fingerprint（SimHash 64bit）；✅ 社区指纹/域名库（上报载荷扩容，≥2 独立安装才下发，快照条目携带）；✅ 指纹/域名命中仅「大扫除」档生效（用户拍板）；✅ 本地复读标注（同模板 ≥3 次，会话内存不上传，大扫除档）；✅ 快照 schema / 校验 / 索引全链路；✅ Campaign 实体与评分（v0.5 并入：指纹簇聚类，campaign_entry_id/campaign_size 随快照下发）；✅ SimHash / MinHash 模糊匹配（v0.5 并入：汉明距离 ≤2 判话术变体，exact 优先）。
 
-- Content Fingerprint
-- Normalized template hash
-- Domain Reputation
-- Account / Fingerprint / Domain entity model
-- Campaign foundation
-- Duplicate / copy-paste clustering
+## v0.5 — 垃圾网络识别（原 AI 规划顺延）
 
-成功标准：
+目标：**换号再快，话术和域名认得出来。（已由 v0.4 尾项合并完成）**
 
-> 垃圾号换了账号但继续复用同一话术 / 域名时，FeedSieve 仍然能够识别标注。
+状态（2026-08-30）：✅ Campaign 实体（指纹簇聚类、代表条目、块规模下发）；✅ SimHash 模糊匹配（话术变体识别）。已发版 v0.5.0。
 
-## v0.5 — AI 会认
-
-目标：只识别名单、启发式和模板仍然拿不准的模糊内容。
+AI 识别（原 v0.5 规划）顺延至 v0.5.x / v0.6：**AI 是最后一层识别增强，不是基础依赖。**
 
 - OpenAI-compatible Provider
 - 自定义 Endpoint / Model
@@ -78,10 +71,6 @@
 - Soft advertising
 - Engagement bait
 - AI Decision Cache
-
-原则：
-
-> AI 是最后一层识别增强，不是 FeedSieve 的基础依赖。
 
 ## v0.6 — 会整活
 

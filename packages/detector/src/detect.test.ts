@@ -48,6 +48,51 @@ describe('detect: community fingerprint (v0.4)', () => {
   });
 });
 
+describe('detect: simhash 话术变体（v0.5 Campaign）', () => {
+  it('换词变体（exact miss）命中 simhash 集合', () => {
+    const variant =
+      '🎉 500 usdt Giveaway！DM @brand_new_2 Claim on Tron 👉 https://t.co/zzz999 follow & repost 💥';
+    const result = detect(
+      { handle: 'brand_new_rebrand', text: variant },
+      { simhashes: new Set([KNOWN_TEMPLATE_FP]) },
+    );
+    expect(result?.source).toBe('fingerprint');
+    expect(result?.ruleId).toBe('community-fingerprint-sim');
+    expect(result?.reason).toContain('话术变体');
+  });
+
+  it('exact 命中优先于 simhash（两者同时给时走 community-fingerprint）', () => {
+    const result = detect(
+      { handle: 'brand_new_rebrand', text: TEMPLATE_TWEET },
+      {
+        fingerprints: new Set([KNOWN_TEMPLATE_FP]),
+        simhashes: new Set([KNOWN_TEMPLATE_FP]),
+      },
+    );
+    expect(result?.ruleId).toBe('community-fingerprint');
+  });
+
+  it('语义不同的文本距离超阈值，不误报', () => {
+    const result = detect(
+      { handle: 'brand_new_rebrand', text: '今天天气不错，整理了一下项目清单。' },
+      { simhashes: new Set([KNOWN_TEMPLATE_FP]) },
+    );
+    expect(result).toBeNull();
+  });
+
+  it('无文本（只有 bio）也走 simhash 检测（bio 是话术埋点）', () => {
+    const result = detect(
+      {
+        handle: 'brand_new_rebrand',
+        bio: '🚀 500 usdt giveaway! DM @scammer_88 claim on tron follow & repost 🔥',
+      },
+      { simhashes: new Set([KNOWN_TEMPLATE_FP]) },
+    );
+    expect(result?.source).toBe('fingerprint');
+    expect(result?.ruleId).toBe('community-fingerprint-sim');
+  });
+});
+
 describe('detect: community domain (v0.4)', () => {
   it('marks links pointing at a listed domain, case-insensitively', () => {
     const result = detect(

@@ -268,6 +268,11 @@ export default defineContentScript({
           ? detect(input, {
               list: community.handleSet,
               listSource: 'community-list',
+              // v0.5 指纹即 SimHash：simhashes 集合与 fingerprints 集合同源，
+              // exact 命中优先，miss 后走汉明距离找「话术变体」
+              ...(community.fingerprintSet.size
+                ? { simhashes: community.fingerprintSet }
+                : {}),
               ...evidenceOptions,
             })
           : null;
@@ -324,6 +329,24 @@ export default defineContentScript({
             detection = {
               ...detection,
               reason: `社区名单：${entry.category} · ${entry.report_count} 举报${rescueSuffix}`,
+            };
+          }
+        }
+
+        // v0.5 Campaign：指纹命中（exact 或变体）时，
+        // 反查所在簇的规模，徽章显示「同模板 N 个账号」（网络感，不只单点）
+        if (detection.source === 'fingerprint' && community) {
+          const campaignHandle = detection.matchedFingerprint
+            ? community.campaignByFingerprint.get(detection.matchedFingerprint)
+            : undefined;
+          const campaign = campaignHandle
+            ? community.campaignById.get(campaignHandle)
+            : undefined;
+          if (campaign) {
+            detection = {
+              ...detection,
+              campaignEntryId: campaign.campaign_entry_id,
+              reason: `${detection.reason} · 同模板 ${campaign.campaign_size} 个账号`,
             };
           }
         }

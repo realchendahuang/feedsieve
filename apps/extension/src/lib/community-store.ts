@@ -10,6 +10,7 @@ import {
   parseSnapshotBody,
   workerSource,
   DEFAULT_MARK_STRENGTH,
+  type CommunityEntry,
   type CommunityIndex,
   type MarkStrength,
   type StoredSnapshot,
@@ -128,10 +129,21 @@ export interface RuntimeCommunity {
   /**
    * 已知垃圾模板指纹集合（v0.4）。间接证据：仅「大扫除」档聚合下发，
    * 其余强度档为空集合 —— 门槛收口在这里，调用方无需重复判断。
+   * v0.5 起指纹即 SimHash 位向量：detect 按汉明距离做「话术变体」匹配。
    */
   fingerprintSet: ReadonlySet<string>;
   /** 垃圾外链域名集合（v0.4，门槛同指纹） */
   domainSet: ReadonlySet<string>;
+  /**
+   * Campaign（v0.5）：指纹/域名命中的「垃圾网络」条目索引 handle -> 条目。
+   * 标注徽章查它拿 campaign_size / campaign_entry_id，显示「同模板 N 个账号」。
+   */
+  campaignById: ReadonlyMap<string, CommunityEntry>;
+  /**
+   * 指纹值 -> 所属 campaign 条目的 handle（v0.5）：detect 命中指纹后
+   * 用它反查 campaign 元数据。指纹与条目一一对应（同值可能属于同一簇）。
+   */
+  campaignByFingerprint: ReadonlyMap<string, string>;
   version: string;
 }
 
@@ -160,15 +172,33 @@ export async function buildRuntimeCommunity(): Promise<RuntimeCommunity | null> 
   const deepClean = settings.strength === 'deep_clean';
   const fingerprintSet = new Set<string>();
   const domainSet = new Set<string>();
+  const campaignById = new Map<string, CommunityEntry>();
+  const campaignByFingerprint = new Map<string, string>();
   if (deepClean) {
     for (const entry of parsed.value.entries) {
       for (const fp of entry.fingerprints ?? []) {
         fingerprintSet.add(fp);
+        // v0.5：指纹属于谁的 campaign？（entry 自己的 campaign_entry_id 或自己就是代表）
+        const campaignHandle = entry.campaign_entry_id ?? entry.handle;
+        campaignByFingerprint.set(fp, campaignHandle);
       }
       for (const domain of entry.domains ?? []) {
         domainSet.add(domain);
       }
+      // v0.5 Campaign：指纹命中的簇代表条目；handle 命中名单时
+      // 「同模板 N 个账号」的语义由它的 campaign 元数据提供
+      if (entry.campaign_entry_id && entry.campaign_size) {
+        campaignById.set(entry.campaign_entry_id, entry);
+      }
     }
   }
-  return { index, handleSet, fingerprintSet, domainSet, version: index.version };
+  return {
+    index,
+    handleSet,
+    fingerprintSet,
+    domainSet,
+    campaignById,
+    campaignByFingerprint,
+    version: index.version,
+  };
 }

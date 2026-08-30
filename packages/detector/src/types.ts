@@ -25,4 +25,15 @@ export interface Detection {
   reason: string;
   /** 命中的具体规则 ID，便于统计与调参（如 'list'、'default-name-digits'）。 */
   ruleId?: string;
+  /**
+   * v0.5 Campaign：指纹/域名命中的「垃圾网络」实体。
+   * 由扩展在快照条目里查到 campaign_entry_id 后回填，徽章显示
+   * 「同一模板 N 个账号」时用（无网络语义时不存在）。
+   */
+  campaignEntryId?: string;
+  /**
+   * 命中的指纹值（v0.5 起为 SimHash 位向量 hex）：exact 与变体命中都带。
+   * 扩展用它反查快照条目，取 campaign 元数据（规模/代表条目）。
+   */
+  matchedFingerprint?: string;
 }

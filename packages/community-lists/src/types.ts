@@ -32,10 +32,19 @@ export interface CommunityEntry {
   /**
    * 已知垃圾模板指纹（v0.4，可选）：≥2 个独立安装上报同一归一化话术哈希才下发。
    * 间接证据 —— 扩展只在「大扫除」强度档用它标注（换号复用话术仍能认出）。
+   * v0.5 起指纹即 SimHash 位向量：扩展按汉明距离 <= 2 判「话术变体」。
    */
   fingerprints?: string[];
   /** 垃圾外链域名（v0.4，可选）：门槛同指纹 */
   domains?: string[];
+  /**
+   * Campaign（v0.5，可选）：该账号所属垃圾网络的「代表条目」handle。
+   * 聚类规则：同指纹簇（互相汉明距离 <= 2）内取 report_count 最高的条目为代表；
+   * 只有簇内 >= 2 个账号才产生 campaign 语义（单账号无网络）。
+   */
+  campaign_entry_id?: string;
+  /** Campaign 规模（v0.5，可选）：该簇内账号数，徽章显示「同模板 N 个账号」 */
+  campaign_size?: number;
   first_seen_at: string;
   updated_at: string;
   evidence_post_ids: string[];

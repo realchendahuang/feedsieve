@@ -9,6 +9,9 @@ export const SNAPSHOT_PACK = 'official.json';
 const MAX_EVIDENCE_PER_ENTRY = 5;
 /** 证据门槛：一条指纹/域名至少要 2 个独立安装上报（reports 唯一索引保证一行 = 一个独立安装） */
 const MIN_INSTALLS_FOR_EVIDENCE = 2;
+/** 指纹簇（Campaign）：汉明距离 <= 此值视为同一话术的变体，归同一簇；< 2 个账号的簇不产生 campaign */
+const SIMHASH_HAMMING_THRESHOLD = 2;
+const MIN_CAMPAIGN_ACCOUNTS = 2;
 
 export interface SnapshotEntry {
   handle: string;
@@ -21,6 +24,83 @@ export interface SnapshotEntry {
   first_seen_at: string;
   updated_at: string;
   evidence_post_ids: string[];
+}
+
+function hamming(a: string, b: string): number {
+  let x = BigInt(`0x${a}`) ^ BigInt(`0x${b}`);
+  let n = 0;
+  while (x !== 0n) {
+    x &= x - 1n;
+    n++;
+  }
+  return n;
+}
+
+/**
+ * Campaign 聚类（v0.5）：按指纹汉明距离把账号归簇。
+ *
+ * - 输入：指纹 -> 上报该指纹的账号（已过 ≥2 安装门槛），+ 各账号 report_count
+ * - 输出：account -> { entryId: 簇内 report_count 最高的账号, size: 簇内账号数 }
+ * - 只有簇内 >= 2 个账号才产生 campaign（单账号无「网络」语义）
+ * - 同一账号上报多个相近指纹时去重（防自环）
+ * - 代表性：簇内证据最强的账号（report_count 最高；并列时 handle 字典序）
+ *
+ * 指纹是 SimHash 位向量（64bit hex），距离 <= 阈值视为同一话术模板的变体；
+ * 簇 = 共享同一模板的账号集合，它们协同推送同一条垃圾内容 -> 一个 Campaign。
+ * 快照代表条目（campaign_entry_id）由调用方对每个 account 反向填回。
+ */
+function clusterCampaigns(
+  inputs: Map<string, string[]>,
+  reportCounts: Map<string, number>,
+): Map<string, { entryId: string; size: number }> {
+  // 指纹 -> 去重账号集合（排序稳定）
+  const fpAccounts = new Map<string, string[]>();
+  for (const [fp, handles] of inputs) {
+    const unique = [...new Set(handles)].sort();
+    fpAccounts.set(fp, unique);
+  }
+  const fps = [...fpAccounts.keys()];
+  const visitedFp = new Set<string>();
+  const result = new Map<string, { entryId: string; size: number }>();
+
+  for (let i = 0; i < fps.length; i++) {
+    if (visitedFp.has(fps[i])) {
+      continue;
+    }
+    // 当前簇：从本指纹出发，把彼此距离 <= 阈值的指纹的账号并入
+    // （传递归簇：变体链 A-B-C，A 近 B、B 近 C 算一簇）
+    const clusterFps = new Set<string>([fps[i]]);
+    const clusterAccounts = new Set<string>(fpAccounts.get(fps[i])!);
+    visitedFp.add(fps[i]);
+    for (let j = i + 1; j < fps.length; j++) {
+      if (visitedFp.has(fps[j])) {
+        continue;
+      }
+      const near = [...clusterFps].some(
+        (f) => hamming(f, fps[j]) <= SIMHASH_HAMMING_THRESHOLD,
+      );
+      if (near) {
+        clusterFps.add(fps[j]);
+        for (const h of fpAccounts.get(fps[j])!) {
+          clusterAccounts.add(h);
+        }
+        visitedFp.add(fps[j]);
+      }
+    }
+    if (clusterAccounts.size < MIN_CAMPAIGN_ACCOUNTS) {
+      continue;
+    }
+    // 代表条目：簇内 report_count 最高（并列取 handle 字典序）
+    const entryId = [...clusterAccounts].sort((a, b) => {
+      const ra = reportCounts.get(a) ?? 0;
+      const rb = reportCounts.get(b) ?? 0;
+      return rb - ra || a.localeCompare(b);
+    })[0];
+    for (const account of clusterAccounts) {
+      result.set(account, { entryId, size: clusterAccounts.size });
+    }
+  }
+  return result;
 }
 
 interface AccountRow {
@@ -63,6 +143,7 @@ function buildEntry(
   distinctDays: number,
   fingerprints: string[],
   domains: string[],
+  campaign?: { entryId: string; size: number },
 ) {
   let aliases: string[] = [];
   try {
@@ -92,6 +173,8 @@ function buildEntry(
     // v0.4 内容证据：仅在有达标（≥2 独立安装）指纹/域名时携带
     ...(fingerprints.length > 0 ? { fingerprints } : {}),
     ...(domains.length > 0 ? { domains } : {}),
+    // v0.5 Campaign：该条目所属簇的代表条目与规模（只在簇内 >= 2 账号时存在）
+    ...(campaign ? { campaign_entry_id: campaign.entryId, campaign_size: campaign.size } : {}),
   };
 }
 
@@ -207,10 +290,27 @@ export async function generateSnapshot(
   const daysByHandle = new Map(
     dayRows.results.map((r) => [r.handle, r.days] as const),
   );
+  const rcRows = await env.DB.prepare(
+    'SELECT handle, report_count FROM accounts',
+  ).all<{ handle: string; report_count: number }>();
+  const reportCounts = new Map(
+    rcRows.results.map((r) => [r.handle, r.report_count] as const),
+  );
   const { fingerprintsByHandle, domainsByHandle } =
     await collectContentEvidence(env);
+  // 指纹簇（Campaign）：每个指纹的账号（已达标），汉明距离归簇
+  const evidenceFpAccounts = new Map<string, string[]>();
+  for (const [handle, fps] of fingerprintsByHandle) {
+    for (const fp of fps) {
+      const list = evidenceFpAccounts.get(fp) ?? [];
+      list.push(handle);
+      evidenceFpAccounts.set(fp, list);
+    }
+  }
+  const campaigns = clusterCampaigns(evidenceFpAccounts, reportCounts);
   for (const row of accounts.results) {
     const evidence = await collectEvidence(env, row.handle);
+    const campaign = campaigns.get(row.handle);
     entries.push(
       buildEntry(
         row,
@@ -218,6 +318,7 @@ export async function generateSnapshot(
         daysByHandle.get(row.handle) ?? 1,
         fingerprintsByHandle.get(row.handle) ?? [],
         domainsByHandle.get(row.handle) ?? [],
+        campaign,
       ),
     );
   }
