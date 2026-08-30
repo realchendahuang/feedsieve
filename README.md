@@ -161,7 +161,7 @@ FeedSieve 希望做到：
 
 ### JSON — Extension 运行产物
 
-[`community/lists/recommended.json`](community/lists/recommended.json)
+[`community/lists/manifest.json`](community/lists/manifest.json) + [`community/lists/official.json`](community/lists/official.json)
 
 用于：
 
@@ -172,7 +172,7 @@ FeedSieve 希望做到：
 
 更新入口：
 
-[`community/lists/manifest.json`](community/lists/manifest.json)
+[`community/lists/manifest.json`](community/lists/manifest.json)（由 `scripts/mirror-community-lists.sh` 从线上快照镜像）
 
 链路：
 

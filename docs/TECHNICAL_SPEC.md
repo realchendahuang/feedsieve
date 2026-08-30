@@ -588,7 +588,7 @@ community/source/recommended.yaml
 ### 8.2 JSON 是运行时产物
 
 ```text
-community/lists/recommended.json
+community/lists/official.json（由 scripts/mirror-community-lists.sh 从线上快照镜像）
 ```
 
 作用：
@@ -654,7 +654,7 @@ community/lists/manifest.json
   "generated_at": "2026-08-26T00:00:00Z",
   "files": [
     {
-      "path": "recommended.json",
+      "path": "official.json",
       "sha256": "...",
       "entries": 1234
     }

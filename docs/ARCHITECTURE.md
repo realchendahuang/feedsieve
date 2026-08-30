@@ -202,7 +202,7 @@ manifest.json
        ↓
 version changed?
        ↓
-recommended.json
+official.json
        ↓
 schema + checksum
        ↓

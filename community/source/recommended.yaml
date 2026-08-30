@@ -1,8 +1,8 @@
 # FeedSieve Community Recommended List
 #
 # Human-readable public source.
-# The browser extension should consume the generated JSON artifact in
-# ../lists/recommended.json rather than parsing this file on every page.
+# The browser extension consumes the runtime snapshot artifact in
+# ../lists/official.json (mirrored from feedsieve-api) rather than this file.
 #
 # Identity rule for schema v1:
 # - handle: required
