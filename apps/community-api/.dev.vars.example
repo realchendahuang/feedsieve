@@ -2,3 +2,4 @@
 # 线上密钥用 wrangler secret put 设置，绝不写进任何被提交的文件。
 ADMIN_TOKEN=local-dev-admin-token
 INSTALLATION_SALT=local-dev-salt
+OWNER_INSTALLATION_ID=<维护者安装 ID，来自 popup「复制安装 ID」>

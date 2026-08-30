@@ -1,20 +1,25 @@
-# FeedSieve 社区治理政策 v1 —— 唯一公开事实源。
+# FeedSieve 社区治理政策 v2 —— 唯一公开事实源。
 # 这些值与 apps/community-api 的 POLICY / SCORE_POLICY 常量一一对应，
 # drift 由 apps/community-api/test/policy.test.ts 守卫（常量改动必须同步本文件）。
-version: 1
-updated_at: "2026-08-28T00:00:00Z"
+version: 2
+updated_at: "2026-08-30T00:00:00Z"
 
 description: >-
-  冷启动默认值，通过公开 PR 演进。原则：标注自动、拉黑永远显式；
-  名单不是永久刑罚；不把观点差异当垃圾。
+  零人工自动评级：状态全部由独立安装票数 + owner 裁决派生，没有人工审核岗。
+  原则：标注自动、拉黑永远显式；名单不是永久刑罚；不把观点差异当垃圾。
 
-# 上报 → 候选
+# 自动评级（v0.5，低配阈值适配冷启动）
 candidate:
-  min_independent_reports: 3   # 独立安装数达到即自动进入 candidate
-  # 自动降级（对称闸门）：candidate 的 rescue_count >= report_count 时降回 new
+  min_independent_reports: 2   # >=2 独立安装 -> candidate（默认档可见）
+strong:
+  min_independent_reports: 3   # >=3 独立安装 -> strong（全档可见）
+owner:
+  description: >-
+    维护者的安装实例识别为 owner（服务端 secret 配置）。
+    owner 拉黑 1 票即 strong；owner 抢救 = 最终裁决（dismissed，永久退出）。
 
-# 人工闸门：recommended / strong 只能由维护者提升（admin promote），
-# dismissed = 驳回（立即退出快照）。自动化永远到不了这两档。
+# 自动降级（对称闸门）：rescue_count >= report_count 时降回 new
+auto_demote: rescue_ge_reports
 
 # Community Score v1（可解释公式，快照条目 community_score 字段）
 score:
@@ -46,3 +51,5 @@ principles:
   - opinion_disagreement_is_not_spam
   - burst_reports_may_be_downweighted
   - list_entries_are_not_permanent_sentences
+  - owner_veto_is_final
+  - zero_human_review

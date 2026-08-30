@@ -460,6 +460,20 @@ body {
   text-align: center;
 }
 
+.install-id-btn {
+  align-self: flex-start;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: 10px;
+  color: var(--fs-yellow-text-soft);
+  cursor: pointer;
+}
+
+.install-id-btn:hover {
+  color: var(--fs-yellow-ink);
+}
+
 .action-row {
   display: flex;
   gap: 6px;

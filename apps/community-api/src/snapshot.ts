@@ -1,6 +1,7 @@
 import { sha256Hex } from './lib/hash';
 import { computeScore } from './lib/score';
 import { publicPolicy } from './reports';
+import { autoRateAccounts } from './rating';
 
 export const SNAPSHOT_SCHEMA_VERSION = 1;
 export const SNAPSHOT_PACK = 'official.json';
@@ -267,6 +268,9 @@ export async function generateSnapshot(
   const now = new Date();
   const dateStamp = now.toISOString().slice(0, 10).replaceAll('-', '.');
 
+  // v0.5 零人工：出快照前先把全表状态按逻辑收敛一遍（owner 票 / 阈值 / 降级）
+  await autoRateAccounts(env);
+
   const latest = await env.DB.prepare(
     "SELECT version FROM snapshots WHERE version LIKE ?1 ORDER BY version DESC LIMIT 1",
   )
@@ -345,6 +349,25 @@ export async function generateSnapshot(
     files: [{ path: file.path, sha256: file.sha256, entries: file.entries }],
   };
 
+  // v0.5 零人工：内容无变化则复用最新版本（cron 每小时跑，避免空转刷版本号）。
+  // 比较 entries 内容（body 里的 generated_at 每次不同，不能整串比较）。
+  const lastVersion = latest?.version ?? null;
+  const lastBody = lastVersion ? await getSnapshotFile(env, lastVersion, SNAPSHOT_PACK) : null;
+  if (lastBody && entriesContentEqual(lastBody, entries)) {
+    const lastRow = await env.DB.prepare(
+      'SELECT manifest_json, files_json FROM snapshots WHERE version = ?1',
+    )
+      .bind(lastVersion as string)
+      .first<{ manifest_json: string; files_json: string }>();
+    if (lastRow) {
+      return {
+        version: lastVersion as string,
+        manifest: JSON.parse(lastRow.manifest_json),
+        files: JSON.parse(lastRow.files_json) as Record<string, SnapshotFile>,
+      };
+    }
+  }
+
   await env.DB.prepare(
     `INSERT INTO snapshots (version, manifest_json, files_json, created_at)
      VALUES (?1, ?2, ?3, ?4)`,
@@ -358,6 +381,23 @@ export async function generateSnapshot(
     .run();
 
   return { version, manifest, files: { [file.path]: file } };
+}
+
+/** 两次快照的 entries 内容是否相同（忽略 generated_at / 版本号等元信息）。 */
+function entriesContentEqual(
+  lastBody: string,
+  currentEntries: unknown[],
+): boolean {
+  let last: { entries?: unknown[] };
+  try {
+    last = JSON.parse(lastBody) as { entries?: unknown[] };
+  } catch {
+    return false;
+  }
+  if (!Array.isArray(last.entries)) {
+    return false;
+  }
+  return JSON.stringify(last.entries) === JSON.stringify(currentEntries);
 }
 
 export async function getLatestSnapshot(

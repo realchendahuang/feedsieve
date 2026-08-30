@@ -85,46 +85,38 @@ describe('POST /v1/rescues', () => {
 
   it('auto-demotes a candidate back to new when rescues catch up with reports', async () => {
     const handle = 'rescue_demote';
-    await report3(handle);
+    // 2 票 = candidate（阈值下调后够格）；再用 2 个抢救票追平 → 降回 new
+    await postReports('rrrrrrrr-6001-4001-8000-rrrrrrrrrrrr', handle);
+    await postReports('rrrrrrrr-6002-4002-8000-rrrrrrrrrrrr', handle);
     expect((await accountRow(handle))?.status).toBe('candidate');
 
-    // 3 个独立安装各投一票抢救 → rescue_count(3) >= report_count(3) → 降回 new
     const rescuers = [
       'ssssssss-7004-4004-8000-ssssssssssss',
       'ssssssss-7005-4005-8000-ssssssssssss',
-      'ssssssss-7006-4006-8000-ssssssssssss',
     ];
     for (const id of rescuers) {
       const res = await postRescues({ installation_id: id, rescues: [{ handle }] });
       expect(res.status).toBe(200);
     }
     const row = await accountRow(handle);
-    expect(row?.rescue_count).toBe(3);
+    expect(row?.rescue_count).toBe(2);
     expect(row?.status).toBe('new');
   });
 
-  it('does not auto-demote human-promoted statuses', async () => {
-    const handle = 'rescue_strong';
+  it('owner rescue is a final veto (dismissed, never resurrected)', async () => {
+    const handle = 'owner_veto';
     await report3(handle);
-    const promote = await worker.fetch(
-      new Request(`${ORIGIN}/admin/promote`, {
-        method: 'POST',
-        headers: {
-          authorization: `Bearer ${env.ADMIN_TOKEN}`,
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({ handle, status: 'strong' }),
-      }),
-      env,
-    );
-    expect(promote.status).toBe(200);
+    expect((await accountRow(handle))?.status).toBe('strong');
 
     await postRescues({
-      installation_id: 'ssssssss-7007-4007-8000-ssssssssssss',
+      installation_id: env.OWNER_INSTALLATION_ID ?? 'owner-test-install-0001',
       rescues: [{ handle }],
     });
-    const row = await accountRow(handle);
-    expect(row?.status).toBe('strong');
+    expect((await accountRow(handle))?.status).toBe('dismissed');
+
+    // 再举报也不复活
+    await postReports('rrrrrrrr-6009-4009-8000-rrrrrrrrrrrr', handle);
+    expect((await accountRow(handle))?.status).toBe('dismissed');
   });
 
   it('envelopes: empty array / oversized batch are rejected', async () => {

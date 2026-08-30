@@ -12,7 +12,7 @@ import {
 } from '../../src/lib/daily-stats';
 import { buildReportText, shareUrl, CATEGORY_LABELS } from '../../src/lib/share-card';
 import { estimateTimeSaved } from '../../src/lib/time-saved';
-import { getContributionStats, type ContributionStats } from '../../src/lib/contribute';
+import { getContributionStats, getInstallationId, type ContributionStats } from '../../src/lib/contribute';
 import { drawReportCard } from '../../src/lib/share-card-image';
 import {
   getAllowlist,
@@ -199,6 +199,17 @@ export default function App() {
       setSyncMsg('⚠️ 后台未就绪');
     } finally {
       setSyncing(false);
+    }
+  }
+
+  /** 复制本机匿名安装 ID（维护者绑定 owner 特权用；普通用户无感）。 */
+  async function copyInstallationId(): Promise<void> {
+    try {
+      const id = await getInstallationId();
+      await navigator.clipboard.writeText(id);
+      setNotice('已复制安装 ID');
+    } catch {
+      setNotice('复制失败：请手动复制');
     }
   }
 
@@ -533,6 +544,14 @@ export default function App() {
               />
             </label>
             <p className="settings-note">仅匿名上报：你拉黑的账号 + 分类</p>
+            <button
+              type="button"
+              className="install-id-btn"
+              title="复制本机安装 ID（维护者配置 owner 特权用，凭此识别你的票）"
+              onClick={() => void copyInstallationId()}
+            >
+              复制安装 ID
+            </button>
           </div>
         ) : (
           <p className="list-empty">…</p>

@@ -3,7 +3,9 @@ import { validateReport, type ValidReport } from './lib/validate';
 
 // Phase D 会把阈值搬进 policy 文件/端点；先集中放这里
 export const POLICY = {
-  candidateThreshold: 3, // 独立安装数达到即自动进入 candidate
+  // v0.5 自动评级（低配阈值：当前用户规模小，高阈值反而没数据）
+  candidateThreshold: 2, // 独立安装票数达到 → candidate（默认档可见）
+  strongThreshold: 3, // 独立安装票数达到 → strong（全档可见）
   dailyReportLimit: 100, // 单安装每日上报上限（实际限额 = 此值 × trust，见下）
   rescueDailyLimit: 50, // 单安装每日抢救上限（同样乘 trust）
   minDailyLimit: 10, // 限额下限：无论 trust 多低，保留基本参与能力
@@ -21,9 +23,11 @@ export function effectiveDailyLimit(baseLimit: number, trust: number): number {
 /** 公开政策快照（/v1/policy 与 manifest 内嵌；与 community/policy/v1.yaml 对应） */
 export function publicPolicy() {
   return {
-    version: 1,
+    version: 2,
     candidate: { min_independent_reports: POLICY.candidateThreshold },
-    auto_demote: 'candidate_rescue_ge_reports',
+    strong: { min_independent_reports: POLICY.strongThreshold },
+    owner: { description: 'maintainer votes count as strong instantly' },
+    auto_demote: 'rescue_ge_reports',
     limits: {
       daily_report_base: POLICY.dailyReportLimit,
       daily_rescue_base: POLICY.rescueDailyLimit,
@@ -101,6 +105,12 @@ export async function processReportBatch(
   }
 
   const installHash = await hashInstallationId(env.INSTALLATION_SALT, installationId);
+  // owner（维护者）特权（v0.5）：owner 拉的号 = 最高置信证据，直接 strong，不走多数流程。
+  // 识别只靠安装 ID 比对（secret 配置），匿名性不变；纸上不落原始 ID。
+  const isOwner = env.OWNER_INSTALLATION_ID
+    ? installHash ===
+      (await hashInstallationId(env.INSTALLATION_SALT, env.OWNER_INSTALLATION_ID))
+    : false;
   const today = utcToday();
   const now = nowSeconds();
 
@@ -198,19 +208,33 @@ export async function processReportBatch(
     }
   }
 
-  // 聚合进 accounts：首报定 category / x_user_id；独立票数过阈值自动升 candidate
+  // 聚合进 accounts：首报定 category / x_user_id。
+  // 自动评级（v0.5，阈值低配：当前用户规模小）：
+  // - owner 票 ≥1（本次或累计）→ strong（最高置信，全档可见）
+  // - 普通独立票 ≥3 → strong；≥2 → candidate
+  // - 降级/白名单裁决由 auto-rate 统一评估（rescues 侧 owner 直接置 dismissed）
   for (const [handle, delta] of insertedHandles) {
     const first = firstReport.get(handle)!;
-    const threshold = POLICY.candidateThreshold;
+    const finalStatus = isOwner
+      ? 'strong'
+      : delta >= POLICY.strongThreshold
+        ? 'strong'
+        : delta >= POLICY.candidateThreshold
+          ? 'candidate'
+          : 'new';
     await env.DB.prepare(
       `INSERT INTO accounts
-         (handle, x_user_id, category, status, report_count, rescue_count, first_report_at, updated_at)
-       VALUES (?1, ?2, ?3, ?4, ?5, 0, ?6, ?6)
+         (handle, x_user_id, category, status, report_count, rescue_count, owner_votes, first_report_at, updated_at)
+       VALUES (?1, ?2, ?3, ?4, ?5, 0, ?8, ?6, ?6)
        ON CONFLICT(handle) DO UPDATE SET
          report_count = accounts.report_count + ?5,
+         owner_votes = accounts.owner_votes + ?8,
          x_user_id = COALESCE(excluded.x_user_id, accounts.x_user_id),
          status = CASE
-           WHEN accounts.status IN ('new') AND accounts.report_count + ?5 >= ?7 THEN 'candidate'
+           WHEN accounts.status = 'dismissed' THEN 'dismissed'
+           WHEN accounts.owner_votes + ?8 > 0 THEN 'strong'
+           WHEN accounts.report_count + ?5 >= ?7 THEN 'strong'
+           WHEN accounts.report_count + ?5 >= ?9 THEN 'candidate'
            ELSE accounts.status END,
          updated_at = ?6`,
     )
@@ -218,10 +242,12 @@ export async function processReportBatch(
         handle,
         first.xUserId,
         first.reason,
-        delta >= threshold ? 'candidate' : 'new',
+        finalStatus,
         delta,
         now,
-        threshold,
+        POLICY.strongThreshold,
+        isOwner ? delta : 0,
+        POLICY.candidateThreshold,
       )
       .run();
   }

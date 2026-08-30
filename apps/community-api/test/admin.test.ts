@@ -37,72 +37,44 @@ async function report(installationId: string, handle: string) {
   expect(res.status).toBe(200);
 }
 
-describe('admin candidates & promote', () => {
+describe('admin candidates（只读透明度）', () => {
   it('rejects unauthenticated access', async () => {
     expect((await adminFetch('/admin/candidates')).status).toBe(401);
-    expect(
-      (
-        await adminFetch('/admin/promote', {
-          method: 'POST',
-          body: JSON.stringify({ handle: 'x', status: 'strong' }),
-        })
-      ).status,
-    ).toBe(401);
   });
 
-  it('promote validates status and account existence', async () => {
-    expect(
-      (
-        await adminFetch('/admin/promote', {
-          method: 'POST',
-          token: ADMIN,
-          body: JSON.stringify({ handle: 'a_user', status: 'candidate' }),
-        })
-      ).status,
-    ).toBe(400);
-    expect(
-      (
-        await adminFetch('/admin/promote', {
-          method: 'POST',
-          token: ADMIN,
-          body: JSON.stringify({ handle: 'nobody_here', status: 'strong' }),
-        })
-      ).status,
-    ).toBe(404);
-  });
-
-  it('human promote: candidate -> strong, then leaves the review queue', async () => {
-    const installs = ['uuuuuuuu-3001-4001-8000-uuuuuuuuuuuu', 'uuuuuuuu-3002-4002-8000-uuuuuuuuuuuu', 'uuuuuuuu-3003-4003-8000-uuuuuuuuuuuu'];
+  it('auto-rate: 3 独立安装自动升 strong（零人工）并离开待审队列', async () => {
+    const installs = [
+      'uuuuuuuu-3001-4001-8000-uuuuuuuuuuuu',
+      'uuuuuuuu-3002-4002-8000-uuuuuuuuuuuu',
+      'uuuuuuuu-3003-4003-8000-uuuuuuuuuuuu',
+    ];
     for (const id of installs) await report(id, 'review_user');
+
+    // 上传时已按阈值定级：3 票 → strong（不再需要人工 promote）
+    const row = await env.DB.prepare(
+      'SELECT status, report_count FROM accounts WHERE handle = ?1',
+    )
+      .bind('review_user')
+      .first<{ status: string; report_count: number }>();
+    expect(row?.status).toBe('strong');
+    expect(row?.report_count).toBe(3);
 
     const queue = (await (
       await adminFetch('/admin/candidates', { token: ADMIN })
     ).json()) as {
       candidates: { handle: string; status: string; report_count: number }[];
     };
-    const entry = queue.candidates.find((c) => c.handle === 'review_user');
-    expect(entry?.status).toBe('candidate');
-    expect(entry?.report_count).toBe(3);
+    expect(queue.candidates.some((c) => c.handle === 'review_user')).toBe(false);
+  });
 
-    const promoted = (await (
-      await adminFetch('/admin/promote', {
-        method: 'POST',
-        token: ADMIN,
-        body: JSON.stringify({ handle: '@review_user', status: 'strong' }),
-      })
-    ).json()) as { handle: string; status: string };
-    expect(promoted).toEqual({ handle: 'review_user', status: 'strong' });
-
-    const after = (await (
-      await adminFetch('/admin/candidates', { token: ADMIN })
-    ).json()) as { candidates: { handle: string }[] };
-    expect(after.candidates.some((c) => c.handle === 'review_user')).toBe(false);
-
+  it('2 独立安装自动升 candidate（默认档可见）', async () => {
+    await report('vvvvvvvv-3001-4001-8000-vvvvvvvvvvvv', 'auto_cand');
+    await report('vvvvvvvv-3002-4002-8000-vvvvvvvvvvvv', 'auto_cand');
     const row = await env.DB.prepare(
       'SELECT status FROM accounts WHERE handle = ?1',
     )
-      .bind('review_user')
+      .bind('auto_cand')
       .first<{ status: string }>();
-    expect(row?.status).toBe('strong');
+    expect(row?.status).toBe('candidate');
   });
 });

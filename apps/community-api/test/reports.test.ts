@@ -70,15 +70,16 @@ describe('POST /v1/reports', () => {
     expect(account?.report_count).toBe(1);
   });
 
-  it('auto-promotes to candidate at threshold of distinct installations', async () => {
+  it('auto-promotes by distinct installations: 2 -> candidate, 3 -> strong', async () => {
     await postOne('cccccccc-3333-4333-8333-cccccccccccc', 'thresh_user');
     await postOne('dddddddd-4444-4444-8444-dddddddddddd', 'thresh_user');
     const account = await accountRow('thresh_user');
-    expect(account?.status).toBe('new');
+    expect(account?.status).toBe('candidate');
+    expect(account?.report_count).toBe(2);
 
     await postOne('eeeeeeee-5555-4555-8555-eeeeeeeeeeee', 'thresh_user');
     const promoted = await accountRow('thresh_user');
-    expect(promoted?.status).toBe('candidate');
+    expect(promoted?.status).toBe('strong');
     expect(promoted?.report_count).toBe(3);
   });
 

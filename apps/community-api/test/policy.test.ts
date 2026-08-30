@@ -14,6 +14,15 @@ describe('policy yaml ↔ code constants', () => {
     expect(yaml).toContain(`min_independent_reports: ${POLICY.candidateThreshold}`);
   });
 
+  it('strong threshold matches', () => {
+    expect(yaml).toContain(`min_independent_reports: ${POLICY.strongThreshold}`);
+  });
+
+  it('zero-human-review principle is codified', () => {
+    expect(yaml).toContain('zero_human_review');
+    expect(yaml).toContain('owner_veto_is_final');
+  });
+
   it('limit values match', () => {
     expect(yaml).toContain(`daily_report_base: ${POLICY.dailyReportLimit}`);
     expect(yaml).toContain(`daily_rescue_base: ${POLICY.rescueDailyLimit}`);

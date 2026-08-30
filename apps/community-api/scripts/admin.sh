@@ -3,9 +3,8 @@
 #
 # 用法:
 #   ./admin.sh health                    检查服务存活
-#   ./admin.sh candidates                待审队列（new + candidate，按票数降序）
-#   ./admin.sh promote <handle> <status> 人工提升/驳回，status ∈ recommended|strong|dismissed
-#   ./admin.sh publish                   生成并发布新快照版本
+#   ./admin.sh candidates                待审队列（只读，透明度用）
+#   ./admin.sh publish                   生成并发布新快照版本（cron 已自动跑，手动是保险丝）
 #
 # 环境变量:
 #   FEEDSIEVE_API          默认 https://feedsieve-api.chendahuang.com
@@ -31,22 +30,11 @@ case "$cmd" in
   candidates)
     curl -sS -H "$AUTH" "$API/admin/candidates"
     ;;
-  promote)
-    handle="${2:-}"
-    status="${3:-}"
-    if [ -z "$handle" ] || [ -z "$status" ]; then
-      echo "用法: admin.sh promote <handle> <recommended|strong|dismissed>" >&2
-      exit 1
-    fi
-    curl -sS -X POST -H "$AUTH" -H 'content-type: application/json' \
-      -d "{\"handle\":\"$handle\",\"status\":\"$status\"}" \
-      "$API/admin/promote"
-    ;;
   publish)
     curl -sS -X POST -H "$AUTH" "$API/admin/publish"
     ;;
   *)
-    echo "用法: admin.sh <health|candidates|promote <handle> <status>|publish>" >&2
+    echo "用法: admin.sh <health|candidates|publish>" >&2
     exit 1
     ;;
 esac

@@ -75,7 +75,7 @@ describe('snapshot pipeline', () => {
     expect(manifest.snapshot_version).toBe(snapshot_version);
   });
 
-  it('candidate account lands in snapshot with matching sha256 and stable ordering', async () => {
+  it('strong account lands in snapshot with matching sha256 and stable ordering', async () => {
     const installs = [
       'tttttttt-2001-4001-8000-tttttttttttt',
       'tttttttt-2002-4002-8000-tttttttttttt',
@@ -112,7 +112,7 @@ describe('snapshot pipeline', () => {
     expect(body.entries).toHaveLength(1);
     const entry = body.entries[0];
     expect(entry.handle).toBe('cand_user');
-    expect(entry.status).toBe('candidate');
+    expect(entry.status).toBe('strong');
     expect(entry.report_count).toBe(4);
     // 4 票同日：4/7 = 0.571 → 0.57（未达爆发线，不打折）
     expect(entry.community_score).toBe(0.57);
@@ -125,16 +125,10 @@ describe('snapshot pipeline', () => {
     expect(fileRes.headers.get('cache-control')).toContain('immutable');
   });
 
-  it('republishing the same day increments the version counter', async () => {
+  it('republishing unchanged content reuses the same version (no churn)', async () => {
     const first = (await (await publish(ADMIN)).json()) as Manifest;
     const second = (await (await publish(ADMIN)).json()) as Manifest;
-    expect(second.snapshot_version).not.toBe(first.snapshot_version);
-    expect(second.snapshot_version.startsWith(first.snapshot_version)).toBe(
-      false,
-    );
-    const [, n1] = first.snapshot_version.split('.');
-    const dayPart = first.snapshot_version.split('.').slice(0, 3).join('.');
-    expect(second.snapshot_version.startsWith(dayPart)).toBe(true);
-    expect(Number.parseInt(n1, 10)).toBeGreaterThan(0);
+    // v0.5 零人工：内容没变化就不产生新版本（cron 每小时跑，不刷版本号）
+    expect(second.snapshot_version).toBe(first.snapshot_version);
   });
 });

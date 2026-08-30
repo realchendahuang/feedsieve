@@ -75,6 +75,12 @@ export async function processRescueBatch(
   }
 
   const installHash = await hashInstallationId(env.INSTALLATION_SALT, installationId);
+  // owner（维护者）特权（v0.5）：owner 的抢救 = 最终裁决 —— 账号永久退出名单
+  // （dismissed），后续普通举报不复活（auto-rate 只看 new/candidate/strong）。
+  const isOwner = env.OWNER_INSTALLATION_ID
+    ? installHash ===
+      (await hashInstallationId(env.INSTALLATION_SALT, env.OWNER_INSTALLATION_ID))
+    : false;
   const today = utcToday();
   const now = nowSeconds();
 
@@ -117,6 +123,19 @@ export async function processRescueBatch(
 
     if ((insert.meta.changes ?? 0) === 0) {
       results[i].status = 'duplicate';
+      continue;
+    }
+
+    // owner 裁决：直接 dismissed（永久退出快照），不计入普通 rescue 计分
+    if (isOwner) {
+      const veto = await env.DB.prepare(
+        `UPDATE accounts SET status = 'dismissed', updated_at = ?2 WHERE handle = ?1`,
+      )
+        .bind(r.handle, now)
+        .run();
+      if ((veto.meta.changes ?? 0) === 0) {
+        results[i].status = 'unknown';
+      }
       continue;
     }
 

@@ -1,7 +1,6 @@
 import { cors } from 'hono/cors';
 import { Hono } from 'hono';
 import { checkBearerToken } from './lib/auth';
-import { isAdminStatus } from './lib/admin';
 import { hashInstallationId } from './lib/hash';
 import { POLICY, processReportBatch, publicPolicy } from './reports';
 import { processRescueBatch } from './rescues';
@@ -142,30 +141,8 @@ export function createApp() {
     return c.json({ candidates: res.results });
   });
 
-  // 人工提升/驳回：只接受 recommended / strong / dismissed
-  app.post('/admin/promote', async (c) => {
-    const body = await c.req.json().catch(() => undefined);
-    if (typeof body !== 'object' || body === null) {
-      return c.json({ error: 'invalid_json_body' }, 400);
-    }
-    const { handle, status } = body as Record<string, unknown>;
-    if (typeof handle !== 'string' || handle.trim() === '') {
-      return c.json({ error: 'invalid_handle' }, 400);
-    }
-    if (!isAdminStatus(status)) {
-      return c.json({ error: 'invalid_status' }, 400);
-    }
-    const normalized = handle.replace(/^@/, '').toLowerCase();
-    const res = await c.env.DB.prepare(
-      'UPDATE accounts SET status = ?2, updated_at = ?3 WHERE handle = ?1',
-    )
-      .bind(normalized, status, Math.floor(Date.now() / 1000))
-      .run();
-    if ((res.meta.changes ?? 0) === 0) {
-      return c.json({ error: 'account_not_found' }, 404);
-    }
-    return c.json({ handle: normalized, status });
-  });
+  // 人工提升/驳回已移除（v0.5 零人工：状态全部由 auto-rate 派生）。
+  // 保留待审队列视图（纯只读，透明度用）。
 
   app.notFound((c) => c.json({ error: 'not_found' }, 404));
 
@@ -177,8 +154,31 @@ export function createApp() {
   return app;
 }
 
+// v0.5 零人工：每小时 cron 自动 publish。publish 只产生新版本当内容有变化
+// （auto-rate 收敛 + 投票变化），无变化时保持最新版本不动。
+async function scheduledAutoPublish(env: Cloudflare.Env): Promise<void> {
+  try {
+    const before = await env.DB.prepare(
+      'SELECT COUNT(*) AS n FROM snapshots',
+    ).first<{ n: number }>();
+    const published = await generateSnapshot(env);
+    const after = await env.DB.prepare(
+      'SELECT COUNT(*) AS n FROM snapshots',
+    ).first<{ n: number }>();
+    const createdNew = (after?.n ?? 0) > (before?.n ?? 0);
+    console.info(
+      `[community-api] cron publish: version=${published.version} new=${createdNew}`,
+    );
+  } catch (error) {
+    console.error('[community-api] cron publish failed:', error);
+  }
+}
+
 export default {
   fetch(request, env) {
     return createApp().fetch(request, env);
+  },
+  async scheduled(_controller, env) {
+    await scheduledAutoPublish(env);
   },
 } satisfies ExportedHandler<Cloudflare.Env>;
