@@ -1,12 +1,5 @@
 import { useEffect, useState } from 'react';
 import {
-  clearPendingBlocks,
-  getPendingBlocks,
-  removePendingBlock,
-  subscribePending,
-  type PendingBlock,
-} from '../../src/lib/pending-blocks';
-import {
   getBlockedAccounts,
   subscribeBlocked,
   type BlockedAccount,
@@ -40,8 +33,19 @@ import {
   parseSnapshotBody,
   type MarkStrength,
 } from '@feedsieve/community-lists';
-import type { BatchBlockResult } from '../../src/lib/run-block-batch';
+/** 一键拉黑批量结果（content 脚本执行后回传）。 */
+interface PageBlockResult {
+  blocked: string[];
+  failed: Array<{ handle: string; code: string }>;
+}
 import type { UnblockBatchResult } from '../../src/lib/run-unblock-batch';
+
+/** 页面黄框账号（popup 从活动 x.com 标签实时查询）。 */
+interface PageMarkedItem {
+  handle: string;
+  category: string;
+  reason: string;
+}
 
 const FAILURE_LABELS: Record<string, string> = {
   'no-id': '无用户ID',
@@ -59,7 +63,8 @@ const STRENGTH_HINTS: Record<MarkStrength, string> = {
   deep_clean: '全部候选都标（含指纹/域名）',
 };
 
-const BLOCK_MESSAGE = { type: 'feedsieve:run-block-batch' } as const;
+const BLOCK_MESSAGE = { type: 'feedsieve:run-page-block' } as const;
+const PAGE_MARKED_MESSAGE = { type: 'feedsieve:page-marked-list' } as const;
 
 const EMPTY_STATS: LocalStats = { detected: 0, blocked: 0, unblocked: 0 };
 
@@ -78,14 +83,14 @@ function formatAgo(timestamp: number): string {
 }
 
 export default function App() {
-  const [blocks, setBlocks] = useState<PendingBlock[] | null>(null);
+  const [pageMarked, setPageMarked] = useState<PageMarkedItem[] | null>(null);
   const [blocked, setBlocked] = useState<BlockedAccount[] | null>(null);
   const [stats, setStats] = useState<LocalStats>(EMPTY_STATS);
   const [daily, setDaily] = useState<DailyStats>({ days: {} });
   const [contribution, setContribution] = useState<ContributionStats | null>(null);
   const [cardUrl, setCardUrl] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
-  const [blockResult, setBlockResult] = useState<BatchBlockResult | null>(null);
+  const [blockResult, setBlockResult] = useState<PageBlockResult | null>(null);
   const [unblockResult, setUnblockResult] = useState<UnblockBatchResult | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [community, setCommunity] = useState<CommunitySettings | null>(null);
@@ -99,13 +104,16 @@ export default function App() {
   const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
-    void getPendingBlocks().then(setBlocks);
     void getBlockedAccounts().then(setBlocked);
     void getStats().then(setStats);
     void getDailyStats().then(setDaily);
     void getContributionStats().then(setContribution);
     void getAllowlist().then(setAllowlist);
     void getCommunitySettings().then(setCommunity);
+    // 页面黄框清单只读查询走 .then 链（满足 set-state-in-effect 规则）
+    void sendToXPage(PAGE_MARKED_MESSAGE)
+      .then((result) => setPageMarked(result as PageMarkedItem[]))
+      .catch(() => setPageMarked([]));
     void getCommunitySnapshot().then(async (snapshot) => {
       if (!snapshot) {
         return;
@@ -120,7 +128,6 @@ export default function App() {
       }
     });
     const unsubs = [
-      subscribePending(setBlocks),
       subscribeBlocked(setBlocked),
       subscribeStats(setStats),
       subscribeDaily(setDaily),
@@ -136,6 +143,7 @@ export default function App() {
    * 投递消息到任一可用的 x.com 标签：活动标签优先，其余依次兜底。
    * 重载扩展后旧标签的 content script 不响应（Receiving end does not exist），
    * 逐个尝试总能找到活着的会话（若有）。
+   * 纯函数（不读 state），组件顶部申明保证 effect 依赖稳定。
    */
   async function sendToXPage(
     message: { type: string; handle?: string; force?: boolean },
@@ -155,6 +163,16 @@ export default function App() {
       }
     }
     throw new Error('no x.com receiver');
+  }
+
+  /** 从活动 x.com 标签实时拉取当前页面黄框账号清单。 */
+  async function refreshPageMarked(): Promise<void> {
+    try {
+      const result = (await sendToXPage(PAGE_MARKED_MESSAGE)) as PageMarkedItem[];
+      setPageMarked(result);
+    } catch {
+      setPageMarked([]); // 没有可用的 x.com 标签：空清单，按钮会给提示
+    }
   }
 
   async function syncCommunityNow(): Promise<void> {
@@ -184,14 +202,16 @@ export default function App() {
     }
   }
 
+  /** 一键拉黑：当前页面全部黄框账号（由活动 x.com 标签执行）。 */
   async function runBatch(): Promise<void> {
     setRunning(true);
     setNotice(null);
     setBlockResult(null);
     setUnblockResult(null);
     try {
-      const result = (await sendToXPage(BLOCK_MESSAGE)) as BatchBlockResult;
+      const result = (await sendToXPage(BLOCK_MESSAGE)) as PageBlockResult;
       setBlockResult(result);
+      await refreshPageMarked();
     } catch {
       setNotice('请先打开或刷新 x.com');
     } finally {
@@ -211,6 +231,8 @@ export default function App() {
         ...(handle ? { handle } : {}),
       })) as UnblockBatchResult;
       setUnblockResult(result);
+      // 撤销后已拉黑记录变化；页面黄框可能重新出现（X 服务端行为），刷新一次
+      await refreshPageMarked();
     } catch {
       setNotice('请先打开或刷新 x.com');
     } finally {
@@ -218,17 +240,7 @@ export default function App() {
     }
   }
 
-  async function removeOne(handle: string): Promise<void> {
-    await removePendingBlock(handle);
-  }
-
-  async function clearAll(): Promise<void> {
-    if (window.confirm('清空待拉黑列表？已经拉黑的不受影响。')) {
-      await clearPendingBlocks();
-    }
-  }
-
-  const count = blocks?.length ?? null;
+  const pageCount = pageMarked?.length ?? null;
   const blockedCount = blocked?.length ?? null;
   const failedSummary = (result: { failed: Array<{ handle: string; code: string }> } | null) =>
     result?.failed.length
@@ -348,38 +360,29 @@ export default function App() {
         <span title="撤销">↩️ {stats.unblocked}</span>
       </section>
 
-      {/* 待拉黑列表：勾选在 Timeline 黄框里进行 */}
+      {/* 页面黄框：当前 X 页面的待拉黑账号清单（一键拉黑 = 全部） */}
       <section className="list-card">
         <div className="list-head">
-          <span className="stat-label">待拉黑</span>
-          <span className="list-count">{count === null ? '…' : count}</span>
+          <span className="stat-label">页面黄框</span>
+          <span className="list-count">{pageCount === null ? '…' : pageCount}</span>
         </div>
 
-        {count === null ? (
+        {pageCount === null ? (
           <p className="list-empty">…</p>
-        ) : count === 0 ? (
+        ) : pageCount === 0 ? (
           <p className="list-empty">
-            {running ? '处理中…' : '在 X 页面勾选黄框账号'}
+            {running ? '处理中…' : '当前页面没有黄框账号'}
           </p>
         ) : (
           <ul className="pending-list">
-            {blocks!.map((block) => (
-              <li key={block.handle} className="pending-item">
+            {pageMarked!.map((item) => (
+              <li key={item.handle} className="pending-item">
                 <div className="pending-info">
-                  <span className="pending-handle">@{block.handle}</span>
-                  {block.markedReason ? (
-                    <span className="pending-reason">{block.markedReason}</span>
+                  <span className="pending-handle">@{item.handle}</span>
+                  {item.reason ? (
+                    <span className="pending-reason">{item.reason}</span>
                   ) : null}
                 </div>
-                <button
-                  type="button"
-                  className="remove-btn"
-                  title="移出列表"
-                  disabled={running}
-                  onClick={() => void removeOne(block.handle)}
-                >
-                  ✕
-                </button>
               </li>
             ))}
           </ul>
@@ -402,18 +405,18 @@ export default function App() {
       <div className="action-row">
         <button
           className="primary-action"
-          disabled={!count || running}
+          disabled={!pageCount || running}
           onClick={() => void runBatch()}
         >
-          {running ? '处理中…' : `一键拉黑${count ? `（${count}）` : ''}`}
+          {running ? '处理中…' : `一键拉黑${pageCount ? `（页面 ${pageCount} 个）` : ''}`}
         </button>
         <button
           className="icon-action"
-          title="清空待拉黑"
-          disabled={!count || running}
-          onClick={() => void clearAll()}
+          title="刷新页面黄框清单"
+          disabled={running}
+          onClick={() => void refreshPageMarked()}
         >
-          🗑
+          ⟳
         </button>
       </div>
 

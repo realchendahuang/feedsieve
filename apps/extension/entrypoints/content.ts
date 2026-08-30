@@ -13,12 +13,6 @@ import {
   type ParsedApiData,
 } from '@feedsieve/x-adapter';
 import {
-  isPending,
-  removePendingBlock,
-  setPendingBlock,
-  type BlockEvidence,
-} from '../src/lib/pending-blocks';
-import {
   getBlockedAccounts,
   markBlocked,
   subscribeBlocked,
@@ -26,7 +20,6 @@ import {
 import { bumpStat } from '../src/lib/local-stats';
 import { bumpDaily } from '../src/lib/daily-stats';
 import { collectCellsByHandle, removeCellsSoon } from '../src/lib/remove-tweets';
-import { runPendingBlockBatch } from '../src/lib/run-block-batch';
 import { runUnblockBatch } from '../src/lib/run-unblock-batch';
 import { getUserId, saveUserIds } from '../src/lib/user-ids';
 import {
@@ -60,8 +53,23 @@ const BUILTIN_LIST = toHandleSet(
 const MARK_ATTRIBUTE = 'data-fs-marked';
 const STYLE_ELEMENT_ID = 'feedsieve-mark-styles';
 
+/** 标注时刻收集的内容证据（上报载荷，见 contribute.ts） */
+interface BlockEvidence {
+  contentFingerprint?: string;
+  linkDomains?: string[];
+}
+
+/** 页面内一个黄框账号待处理时的标记数据（一键拉黑 = 页面全部黄框）。 */
+interface PageMarkedAccount {
+  handle: string;
+  category: string;
+  /** 标注理由（popup 页面黄框清单展示用） */
+  reason: string;
+  evidence: BlockEvidence;
+}
+
 /**
- * Phase 1 content script：黄框标注（带理由）+ 勾选加入待拉黑列表。
+ * Phase 1 content script：黄框标注（带理由）。一键拉黑 = 当前页面全部黄框账号。
  *
  * - ISOLATED world（冻结决策）
  * - 标注绝不改动页面内容显示，也不破坏 X 布局。
@@ -72,12 +80,15 @@ const STYLE_ELEMENT_ID = 'feedsieve-mark-styles';
  * - MutationObserver 只发现候选节点，WeakSet 去重，debounce 批量扫描
  * - XHR 桥（xhr-bridge.content.ts，MAIN world）通过 CustomEvent 送来
  *   GraphQL 权威数据：在这里缓存 rest_id（拉黑 API 必需）与 bio（检测增强）。
+ * - 页面黄框集合 pageMarked 是会话内内存态：拉黑成功即移除，
+ *   页面刷新后重新扫描重建（不需要跨页面持久化）。
  */
 export default defineContentScript({
   matches: ['https://x.com/*'],
   main() {
     const seenArticles = new WeakSet<Element>();
-    const pendingCache = new Set<string>();
+    /** 当前页面所有黄框账号（剔除已拉黑回显：它们已经在黑名单里） */
+    const pageMarked = new Map<string, PageMarkedAccount>();
     /** handle -> bio（XHR 桥提供，检测用；DOM 拿不到简介） */
     const bioCache = new Map<string, string>();
     /** 白名单缓存：一票否决，最高优先级 */
@@ -98,7 +109,6 @@ export default defineContentScript({
     let scanTimer: number | undefined;
 
     ensureStyles();
-    refreshPendingCache();
     refreshAllowCache();
     refreshBlockedCache();
     void refreshCommunity();
@@ -116,11 +126,25 @@ export default defineContentScript({
      */
     browser.runtime.onMessage.addListener((message: unknown) => {
       const type = (message as { type?: string } | null)?.type;
-      if (type === 'feedsieve:run-block-batch') {
-        return runPendingBlockBatch();
+      // 一键拉黑 = 当前页面全部黄框账号（用户拍板的交互语义）
+      if (type === 'feedsieve:run-page-block') {
+        return runPageBlockBatch();
       }
       if (type === 'feedsieve:unblock') {
         return runUnblockBatch((message as { handle?: string }).handle);
+      }
+      return undefined;
+    });
+
+    /** popup「一键拉黑」需要的页面黄框快照（发往活动 tab 实时查询）。 */
+    browser.runtime.onMessage.addListener((message: unknown) => {
+      const type = (message as { type?: string } | null)?.type;
+      if (type === 'feedsieve:page-marked-list') {
+        return [...pageMarked.values()].map((m) => ({
+          handle: m.handle,
+          category: m.category,
+          reason: m.reason,
+        }));
       }
       return undefined;
     });
@@ -158,28 +182,6 @@ export default defineContentScript({
         }
       });
     }
-
-    function refreshPendingCache(): void {
-      void browser.storage.local
-        .get('pendingBlocks')
-        .then((result) => {
-          pendingCache.clear();
-          for (const block of (result.pendingBlocks as Array<{ handle?: string }>) ?? []) {
-            if (block.handle) {
-              pendingCache.add(block.handle);
-            }
-          }
-        })
-        .catch(() => {
-          // storage 异常时保持旧缓存；勾选状态可能滞后一拍，可接受
-        });
-    }
-
-    browser.storage.onChanged.addListener((changes, area) => {
-      if (area === 'local' && changes['pendingBlocks']) {
-        refreshPendingCache();
-      }
-    });
 
     function refreshBlockedCache(): void {
       const apply = (items: Array<{ handle: string }>): void => {
@@ -389,6 +391,15 @@ export default defineContentScript({
     ): void {
       cell.setAttribute(MARK_ATTRIBUTE, detection.source);
       attachBadge(cell, detection, category, evidence);
+      // 页面黄框集合：一键拉黑的数据源。已拉黑回显不在黑名单动作范围，跳过。
+      if (detection.source !== 'blocked') {
+        pageMarked.set(detection.handle, {
+          handle: detection.handle,
+          category,
+          reason: detection.reason,
+          evidence,
+        });
+      }
       // 本地统计：每次新标注 +1（seenArticles 保证每个 cell 只标一次）；
       // 已拉黑回显不是新发现，不计数
       if (detection.source !== 'blocked') {
@@ -433,31 +444,10 @@ export default defineContentScript({
         return;
       }
 
-      // 主操作组：勾选入列 + 顺手拉黑（高频，视觉突出）
+      // 主操作组：顺手拉黑（高频，视觉突出）。
+      // 批量操作不再走勾选：popup「一键拉黑」= 页面全部黄框账号。
       const primaryGroup = document.createElement('span');
       primaryGroup.className = 'fs-actions';
-
-      const checkbox = document.createElement('label');
-      checkbox.className = 'fs-pick';
-      const input = document.createElement('input');
-      input.type = 'checkbox';
-      input.addEventListener('change', () => {
-        void (async () => {
-          const xUserId = await getUserId(detection.handle);
-          await setPendingBlock(
-            detection.handle,
-            input.checked,
-            detection.reason,
-            xUserId,
-            category,
-            evidence,
-          );
-        })().catch(() => {
-          input.checked = !input.checked; // 写入失败回滚勾选态
-        });
-      });
-      checkbox.appendChild(input);
-      checkbox.appendChild(document.createTextNode('待拉黑'));
 
       const blockBtn = document.createElement('button');
       blockBtn.className = 'fs-block-now';
@@ -466,7 +456,7 @@ export default defineContentScript({
       blockBtn.addEventListener('click', () => {
         void runBlockNow(detection.handle, blockBtn, category, evidence);
       });
-      primaryGroup.append(checkbox, blockBtn);
+      primaryGroup.append(blockBtn);
 
       // 次操作组：抢救 / 误标？（低频治理，弱化样式）
       const secondaryGroup = document.createElement('span');
@@ -528,18 +518,74 @@ export default defineContentScript({
       // cellInnerDiv 是普通块容器：徽章作为新块级子元素排在推文下方，
       // 处于文档流内但不进入 article 的 grid，不覆盖、不挤压任何 X 内容。
       cell.appendChild(badge);
+    }
 
-      // X 可能整棵重渲染节点；异步对齐一次勾选态，防 pendingCache 未及时刷新
-      void isPending(detection.handle).then((isOn) => {
-        input.checked = isOn;
-      });
+    /**
+     * 一键拉黑（popup 入口）：当前页面全部黄框账号批量拉黑。
+     * 逐个执行，成功即从 pageMarked 移除并把推文移除；失败如实保留，
+     * 汇总回报 popup（与「顺手拉黑」共用 blockOne 原生产链路）。
+     */
+    async function runPageBlockBatch(): Promise<{
+      blocked: string[];
+      failed: Array<{ handle: string; code: string }>;
+    }> {
+      const targets = [...pageMarked.values()];
+      const blocked: string[] = [];
+      const failed: Array<{ handle: string; code: string }> = [];
+      for (const item of targets) {
+        const outcome = await blockOne(item);
+        if (outcome.ok) {
+          blocked.push(item.handle);
+          pageMarked.delete(item.handle);
+          // 对齐 X 原生拉黑行为：该账号页面上可见的推文一并移除
+          removeCellsSoon(collectCellsByHandle(item.handle));
+        } else {
+          failed.push({ handle: item.handle, code: outcome.code });
+        }
+        await sleep(PACE_MS);
+      }
+      return { blocked, failed };
+    }
+
+    /**
+     * 单账号完整拉黑链路（顺手拉黑 / 一键拉黑共用）。
+     * 不抛异常，一切失败转成结构化结果；成功后记账 + 统计 + 贡献上报。
+     */
+    async function blockOne(
+      item: PageMarkedAccount,
+    ): Promise<{ ok: true } | { ok: false; code: string }> {
+      let xUserId: string | undefined | null = await getUserId(item.handle);
+      if (!xUserId) {
+        xUserId = await resolveUserIdByHandle(item.handle);
+        if (xUserId) {
+          void saveUserIds([{ handle: item.handle, xUserId }]).catch(() => {
+            // 回填失败不影响本次拉黑
+          });
+        }
+      }
+      if (!xUserId) {
+        return { ok: false, code: 'no-id' };
+      }
+
+      const result = await runNativeAction('block', xUserId);
+      if (!result.ok) {
+        return { ok: false, code: result.code };
+      }
+      // 记账（撤销入口的数据源）+ 本地统计
+      await markBlocked(item.handle, xUserId);
+      await bumpStat('blocked');
+      // v0.6 战报：今日拉黑 + 分类计数
+      await bumpDaily('blocked', item.category);
+      // 摩擦设计：拉黑成功即自动贡献社区（无弹窗；全局开关在 contributeBlocks 内判断）
+      contributeBlocks([{ handle: item.handle, xUserId, category: item.category, ...item.evidence }]);
+      return { ok: true };
     }
 
     /**
      * 顺手拉黑（Phase 2）：查缓存的 rest_id -> 调 X 网页端原拉黑端点。
      * 缓存 miss 不再让用户等刷新：按 UserByScreenName 当场解析（TBWL 同款），
      * 解析成功顺手回填缓存；只有解析也失败才如实提示。
-     * 成功后：从待拉黑列表移除该账号，并把页面上该账号的推文移除
+     * 成功后：把该账号从 pageMarked 移除，并把页面上该账号的推文移除
      * （对齐 X 原生拉黑行为，见 src/lib/remove-tweets.ts）。
      * 按钮文字实时反映状态，绝不假装成功。
      */
@@ -553,44 +599,20 @@ export default defineContentScript({
       button.disabled = true;
       try {
         button.textContent = '拉黑中…';
-        let xUserId: string | undefined | null = await getUserId(handle);
-        if (!xUserId) {
-          xUserId = await resolveUserIdByHandle(handle);
-          if (xUserId) {
-            void saveUserIds([{ handle, xUserId }]).catch(() => {
-              // 回填失败不影响本次拉黑
-            });
-          }
-        }
-        if (!xUserId) {
-          button.textContent = '失败 无ID';
-          console.warn(`[FeedSieve] resolve rest_id for @${handle} failed`);
-          setTimeout(() => {
-            button.textContent = original;
-            button.disabled = false;
-          }, 3000);
-          return;
-        }
-
-        const result = await runNativeAction('block', xUserId);
-        if (result.ok) {
+        const outcome = await blockOne({
+          handle,
+          category,
+          reason: '',
+          evidence,
+        });
+        if (outcome.ok) {
           button.textContent = '已拉黑 ✓';
-          // 已拉黑就不该再留在待拉黑列表里，否则批量执行会重复拉黑
-          await removePendingBlock(handle);
-          // 记账（撤销入口的数据源）+ 本地统计
-          await markBlocked(handle, xUserId);
-          await bumpStat('blocked');
-          // v0.6 战报：今日拉黑 + 分类计数
-          await bumpDaily('blocked', category);
-          // 摩擦设计：拉黑成功即自动贡献社区（无弹窗；全局开关在 contributeBlocks 内判断）
-          contributeBlocks([{ handle, xUserId, category, ...evidence }]);
-          // 对齐 X 原生拉黑行为：确认成功后把该账号页面上可见的推文一并移除，
-          // 让「已拉黑」立刻有可见效果，而不是等刷新
+          pageMarked.delete(handle);
           removeCellsSoon(collectCellsByHandle(handle));
         } else {
           // 如实反馈失败原因（auth_required / rate_limited / network_error…）
-          button.textContent = `失败 ${result.code}`;
-          console.warn(`[FeedSieve] block @${handle} failed:`, result.code, result.message);
+          button.textContent = `失败 ${outcome.code}`;
+          console.warn(`[FeedSieve] block @${handle} failed:`, outcome.code);
           setTimeout(() => {
             button.textContent = original;
             button.disabled = false;
@@ -607,6 +629,13 @@ export default defineContentScript({
     }
   },
 });
+
+/** 相邻两次拉黑请求的间隔（毫秒），与批量执行一致。 */
+const PACE_MS = 400;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function ensureStyles(): void {
   if (document.getElementById(STYLE_ELEMENT_ID)) {
