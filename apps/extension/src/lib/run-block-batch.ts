@@ -11,6 +11,7 @@
 import { resolveUserIdByHandle, runNativeAction } from '@feedsieve/x-adapter';
 import { markBlocked } from './blocked-accounts';
 import { bumpStat } from './local-stats';
+import { bumpDaily } from './daily-stats';
 import { getPendingBlocks, removePendingBlock, type PendingBlock } from './pending-blocks';
 import { getUserId } from './user-ids';
 import { collectCellsByHandle, removeCellsSoon } from './remove-tweets';
@@ -37,6 +38,8 @@ export async function runPendingBlockBatch(): Promise<BatchBlockResult> {
       await removePendingBlock(item.handle);
       await markBlocked(item.handle, item.xUserId);
       await bumpStat('blocked');
+      // v0.6 战报：今日拉黑 + 分类计数（贡献分类，见 contribute.ts）
+      await bumpDaily('blocked', item.category ?? 'other');
       // 对齐「顺手拉黑」：该账号页面上可见的推文一并移除
       removeCellsSoon(collectCellsByHandle(item.handle));
       // 摩擦设计：拉黑成功即自动贡献社区（全局开关在 contributeBlocks 内部判断）

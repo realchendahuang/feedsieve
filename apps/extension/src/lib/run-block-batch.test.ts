@@ -24,6 +24,10 @@ vi.mock('./local-stats', () => ({
   bumpStat: vi.fn(),
 }));
 
+vi.mock('./daily-stats', () => ({
+  bumpDaily: vi.fn(),
+}));
+
 vi.mock('./user-ids', () => ({
   getUserId: vi.fn(),
 }));
@@ -43,6 +47,7 @@ import { resolveUserIdByHandle, runNativeAction } from '@feedsieve/x-adapter';
 import { collectCellsByHandle, removeCellsSoon } from './remove-tweets';
 import { markBlocked } from './blocked-accounts';
 import { bumpStat } from './local-stats';
+import { bumpDaily } from './daily-stats';
 
 const mockedGetPending = vi.mocked(getPendingBlocks);
 const mockedRemove = vi.mocked(removePendingBlock);
@@ -53,6 +58,7 @@ const mockedCollect = vi.mocked(collectCellsByHandle);
 const mockedRemoveSoon = vi.mocked(removeCellsSoon);
 const mockedMarkBlocked = vi.mocked(markBlocked);
 const mockedBumpStat = vi.mocked(bumpStat);
+const mockedBumpDaily = vi.mocked(bumpDaily);
 
 function pending(handle: string, xUserId?: string): PendingBlock {
   return { handle, addedAt: 0, markedReason: '测试', ...(xUserId ? { xUserId } : {}) };
@@ -90,6 +96,8 @@ describe('runPendingBlockBatch', () => {
     expect(mockedMarkBlocked).toHaveBeenCalledWith('a', '1');
     expect(mockedMarkBlocked).toHaveBeenCalledWith('b', '2');
     expect(mockedBumpStat).toHaveBeenCalledWith('blocked');
+    // v0.6 战报：今日拉黑 + 分类计数
+    expect(mockedBumpDaily).toHaveBeenCalledWith('blocked', 'other');
   });
 
   it('falls back to cache, then live resolution, for missing rest_id', async () => {

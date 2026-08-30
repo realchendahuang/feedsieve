@@ -13,6 +13,12 @@ import {
 } from '../../src/lib/blocked-accounts';
 import { getStats, subscribeStats, type LocalStats } from '../../src/lib/local-stats';
 import {
+  getDailyStats,
+  subscribeDaily,
+  type DailyStats,
+} from '../../src/lib/daily-stats';
+import { buildReportText, shareUrl } from '../../src/lib/share-card';
+import {
   getAllowlist,
   removeAllowed,
   subscribeAllowlist,
@@ -72,6 +78,7 @@ export default function App() {
   const [blocks, setBlocks] = useState<PendingBlock[] | null>(null);
   const [blocked, setBlocked] = useState<BlockedAccount[] | null>(null);
   const [stats, setStats] = useState<LocalStats>(EMPTY_STATS);
+  const [daily, setDaily] = useState<DailyStats>({ days: {} });
   const [running, setRunning] = useState(false);
   const [blockResult, setBlockResult] = useState<BatchBlockResult | null>(null);
   const [unblockResult, setUnblockResult] = useState<UnblockBatchResult | null>(null);
@@ -90,6 +97,7 @@ export default function App() {
     void getPendingBlocks().then(setBlocks);
     void getBlockedAccounts().then(setBlocked);
     void getStats().then(setStats);
+    void getDailyStats().then(setDaily);
     void getAllowlist().then(setAllowlist);
     void getCommunitySettings().then(setCommunity);
     void getCommunitySnapshot().then(async (snapshot) => {
@@ -109,6 +117,7 @@ export default function App() {
       subscribePending(setBlocks),
       subscribeBlocked(setBlocked),
       subscribeStats(setStats),
+      subscribeDaily(setDaily),
       subscribeAllowlist(setAllowlist),
       subscribeCommunity(() => {
         void getCommunitySettings().then(setCommunity);
@@ -222,6 +231,16 @@ export default function App() {
           .join('、')
       : null;
 
+  // v0.6 战报：今日数据（daily-stats 按日累计）
+  const today = daily.days[new Date().toISOString().slice(0, 10)] ?? {
+    blocked: 0,
+    detected: 0,
+    unblocked: 0,
+    byCategory: {},
+  };
+  const reportText = buildReportText(today);
+  const shareHref = shareUrl(reportText);
+
   return (
     <main className="popup">
       <header className="popup-header">
@@ -229,6 +248,26 @@ export default function App() {
           福滤娃 <span className="popup-sub">FeedSieve</span>
         </h1>
       </header>
+
+      {/* 今日战报：送走 N 个 + 分类明细 + 一键分享 */}
+      <section className="report-card">
+        <div className="report-head">
+          <span className="stat-label">今日战报</span>
+          <a
+            className="report-share"
+            href={shareHref}
+            target="_blank"
+            rel="noreferrer"
+            title="分享到 X"
+          >
+            分享 ↗
+          </a>
+        </div>
+        <p className="report-text">{reportText}</p>
+        {today.detected > 0 ? (
+          <p className="report-sub">标注 {today.detected} 个 · 撤销 {today.unblocked} 个</p>
+        ) : null}
+      </section>
 
       {/* 本地统计（动作只发生在本机） */}
       <section className="stats-bar">

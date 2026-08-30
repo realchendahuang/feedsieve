@@ -8,6 +8,7 @@
 import { resolveUserIdByHandle, runNativeAction } from '@feedsieve/x-adapter';
 import { getBlockedAccounts, removeBlockedAccount } from './blocked-accounts';
 import { bumpStat } from './local-stats';
+import { bumpDaily } from './daily-stats';
 import { getUserId } from './user-ids';
 
 export interface UnblockBatchResult {
@@ -31,6 +32,8 @@ export async function runUnblockBatch(handle?: string): Promise<UnblockBatchResu
       unblocked.push(account.handle);
       await removeBlockedAccount(account.handle);
       await bumpStat('unblocked');
+      // v0.6 战报：今日撤销（无分类）
+      await bumpDaily('unblocked');
     } else {
       failed.push({ handle: account.handle, code: outcome.code });
     }

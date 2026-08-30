@@ -24,6 +24,7 @@ import {
   subscribeBlocked,
 } from '../src/lib/blocked-accounts';
 import { bumpStat } from '../src/lib/local-stats';
+import { bumpDaily } from '../src/lib/daily-stats';
 import { collectCellsByHandle, removeCellsSoon } from '../src/lib/remove-tweets';
 import { runPendingBlockBatch } from '../src/lib/run-block-batch';
 import { runUnblockBatch } from '../src/lib/run-unblock-batch';
@@ -579,6 +580,8 @@ export default defineContentScript({
           // 记账（撤销入口的数据源）+ 本地统计
           await markBlocked(handle, xUserId);
           await bumpStat('blocked');
+          // v0.6 战报：今日拉黑 + 分类计数
+          await bumpDaily('blocked', category);
           // 摩擦设计：拉黑成功即自动贡献社区（无弹窗；全局开关在 contributeBlocks 内判断）
           contributeBlocks([{ handle, xUserId, category, ...evidence }]);
           // 对齐 X 原生拉黑行为：确认成功后把该账号页面上可见的推文一并移除，
