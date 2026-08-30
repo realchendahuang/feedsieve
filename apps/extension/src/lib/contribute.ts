@@ -70,6 +70,33 @@ export async function getInstallationId(): Promise<string> {
   return created;
 }
 
+/** 我的社区贡献统计（v0.6）：累计上报 / 被采纳 / 抢救数。纯数字，无账号信息。 */
+export interface ContributionStats {
+  reports: number;
+  rescues: number;
+  adopted: number;
+}
+
+export async function getContributionStats(): Promise<ContributionStats | null> {
+  try {
+    const installationId = await getInstallationId();
+    const response = await fetch(
+      `${COMMUNITY_API_BASE}/v1/contributions/stats?installation_id=${encodeURIComponent(installationId)}`,
+    );
+    if (!response.ok) {
+      return null;
+    }
+    const body = (await response.json()) as Partial<ContributionStats>;
+    return {
+      reports: Number(body.reports) || 0,
+      rescues: Number(body.rescues) || 0,
+      adopted: Number(body.adopted) || 0,
+    };
+  } catch {
+    return null; // 网络失败静默：战报不因统计不可用而崩
+  }
+}
+
 /** detect 结果 -> 上报分类（用户零输入） */
 export function categoryFromDetection(
   source: string,

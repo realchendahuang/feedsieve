@@ -17,7 +17,10 @@ import {
   subscribeDaily,
   type DailyStats,
 } from '../../src/lib/daily-stats';
-import { buildReportText, shareUrl } from '../../src/lib/share-card';
+import { buildReportText, shareUrl, CATEGORY_LABELS } from '../../src/lib/share-card';
+import { estimateTimeSaved } from '../../src/lib/time-saved';
+import { getContributionStats, type ContributionStats } from '../../src/lib/contribute';
+import { drawReportCard } from '../../src/lib/share-card-image';
 import {
   getAllowlist,
   removeAllowed,
@@ -79,6 +82,8 @@ export default function App() {
   const [blocked, setBlocked] = useState<BlockedAccount[] | null>(null);
   const [stats, setStats] = useState<LocalStats>(EMPTY_STATS);
   const [daily, setDaily] = useState<DailyStats>({ days: {} });
+  const [contribution, setContribution] = useState<ContributionStats | null>(null);
+  const [cardUrl, setCardUrl] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [blockResult, setBlockResult] = useState<BatchBlockResult | null>(null);
   const [unblockResult, setUnblockResult] = useState<UnblockBatchResult | null>(null);
@@ -98,6 +103,7 @@ export default function App() {
     void getBlockedAccounts().then(setBlocked);
     void getStats().then(setStats);
     void getDailyStats().then(setDaily);
+    void getContributionStats().then(setContribution);
     void getAllowlist().then(setAllowlist);
     void getCommunitySettings().then(setCommunity);
     void getCommunitySnapshot().then(async (snapshot) => {
@@ -240,6 +246,27 @@ export default function App() {
   };
   const reportText = buildReportText(today);
   const shareHref = shareUrl(reportText);
+  const timeSaved = estimateTimeSaved(today.detected);
+
+  /** 生成分享卡片图片（canvas -> dataURL，popup 预览 + 下载用）。 */
+  function makeCard(): void {
+    try {
+      const canvas = drawReportCard(today);
+      setCardUrl(canvas.toDataURL('image/png'));
+    } catch {
+      setCardUrl(null); // canvas 不可用（极老环境）时静默降级为纯文字分享
+    }
+  }
+  // 分类占比条形图：按数量降序，最多显示 4 类（克制）
+  const categoryBars = Object.entries(today.byCategory)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+    .map(([key, count]) => ({
+      key,
+      label: CATEGORY_LABELS[key] ?? key,
+      count,
+      pct: today.blocked > 0 ? Math.round((count / today.blocked) * 100) : 0,
+    }));
 
   return (
     <main className="popup">
@@ -253,19 +280,64 @@ export default function App() {
       <section className="report-card">
         <div className="report-head">
           <span className="stat-label">今日战报</span>
-          <a
-            className="report-share"
-            href={shareHref}
-            target="_blank"
-            rel="noreferrer"
-            title="分享到 X"
-          >
-            分享 ↗
-          </a>
+          <div className="report-actions">
+            <button
+              type="button"
+              className="report-card-btn"
+              title="生成分享卡片"
+              onClick={makeCard}
+            >
+              卡片
+            </button>
+            <a
+              className="report-share"
+              href={shareHref}
+              target="_blank"
+              rel="noreferrer"
+              title="分享到 X"
+            >
+              分享 ↗
+            </a>
+          </div>
         </div>
+        {cardUrl ? (
+          <div className="report-card-preview">
+            <img src={cardUrl} alt="战报分享卡片" />
+            <a
+              className="report-card-download"
+              href={cardUrl}
+              download="feedsieve-report.png"
+            >
+              下载图片
+            </a>
+          </div>
+        ) : null}
         <p className="report-text">{reportText}</p>
         {today.detected > 0 ? (
-          <p className="report-sub">标注 {today.detected} 个 · 撤销 {today.unblocked} 个</p>
+          <p className="report-sub">
+            标注 {today.detected} 个 · 撤销 {today.unblocked} 个 · 省下 {timeSaved.label}
+          </p>
+        ) : null}
+        {categoryBars.length > 0 ? (
+          <div className="report-bars">
+            {categoryBars.map((bar) => (
+              <div key={bar.key} className="report-bar">
+                <span className="report-bar-label">{bar.label}</span>
+                <div className="report-bar-track">
+                  <div
+                    className="report-bar-fill"
+                    style={{ width: `${Math.max(bar.pct, 4)}%` }}
+                  />
+                </div>
+                <span className="report-bar-count">{bar.count}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        {contribution && contribution.reports > 0 ? (
+          <p className="report-sub">
+            已为社区贡献 {contribution.reports} 条 · 被采纳 {contribution.adopted} 个
+          </p>
         ) : null}
       </section>
 

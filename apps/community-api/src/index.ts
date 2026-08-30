@@ -2,6 +2,7 @@ import { cors } from 'hono/cors';
 import { Hono } from 'hono';
 import { checkBearerToken } from './lib/auth';
 import { isAdminStatus } from './lib/admin';
+import { hashInstallationId } from './lib/hash';
 import { POLICY, processReportBatch, publicPolicy } from './reports';
 import { processRescueBatch } from './rescues';
 import {
@@ -69,6 +70,50 @@ export function createApp() {
 
   // 公开政策：阈值不藏在后端黑箱里
   app.get('/v1/policy', (c) => c.json(publicPolicy()));
+
+  // 我的贡献统计（v0.6）：按安装哈希查累计上报 / 被采纳 / 抢救数。
+  // 隐私：只接受哈希后的安装 ID，原始 UUID 不落库；返回纯数字，无账号信息。
+  app.get('/v1/contributions/stats', async (c) => {
+    const installationId = c.req.query('installation_id');
+    if (
+      typeof installationId !== 'string' ||
+      installationId.length < 8 ||
+      installationId.length > 128
+    ) {
+      return c.json({ error: 'invalid_installation_id' }, 400);
+    }
+    const installHash = await hashInstallationId(
+      c.env.INSTALLATION_SALT,
+      installationId,
+    );
+    const [reports, rescues, adopted] = await Promise.all([
+      c.env.DB.prepare(
+        'SELECT COUNT(*) AS n FROM reports WHERE installation_id = ?1',
+      )
+        .bind(installHash)
+        .first<{ n: number }>(),
+      c.env.DB.prepare(
+        'SELECT COUNT(*) AS n FROM rescues WHERE installation_id = ?1',
+      )
+        .bind(installHash)
+        .first<{ n: number }>(),
+      // 被采纳：该安装上报过的账号，最终进了快照（candidate/recommended/strong）
+      c.env.DB.prepare(
+        `SELECT COUNT(DISTINCT r.handle) AS n
+         FROM reports r
+         JOIN accounts a ON a.handle = r.handle
+         WHERE r.installation_id = ?1
+           AND a.status IN ('candidate', 'recommended', 'strong')`,
+      )
+        .bind(installHash)
+        .first<{ n: number }>(),
+    ]);
+    return c.json({
+      reports: reports?.n ?? 0,
+      rescues: rescues?.n ?? 0,
+      adopted: adopted?.n ?? 0,
+    });
+  });
 
   // admin：ADMIN_TOKEN 保护；自动化只能到 candidate，提升/发布由人触发
   app.use('/admin/*', async (c, next) => {

@@ -69,6 +69,49 @@ body {
   gap: 8px;
 }
 
+.report-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.report-card-btn {
+  border: none;
+  background: transparent;
+  color: var(--fs-yellow-text);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.report-card-btn:hover {
+  color: var(--fs-yellow-ink);
+}
+
+.report-card-preview {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+
+.report-card-preview img {
+  width: 100%;
+  border-radius: 6px;
+  border: 1px solid var(--fs-yellow-border-soft);
+}
+
+.report-card-download {
+  font-size: 11px;
+  color: var(--fs-yellow-text);
+  text-decoration: none;
+}
+
+.report-card-download:hover {
+  color: var(--fs-yellow-ink);
+}
+
 .report-share {
   font-size: 11px;
   color: var(--fs-yellow-text);
@@ -92,6 +135,52 @@ body {
   margin: 4px 0 0;
   font-size: 10px;
   color: var(--fs-yellow-text-soft);
+}
+
+/* 分类占比条形图（纯 CSS，不引图表库） */
+.report-bars {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.report-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--fs-yellow-text);
+}
+
+.report-bar-label {
+  flex: none;
+  width: 44px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.report-bar-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: #f0e6b8;
+  overflow: hidden;
+}
+
+.report-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--fs-yellow);
+}
+
+.report-bar-count {
+  flex: none;
+  min-width: 16px;
+  text-align: right;
+  font-weight: 600;
+  color: var(--fs-yellow-ink);
 }
 
 /* 本地统计条 */
