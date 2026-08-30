@@ -88,17 +88,19 @@ AI 识别（原 v0.5 规划）顺延至 v0.5.x / v0.6：**AI 是最后一层识�
 ## v0.7 — Block Pack 生态（已否决 2026-08-30）
 
 **不做。** 用户拍板：官方仓库单一来源，名单只走官方社区管线（上报 → 审核 → 快照 → 镜像）。
-第三方 Pack / Registry / 订阅生态全部砍掉，不进入实施。
+第三方 Pack / Registry / 订阅 / 导入导出全部砍掉，不进入实施。
 
 - ~~Third-party Block Pack~~
 - ~~Pack metadata / maintainer / version~~
 - ~~Pack subscription~~
 - ~~Import / Export~~
 - ~~Public Pack Registry~~
-- Firefox
-- Safari 评估
-- Developer Adapter API / SDK
-- 更多平台 Adapter（YouTube / Instagram 评论区）
+- ~~Firefox~~
+- ~~Safari 评估~~
+- ~~Developer Adapter API / SDK~~
+- ~~更多平台 Adapter（YouTube / Instagram 评论区）~~
+
+**产品边界（用户拍板）：只做 X + Chrome 系浏览器。** 跨浏览器、跨平台均无价值，不做。
 
 ## 当前实施顺序
 
