@@ -49,6 +49,12 @@ The technical rule is simple:
 
 单账号场景：看到垃圾号，点「顺手拉黑」。误伤场景：一键「放回来」。
 
+## 安装
+
+- Chrome Web Store：审核通过后补链接
+- 开发者加载：`pnpm install && pnpm build:extension`，Chrome 载入 `apps/extension/.output/chrome-mv3`
+- 隐私政策：[PRIVACY.md](PRIVACY.md) · 问题反馈：[Issues](https://github.com/realchendahuang/feedsieve/issues)
+
 ## 品牌定位
 
 | 项目 | 定义 |

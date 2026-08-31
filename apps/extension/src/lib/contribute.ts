@@ -58,7 +58,10 @@ const INSTALLATION_KEY = 'installationId';
 const BACKLOG_KEY = 'pendingContributions';
 const MAX_BACKLOG = 500;
 
-/** 本机匿名安装 ID：首次使用时生成随机 UUID，服务端只存加盐哈希。 */
+/**
+ * 本机匿名安装 ID：首次使用时生成随机 UUID，服务端只存加盐哈希。
+ * 只在主动路径调用（贡献上报 / 复制 ID 按钮）；被动查询走 peekInstallationId。
+ */
 export async function getInstallationId(): Promise<string> {
   const result = await browser.storage.local.get(INSTALLATION_KEY);
   const existing = result[INSTALLATION_KEY];
@@ -70,6 +73,15 @@ export async function getInstallationId(): Promise<string> {
   return created;
 }
 
+/** 只读安装 ID：存在则返回，绝不生成、绝不发请求。 */
+export async function peekInstallationId(): Promise<string | null> {
+  const result = await browser.storage.local.get(INSTALLATION_KEY);
+  const existing = result[INSTALLATION_KEY];
+  return typeof existing === 'string' && existing.length >= 8
+    ? existing
+    : null;
+}
+
 /** 我的社区贡献统计（v0.6）：累计上报 / 被采纳 / 抢救数。纯数字，无账号信息。 */
 export interface ContributionStats {
   reports: number;
@@ -79,10 +91,17 @@ export interface ContributionStats {
 
 export async function getContributionStats(): Promise<ContributionStats | null> {
   try {
-    const installationId = await getInstallationId();
-    const response = await fetch(
-      `${COMMUNITY_API_BASE}/v1/contributions/stats?installation_id=${encodeURIComponent(installationId)}`,
-    );
+    const installationId = await peekInstallationId();
+    // 本机从未上报过（无安装 ID）：零网络请求，与「只有主动拉黑才上报」一致
+    if (!installationId) {
+      return null;
+    }
+    // POST body：原始 UUID 不进 URL，避免边缘/访问日志暂存
+    const response = await fetch(`${COMMUNITY_API_BASE}/v1/contributions/stats`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ installation_id: installationId }),
+    });
     if (!response.ok) {
       return null;
     }

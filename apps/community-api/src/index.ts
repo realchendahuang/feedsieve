@@ -71,9 +71,14 @@ export function createApp() {
   app.get('/v1/policy', (c) => c.json(publicPolicy()));
 
   // 我的贡献统计（v0.6）：按安装哈希查累计上报 / 被采纳 / 抢救数。
-  // 隐私：只接受哈希后的安装 ID，原始 UUID 不落库；返回纯数字，无账号信息。
-  app.get('/v1/contributions/stats', async (c) => {
-    const installationId = c.req.query('installation_id');
+  // 隐私：POST body 接收安装 ID（不进 URL，不落边缘访问日志），服务端只存
+  // 加盐哈希；返回纯数字，无账号信息。
+  app.post('/v1/contributions/stats', async (c) => {
+    const body: unknown = await c.req.json().catch(() => undefined);
+    const installationId =
+      typeof body === 'object' && body !== null
+        ? (body as Record<string, unknown>)['installation_id']
+        : undefined;
     if (
       typeof installationId !== 'string' ||
       installationId.length < 8 ||

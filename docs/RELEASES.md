@@ -1,5 +1,34 @@
 # Release Notes
 
+## v0.7.0 — 上架准备（2026-08-31）
+
+面向 Chrome Web Store 首次提交的发布版。
+
+### 能力清单
+
+- **商店素材**：全套扩展图标（16/32/48/64/128，来自 1254px 高清头像）；440x280 宣传图 + 1400x560 跑马灯（`assets/store/`）；真机截图（`assets/store/screenshot-1-marked.png`）。
+- **发布流水**：`scripts/pack-store.sh`（verify -> 构建 -> zip -> manifest/ZIP 内容审计 -> SHA-256）；上架手册 `docs/STORE_SUBMISSION.md`（listing 文案、权限说明、数据披露、审核员说明）。
+- **隐私政策**：仓库根 `PRIVACY.md`（双语），商店隐私政策 URL 与支持入口（GitHub Issues）落地。
+- **消息链路修复**：popup「页面黄框」查询的 onMessage 监听器由同步数组改为 Promise 返回（Chrome 原生 API 只认 true/Promise 为异步响应标记，同步返回会被丢弃、popup 永远收到 undefined）；popup 消费侧对 undefined 加 `?? []` 防御。真机 E2E 捕获。
+
+### 安全边界
+
+- **贡献统计零打扰**：安装 ID 改为只读（`peekInstallationId`），从未上报过的设备打开 popup 不发任何请求、不生成 ID。
+- **原始 UUID 不进 URL**：`/v1/contributions/stats` 从 GET query 改为 POST body，避免边缘访问日志暂存原始安装 ID（部署新版 API 后生效；未部署时统计行静默降级）。
+- **host 权限最小化**：移除 jsDelivr 镜像兜底源（原代码引用了未声明的 host permission），快照同步只走官方 API；仓库镜像保留为公开存档。host_permissions 收敛为 x.com + 官方 API。
+
+### 已知状态
+
+- 真机端到端验证已完成（2026-08-31，主力 Chrome + x.com）：社区名单同步（v2026.08.30.2）✓；社区名单账号（@Crypto_Teacher，scam_phishing）时间线黄框 + 徽章标注 ✓；徽章「顺手拉黑」-> X 服务端拉黑生效（主页显示已屏蔽）✓；popup 已拉黑列表 -> 撤销 -> X 主页恢复「关注」✓；popup 战报「送走 1 个垃圾号（诈骗 1）」实时更新 ✓。
+- 社区 API 需重新部署以启用 POST stats；未部署不影响其他功能（统计行静默降级）。
+- 「页面黄框」pending 态：popup 打开瞬间可能停在 `…`，点 ⟳ 刷新即恢复（消息链路已修复，此为冷启动时序的已知边角）。
+
+### 发布工件
+
+- `feedsieve-0.7.0-chrome.zip`（139.59 kB）
+- SHA-256: `5c753b7d3dc9e76b1c9cd6c1135a2d01dca3cd9310ce877dcad8e7a611cedc42`
+- 构建命令：`bash scripts/pack-store.sh`
+
 ## v0.6.1 — 会整活 · 补全（2026-08-30）
 
 v0.6 余项一次收尾。

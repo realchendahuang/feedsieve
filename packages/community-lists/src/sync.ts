@@ -33,7 +33,7 @@ export interface SnapshotStore {
 }
 
 export interface SyncOptions {
-  /** 依次尝试的来源；前面的源报错时自动落到下一个（如 Worker -> jsDelivr 镜像） */
+  /** 依次尝试的来源；前面的源报错时自动落到下一个 */
   sources: SyncSource[];
   fetchImpl: FetchLike;
   store: SnapshotStore;

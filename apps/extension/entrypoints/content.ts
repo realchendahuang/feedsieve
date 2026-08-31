@@ -140,11 +140,15 @@ export default defineContentScript({
     browser.runtime.onMessage.addListener((message: unknown) => {
       const type = (message as { type?: string } | null)?.type;
       if (type === 'feedsieve:page-marked-list') {
-        return [...pageMarked.values()].map((m) => ({
-          handle: m.handle,
-          category: m.category,
-          reason: m.reason,
-        }));
+        // 必须 Promise：Chrome 原生 onMessage 只认 true / Promise 作为异步响应，
+        // 同步返回数组会被忽略，popup 收到 undefined（v0.7.0 真机回归捕获）
+        return Promise.resolve(
+          [...pageMarked.values()].map((m) => ({
+            handle: m.handle,
+            category: m.category,
+            reason: m.reason,
+          })),
+        );
       }
       return undefined;
     });

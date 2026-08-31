@@ -20,17 +20,12 @@ import {
 export const COMMUNITY_API_BASE = 'https://feedsieve-api.chendahuang.com';
 
 /**
- * 快照双源：Worker 主源；jsDelivr 镜像兜底（Worker 不可达时）。
- * 镜像内容 = 仓库 community/lists/ 最近一次提交（scripts/mirror-community-lists.sh 维护）。
+ * 快照来源：官方 Worker 单源（最小 host 权限：x.com + 官方 API）。
+ * 仓库 community/lists/ 镜像仅为公开存档（scripts/mirror-community-lists.sh 维护），
+ * 扩展不直接拉取第三方 CDN。
  */
 export const COMMUNITY_SYNC_SOURCES: SyncSource[] = [
   workerSource(COMMUNITY_API_BASE),
-  {
-    manifestUrl:
-      'https://cdn.jsdelivr.net/gh/realchendahuang/feedsieve@main/community/lists/manifest.json',
-    fileUrl: (_version, path) =>
-      `https://cdn.jsdelivr.net/gh/realchendahuang/feedsieve@main/community/lists/${path}`,
-  },
 ];
 
 const SNAPSHOT_KEY = 'communitySnapshot';

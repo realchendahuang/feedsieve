@@ -112,7 +112,7 @@ export default function App() {
     void getCommunitySettings().then(setCommunity);
     // 页面黄框清单只读查询走 .then 链（满足 set-state-in-effect 规则）
     void sendToXPage(PAGE_MARKED_MESSAGE)
-      .then((result) => setPageMarked(result as PageMarkedItem[]))
+      .then((result) => setPageMarked((result as PageMarkedItem[]) ?? []))
       .catch(() => setPageMarked([]));
     void getCommunitySnapshot().then(async (snapshot) => {
       if (!snapshot) {
@@ -168,8 +168,10 @@ export default function App() {
   /** 从活动 x.com 标签实时拉取当前页面黄框账号清单。 */
   async function refreshPageMarked(): Promise<void> {
     try {
-      const result = (await sendToXPage(PAGE_MARKED_MESSAGE)) as PageMarkedItem[];
-      setPageMarked(result);
+      const result = (await sendToXPage(PAGE_MARKED_MESSAGE)) as
+        | PageMarkedItem[]
+        | undefined;
+      setPageMarked(result ?? []);
     } catch {
       setPageMarked([]); // 没有可用的 x.com 标签：空清单，按钮会给提示
     }

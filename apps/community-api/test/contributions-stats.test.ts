@@ -36,14 +36,18 @@ async function rescue(installationId: string, handle: string) {
 
 async function stats(installationId: string): Promise<Record<string, number>> {
   const res = await worker.fetch(
-    new Request(`${ORIGIN}/v1/contributions/stats?installation_id=${installationId}`),
+    new Request(`${ORIGIN}/v1/contributions/stats`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ installation_id: installationId }),
+    }),
     env,
   );
   expect(res.status).toBe(200);
   return (await res.json()) as Record<string, number>;
 }
 
-describe('GET /v1/contributions/stats', () => {
+describe('POST /v1/contributions/stats', () => {
   it('返回该安装的累计上报 / 抢救 / 被采纳数', async () => {
     const install = 'stats-install-0001-ffffff';
     await report(install, 'stats_a');
@@ -71,7 +75,11 @@ describe('GET /v1/contributions/stats', () => {
 
   it('非法 installation_id 返回 400', async () => {
     const res = await worker.fetch(
-      new Request(`${ORIGIN}/v1/contributions/stats?installation_id=short`),
+      new Request(`${ORIGIN}/v1/contributions/stats`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ installation_id: 'short' }),
+      }),
       env,
     );
     expect(res.status).toBe(400);
