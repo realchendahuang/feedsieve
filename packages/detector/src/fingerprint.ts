@@ -57,10 +57,7 @@ export function fingerprintText(text: string): string | null {
  * Detector / 扩展共用的指纹入口：正文优先（推文是复制的载体），
  * 无正文时退回简介（垃圾号爱在 bio 埋话术，PureTwitter 实证）。
  */
-export function contentFingerprint(input: {
-  text?: string;
-  bio?: string;
-}): string | null {
+export function contentFingerprint(input: { text?: string; bio?: string }): string | null {
   const text = input.text?.trim() ? input.text : input.bio;
   if (!text) {
     return null;
@@ -78,11 +75,11 @@ export interface RepetitionTrackerOptions {
 
 export interface RepetitionTracker {
   /**
-   * 记一次出现。达到阈值后每次调用都返回 true ——
-   * 同一模板的第 3、4、5 个发帖账号都该被标；每条推文只 track 一次由调用方负责。
+   * 记一个账号使用该模板。达到不同账号阈值后每次调用都返回 true ——
+   * 同一账号重复发帖或 X 虚拟滚动重挂 DOM 只算一次。
    */
-  track(fingerprint: string): boolean;
-  /** 该指纹当前累计出现次数 */
+  track(fingerprint: string, identity: string): boolean;
+  /** 该指纹当前累计的不同账号数 */
   countOf(fingerprint: string): number;
 }
 
@@ -90,26 +87,25 @@ export interface RepetitionTracker {
  * 本地复读追踪（v0.4 copy-paste clustering 的最简形态）：
  * 会话内存，不持久、不上传，页面关闭即消失。
  */
-export function createRepetitionTracker(
-  options: RepetitionTrackerOptions = {},
-): RepetitionTracker {
+export function createRepetitionTracker(options: RepetitionTrackerOptions = {}): RepetitionTracker {
   const minRepeat = options.minRepeat ?? 3;
   const maxTracked = options.maxTracked ?? 600;
-  const counts = new Map<string, number>();
+  const identities = new Map<string, Set<string>>();
   return {
-    track(fingerprint) {
-      const prev = counts.get(fingerprint) ?? 0;
-      counts.set(fingerprint, prev + 1);
-      if (counts.size > maxTracked) {
-        const oldest = counts.keys().next().value;
+    track(fingerprint, identity) {
+      const seen = identities.get(fingerprint) ?? new Set<string>();
+      seen.add(identity.toLowerCase());
+      identities.set(fingerprint, seen);
+      if (identities.size > maxTracked) {
+        const oldest = identities.keys().next().value;
         if (oldest !== undefined && oldest !== fingerprint) {
-          counts.delete(oldest);
+          identities.delete(oldest);
         }
       }
-      return prev + 1 >= minRepeat;
+      return seen.size >= minRepeat;
     },
     countOf(fingerprint) {
-      return counts.get(fingerprint) ?? 0;
+      return identities.get(fingerprint)?.size ?? 0;
     },
   };
 }

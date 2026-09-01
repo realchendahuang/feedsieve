@@ -1,10 +1,11 @@
 {
   "name": "@feedsieve/extension",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "wxt",
+    "preview:popup": "vite --config vite.preview.config.mjs",
     "build": "wxt build",
     "zip": "wxt zip",
     "postinstall": "wxt prepare",

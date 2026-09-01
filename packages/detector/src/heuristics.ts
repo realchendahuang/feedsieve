@@ -27,11 +27,15 @@ const defaultNameDigits: HeuristicRule = {
     if (displayName && DEFAULT_NAME_RE.test(displayName)) {
       return '默认名 + 随机数字，疑似批量注册账号';
     }
+    // displayName 缺失通常只是 X 懒加载 / 引用帖 DOM 暂时没解析出来，
+    // 不能把“读取不到证据”当成“没有有效昵称”。只有昵称本身也明确保持
+    // 默认数字名时，handle 形态才作为第二条相互独立的证据参与判定。
     if (
       DIGIT_TAIL_HANDLE_RE.test(input.handle) &&
-      (!displayName || DEFAULT_NAME_RE.test(displayName))
+      displayName &&
+      DEFAULT_NAME_RE.test(displayName)
     ) {
-      return 'handle 为短前缀长数字，且无有效昵称';
+      return 'handle 为短前缀长数字，且昵称也是默认数字名';
     }
     return null;
   },
@@ -45,8 +49,7 @@ const defaultNameDigits: HeuristicRule = {
  * 不要求词边界：垃圾域名惯用 myfreecrypto.xxx 这类嵌入式命名；
  * 多字词组合误命中正常域名的概率极低，且标注需用户确认才会拉黑。
  */
-const SPAM_HOST_HINT_RE =
-  /(?:giveaway|airdrop|freecrypto|freegift|claimrewards?)/i;
+const SPAM_HOST_HINT_RE = /(?:giveaway|airdrop|freecrypto|freegift|claimrewards?)/i;
 
 const spamLinkHint: HeuristicRule = {
   id: 'spam-link-hint',
@@ -65,7 +68,10 @@ const spamLinkHint: HeuristicRule = {
 
 /** 模板化文本：高频垃圾话术。每条 pattern 的 label 会直接成为标注理由。 */
 const TEMPLATED_PATTERNS: ReadonlyArray<readonly [RegExp, string]> = [
-  [/(?:加|私)(?:我)?(?:微信|QQ|扣扣)|带单(?:老师)?|内部(?:群|渠道)|包赚|稳赚不赔/i, '中文引流 / 带单话术'],
+  [
+    /(?:加|私)(?:我)?(?:微信|QQ|扣扣)|带单(?:老师)?|内部(?:群|渠道)|包赚|稳赚不赔/i,
+    '中文引流 / 带单话术',
+  ],
   [
     /\b(?:dm|pm)\s+(?:me|us)\b[\s\S]{0,40}\b(?:invest|crypto|profit|earn|signal)/i,
     '英文 DM 引流 + 变现关键词',
@@ -81,10 +87,7 @@ const TEMPLATED_PATTERNS: ReadonlyArray<readonly [RegExp, string]> = [
     '加密货币 Giveaway 假抽奖模板',
   ],
   // 要求 repost/retweet/follow 这类强互动引流动词，避免误伤日常 "like ... win" 表述
-  [
-    /(?:follow|repost|retweet)\b[\s\S]{0,60}(?:claim|win)\b/i,
-    '关注-转发抽奖引流话术',
-  ],
+  [/(?:follow|repost|retweet)\b[\s\S]{0,60}(?:claim|win)\b/i, '关注-转发抽奖引流话术'],
 ];
 
 const templatedText: HeuristicRule = {

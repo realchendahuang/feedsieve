@@ -48,14 +48,15 @@ async function stats(installationId: string): Promise<Record<string, number>> {
 }
 
 describe('POST /v1/contributions/stats', () => {
-  it('返回该安装的累计上报 / 抢救 / 被采纳数', async () => {
+  it('返回该安装当前生效的黑名单 / 白名单 / 被采纳数', async () => {
     const install = 'stats-install-0001-ffffff';
     await report(install, 'stats_a');
     await report(install, 'stats_b');
     await rescue(install, 'stats_a');
 
     const s = await stats(install);
-    expect(s.reports).toBe(2);
+    // stats_a 已从拉黑改判为白名单，同一安装不再同时算正负两票。
+    expect(s.reports).toBe(1);
     expect(s.rescues).toBe(1);
     // 上报过的账号尚未进快照（无 3 票），adopted = 0
     expect(s.adopted).toBe(0);

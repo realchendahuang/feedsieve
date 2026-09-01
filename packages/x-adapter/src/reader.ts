@@ -30,19 +30,53 @@ function extractDisplayName(area: Element | null, handle: string): string | unde
   }
   const full = area.textContent ?? '';
   // X 的展示名不允许含 @，所以所有 @handle 出现都可以安全剥掉
-  const withoutHandle = full.replace(
-    new RegExp(`@${escapeRegExp(handle)}\\b`, 'gi'),
-    '',
-  );
+  const withoutHandle = full.replace(new RegExp(`@${escapeRegExp(handle)}\\b`, 'gi'), '');
   const cleaned = withoutHandle
     .replace(/[\u00b7\u2022|]/g, ' ')
     .replace(/^[\s\-–—:·@]+|[\s\-–—:·@]+$/g, '');
   return cleaned || undefined;
 }
 
-function extractExternalLinks(article: Element): FeedItem['links'] {
+/**
+ * X 的引用帖嵌在父 article 内。引用卡通常是一个 link/role=link 容器，里面
+ * 自带另一个 /status/<id>。Reader 只能把父帖自己的正文与外链交给 Detector，
+ * 否则“引用垃圾内容进行评论”的正常账号会被误标成原作者。
+ */
+function isInsideQuotedPost(element: Element, article: Element, articlePostId?: string): boolean {
+  if (!articlePostId) {
+    return false;
+  }
+  let current = element.parentElement;
+  while (current && current !== article) {
+    if (current.matches('a[href*="/status/"], [role="link"]')) {
+      const statusAnchor = current.matches('a[href*="/status/"]')
+        ? current
+        : current.querySelector('a[href*="/status/"]');
+      const nestedId = POST_ID_RE.exec(statusAnchor?.getAttribute('href') ?? '')?.[1];
+      if (nestedId && nestedId !== articlePostId) {
+        return true;
+      }
+    }
+    current = current.parentElement;
+  }
+  return false;
+}
+
+function extractOwnText(article: Element, postId?: string): string {
+  for (const textEl of article.querySelectorAll(tweetSelectors.text)) {
+    if (!isInsideQuotedPost(textEl, article, postId)) {
+      return textEl.textContent ?? '';
+    }
+  }
+  return '';
+}
+
+function extractExternalLinks(article: Element, postId?: string): FeedItem['links'] {
   const links = new Map<string, FeedItem['links'][number]>();
   for (const anchor of article.querySelectorAll('a[href]')) {
+    if (isInsideQuotedPost(anchor, article, postId)) {
+      continue;
+    }
     const href = anchor.getAttribute('href') ?? '';
     let url: URL;
     try {
@@ -75,31 +109,25 @@ function extractExternalLinks(article: Element): FeedItem['links'] {
  * - handle 缺失（DOM 不符合预期）时返回 null，调用方安全跳过
  * - 输出是纯数据：Detector 与 UI 永远不直接读 article 内部结构
  */
-export function extractFeedItem(
-  article: Element,
-  context: FeedContext = 'other',
-): FeedItem | null {
-  const authorAnchor =
-    article.querySelector<HTMLAnchorElement>(tweetSelectors.authorLink);
-  const handle = authorAnchor
-    ? extractHandleFromPath(authorAnchor.pathname)
-    : null;
+export function extractFeedItem(article: Element, context: FeedContext = 'other'): FeedItem | null {
+  const authorAnchor = article.querySelector<HTMLAnchorElement>(tweetSelectors.authorLink);
+  const handle = authorAnchor ? extractHandleFromPath(authorAnchor.pathname) : null;
   if (!handle) {
     return null;
   }
 
   const nameArea = article.querySelector(tweetSelectors.authorNameArea);
-  const textEl = article.querySelector(tweetSelectors.text);
+  const postId = extractPostId(article);
 
   return {
     source: 'x',
-    postId: extractPostId(article),
+    postId,
     author: {
       handle,
       displayName: extractDisplayName(nameArea, handle),
     },
-    text: textEl?.textContent ?? '',
-    links: extractExternalLinks(article),
+    text: extractOwnText(article, postId),
+    links: extractExternalLinks(article, postId),
     context,
   };
 }

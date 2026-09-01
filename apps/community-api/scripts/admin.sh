@@ -4,6 +4,7 @@
 # 用法:
 #   ./admin.sh health                    检查服务存活
 #   ./admin.sh candidates                待审队列（只读，透明度用）
+#   ./admin.sh false-positives           误标反馈（按规则汇总 + 最近记录）
 #   ./admin.sh publish                   生成并发布新快照版本（cron 已自动跑，手动是保险丝）
 #
 # 环境变量:
@@ -30,11 +31,14 @@ case "$cmd" in
   candidates)
     curl -sS -H "$AUTH" "$API/admin/candidates"
     ;;
+  false-positives)
+    curl -sS -H "$AUTH" "$API/admin/false-positives"
+    ;;
   publish)
     curl -sS -X POST -H "$AUTH" "$API/admin/publish"
     ;;
   *)
-    echo "用法: admin.sh <health|candidates|publish>" >&2
+    echo "用法: admin.sh <health|candidates|false-positives|publish>" >&2
     exit 1
     ;;
 esac

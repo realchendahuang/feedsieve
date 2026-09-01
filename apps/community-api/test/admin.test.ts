@@ -51,17 +51,13 @@ describe('admin candidates（只读透明度）', () => {
     for (const id of installs) await report(id, 'review_user');
 
     // 上传时已按阈值定级：3 票 → strong（不再需要人工 promote）
-    const row = await env.DB.prepare(
-      'SELECT status, report_count FROM accounts WHERE handle = ?1',
-    )
+    const row = await env.DB.prepare('SELECT status, report_count FROM accounts WHERE handle = ?1')
       .bind('review_user')
       .first<{ status: string; report_count: number }>();
     expect(row?.status).toBe('strong');
     expect(row?.report_count).toBe(3);
 
-    const queue = (await (
-      await adminFetch('/admin/candidates', { token: ADMIN })
-    ).json()) as {
+    const queue = (await (await adminFetch('/admin/candidates', { token: ADMIN })).json()) as {
       candidates: { handle: string; status: string; report_count: number }[];
     };
     expect(queue.candidates.some((c) => c.handle === 'review_user')).toBe(false);
@@ -70,11 +66,55 @@ describe('admin candidates（只读透明度）', () => {
   it('2 独立安装自动升 candidate（默认档可见）', async () => {
     await report('vvvvvvvv-3001-4001-8000-vvvvvvvvvvvv', 'auto_cand');
     await report('vvvvvvvv-3002-4002-8000-vvvvvvvvvvvv', 'auto_cand');
-    const row = await env.DB.prepare(
-      'SELECT status FROM accounts WHERE handle = ?1',
-    )
+    const row = await env.DB.prepare('SELECT status FROM accounts WHERE handle = ?1')
       .bind('auto_cand')
       .first<{ status: string }>();
     expect(row?.status).toBe('candidate');
+  });
+});
+
+describe('admin false positives（规则级误标审计）', () => {
+  it('rejects unauthenticated access', async () => {
+    expect((await adminFetch('/admin/false-positives')).status).toBe(401);
+  });
+
+  it('returns a rule summary and recent feedback without installation identifiers', async () => {
+    const res = await worker.fetch(
+      new Request(`${ORIGIN}/v1/rescues`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          installation_id: 'zzzzzzzz-9101-4101-8101-zzzzzzzzzzzz',
+          client_version: '0.7.1',
+          rescues: [
+            {
+              handle: 'legituser88',
+              detection_source: 'heuristic',
+              rule_id: 'default-name-digits',
+              detection_reason: '启发式：默认名 + 随机数字',
+            },
+          ],
+        }),
+      }),
+      env,
+    );
+    expect(res.status).toBe(200);
+
+    const audit = (await (await adminFetch('/admin/false-positives', { token: ADMIN })).json()) as {
+      summary: Array<{ detection_source: string; rule_id: string; count: number }>;
+      false_positives: Array<Record<string, unknown>>;
+    };
+    expect(audit.summary).toContainEqual({
+      detection_source: 'heuristic',
+      rule_id: 'default-name-digits',
+      count: 1,
+    });
+    expect(audit.false_positives[0]).toMatchObject({
+      handle: 'legituser88',
+      detection_source: 'heuristic',
+      rule_id: 'default-name-digits',
+      client_version: '0.7.1',
+    });
+    expect(audit.false_positives[0]).not.toHaveProperty('installation_id');
   });
 });

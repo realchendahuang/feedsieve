@@ -40,10 +40,7 @@ describe('detect: community fingerprint (v0.4)', () => {
   });
 
   it('empty fingerprint set disables fingerprint marking (falls through to heuristics)', () => {
-    const result = detect(
-      { handle: 'spam', text: TEMPLATE_TWEET },
-      { fingerprints: new Set() },
-    );
+    const result = detect({ handle: 'spam', text: TEMPLATE_TWEET }, { fingerprints: new Set() });
     expect(result?.source).toBe('heuristic');
   });
 });
@@ -96,7 +93,10 @@ describe('detect: simhash 话术变体（v0.5 Campaign）', () => {
 describe('detect: community domain (v0.4)', () => {
   it('marks links pointing at a listed domain, case-insensitively', () => {
     const result = detect(
-      { handle: 'somebody', links: [{ href: 'https://scam-sity.example/', hostname: 'SCAM-Sity.Example' }] },
+      {
+        handle: 'somebody',
+        links: [{ href: 'https://scam-sity.example/', hostname: 'SCAM-Sity.Example' }],
+      },
       { domains: new Set(['scam-sity.example']) },
     );
     expect(result?.source).toBe('domain');
@@ -201,9 +201,15 @@ describe('heuristic: default-name-digits', () => {
     expect(result?.reason).toContain('默认名');
   });
 
-  it('flags digit-tail handle without meaningful display name', () => {
-    const result = detect({ handle: 'ab123456789', displayName: undefined });
+  it('flags digit-tail handle only when the display name is independently default-like', () => {
+    const result = detect({ handle: 'ab123456789', displayName: 'User 123456789' });
     expect(result?.ruleId).toBe('default-name-digits');
+  });
+
+  it('does not treat a temporarily missing display name as spam evidence', () => {
+    // X 的懒加载 / 引用帖 DOM 会短暂缺昵称；这些是真实误标记录中的 handle 形态。
+    expect(detect({ handle: 'artist1818888', displayName: undefined })).toBeNull();
+    expect(detect({ handle: 'creator44502446', displayName: undefined })).toBeNull();
   });
 
   it('does not flag meaningful names or realistic handles', () => {
@@ -218,7 +224,10 @@ describe('heuristic: spam-link-hint', () => {
     ['example.com', false],
     ['myfreecrypto.blog', true],
   ])('evaluates host %s', (hostname, shouldMark) => {
-    const result = detect({ handle: 'somebody', links: [{ href: `https://${hostname}/`, hostname }] });
+    const result = detect({
+      handle: 'somebody',
+      links: [{ href: `https://${hostname}/`, hostname }],
+    });
     if (shouldMark) {
       expect(result?.ruleId).toBe('spam-link-hint');
       expect(result?.reason).toContain(hostname);
@@ -246,10 +255,10 @@ describe('heuristic: templated-text', () => {
   describe('crypto giveaway template (2026-08 real-world samples, anonymized)', () => {
     it.each([
       [
-        '🚀 500 USDT Giveaway! Clock\'s ticking—act fast! 💎 Instant claim on Tron ⚡️ No KYC, just repost 🔥 Free entry, win big Join, follow, like, repost & comment now!',
+        "🚀 500 USDT Giveaway! Clock's ticking—act fast! 💎 Instant claim on Tron ⚡️ No KYC, just repost 🔥 Free entry, win big Join, follow, like, repost & comment now!",
       ],
       [
-        '🚨 Massive 500 USDT Giveaway! Don\'t miss out! 🚀 Instant win chance on Tron network 🔥 No purchase—just follow, like, comment & repost Claim your share now—time\'s ticking!',
+        "🚨 Massive 500 USDT Giveaway! Don't miss out! 🚀 Instant win chance on Tron network 🔥 No purchase—just follow, like, comment & repost Claim your share now—time's ticking!",
       ],
     ])('flags real spam copy', (text) => {
       const result = detect({ handle: 'spamuser1', text });
@@ -258,9 +267,7 @@ describe('heuristic: templated-text', () => {
     });
 
     it('flags reversed word order and spelling variants', () => {
-      expect(
-        detect({ handle: 's', text: 'GIWEAWAY time! Get 500 USDT now' })?.marked,
-      ).toBe(true);
+      expect(detect({ handle: 's', text: 'GIWEAWAY time! Get 500 USDT now' })?.marked).toBe(true);
     });
 
     it('flags follow/repost + claim bait', () => {
@@ -276,9 +283,7 @@ describe('heuristic: templated-text', () => {
       expect(
         detect({ handle: 'shop', text: 'we give away swag at the conference booth' }),
       ).toBeNull();
-      expect(
-        detect({ handle: 'friend', text: 'I like how you claim your mornings' }),
-      ).toBeNull();
+      expect(detect({ handle: 'friend', text: 'I like how you claim your mornings' })).toBeNull();
     });
 
     it('catches spam planted in bio even with clean tweets', () => {
@@ -303,9 +308,7 @@ describe('heuristic: templated-text', () => {
     });
 
     it('catches 福利-in-bio variant', () => {
-      expect(detect({ handle: 'bait02', bio: '福利在简介 自取' })?.ruleId).toBe(
-        'porn-bait-zh',
-      );
+      expect(detect({ handle: 'bait02', bio: '福利在简介 自取' })?.ruleId).toBe('porn-bait-zh');
     });
 
     it('keeps normal Chinese text clean (single erogenous marker is not enough)', () => {

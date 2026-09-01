@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 // popup 渲染冒烟测试：防止「渲染期崩溃 → 白屏」再犯（曾因三态分支写错崩在 null.map）
-import React from 'react';
+import React, { act } from 'react';
 import ReactDOM from 'react-dom/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
@@ -9,7 +9,7 @@ beforeEach(() => {
   vi.stubGlobal('browser', {
     storage: {
       local: {
-        get: vi.fn().mockResolvedValue({}),
+        get: vi.fn().mockResolvedValue({ uiLanguage: 'zh' }),
         set: vi.fn().mockResolvedValue(undefined),
       },
       onChanged: {
@@ -31,6 +31,14 @@ function renderApp(): HTMLElement {
   return rootEl;
 }
 
+function buttonWithText(root: HTMLElement, label: string): HTMLButtonElement {
+  const button = [...root.querySelectorAll('button')].find(
+    (candidate) => candidate.textContent?.trim() === label,
+  );
+  if (!button) throw new Error(`button not found: ${label}`);
+  return button;
+}
+
 describe('popup App 渲染冒烟', () => {
   it('renders header and empty page-marked hint without throwing', async () => {
     const rootEl = renderApp();
@@ -39,17 +47,34 @@ describe('popup App 渲染冒烟', () => {
     await new Promise((r) => setTimeout(r, 150));
 
     expect(rootEl.textContent).toContain('福滤娃');
-    expect(rootEl.textContent).toContain('页面黄框');
-    expect(rootEl.textContent).toContain('一键拉黑');
-    expect(rootEl.textContent).toContain('已拉黑');
-    expect(rootEl.textContent).toContain('🟡 0');
+    expect(rootEl.textContent).toContain('当前页面');
+    expect(rootEl.textContent).toContain('当前页面很干净');
+    expect(rootEl.textContent).toContain('全部拉黑');
+    expect(rootEl.textContent).toContain('今日概览');
+    expect(rootEl.textContent).toContain('清理');
+    expect(rootEl.textContent).toContain('名单');
+    expect(rootEl.textContent).toContain('设置');
+
+    await act(async () => buttonWithText(rootEl, '名单').click());
+    expect(rootEl.textContent).toContain('拉黑记录');
+    expect(rootEl.textContent).toContain('误标白名单');
+
+    await act(async () => buttonWithText(rootEl, '设置').click());
+    expect(rootEl.textContent).toContain('检测强度');
+    expect(rootEl.textContent).not.toContain('误标较多时');
+    expect(rootEl.textContent).not.toContain('标注不隐藏内容');
+    expect(rootEl.textContent).not.toContain('X 页面清理');
+
+    await act(async () => buttonWithText(rootEl, 'EN').click());
+    expect(rootEl.textContent).toContain('FeedSieve');
+    expect(rootEl.textContent).toContain('Detection level');
   });
 
   it('renders page-marked accounts after querying the active x.com tab', async () => {
     vi.stubGlobal('browser', {
       storage: {
         local: {
-          get: vi.fn().mockResolvedValue({}),
+          get: vi.fn().mockResolvedValue({ uiLanguage: 'zh' }),
           set: vi.fn().mockResolvedValue(undefined),
         },
         onChanged: {
@@ -60,9 +85,11 @@ describe('popup App 渲染冒烟', () => {
       tabs: {
         query: vi.fn().mockResolvedValue([{ id: 1 }]),
         // 页面黄框清单：内容脚本实时查询返回
-        sendMessage: vi.fn().mockResolvedValue([
-          { handle: 'spamking88', category: 'copy_paste', reason: '已知垃圾模板' },
-        ]),
+        sendMessage: vi
+          .fn()
+          .mockResolvedValue([
+            { handle: 'spamking88', category: 'copy_paste', reason: '已知垃圾模板' },
+          ]),
       },
     });
 
@@ -71,6 +98,6 @@ describe('popup App 渲染冒烟', () => {
 
     expect(rootEl.textContent).toContain('@spamking88');
     expect(rootEl.textContent).toContain('已知垃圾模板');
-    expect(rootEl.textContent).toContain('一键拉黑（页面 1 个）');
+    expect(rootEl.textContent).toContain('全部拉黑 · 1');
   });
 });

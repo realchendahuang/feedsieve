@@ -12,11 +12,7 @@ import {
   tweetSelectors,
   type ParsedApiData,
 } from '@feedsieve/x-adapter';
-import {
-  getBlockedAccounts,
-  markBlocked,
-  subscribeBlocked,
-} from '../src/lib/blocked-accounts';
+import { getBlockedAccounts, markBlocked, subscribeBlocked } from '../src/lib/blocked-accounts';
 import { bumpStat } from '../src/lib/local-stats';
 import { bumpDaily } from '../src/lib/daily-stats';
 import { collectCellsByHandle, removeCellsSoon } from '../src/lib/remove-tweets';
@@ -27,16 +23,13 @@ import {
   subscribeCommunity,
   type RuntimeCommunity,
 } from '../src/lib/community-store';
-import {
-  addAllowlist,
-  getAllowlist,
-  subscribeAllowlist,
-} from '../src/lib/allowlist';
+import { addAllowlist, getAllowlist, subscribeAllowlist } from '../src/lib/allowlist';
 import {
   categoryFromDetection,
   collectLinkDomains,
   contributeBlocks,
   rescueHandle,
+  syncLocalLabels,
 } from '../src/lib/contribute';
 import { getCommunitySettings } from '../src/lib/community-store';
 import builtinListJson from '../../../community/lists/recommended.json';
@@ -46,9 +39,7 @@ import builtinListJson from '../../../community/lists/recommended.json';
  * 社区名单走运行时同步（background SW -> storage.local -> 这里建索引），
  * 服务器快照永远是权威来源。
  */
-const BUILTIN_LIST = toHandleSet(
-  (builtinListJson as { entries: unknown }).entries as never[],
-);
+const BUILTIN_LIST = toHandleSet((builtinListJson as { entries: unknown }).entries as never[]);
 
 const MARK_ATTRIBUTE = 'data-fs-marked';
 const STYLE_ELEMENT_ID = 'feedsieve-mark-styles';
@@ -114,11 +105,9 @@ export default defineContentScript({
     void refreshCommunity();
     listenXhrBridge();
     // 请 background SW 同步快照（SW 侧 6h 节流；发消息顺便唤醒 SW）
-    void browser.runtime
-      .sendMessage({ type: 'feedsieve:community-sync' })
-      .catch(() => {
-        // SW 暂不可达（开发热重载等）：下次页面加载再试
-      });
+    void browser.runtime.sendMessage({ type: 'feedsieve:community-sync' }).catch(() => {
+      // SW 暂不可达（开发热重载等）：下次页面加载再试
+    });
 
     /**
      * popup「一键拉黑 / 一键撤销」入口：这里执行需要页面会话的原生操作，
@@ -131,7 +120,10 @@ export default defineContentScript({
         return runPageBlockBatch();
       }
       if (type === 'feedsieve:unblock') {
-        return runUnblockBatch((message as { handle?: string }).handle);
+        return runUnblockBatch((message as { handle?: string }).handle).then((result) => {
+          void syncLocalLabels();
+          return result;
+        });
       }
       return undefined;
     });
@@ -158,9 +150,7 @@ export default defineContentScript({
       // 注意：桥 dispatch 在共享的 document 上；window 是各 world 独立的，监听 window 收不到
       document.addEventListener('feedsieve:xhr-items', (event) => {
         try {
-          const parsed = JSON.parse(
-            (event as CustomEvent<string>).detail,
-          ) as ParsedApiData;
+          const parsed = JSON.parse((event as CustomEvent<string>).detail) as ParsedApiData;
           if (!parsed?.tweets && !parsed?.listMembers) {
             return;
           }
@@ -194,9 +184,11 @@ export default defineContentScript({
           blockedCache.add(item.handle);
         }
       };
-      void getBlockedAccounts().then(apply).catch(() => {
-        // storage 异常保持旧缓存
-      });
+      void getBlockedAccounts()
+        .then(apply)
+        .catch(() => {
+          // storage 异常保持旧缓存
+        });
       subscribeBlocked(apply);
     }
 
@@ -214,9 +206,11 @@ export default defineContentScript({
           allowCache.add(item.handle);
         }
       };
-      void getAllowlist().then(apply).catch(() => {
-        // storage 异常保持旧缓存
-      });
+      void getAllowlist()
+        .then(apply)
+        .catch(() => {
+          // storage 异常保持旧缓存
+        });
       // 初始订阅：后续白名单变化实时生效（订阅保持到页面卸载）
       subscribeAllowlist(apply);
     }
@@ -261,14 +255,12 @@ export default defineContentScript({
         if (linkDomains) {
           evidence.linkDomains = linkDomains;
         }
-        const isRepeat = fp ? repetition.track(fp) : false;
+        const isRepeat = fp ? repetition.track(fp, item.author.handle.toLowerCase()) : false;
 
         // 识别顺序：社区快照名单 -> 内置名单兜底 -> 启发式
         // 社区指纹/域名集合由 buildRuntimeCommunity 按强度档准备（大扫除档才有内容）
         const evidenceOptions = {
-          ...(community?.fingerprintSet.size
-            ? { fingerprints: community.fingerprintSet }
-            : {}),
+          ...(community?.fingerprintSet.size ? { fingerprints: community.fingerprintSet } : {}),
           ...(community?.domainSet.size ? { domains: community.domainSet } : {}),
         };
         let detection = community
@@ -277,9 +269,7 @@ export default defineContentScript({
               listSource: 'community-list',
               // v0.5 指纹即 SimHash：simhashes 集合与 fingerprints 集合同源，
               // exact 命中优先，miss 后走汉明距离找「话术变体」
-              ...(community.fingerprintSet.size
-                ? { simhashes: community.fingerprintSet }
-                : {}),
+              ...(community.fingerprintSet.size ? { simhashes: community.fingerprintSet } : {}),
               ...evidenceOptions,
             })
           : null;
@@ -331,8 +321,7 @@ export default defineContentScript({
           const entry = community.index.lookup(item.author.handle);
           if (entry) {
             communityCategory = entry.category;
-            const rescueSuffix =
-              entry.rescue_count > 0 ? ` · ${entry.rescue_count} 抢救` : '';
+            const rescueSuffix = entry.rescue_count > 0 ? ` · ${entry.rescue_count} 抢救` : '';
             detection = {
               ...detection,
               reason: `社区名单：${entry.category} · ${entry.report_count} 举报${rescueSuffix}`,
@@ -346,9 +335,7 @@ export default defineContentScript({
           const campaignHandle = detection.matchedFingerprint
             ? community.campaignByFingerprint.get(detection.matchedFingerprint)
             : undefined;
-          const campaign = campaignHandle
-            ? community.campaignById.get(campaignHandle)
-            : undefined;
+          const campaign = campaignHandle ? community.campaignById.get(campaignHandle) : undefined;
           if (campaign) {
             detection = {
               ...detection,
@@ -470,12 +457,20 @@ export default defineContentScript({
       allowBtn.className = 'fs-allow';
       allowBtn.type = 'button';
       allowBtn.textContent = '误标？';
-      allowBtn.title = '加入个人白名单：不再标注该账号（本地生效，优先级最高）';
+      allowBtn.title = '加入个人白名单，并提交这条规则的误标反馈';
       allowBtn.addEventListener('click', () => {
         void (async () => {
-          await addAllowlist(detection.handle);
+          const feedback = {
+            detectionSource: detection.source,
+            ...(detection.ruleId ? { ruleId: detection.ruleId } : {}),
+            detectionReason: detection.reason,
+          };
+          const xUserId = (await getUserId(detection.handle)) ?? undefined;
+          await addAllowlist(detection.handle, xUserId, feedback);
           cell.removeAttribute(MARK_ATTRIBUTE);
           badge.remove();
+          // 本地白名单立即生效；同步器会补传失败记录和历史名单。
+          void syncLocalLabels();
         })().catch(() => {
           // 白名单写入失败：标注保持原状
         });
@@ -494,7 +489,15 @@ export default defineContentScript({
                 void (async () => {
                   btn.disabled = true;
                   btn.textContent = '…';
-                  const ok = await rescueHandle(detection.handle);
+                  const ok = await rescueHandle(
+                    detection.handle,
+                    {
+                      detectionSource: detection.source,
+                      ...(detection.ruleId ? { ruleId: detection.ruleId } : {}),
+                      detectionReason: detection.reason,
+                    },
+                    (await getUserId(detection.handle)) ?? undefined,
+                  );
                   if (ok) {
                     btn.textContent = '已抢救 ✓';
                     setTimeout(() => {
@@ -513,10 +516,7 @@ export default defineContentScript({
             })()
           : null;
 
-      secondaryGroup.append(
-        ...(rescueBtn ? [rescueBtn] : []),
-        allowBtn,
-      );
+      secondaryGroup.append(...(rescueBtn ? [rescueBtn] : []), allowBtn);
 
       badge.append(label, primaryGroup, secondaryGroup);
       // cellInnerDiv 是普通块容器：徽章作为新块级子元素排在推文下方，
@@ -576,12 +576,17 @@ export default defineContentScript({
         return { ok: false, code: result.code };
       }
       // 记账（撤销入口的数据源）+ 本地统计
-      await markBlocked(item.handle, xUserId);
+      await markBlocked(item.handle, xUserId, {
+        category: item.category,
+        ...item.evidence,
+      });
       await bumpStat('blocked');
       // v0.6 战报：今日拉黑 + 分类计数
       await bumpDaily('blocked', item.category);
       // 摩擦设计：拉黑成功即自动贡献社区（无弹窗；全局开关在 contributeBlocks 内判断）
-      contributeBlocks([{ handle: item.handle, xUserId, category: item.category, ...item.evidence }]);
+      contributeBlocks([
+        { handle: item.handle, xUserId, category: item.category, ...item.evidence },
+      ]);
       return { ok: true };
     }
 

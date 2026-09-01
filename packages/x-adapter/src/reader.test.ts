@@ -76,4 +76,40 @@ describe('extractFeedItem', () => {
     // 名字只有 @handle 本身时清洗后为空 -> undefined，而不是残留空串
     expect(item?.author.displayName).toBeUndefined();
   });
+
+  it('does not attribute quoted-post text or links to the quoting account', () => {
+    const article = renderTweet(`
+      <div data-testid="User-Name">
+        <a href="/legitcreator"><span>Legit Creator</span></a>
+        <a href="/legitcreator"><span>@legitcreator</span></a>
+      </div>
+      <a href="/legitcreator/status/111"><time>now</time></a>
+      <div role="link">
+        <a href="/spamaccount/status/222"><time>quoted</time></a>
+        <div data-testid="tweetText">DM me for crypto profit signals</div>
+        <a href="https://giveaway.example/win">claim</a>
+      </div>
+    `);
+    const item = extractFeedItem(article);
+    expect(item?.postId).toBe('111');
+    expect(item?.text).toBe('');
+    expect(item?.links.some((link) => link.hostname === 'giveaway.example')).toBe(false);
+  });
+
+  it('keeps the parent post text while excluding a nested quote', () => {
+    const article = renderTweet(`
+      <div data-testid="User-Name">
+        <a href="/commenter"><span>Commenter</span></a>
+        <a href="/commenter"><span>@commenter</span></a>
+      </div>
+      <a href="/commenter/status/333"><time>now</time></a>
+      <div data-testid="tweetText">This quoted claim looks suspicious.</div>
+      <div role="link">
+        <a href="/spamaccount/status/444"><time>quoted</time></a>
+        <div data-testid="tweetText">Free crypto giveaway, follow and claim</div>
+      </div>
+    `);
+    const item = extractFeedItem(article);
+    expect(item?.text).toBe('This quoted claim looks suspicious.');
+  });
 });

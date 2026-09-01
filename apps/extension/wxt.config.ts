@@ -9,7 +9,7 @@ export default defineConfig({
     permissions: ['storage'],
     host_permissions: [
       'https://x.com/*',
-      // 社区名单同步 + 拉黑贡献上报（Cloudflare Worker，自部署见 apps/community-api）
+      // 社区名单下载 + 用户黑白名单同步（Cloudflare Worker，自部署见 apps/community-api）
       'https://feedsieve-api.chendahuang.com/*',
     ],
     icons: {

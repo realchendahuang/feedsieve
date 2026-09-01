@@ -1,8 +1,5 @@
 import { syncCommunitySnapshot } from '@feedsieve/community-lists';
-import {
-  COMMUNITY_SYNC_SOURCES,
-  snapshotStore,
-} from '../src/lib/community-store';
+import { COMMUNITY_SYNC_SOURCES, snapshotStore } from '../src/lib/community-store';
 import { flushContributions } from '../src/lib/contribute';
 
 export default defineBackground(() => {
@@ -21,6 +18,8 @@ export default defineBackground(() => {
     console.info(`[FeedSieve] installed (${details.reason})`);
     // 安装/更新后立即拉一次社区快照（跳过 6h 节流）
     void sync(true);
+    // 升级后补传历史黑名单/白名单；同步状态会防止重复上传。
+    void flushContributions();
   });
 
   browser.runtime.onStartup.addListener(() => {
@@ -38,6 +37,9 @@ export default defineBackground(() => {
         type: 'feedsieve:community-sync',
         outcome,
       }));
+    }
+    if (msg?.type === 'feedsieve:labels-sync') {
+      return flushContributions().then(() => ({ type: 'feedsieve:labels-sync', ok: true }));
     }
     return undefined;
   });

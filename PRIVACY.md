@@ -1,6 +1,6 @@
 # FeedSieve 隐私政策 / Privacy Policy
 
-生效日期：2026-08-31 · Contact: [GitHub Issues](https://github.com/realchendahuang/feedsieve/issues)
+生效日期：2026-09-01 · Contact: [GitHub Issues](https://github.com/realchendahuang/feedsieve/issues)
 
 FeedSieve（福滤娃）是 X（Twitter）扩展：黄框标注垃圾账号，用户点击后执行拉黑。
 本政策说明它处理什么数据、什么数据出设备、什么数据绝不出设备。
@@ -21,31 +21,28 @@ FeedSieve（福滤娃）是 X（Twitter）扩展：黄框标注垃圾账号，�
 **1. 社区名单同步（无你的任何数据）**
 扩展从官方 API `feedsieve-api.chendahuang.com` 下载社区名单快照（JSON，经 SHA-256 校验）。该请求不包含你的任何个人数据。
 
-**2. 匿名贡献上报（默认开启，可一键关闭）**
-只有当你主动拉黑某个账号后，扩展才向官方 API 上报该账号：
+**2. 黑白名单上传（默认开启，可一键关闭）**
+开启「名单上传」时，扩展同步你明确维护的本地黑名单和白名单，包括升级前已保存在本机的历史记录。它不上传仅仅浏览过、仅仅被标注但未处理的账号。
 
-- `handle`（对方账号名）、可选 `x_user_id`
-- 分类（如 bot_spam / scam_phishing）
-- 话术指纹：推文文本归一化后的单向哈希，原文不出设备
-- 该推文外链域名（仅 hostname，最多 5 个，不含 X 自家域名）
-- 安装 ID：本机生成的随机 UUID，服务端只存加盐哈希，无法反推
-- 扩展版本号
+- 黑名单：`handle`（对方账号名）、可选 `x_user_id`、分类、话术指纹单向哈希、外链 hostname（最多 5 个）
+- 白名单：`handle`、可选 `x_user_id`、当时的检测来源、规则 ID 与检测理由（旧记录可能只有 handle）
+- 两者共同携带：本机随机安装 ID 与扩展版本号；服务端只保存安装 ID 的加盐哈希
 
-关闭「自动贡献」后完全不发送。上报的账号经自动评分进入社区名单。
+同一安装对同一账号只保留一个当前判断，后一次“拉黑 / 白名单”覆盖前一次。本地名单删除后会撤回当前票；原始上报证据仍用于误标审计，直到你提出服务器数据删除请求。关闭「名单上传」后完全不发送。
 
 **3. 贡献统计查询**
 仅当本机曾上报过（存在安装 ID）时，打开扩展面板会查询你的累计贡献数。请求经 POST body 发送安装 ID，返回纯数字。从未上报过的设备不产生此请求。
 
 **4. 抢救票（显式动作）**
-你认为误伤并点击「抢救」时，上报 `handle` 与安装 ID。
+你认为误伤并点击「抢救」时，上报 `handle`、可选 `x_user_id`、误标规则证据与安装 ID，并作为当前负标签计票。
 
 ### 服务器保存什么
 
-官方 API（部署于 Cloudflare Workers + D1）保存：handle、x_user_id、分类、指纹、外链域名、加盐哈希后的安装 ID、时间。不保存 IP、原始安装 ID、Cookie、任何 X 凭证。
+官方 API（部署于 Cloudflare Workers + D1）保存：handle、x_user_id、分类、指纹、外链域名、误标来源/规则/理由、当前黑白标签、加盐哈希后的安装 ID、时间。不保存 IP、原始安装 ID、Cookie、任何 X 凭证。
 
 ### 删除与退出
 
-- 关闭上报：扩展面板 → 社区名单 → 关闭「自动贡献」。
+- 关闭上报：扩展面板 → 设置 → 关闭「名单上传」。
 - 删除服务器数据：在 [GitHub Issues](https://github.com/realchendahuang/feedsieve/issues) 提出请求，按安装 ID 哈希删除相关记录。
 - 卸载扩展即删除全部本地数据。
 
@@ -69,31 +66,28 @@ FeedSieve（福滤娃）是 X（Twitter）扩展：黄框标注垃圾账号，�
 **1. Community list sync (contains none of your data)**
 The extension downloads the community snapshot (JSON, SHA-256 verified) from the official API `feedsieve-api.chendahuang.com`. No personal data is included in this request.
 
-**2. Anonymous contribution (default on, one toggle to disable)**
-Only after you actively block an account, the extension reports that account:
+**2. Blocklist and allowlist uploads (default on, one toggle to disable)**
+When “List uploads” is enabled, the extension syncs the local blocklist and allowlist entries you explicitly maintain, including records already stored locally before an upgrade. Merely viewed or merely marked accounts are never uploaded.
 
-- `handle`, optional `x_user_id`
-- category (e.g. bot_spam / scam_phishing)
-- content fingerprint: a one-way hash of normalized tweet text; the original text never leaves the device
-- external link hostnames from that tweet (max 5, X-owned domains excluded)
-- installation ID: a random UUID generated locally; the server stores only a salted hash
-- extension version
+- Blocklist: `handle`, optional `x_user_id`, category, one-way content fingerprint, and up to five external link hostnames
+- Allowlist: `handle`, optional `x_user_id`, detection source, rule ID, and the detector's reason when available; legacy records may contain only the handle
+- Both include a random local installation ID and extension version; the server stores only a salted hash of that ID
 
-Turn off "自动贡献 / autoContribute" to stop entirely.
+Each installation has only one current judgment per account, so a later block/allow decision replaces the earlier one. Removing a local list entry retracts the current vote; original evidence remains for false-positive auditing until you request server-side deletion. Turn off “List uploads” to stop all such transmissions.
 
 **3. Contribution stats**
 Only if this device has contributed before, opening the popup queries your cumulative counts. The installation ID is sent in a POST body; the response is numbers only. Devices that never contributed make no such request.
 
 **4. Rescue votes (explicit action)**
-Clicking rescue on a wrongly marked account reports the `handle` and installation ID.
+Clicking rescue on a wrongly marked account reports its `handle`, optional `x_user_id`, rule evidence, and installation ID as a current negative label.
 
 ### What the server stores
 
-The official API (Cloudflare Workers + D1) stores: handle, x_user_id, category, fingerprint, link domains, salted-hashed installation ID, timestamps. It does not store IPs, raw installation IDs, cookies, or any X credentials.
+The official API (Cloudflare Workers + D1) stores: handle, x_user_id, category, fingerprint, link domains, false-positive source/rule/reason, current block/allow label, salted-hashed installation ID, and timestamps. It does not store IPs, raw installation IDs, cookies, or any X credentials.
 
 ### Deletion and opt-out
 
-- Stop reporting: popup → 社区名单 → disable 自动贡献.
+- Stop reporting: popup → Settings → disable List uploads.
 - Delete server data: open a request in [GitHub Issues](https://github.com/realchendahuang/feedsieve/issues); records are deleted by hashed installation ID.
 - Uninstalling the extension removes all local data.
 

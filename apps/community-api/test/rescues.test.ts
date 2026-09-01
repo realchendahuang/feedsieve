@@ -30,9 +30,7 @@ async function postReports(installationId: string, handle: string): Promise<Resp
 }
 
 async function accountRow(handle: string) {
-  return env.DB.prepare(
-    'SELECT status, report_count, rescue_count FROM accounts WHERE handle = ?1',
-  )
+  return env.DB.prepare('SELECT status, report_count, rescue_count FROM accounts WHERE handle = ?1')
     .bind(handle)
     .first<{ status: string; report_count: number; rescue_count: number }>();
 }
@@ -68,10 +66,18 @@ describe('POST /v1/rescues', () => {
     await report3('rescue_dup_user');
     const id = 'ssssssss-7002-4002-8000-ssssssssssss';
     expect(
-      ((await (await postRescues({ installation_id: id, rescues: [{ handle: 'rescue_dup_user' }] })).json()) as { results: { status: string }[] }).results[0].status,
+      (
+        (await (
+          await postRescues({ installation_id: id, rescues: [{ handle: 'rescue_dup_user' }] })
+        ).json()) as { results: { status: string }[] }
+      ).results[0].status,
     ).toBe('recorded');
     expect(
-      ((await (await postRescues({ installation_id: id, rescues: [{ handle: 'rescue_dup_user' }] })).json()) as { results: { status: string }[] }).results[0].status,
+      (
+        (await (
+          await postRescues({ installation_id: id, rescues: [{ handle: 'rescue_dup_user' }] })
+        ).json()) as { results: { status: string }[] }
+      ).results[0].status,
     ).toBe('duplicate');
 
     const unknown = (await (
@@ -81,6 +87,68 @@ describe('POST /v1/rescues', () => {
       })
     ).json()) as { results: { status: string }[] };
     expect(unknown.results[0].status).toBe('unknown');
+  });
+
+  it('stores rule-level evidence for heuristic false positives without creating an account', async () => {
+    const handle = 'legit_creator88';
+    const res = await postRescues({
+      installation_id: 'ssssssss-7010-4010-8010-ssssssssssss',
+      client_version: '0.7.1',
+      rescues: [
+        {
+          handle,
+          detection_source: 'heuristic',
+          rule_id: 'default-name-digits',
+          detection_reason: '启发式：默认名 + 随机数字，疑似批量注册账号',
+        },
+      ],
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { results: { status: string }[] };
+    expect(body.results[0].status).toBe('unknown');
+
+    const feedback = await env.DB.prepare(
+      `SELECT detection_source, rule_id, detection_reason, client_version
+       FROM rescues WHERE handle = ?1`,
+    )
+      .bind(handle)
+      .first<{
+        detection_source: string;
+        rule_id: string;
+        detection_reason: string;
+        client_version: string;
+      }>();
+    expect(feedback).toMatchObject({
+      detection_source: 'heuristic',
+      rule_id: 'default-name-digits',
+      client_version: '0.7.1',
+    });
+    expect(feedback?.detection_reason).toContain('默认名');
+    expect(await accountRow(handle)).toBeNull();
+  });
+
+  it('rejects malformed false-positive evidence', async () => {
+    const base = {
+      installation_id: 'ssssssss-7011-4011-8011-ssssssssssss',
+    };
+    expect(
+      (
+        await postRescues({
+          ...base,
+          rescues: [{ handle: 'valid_handle', detection_source: 'page-script' }],
+        })
+      ).status,
+    ).toBe(200);
+    const invalidSource = (await (
+      await postRescues({
+        ...base,
+        rescues: [{ handle: 'valid_handle', detection_source: 'page-script' }],
+      })
+    ).json()) as { results: { status: string; error?: string }[] };
+    expect(invalidSource.results[0]).toMatchObject({
+      status: 'rejected',
+      error: 'invalid_detection_source',
+    });
   });
 
   it('auto-demotes a candidate back to new when rescues catch up with reports', async () => {
@@ -121,11 +189,13 @@ describe('POST /v1/rescues', () => {
 
   it('envelopes: empty array / oversized batch are rejected', async () => {
     expect(
-      (await postRescues({ installation_id: 'ssssssss-7008-4008-8000-ssssssssss', rescues: [] })).status,
+      (await postRescues({ installation_id: 'ssssssss-7008-4008-8000-ssssssssss', rescues: [] }))
+        .status,
     ).toBe(400);
     const many = Array.from({ length: 51 }, (_, i) => ({ handle: `u_${i}` }));
     expect(
-      (await postRescues({ installation_id: 'ssssssss-7009-4009-8000-ssssssssss', rescues: many })).status,
+      (await postRescues({ installation_id: 'ssssssss-7009-4009-8000-ssssssssss', rescues: many }))
+        .status,
     ).toBe(413);
   });
 });

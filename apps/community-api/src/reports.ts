@@ -1,5 +1,5 @@
-import { hashInstallationId } from './lib/hash';
 import { validateReport, type ValidReport } from './lib/validate';
+import { installationHash, refreshAccountFromLabels, setActiveLabel } from './labels';
 
 // Phase D 会把阈值搬进 policy 文件/端点；先集中放这里
 export const POLICY = {
@@ -50,8 +50,7 @@ export interface ReportResult {
 }
 
 export type ProcessBatchResult =
-  | { ok: true; results: ReportResult[] }
-  | { ok: false; httpStatus: 400 | 413 | 429; error: string };
+  { ok: true; results: ReportResult[] } | { ok: false; httpStatus: 400 | 413 | 429; error: string };
 
 function utcToday(): string {
   return new Date().toISOString().slice(0, 10);
@@ -78,8 +77,7 @@ export async function processReportBatch(
   ) {
     return { ok: false, httpStatus: 400, error: 'invalid_installation_id' };
   }
-  const clientVersion =
-    typeof b.client_version === 'string' ? b.client_version.slice(0, 20) : null;
+  const clientVersion = typeof b.client_version === 'string' ? b.client_version.slice(0, 20) : null;
 
   if (!Array.isArray(b.reports) || b.reports.length === 0) {
     return { ok: false, httpStatus: 400, error: 'reports_must_be_non_empty_array' };
@@ -89,12 +87,12 @@ export async function processReportBatch(
   }
 
   const results: ReportResult[] = [];
-  const valid: ValidReport[] = [];
+  const valid: Array<{ report: ValidReport; resultIndex: number }> = [];
   for (const raw of b.reports) {
     const v = validateReport(raw);
     if (v.ok) {
-      valid.push(v.report);
       results.push({ handle: v.report.handle, status: 'recorded' });
+      valid.push({ report: v.report, resultIndex: results.length - 1 });
     } else {
       const handle =
         typeof (raw as Record<string, unknown>)?.handle === 'string'
@@ -104,13 +102,10 @@ export async function processReportBatch(
     }
   }
 
-  const installHash = await hashInstallationId(env.INSTALLATION_SALT, installationId);
+  const identity = await installationHash(env, installationId);
+  const installHash = identity.hash;
   // owner（维护者）特权（v0.5）：owner 拉的号 = 最高置信证据，直接 strong，不走多数流程。
   // 识别只靠安装 ID 比对（secret 配置），匿名性不变；纸上不落原始 ID。
-  const isOwner = env.OWNER_INSTALLATION_ID
-    ? installHash ===
-      (await hashInstallationId(env.INSTALLATION_SALT, env.OWNER_INSTALLATION_ID))
-    : false;
   const today = utcToday();
   const now = nowSeconds();
 
@@ -120,8 +115,7 @@ export async function processReportBatch(
     .bind(installHash)
     .first<{ reports_day: string; reports_today: number; trust: number }>();
   const trust = installRow?.trust ?? 1;
-  const usedToday =
-    installRow && installRow.reports_day === today ? installRow.reports_today : 0;
+  const usedToday = installRow && installRow.reports_day === today ? installRow.reports_today : 0;
   if (usedToday + valid.length > effectiveDailyLimit(POLICY.dailyReportLimit, trust)) {
     return { ok: false, httpStatus: 429, error: 'rate_limited' };
   }
@@ -141,23 +135,17 @@ export async function processReportBatch(
       .run();
     // 爆发衰减：本轮越过爆发线（此前未越过）→ 信任降一档，后续限额随之收紧
     const newUsed = usedToday + valid.length;
-    if (
-      newUsed >= POLICY.trustBurstThreshold &&
-      usedToday < POLICY.trustBurstThreshold
-    ) {
-      await env.DB.prepare(
-        'UPDATE installations SET trust = MAX(?2, trust - ?3) WHERE id = ?1',
-      )
+    if (newUsed >= POLICY.trustBurstThreshold && usedToday < POLICY.trustBurstThreshold) {
+      await env.DB.prepare('UPDATE installations SET trust = MAX(?2, trust - ?3) WHERE id = ?1')
         .bind(installHash, POLICY.trustFloor, POLICY.trustDecay)
         .run();
     }
   }
 
-  // 逐条 INSERT OR IGNORE：唯一索引 (installation_id, handle) 保证一个安装对一个账号只算一票
-  const insertedHandles = new Map<string, number>(); // handle -> 本批新增票数
-  const firstReport = new Map<string, ValidReport>(); // handle -> 首条（定 category / x_user_id）
-  for (let i = 0; i < valid.length; i++) {
-    const r = valid[i];
+  // 原始证据按 (installation_id, handle) 幂等更新；active_labels 单独决定是否新增计票。
+  const touchedHandles = new Map<string, ValidReport>();
+  for (const item of valid) {
+    const r = item.report;
 
     // 换号追踪：同一 x_user_id 的已知账号换了个新 handle ——
     // 票记到原账号（正主）头上，新 handle 进它的别名表，不给换号者重新洗白的机会
@@ -180,11 +168,19 @@ export async function processReportBatch(
       }
     }
 
-    const res = await env.DB.prepare(
-      `INSERT OR IGNORE INTO reports
+    await env.DB.prepare(
+      `INSERT INTO reports
          (handle, x_user_id, reason, evidence_post_id, installation_id, client_version, created_at,
           content_fingerprint, link_domains)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)`,
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+       ON CONFLICT(installation_id, handle) DO UPDATE SET
+         x_user_id = COALESCE(excluded.x_user_id, reports.x_user_id),
+         reason = excluded.reason,
+         evidence_post_id = COALESCE(excluded.evidence_post_id, reports.evidence_post_id),
+         client_version = excluded.client_version,
+         created_at = excluded.created_at,
+         content_fingerprint = COALESCE(excluded.content_fingerprint, reports.content_fingerprint),
+         link_domains = COALESCE(excluded.link_domains, reports.link_domains)`,
     )
       .bind(
         canonical,
@@ -198,58 +194,25 @@ export async function processReportBatch(
         r.linkDomains.length > 0 ? JSON.stringify(r.linkDomains) : null,
       )
       .run();
-    if ((res.meta.changes ?? 0) === 1) {
-      insertedHandles.set(canonical, (insertedHandles.get(canonical) ?? 0) + 1);
-      if (!firstReport.has(canonical)) {
-        firstReport.set(canonical, { ...r, handle: canonical });
-      }
-    } else {
-      results[i].status = 'duplicate';
-    }
+    const labelChanged = await setActiveLabel(env, installHash, canonical, 'blocked', now);
+    results[item.resultIndex].status = labelChanged ? 'recorded' : 'duplicate';
+    touchedHandles.set(canonical, { ...r, handle: canonical });
   }
 
-  // 聚合进 accounts：首报定 category / x_user_id。
-  // 自动评级（v0.5，阈值低配：当前用户规模小）：
-  // - owner 票 ≥1（本次或累计）→ strong（最高置信，全档可见）
-  // - 普通独立票 ≥3 → strong；≥2 → candidate
-  // - 降级/白名单裁决由 auto-rate 统一评估（rescues 侧 owner 直接置 dismissed）
-  for (const [handle, delta] of insertedHandles) {
-    const first = firstReport.get(handle)!;
-    const finalStatus = isOwner
-      ? 'strong'
-      : delta >= POLICY.strongThreshold
-        ? 'strong'
-        : delta >= POLICY.candidateThreshold
-          ? 'candidate'
-          : 'new';
+  // 先保证账号存在，再从 active_labels 全量重算当前正票、负票、owner 票与分类。
+  // 这样“正 -> 负 -> 正”的改判和同标签证据更新都不会让聚合计数漂移。
+  for (const [handle, report] of touchedHandles) {
     await env.DB.prepare(
       `INSERT INTO accounts
          (handle, x_user_id, category, status, report_count, rescue_count, owner_votes, first_report_at, updated_at)
-       VALUES (?1, ?2, ?3, ?4, ?5, 0, ?8, ?6, ?6)
+       VALUES (?1, ?2, ?3, 'new', 0, 0, 0, ?4, ?4)
        ON CONFLICT(handle) DO UPDATE SET
-         report_count = accounts.report_count + ?5,
-         owner_votes = accounts.owner_votes + ?8,
          x_user_id = COALESCE(excluded.x_user_id, accounts.x_user_id),
-         status = CASE
-           WHEN accounts.status = 'dismissed' THEN 'dismissed'
-           WHEN accounts.owner_votes + ?8 > 0 THEN 'strong'
-           WHEN accounts.report_count + ?5 >= ?7 THEN 'strong'
-           WHEN accounts.report_count + ?5 >= ?9 THEN 'candidate'
-           ELSE accounts.status END,
-         updated_at = ?6`,
+         updated_at = ?4`,
     )
-      .bind(
-        handle,
-        first.xUserId,
-        first.reason,
-        finalStatus,
-        delta,
-        now,
-        POLICY.strongThreshold,
-        isOwner ? delta : 0,
-        POLICY.candidateThreshold,
-      )
+      .bind(handle, report.xUserId, report.reason, now)
       .run();
+    await refreshAccountFromLabels(env, handle, identity.ownerHash);
   }
 
   return { ok: true, results };

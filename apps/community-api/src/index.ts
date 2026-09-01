@@ -2,13 +2,10 @@ import { cors } from 'hono/cors';
 import { Hono } from 'hono';
 import { checkBearerToken } from './lib/auth';
 import { hashInstallationId } from './lib/hash';
+import { processRetractionBatch } from './labels';
 import { POLICY, processReportBatch, publicPolicy } from './reports';
 import { processRescueBatch } from './rescues';
-import {
-  generateSnapshot,
-  getLatestSnapshot,
-  getSnapshotFile,
-} from './snapshot';
+import { generateSnapshot, getLatestSnapshot, getSnapshotFile } from './snapshot';
 
 export function createApp() {
   const app = new Hono<{ Bindings: Cloudflare.Env }>();
@@ -48,11 +45,7 @@ export function createApp() {
   });
 
   app.get('/v1/snapshots/:version/:path', async (c) => {
-    const body = await getSnapshotFile(
-      c.env,
-      c.req.param('version'),
-      c.req.param('path'),
-    );
+    const body = await getSnapshotFile(c.env, c.req.param('version'), c.req.param('path'));
     if (!body) return c.json({ error: 'not_found' }, 404);
     c.header('Cache-Control', 'public, max-age=31536000, immutable');
     return c.body(body, 200, { 'content-type': 'application/json' });
@@ -61,6 +54,15 @@ export function createApp() {
   app.post('/v1/rescues', async (c) => {
     const body = await c.req.json().catch(() => undefined);
     const result = await processRescueBatch(c.env, body);
+    if (!result.ok) {
+      return c.json({ error: result.error }, result.httpStatus);
+    }
+    return c.json({ results: result.results });
+  });
+
+  app.post('/v1/labels/retract', async (c) => {
+    const body = await c.req.json().catch(() => undefined);
+    const result = await processRetractionBatch(c.env, body);
     if (!result.ok) {
       return c.json({ error: result.error }, result.httpStatus);
     }
@@ -86,27 +88,27 @@ export function createApp() {
     ) {
       return c.json({ error: 'invalid_installation_id' }, 400);
     }
-    const installHash = await hashInstallationId(
-      c.env.INSTALLATION_SALT,
-      installationId,
-    );
+    const installHash = await hashInstallationId(c.env.INSTALLATION_SALT, installationId);
     const [reports, rescues, adopted] = await Promise.all([
       c.env.DB.prepare(
-        'SELECT COUNT(*) AS n FROM reports WHERE installation_id = ?1',
+        `SELECT COUNT(*) AS n FROM active_labels
+         WHERE installation_id = ?1 AND label = 'blocked'`,
       )
         .bind(installHash)
         .first<{ n: number }>(),
       c.env.DB.prepare(
-        'SELECT COUNT(*) AS n FROM rescues WHERE installation_id = ?1',
+        `SELECT COUNT(*) AS n FROM active_labels
+         WHERE installation_id = ?1 AND label = 'allowed'`,
       )
         .bind(installHash)
         .first<{ n: number }>(),
       // 被采纳：该安装上报过的账号，最终进了快照（candidate/recommended/strong）
       c.env.DB.prepare(
-        `SELECT COUNT(DISTINCT r.handle) AS n
-         FROM reports r
-         JOIN accounts a ON a.handle = r.handle
-         WHERE r.installation_id = ?1
+        `SELECT COUNT(DISTINCT l.handle) AS n
+         FROM active_labels l
+         JOIN accounts a ON a.handle = l.handle
+         WHERE l.installation_id = ?1
+           AND l.label = 'blocked'
            AND a.status IN ('candidate', 'recommended', 'strong')`,
       )
         .bind(installHash)
@@ -146,6 +148,35 @@ export function createApp() {
     return c.json({ candidates: res.results });
   });
 
+  // 误标审计：只返回检测规则与聚合账号状态，不暴露匿名 installation hash。
+  // 旧客户端没有 source/rule/reason，因此用 unknown 归组但仍保留记录。
+  app.get('/admin/false-positives', async (c) => {
+    const [summary, recent] = await Promise.all([
+      c.env.DB.prepare(
+        `SELECT
+           COALESCE(detection_source, 'unknown') AS detection_source,
+           COALESCE(rule_id, 'unknown') AS rule_id,
+           COUNT(*) AS count
+         FROM rescues
+         GROUP BY detection_source, rule_id
+         ORDER BY count DESC, detection_source, rule_id`,
+      ).all(),
+      c.env.DB.prepare(
+        `SELECT r.handle, r.detection_source, r.rule_id, r.detection_reason,
+                r.client_version, r.created_at,
+                a.category, a.status, a.report_count, a.rescue_count
+         FROM rescues r
+         LEFT JOIN accounts a ON a.handle = r.handle
+         ORDER BY r.created_at DESC, r.id DESC
+         LIMIT 200`,
+      ).all(),
+    ]);
+    return c.json({
+      summary: summary.results,
+      false_positives: recent.results,
+    });
+  });
+
   // 人工提升/驳回已移除（v0.5 零人工：状态全部由 auto-rate 派生）。
   // 保留待审队列视图（纯只读，透明度用）。
 
@@ -163,17 +194,15 @@ export function createApp() {
 // （auto-rate 收敛 + 投票变化），无变化时保持最新版本不动。
 async function scheduledAutoPublish(env: Cloudflare.Env): Promise<void> {
   try {
-    const before = await env.DB.prepare(
-      'SELECT COUNT(*) AS n FROM snapshots',
-    ).first<{ n: number }>();
+    const before = await env.DB.prepare('SELECT COUNT(*) AS n FROM snapshots').first<{
+      n: number;
+    }>();
     const published = await generateSnapshot(env);
-    const after = await env.DB.prepare(
-      'SELECT COUNT(*) AS n FROM snapshots',
-    ).first<{ n: number }>();
+    const after = await env.DB.prepare('SELECT COUNT(*) AS n FROM snapshots').first<{
+      n: number;
+    }>();
     const createdNew = (after?.n ?? 0) > (before?.n ?? 0);
-    console.info(
-      `[community-api] cron publish: version=${published.version} new=${createdNew}`,
-    );
+    console.info(`[community-api] cron publish: version=${published.version} new=${createdNew}`);
   } catch (error) {
     console.error('[community-api] cron publish failed:', error);
   }

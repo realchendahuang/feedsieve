@@ -24,9 +24,7 @@ export const COMMUNITY_API_BASE = 'https://feedsieve-api.chendahuang.com';
  * 仓库 community/lists/ 镜像仅为公开存档（scripts/mirror-community-lists.sh 维护），
  * 扩展不直接拉取第三方 CDN。
  */
-export const COMMUNITY_SYNC_SOURCES: SyncSource[] = [
-  workerSource(COMMUNITY_API_BASE),
-];
+export const COMMUNITY_SYNC_SOURCES: SyncSource[] = [workerSource(COMMUNITY_API_BASE)];
 
 const SNAPSHOT_KEY = 'communitySnapshot';
 const SETTINGS_KEY = 'communitySettings';
@@ -37,10 +35,10 @@ export interface CommunitySettings {
   /** 标注强度：清爽 / 标准 / 大扫除 */
   strength: MarkStrength;
   /**
-   * 拉黑后自动贡献给社区名单（默认开，全局开关，绝无逐条弹窗）。
-   * 隐私承诺：只有用户主动拉黑才产生上报，上传内容仅限
-   * handle / x_user_id / 分类 / 话术指纹哈希（原文不出设备）/
-   * 该推文外链域名，绝无浏览历史等被动数据。
+   * 同步用户明确维护的本地黑名单/白名单（默认开，全局开关，绝无逐条弹窗）。
+   * 黑名单上传 handle / 可选 x_user_id / 分类 / 话术指纹哈希 / 外链域名；
+   * 白名单上传 handle / 可选 x_user_id / 当时的检测来源、规则与理由。
+   * 不上传浏览历史、推文原文或任何被动页面记录。
    */
   autoContribute: boolean;
 }
@@ -54,11 +52,7 @@ export const DEFAULT_COMMUNITY_SETTINGS: CommunitySettings = {
 export async function getCommunitySnapshot(): Promise<StoredSnapshot | null> {
   const result = await browser.storage.local.get(SNAPSHOT_KEY);
   const value = result[SNAPSHOT_KEY] as StoredSnapshot | undefined;
-  if (
-    !value ||
-    typeof value.snapshot_version !== 'string' ||
-    typeof value.body !== 'string'
-  ) {
+  if (!value || typeof value.snapshot_version !== 'string' || typeof value.body !== 'string') {
     return null;
   }
   return value;
@@ -79,9 +73,7 @@ export async function getCommunitySettings(): Promise<CommunitySettings> {
   const value = (result[SETTINGS_KEY] ?? {}) as Record<string, unknown>;
   return {
     enabled: value['enabled'] !== false,
-    strength: isMarkStrength(value['strength'])
-      ? value['strength']
-      : DEFAULT_MARK_STRENGTH,
+    strength: isMarkStrength(value['strength']) ? value['strength'] : DEFAULT_MARK_STRENGTH,
     autoContribute: value['autoContribute'] !== false,
   };
 }
@@ -94,17 +86,9 @@ export async function setCommunitySettings(
   return next;
 }
 
-export function subscribeCommunity(
-  onChange: () => void,
-): () => void {
-  const listener = (
-    changes: Record<string, unknown>,
-    areaName: string,
-  ) => {
-    if (
-      areaName === 'local' &&
-      (changes[SNAPSHOT_KEY] || changes[SETTINGS_KEY])
-    ) {
+export function subscribeCommunity(onChange: () => void): () => void {
+  const listener = (changes: Record<string, unknown>, areaName: string) => {
+    if (areaName === 'local' && (changes[SNAPSHOT_KEY] || changes[SETTINGS_KEY])) {
       onChange();
     }
   };
@@ -144,10 +128,7 @@ export interface RuntimeCommunity {
 
 /** 内容脚本用：快照 + 设置 -> 可用索引；关闭或无快照返回 null */
 export async function buildRuntimeCommunity(): Promise<RuntimeCommunity | null> {
-  const [snapshot, settings] = await Promise.all([
-    getCommunitySnapshot(),
-    getCommunitySettings(),
-  ]);
+  const [snapshot, settings] = await Promise.all([getCommunitySnapshot(), getCommunitySettings()]);
   if (!settings.enabled || !snapshot) {
     return null;
   }

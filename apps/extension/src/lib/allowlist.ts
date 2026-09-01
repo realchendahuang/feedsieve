@@ -8,6 +8,16 @@ export interface AllowlistItem {
   handle: string;
   xUserId?: string;
   addedAt: number;
+  /** 当时的检测证据：用于本机回看误标原因；旧记录没有这些字段也保持兼容。 */
+  detectionSource?: string;
+  ruleId?: string;
+  detectionReason?: string;
+}
+
+export interface FalsePositiveEvidence {
+  detectionSource: string;
+  ruleId?: string;
+  detectionReason: string;
 }
 
 const STORAGE_KEY = 'allowlist';
@@ -23,8 +33,12 @@ export async function isAllowed(handle: string): Promise<boolean> {
   return (await getAllowlist()).some((item) => item.handle === normalized);
 }
 
-/** 幂等加入。 */
-export async function addAllowlist(handle: string, xUserId?: string): Promise<void> {
+/** 幂等加入；新记录同时保留当时的检测证据，后续才能按规则复盘误标。 */
+export async function addAllowlist(
+  handle: string,
+  xUserId?: string,
+  evidence?: FalsePositiveEvidence,
+): Promise<void> {
   const normalized = normalize(handle);
   if (!normalized) {
     return;
@@ -37,23 +51,21 @@ export async function addAllowlist(handle: string, xUserId?: string): Promise<vo
     handle: normalized,
     addedAt: Date.now(),
     ...(xUserId ? { xUserId } : {}),
+    ...(evidence?.detectionSource ? { detectionSource: evidence.detectionSource } : {}),
+    ...(evidence?.ruleId ? { ruleId: evidence.ruleId } : {}),
+    ...(evidence?.detectionReason ? { detectionReason: evidence.detectionReason } : {}),
   });
   await browser.storage.local.set({ [STORAGE_KEY]: items });
 }
 
 export async function removeAllowed(handle: string): Promise<void> {
   const normalized = normalize(handle);
-  const remaining = (await getAllowlist()).filter(
-    (item) => item.handle !== normalized,
-  );
+  const remaining = (await getAllowlist()).filter((item) => item.handle !== normalized);
   await browser.storage.local.set({ [STORAGE_KEY]: remaining });
 }
 
 export function subscribeAllowlist(onChange: (items: AllowlistItem[]) => void): () => void {
-  const listener = (
-    changes: Record<string, { newValue?: unknown }>,
-    areaName: string,
-  ) => {
+  const listener = (changes: Record<string, { newValue?: unknown }>, areaName: string) => {
     if (areaName === 'local' && changes[STORAGE_KEY]) {
       void getAllowlist().then(onChange);
     }

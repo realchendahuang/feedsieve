@@ -7,13 +7,12 @@ import {
   normalizeForFingerprint,
 } from './fingerprint';
 
-const SPAM_TEMPLATE = '🚀 500 USDT Giveaway! Claim on Tron 👉 https://t.co/abc123 — follow & repost 🔥';
+const SPAM_TEMPLATE =
+  '🚀 500 USDT Giveaway! Claim on Tron 👉 https://t.co/abc123 — follow & repost 🔥';
 
 describe('normalizeForFingerprint', () => {
   it('strips emoji, punctuation, casing and whitespace', () => {
-    expect(normalizeForFingerprint('Hello, World! 🌍 — TEST')).toBe(
-      'helloworldtest',
-    );
+    expect(normalizeForFingerprint('Hello, World! 🌍 — TEST')).toBe('helloworldtest');
   });
 
   it('collapses anti-detection spacing (incl. full-width spaces)', () => {
@@ -59,9 +58,7 @@ describe('fingerprintText', () => {
 
   it('keeps CJK templates above the minimum length fingerprintable', () => {
     const zh = '加我微信进内部群包赚稳赚不赔带单老师带你飞';
-    expect(zh.replace(/\s/g, '').length).toBeGreaterThanOrEqual(
-      MIN_FINGERPRINT_LENGTH,
-    );
+    expect(zh.replace(/\s/g, '').length).toBeGreaterThanOrEqual(MIN_FINGERPRINT_LENGTH);
     expect(fingerprintText(zh)).toMatch(/^[0-9a-f]{16}$/);
   });
 });
@@ -89,36 +86,43 @@ describe('contentFingerprint', () => {
 describe('createRepetitionTracker', () => {
   it('marks from the minRepeat-th occurrence onward', () => {
     const tracker = createRepetitionTracker({ minRepeat: 3 });
-    expect(tracker.track('a')).toBe(false);
-    expect(tracker.track('a')).toBe(false);
-    expect(tracker.track('a')).toBe(true);
-    expect(tracker.track('a')).toBe(true);
+    expect(tracker.track('a', 'user1')).toBe(false);
+    expect(tracker.track('a', 'user2')).toBe(false);
+    expect(tracker.track('a', 'user3')).toBe(true);
+    expect(tracker.track('a', 'user4')).toBe(true);
   });
 
   it('tracks fingerprints independently', () => {
     const tracker = createRepetitionTracker({ minRepeat: 2 });
-    expect(tracker.track('a')).toBe(false);
-    expect(tracker.track('b')).toBe(false);
-    expect(tracker.track('a')).toBe(true);
+    expect(tracker.track('a', 'user1')).toBe(false);
+    expect(tracker.track('b', 'user1')).toBe(false);
+    expect(tracker.track('a', 'user2')).toBe(true);
     expect(tracker.countOf('a')).toBe(2);
     expect(tracker.countOf('b')).toBe(1);
   });
 
+  it('does not count the same account or a rerender twice', () => {
+    const tracker = createRepetitionTracker({ minRepeat: 2 });
+    expect(tracker.track('a', 'SameUser')).toBe(false);
+    expect(tracker.track('a', 'sameuser')).toBe(false);
+    expect(tracker.countOf('a')).toBe(1);
+  });
+
   it('evicts oldest fingerprints beyond maxTracked (session memory bound)', () => {
     const tracker = createRepetitionTracker({ minRepeat: 2, maxTracked: 2 });
-    tracker.track('old');
-    tracker.track('mid');
-    tracker.track('new');
+    tracker.track('old', 'user1');
+    tracker.track('mid', 'user1');
+    tracker.track('new', 'user1');
     // 'old' 已被 FIFO 淘汰：再次出现从头计数
     expect(tracker.countOf('old')).toBe(0);
-    expect(tracker.track('old')).toBe(false);
+    expect(tracker.track('old', 'user1')).toBe(false);
     expect(tracker.countOf('old')).toBe(1);
   });
 
   it('default options: minRepeat=3, maxTracked=600', () => {
     const tracker = createRepetitionTracker();
-    tracker.track('x');
-    tracker.track('x');
-    expect(tracker.track('x')).toBe(true);
+    tracker.track('x', 'user1');
+    tracker.track('x', 'user2');
+    expect(tracker.track('x', 'user3')).toBe(true);
   });
 });

@@ -77,9 +77,7 @@ function clusterCampaigns(
       if (visitedFp.has(fps[j])) {
         continue;
       }
-      const near = [...clusterFps].some(
-        (f) => hamming(f, fps[j]) <= SIMHASH_HAMMING_THRESHOLD,
-      );
+      const near = [...clusterFps].some((f) => hamming(f, fps[j]) <= SIMHASH_HAMMING_THRESHOLD);
       if (near) {
         clusterFps.add(fps[j]);
         for (const h of fpAccounts.get(fps[j])!) {
@@ -179,13 +177,15 @@ function buildEntry(
   };
 }
 
-async function collectEvidence(
-  env: Cloudflare.Env,
-  handle: string,
-): Promise<string[]> {
+async function collectEvidence(env: Cloudflare.Env, handle: string): Promise<string[]> {
   const res = await env.DB.prepare(
-    `SELECT DISTINCT evidence_post_id FROM reports
-     WHERE handle = ?1 AND evidence_post_id IS NOT NULL LIMIT 5`,
+    `SELECT DISTINCT r.evidence_post_id
+     FROM reports r
+     JOIN active_labels l
+       ON l.installation_id = r.installation_id
+      AND l.handle = r.handle
+      AND l.label = 'blocked'
+     WHERE r.handle = ?1 AND r.evidence_post_id IS NOT NULL LIMIT 5`,
   )
     .bind(handle)
     .all<{ evidence_post_id: string }>();
@@ -197,19 +197,21 @@ async function collectEvidence(
  * 门槛的意义：单人重复上报制造不出指纹/域名证据，误拉黑也污染不了名单。
  * 每账号取安装数最高的前 5 条，最终按字典序排序保证确定性 JSON。
  */
-async function collectContentEvidence(
-  env: Cloudflare.Env,
-): Promise<{
+async function collectContentEvidence(env: Cloudflare.Env): Promise<{
   fingerprintsByHandle: Map<string, string[]>;
   domainsByHandle: Map<string, string[]>;
 }> {
   const fpRows = await env.DB.prepare(
-    `SELECT handle, content_fingerprint AS fp
-     FROM reports
-     WHERE content_fingerprint IS NOT NULL
-     GROUP BY handle, content_fingerprint
+    `SELECT r.handle, r.content_fingerprint AS fp
+     FROM reports r
+     JOIN active_labels l
+       ON l.installation_id = r.installation_id
+      AND l.handle = r.handle
+      AND l.label = 'blocked'
+     WHERE r.content_fingerprint IS NOT NULL
+     GROUP BY r.handle, r.content_fingerprint
      HAVING COUNT(*) >= ?1
-     ORDER BY handle ASC, COUNT(*) DESC, content_fingerprint ASC`,
+     ORDER BY r.handle ASC, COUNT(*) DESC, r.content_fingerprint ASC`,
   )
     .bind(MIN_INSTALLS_FOR_EVIDENCE)
     .all<{ handle: string; fp: string }>();
@@ -226,7 +228,13 @@ async function collectContentEvidence(
   }
 
   const domainRows = await env.DB.prepare(
-    'SELECT handle, link_domains FROM reports WHERE link_domains IS NOT NULL',
+    `SELECT r.handle, r.link_domains
+     FROM reports r
+     JOIN active_labels l
+       ON l.installation_id = r.installation_id
+      AND l.handle = r.handle
+      AND l.label = 'blocked'
+     WHERE r.link_domains IS NOT NULL`,
   ).all<{ handle: string; link_domains: string }>();
   const domainCounts = new Map<string, Map<string, number>>();
   for (const row of domainRows.results) {
@@ -262,9 +270,7 @@ async function collectContentEvidence(
   return { fingerprintsByHandle, domainsByHandle };
 }
 
-export async function generateSnapshot(
-  env: Cloudflare.Env,
-): Promise<PublishedSnapshot> {
+export async function generateSnapshot(env: Cloudflare.Env): Promise<PublishedSnapshot> {
   const now = new Date();
   const dateStamp = now.toISOString().slice(0, 10).replaceAll('-', '.');
 
@@ -272,7 +278,7 @@ export async function generateSnapshot(
   await autoRateAccounts(env);
 
   const latest = await env.DB.prepare(
-    "SELECT version FROM snapshots WHERE version LIKE ?1 ORDER BY version DESC LIMIT 1",
+    'SELECT version FROM snapshots WHERE version LIKE ?1 ORDER BY version DESC LIMIT 1',
   )
     .bind(`${dateStamp}.%`)
     .first<{ version: string }>();
@@ -288,20 +294,21 @@ export async function generateSnapshot(
 
   const entries = [];
   const dayRows = await env.DB.prepare(
-    `SELECT handle, COUNT(DISTINCT date(created_at, 'unixepoch')) AS days
-     FROM reports GROUP BY handle`,
+    `SELECT r.handle, COUNT(DISTINCT date(r.created_at, 'unixepoch')) AS days
+     FROM reports r
+     JOIN active_labels l
+       ON l.installation_id = r.installation_id
+      AND l.handle = r.handle
+      AND l.label = 'blocked'
+     GROUP BY r.handle`,
   ).all<{ handle: string; days: number }>();
-  const daysByHandle = new Map(
-    dayRows.results.map((r) => [r.handle, r.days] as const),
-  );
-  const rcRows = await env.DB.prepare(
-    'SELECT handle, report_count FROM accounts',
-  ).all<{ handle: string; report_count: number }>();
-  const reportCounts = new Map(
-    rcRows.results.map((r) => [r.handle, r.report_count] as const),
-  );
-  const { fingerprintsByHandle, domainsByHandle } =
-    await collectContentEvidence(env);
+  const daysByHandle = new Map(dayRows.results.map((r) => [r.handle, r.days] as const));
+  const rcRows = await env.DB.prepare('SELECT handle, report_count FROM accounts').all<{
+    handle: string;
+    report_count: number;
+  }>();
+  const reportCounts = new Map(rcRows.results.map((r) => [r.handle, r.report_count] as const));
+  const { fingerprintsByHandle, domainsByHandle } = await collectContentEvidence(env);
   // 指纹簇（Campaign）：每个指纹的账号（已达标），汉明距离归簇
   const evidenceFpAccounts = new Map<string, string[]>();
   for (const [handle, fps] of fingerprintsByHandle) {
@@ -384,10 +391,7 @@ export async function generateSnapshot(
 }
 
 /** 两次快照的 entries 内容是否相同（忽略 generated_at / 版本号等元信息）。 */
-function entriesContentEqual(
-  lastBody: string,
-  currentEntries: unknown[],
-): boolean {
+function entriesContentEqual(lastBody: string, currentEntries: unknown[]): boolean {
   let last: { entries?: unknown[] };
   try {
     last = JSON.parse(lastBody) as { entries?: unknown[] };
@@ -400,9 +404,7 @@ function entriesContentEqual(
   return JSON.stringify(last.entries) === JSON.stringify(currentEntries);
 }
 
-export async function getLatestSnapshot(
-  env: Cloudflare.Env,
-): Promise<{ manifest: string } | null> {
+export async function getLatestSnapshot(env: Cloudflare.Env): Promise<{ manifest: string } | null> {
   const row = await env.DB.prepare(
     'SELECT manifest_json FROM snapshots ORDER BY created_at DESC, version DESC LIMIT 1',
   ).first<{ manifest_json: string }>();
@@ -417,9 +419,7 @@ export async function getSnapshotFile(
   if (!/^\d{4}\.\d{2}\.\d{2}\.\d{1,4}$/.test(version) || path !== SNAPSHOT_PACK) {
     return null;
   }
-  const row = await env.DB.prepare(
-    'SELECT files_json FROM snapshots WHERE version = ?1',
-  )
+  const row = await env.DB.prepare('SELECT files_json FROM snapshots WHERE version = ?1')
     .bind(version)
     .first<{ files_json: string }>();
   if (!row) return null;

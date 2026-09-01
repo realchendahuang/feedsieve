@@ -6,19 +6,9 @@
  */
 
 import type { DailyStat } from './daily-stats';
+import { categoryLabel, type UiLanguage } from './i18n';
 
 /** 贡献分类 -> 战报里的中文标签（与社区分类一一对应，2-4 字） */
-export const CATEGORY_LABELS: Record<string, string> = {
-  bot_spam: '机器人',
-  copy_paste: '复读机',
-  ai_slop: 'AI 垃圾',
-  advertising: '广告号',
-  adult_gray_traffic: '色情引流',
-  scam_phishing: '诈骗',
-  engagement_bait: '互动钓鱼',
-  other: '其他',
-};
-
 /** 分类明细按固定顺序输出（确定性文案，测试可断言） */
 const CATEGORY_ORDER = [
   'bot_spam',
@@ -36,20 +26,29 @@ const CATEGORY_ORDER = [
  * 「福滤娃今日战报：送走 5 个垃圾号（机器人 2 · 诈骗 1 · 复读机 2）」
  * 无拉黑时给空态文案（不鼓励硬分享）。
  */
-export function buildReportText(stat: DailyStat): string {
+export function buildReportText(stat: DailyStat, language: UiLanguage = 'zh'): string {
   const total = stat.blocked;
   if (total <= 0) {
-    return '福滤娃今日战报：0 个垃圾号，今天的 X 居然挺像人';
+    return language === 'zh'
+      ? '福滤娃今日战报：未发现垃圾账号'
+      : 'FeedSieve today: no spam accounts blocked';
   }
   const parts: string[] = [];
   for (const key of CATEGORY_ORDER) {
     const count = stat.byCategory[key] ?? 0;
     if (count > 0) {
-      parts.push(`${CATEGORY_LABELS[key] ?? key} ${count}`);
+      parts.push(`${categoryLabel(key, language)} ${count}`);
     }
   }
-  const detail = parts.length > 0 ? `（${parts.join(' · ')}）` : '';
-  return `福滤娃今日战报：送走 ${total} 个垃圾号${detail}`;
+  const detail =
+    parts.length > 0
+      ? language === 'zh'
+        ? `（${parts.join(' · ')}）`
+        : ` (${parts.join(' · ')})`
+      : '';
+  return language === 'zh'
+    ? `福滤娃今日战报：已拉黑 ${total} 个垃圾账号${detail}`
+    : `FeedSieve today: blocked ${total} spam account${total === 1 ? '' : 's'}${detail}`;
 }
 
 /** 分享链接：x.com intent（用户已登录，点开即发推）。 */

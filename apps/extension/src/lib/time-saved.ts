@@ -15,19 +15,34 @@ export interface TimeSaved {
   label: string;
 }
 
-export function estimateTimeSaved(detected: number): TimeSaved {
+import type { UiLanguage } from './i18n';
+
+export function estimateTimeSaved(
+  detected: number,
+  language: UiLanguage = 'zh',
+): TimeSaved {
   const seconds = Math.max(0, detected) * SECONDS_PER_TWEET;
   const minutes = Math.floor(seconds / 60);
   if (minutes < 1) {
-    return { seconds, label: '不到 1 分钟' };
+    return { seconds, label: language === 'zh' ? '不到 1 分钟' : 'under 1 minute' };
   }
   if (minutes < 60) {
-    return { seconds, label: `约 ${minutes} 分钟` };
+    return {
+      seconds,
+      label: language === 'zh' ? `约 ${minutes} 分钟` : `about ${minutes} minutes`,
+    };
   }
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
   return {
     seconds,
-    label: rest > 0 ? `约 ${hours} 小时 ${rest} 分钟` : `约 ${hours} 小时`,
+    label:
+      language === 'zh'
+        ? rest > 0
+          ? `约 ${hours} 小时 ${rest} 分钟`
+          : `约 ${hours} 小时`
+        : rest > 0
+          ? `about ${hours}h ${rest}m`
+          : `about ${hours}h`,
   };
 }

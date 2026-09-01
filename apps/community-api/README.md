@@ -9,14 +9,14 @@ FeedSieve 社区名单后端：Cloudflare Worker + Hono + D1。收上报、攒�
 
 本目录的公开/私有边界是刻意的工程结构，不是靠自觉：
 
-| 内容 | 位置 | 是否入库 |
-| --- | --- | --- |
-| 全部源码 / schema / 测试 | `src/` `migrations/` `test/` | ✅ 提交 |
-| 公开 Worker 配置（占位 database_id） | `wrangler.jsonc` | ✅ 提交 |
-| 私有配置模板 | `wrangler.local.example.jsonc` | ✅ 提交 |
-| 真实 account_id / database_id / 域名路由 | `wrangler.local.jsonc` | ❌ gitignored |
-| 线上密钥 | `wrangler secret put` | ❌ 只存在 Cloudflare |
-| 本地开发密钥 | `.dev.vars` | ❌ gitignored（提交 `.dev.vars.example`） |
+| 内容                                     | 位置                           | 是否入库                                  |
+| ---------------------------------------- | ------------------------------ | ----------------------------------------- |
+| 全部源码 / schema / 测试                 | `src/` `migrations/` `test/`   | ✅ 提交                                   |
+| 公开 Worker 配置（占位 database_id）     | `wrangler.jsonc`               | ✅ 提交                                   |
+| 私有配置模板                             | `wrangler.local.example.jsonc` | ✅ 提交                                   |
+| 真实 account_id / database_id / 域名路由 | `wrangler.local.jsonc`         | ❌ gitignored                             |
+| 线上密钥                                 | `wrangler secret put`          | ❌ 只存在 Cloudflare                      |
+| 本地开发密钥                             | `.dev.vars`                    | ❌ gitignored（提交 `.dev.vars.example`） |
 
 隐私红线（见 `docs/OPEN_SOURCE_GOVERNANCE.md` §5）：举报者侧数据只存服务器加盐哈希，IP / 原始安装 UUID 永不落库、永不公开。
 
@@ -48,24 +48,31 @@ curl https://你的域名/healthz
 
 ## 端点
 
-| 端点 | 状态 | 说明 |
-| --- | --- | --- |
-| `GET /healthz` | ✅ | 存活检查 |
-| `POST /v1/reports` | ✅ | 显式上报（匿名安装哈希、去重、限速，批量 ≤50） |
-| `GET /v1/snapshots/latest` | ✅ | manifest（版本 + sha256 + 条目数，短缓存） |
-| `GET /v1/snapshots/:version/:file` | ✅ | 快照文件（immutable 缓存） |
-| `POST /admin/publish` | ✅ | 生成并发布新快照版本 |
-| `GET /admin/candidates` | ✅ | 待审队列（new + candidate，按票数降序） |
-| `POST /admin/promote` | ✅ | 人工提升/驳回：`recommended` / `strong` / `dismissed` |
+| 端点                               | 状态 | 说明                                           |
+| ---------------------------------- | ---- | ---------------------------------------------- |
+| `GET /healthz`                     | ✅   | 存活检查                                       |
+| `POST /v1/reports`                 | ✅   | 显式上报（匿名安装哈希、去重、限速，批量 ≤50） |
+| `POST /v1/rescues`                 | ✅   | 显式误标/抢救反馈（可带检测来源、规则与理由）  |
+| `POST /v1/labels/retract`          | ✅   | 本地名单删除后撤回当前票（原始审计证据保留）   |
+| `GET /v1/snapshots/latest`         | ✅   | manifest（版本 + sha256 + 条目数，短缓存）     |
+| `GET /v1/snapshots/:version/:file` | ✅   | 快照文件（immutable 缓存）                     |
+| `POST /admin/publish`              | ✅   | 生成并发布新快照版本                           |
+| `GET /admin/candidates`            | ✅   | 待审队列（new + candidate，按票数降序）        |
+| `GET /admin/false-positives`       | ✅   | 误标规则汇总 + 最近反馈（不返回安装标识）      |
 
-审核闸门：自动化只能把账号标到 `candidate`；`recommended` / `strong` 必须人工提升，
-`dismissed` = 人工驳回（永不出现在快照里）。`new` = 票数未达阈值（当前 3 票）。
+自动评级：普通独立票达到 2 票进入 `candidate`、达到 3 票进入 `strong`；
+owner 拉黑一票可到 `strong`，owner 误标会变成 `dismissed`（永不出现在快照里）。
+`new` = 票数未达阈值。
+
+计票以 `active_labels` 为准：一个匿名安装对一个账号只能保留一个当前判断，
+后一次“拉黑 / 白名单”会覆盖前一次，避免同一用户同时贡献正负票。`reports` 与
+`rescues` 仍保留规则和内容证据，供误标审计使用；名单删除只撤票，不抹审计记录。
 
 ## 管理 CLI
 
 ```sh
 apps/community-api/scripts/admin.sh candidates          # 待审队列
-apps/community-api/scripts/admin.sh promote @handle strong
+apps/community-api/scripts/admin.sh false-positives     # 误标审计
 apps/community-api/scripts/admin.sh publish             # 发布新快照
 ```
 

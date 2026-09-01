@@ -9,6 +9,16 @@ export interface BlockedAccount {
   handle: string;
   xUserId?: string;
   blockedAt: number;
+  /** 拉黑时的检测证据；旧记录没有这些字段，历史同步时按 other 处理。 */
+  category?: string;
+  contentFingerprint?: string;
+  linkDomains?: string[];
+}
+
+export interface BlockedAccountEvidence {
+  category: string;
+  contentFingerprint?: string;
+  linkDomains?: string[];
 }
 
 const STORAGE_KEY = 'blockedAccounts';
@@ -20,7 +30,11 @@ export async function getBlockedAccounts(): Promise<BlockedAccount[]> {
 }
 
 /** 记账（幂等）：已存在则不动 blockedAt，保留首次拉黑时间。 */
-export async function markBlocked(handle: string, xUserId?: string): Promise<void> {
+export async function markBlocked(
+  handle: string,
+  xUserId?: string,
+  evidence?: BlockedAccountEvidence,
+): Promise<void> {
   const normalized = normalize(handle);
   if (!normalized) {
     return;
@@ -28,8 +42,18 @@ export async function markBlocked(handle: string, xUserId?: string): Promise<voi
   const accounts = await getBlockedAccounts();
   const existing = accounts.find((a) => a.handle === normalized);
   if (existing) {
+    let changed = false;
     if (!existing.xUserId && xUserId) {
       existing.xUserId = xUserId;
+      changed = true;
+    }
+    if (evidence) {
+      existing.category = evidence.category;
+      existing.contentFingerprint = evidence.contentFingerprint;
+      existing.linkDomains = evidence.linkDomains;
+      changed = true;
+    }
+    if (changed) {
       await browser.storage.local.set({ [STORAGE_KEY]: accounts });
     }
     return;
@@ -37,6 +61,9 @@ export async function markBlocked(handle: string, xUserId?: string): Promise<voi
   accounts.push({
     handle: normalized,
     ...(xUserId ? { xUserId } : {}),
+    ...(evidence?.category ? { category: evidence.category } : {}),
+    ...(evidence?.contentFingerprint ? { contentFingerprint: evidence.contentFingerprint } : {}),
+    ...(evidence?.linkDomains?.length ? { linkDomains: evidence.linkDomains } : {}),
     blockedAt: Date.now(),
   });
   await browser.storage.local.set({ [STORAGE_KEY]: accounts });
@@ -50,13 +77,8 @@ export async function removeBlockedAccount(handle: string): Promise<void> {
 }
 
 /** 订阅变化（popup 实时刷新）。返回解绑函数。 */
-export function subscribeBlocked(
-  onChange: (accounts: BlockedAccount[]) => void,
-): () => void {
-  const listener = (
-    changes: Record<string, { newValue?: unknown }>,
-    areaName: string,
-  ) => {
+export function subscribeBlocked(onChange: (accounts: BlockedAccount[]) => void): () => void {
+  const listener = (changes: Record<string, { newValue?: unknown }>, areaName: string) => {
     if (areaName === 'local' && changes[STORAGE_KEY]) {
       void getBlockedAccounts().then(onChange);
     }

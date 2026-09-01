@@ -1,18 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   getBlockedAccounts,
   subscribeBlocked,
   type BlockedAccount,
 } from '../../src/lib/blocked-accounts';
-import { getStats, subscribeStats, type LocalStats } from '../../src/lib/local-stats';
-import {
-  getDailyStats,
-  subscribeDaily,
-  type DailyStats,
-} from '../../src/lib/daily-stats';
-import { buildReportText, shareUrl, CATEGORY_LABELS } from '../../src/lib/share-card';
+import { getDailyStats, subscribeDaily, type DailyStats } from '../../src/lib/daily-stats';
+import { buildReportText, shareUrl } from '../../src/lib/share-card';
 import { estimateTimeSaved } from '../../src/lib/time-saved';
-import { getContributionStats, getInstallationId, type ContributionStats } from '../../src/lib/contribute';
+import {
+  getContributionStats,
+  getInstallationId,
+  type ContributionStats,
+} from '../../src/lib/contribute';
 import { drawReportCard } from '../../src/lib/share-card-image';
 import {
   getAllowlist,
@@ -28,64 +27,167 @@ import {
   type CommunitySettings,
 } from '../../src/lib/community-store';
 import {
-  MARK_STRENGTHS,
-  STRENGTH_LABELS,
-  parseSnapshotBody,
-  type MarkStrength,
-} from '@feedsieve/community-lists';
-/** 一键拉黑批量结果（content 脚本执行后回传）。 */
+  categoryLabel,
+  defaultUiLanguage,
+  getUiLanguage,
+  setUiLanguage,
+  subscribeUiLanguage,
+  UI_COPY,
+  type UiLanguage,
+} from '../../src/lib/i18n';
+import { MARK_STRENGTHS, parseSnapshotBody, type MarkStrength } from '@feedsieve/community-lists';
+import type { UnblockBatchResult } from '../../src/lib/run-unblock-batch';
+
 interface PageBlockResult {
   blocked: string[];
   failed: Array<{ handle: string; code: string }>;
 }
-import type { UnblockBatchResult } from '../../src/lib/run-unblock-batch';
 
-/** 页面黄框账号（popup 从活动 x.com 标签实时查询）。 */
 interface PageMarkedItem {
   handle: string;
   category: string;
   reason: string;
 }
 
-const FAILURE_LABELS: Record<string, string> = {
-  'no-id': '无用户ID',
-  auth_required: '登录已失效',
-  rate_limited: '被限流',
-  http_error: '接口异常',
-  network_error: '网络失败',
-  missing_csrf: '登录态缺失',
+type PopupView = 'home' | 'lists' | 'settings';
+type ListView = 'blocked' | 'allowlist';
+type AppIconName = 'clean' | 'lists' | 'settings' | 'refresh' | 'shield';
+
+function initialPopupView(): PopupView {
+  const value = new URLSearchParams(globalThis.location?.search ?? '').get('view');
+  return value === 'lists' || value === 'settings' ? value : 'home';
+}
+
+function initialListView(): ListView {
+  return new URLSearchParams(globalThis.location?.search ?? '').get('list') === 'allowlist'
+    ? 'allowlist'
+    : 'blocked';
+}
+
+function AppIcon({ name, size = 20 }: { name: AppIconName; size?: number }) {
+  const paths: Record<AppIconName, ReactNode> = {
+    clean: (
+      <>
+        <path d="M12 3.25 5 6.1v5.15c0 4.3 2.82 7.7 7 9.5 4.18-1.8 7-5.2 7-9.5V6.1L12 3.25Z" />
+        <path d="m8.6 12 2.15 2.15 4.75-5" />
+      </>
+    ),
+    lists: (
+      <>
+        <path d="M9.25 6.25h9.5M9.25 12h9.5M9.25 17.75h9.5" />
+        <circle cx="5.25" cy="6.25" r="1" />
+        <circle cx="5.25" cy="12" r="1" />
+        <circle cx="5.25" cy="17.75" r="1" />
+      </>
+    ),
+    settings: (
+      <>
+        <path d="M4 7h10M18 7h2M4 17h2M10 17h10M4 12h4M12 12h8" />
+        <circle cx="16" cy="7" r="2" />
+        <circle cx="8" cy="17" r="2" />
+        <circle cx="10" cy="12" r="2" />
+      </>
+    ),
+    refresh: (
+      <>
+        <path d="M20 7v5h-5" />
+        <path d="M18.35 16.1A8 8 0 1 1 19.6 9" />
+      </>
+    ),
+    shield: (
+      <>
+        <path d="M12 3.25 5 6.1v5.15c0 4.3 2.82 7.7 7 9.5 4.18-1.8 7-5.2 7-9.5V6.1L12 3.25Z" />
+        <path d="m9 12 2 2 4-4" />
+      </>
+    ),
+  };
+
+  return (
+    <svg
+      aria-hidden="true"
+      className="app-icon"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {paths[name]}
+    </svg>
+  );
+}
+
+const FAILURE_LABELS: Record<UiLanguage, Record<string, string>> = {
+  zh: {
+    'no-id': '缺少用户 ID',
+    auth_required: '登录已失效',
+    rate_limited: '请求过于频繁',
+    http_error: '请求异常',
+    network_error: '网络失败',
+    missing_csrf: '登录态缺失',
+  },
+  en: {
+    'no-id': 'Missing user ID',
+    auth_required: 'Sign-in expired',
+    rate_limited: 'Rate limited',
+    http_error: 'Request error',
+    network_error: 'Network error',
+    missing_csrf: 'Missing session',
+  },
 };
 
-/** 强度档位悬停解释：与 community-lists 的 status 门槛一一对应 */
-const STRENGTH_HINTS: Record<MarkStrength, string> = {
-  refresh: '只标社区强证据账号',
-  standard: '强证据 + 推荐账号',
-  deep_clean: '全部候选都标（含指纹/域名）',
+const STRENGTH_LABELS: Record<UiLanguage, Record<MarkStrength, string>> = {
+  zh: { refresh: '清爽', standard: '标准', deep_clean: '彻底' },
+  en: { refresh: 'Light', standard: 'Standard', deep_clean: 'Deep' },
+};
+
+const STRENGTH_HINTS: Record<UiLanguage, Record<MarkStrength, string>> = {
+  zh: {
+    refresh: '只标记强证据账号',
+    standard: '标记强证据和推荐账号',
+    deep_clean: '也标记候选、相似话术和可疑域名',
+  },
+  en: {
+    refresh: 'Only mark accounts with strong evidence',
+    standard: 'Mark strong and recommended accounts',
+    deep_clean: 'Also mark candidates, similar wording, and suspicious domains',
+  },
 };
 
 const BLOCK_MESSAGE = { type: 'feedsieve:run-page-block' } as const;
 const PAGE_MARKED_MESSAGE = { type: 'feedsieve:page-marked-list' } as const;
 
-const EMPTY_STATS: LocalStats = { detected: 0, blocked: 0, unblocked: 0 };
-
-function formatDate(timestamp: number): string {
-  const d = new Date(timestamp);
-  return `${d.getMonth() + 1}月${d.getDate()}日`;
+function asPageMarkedList(value: unknown): PageMarkedItem[] {
+  return Array.isArray(value) ? (value as PageMarkedItem[]) : [];
 }
 
-function formatAgo(timestamp: number): string {
+function formatDate(timestamp: number, language: UiLanguage): string {
+  return new Intl.DateTimeFormat(language === 'zh' ? 'zh-CN' : 'en', {
+    month: 'short',
+    day: 'numeric',
+  }).format(new Date(timestamp));
+}
+
+function formatAgo(timestamp: number, language: UiLanguage): string {
+  const t = UI_COPY[language];
   const minutes = Math.floor((Date.now() - timestamp) / 60000);
-  if (minutes < 1) return '刚刚';
-  if (minutes < 60) return `${minutes} 分钟前`;
+  if (minutes < 1) return t.justNow;
+  if (minutes < 60) return t.minutesAgo(minutes);
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} 小时前`;
-  return `${Math.floor(hours / 24)} 天前`;
+  if (hours < 24) return t.hoursAgo(hours);
+  return t.daysAgo(Math.floor(hours / 24));
 }
 
 export default function App() {
+  const [language, setLanguage] = useState<UiLanguage>(defaultUiLanguage);
+  const [view, setView] = useState<PopupView>(initialPopupView);
+  const [listView, setListView] = useState<ListView>(initialListView);
+  const [reportExpanded, setReportExpanded] = useState(false);
   const [pageMarked, setPageMarked] = useState<PageMarkedItem[] | null>(null);
   const [blocked, setBlocked] = useState<BlockedAccount[] | null>(null);
-  const [stats, setStats] = useState<LocalStats>(EMPTY_STATS);
   const [daily, setDaily] = useState<DailyStats>({ days: {} });
   const [contribution, setContribution] = useState<ContributionStats | null>(null);
   const [cardUrl, setCardUrl] = useState<string | null>(null);
@@ -103,21 +205,20 @@ export default function App() {
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
 
+  const t = UI_COPY[language];
+
   useEffect(() => {
+    void getUiLanguage().then(setLanguage);
     void getBlockedAccounts().then(setBlocked);
-    void getStats().then(setStats);
     void getDailyStats().then(setDaily);
     void getContributionStats().then(setContribution);
     void getAllowlist().then(setAllowlist);
     void getCommunitySettings().then(setCommunity);
-    // 页面黄框清单只读查询走 .then 链（满足 set-state-in-effect 规则）
     void sendToXPage(PAGE_MARKED_MESSAGE)
-      .then((result) => setPageMarked((result as PageMarkedItem[]) ?? []))
+      .then((result) => setPageMarked(asPageMarkedList(result)))
       .catch(() => setPageMarked([]));
-    void getCommunitySnapshot().then(async (snapshot) => {
-      if (!snapshot) {
-        return;
-      }
+    void getCommunitySnapshot().then((snapshot) => {
+      if (!snapshot) return;
       const parsed = parseSnapshotBody(snapshot.body);
       if (parsed.ok) {
         setCommunityMeta({
@@ -129,52 +230,65 @@ export default function App() {
     });
     const unsubs = [
       subscribeBlocked(setBlocked),
-      subscribeStats(setStats),
       subscribeDaily(setDaily),
       subscribeAllowlist(setAllowlist),
-      subscribeCommunity(() => {
-        void getCommunitySettings().then(setCommunity);
-      }),
+      subscribeCommunity(() => void getCommunitySettings().then(setCommunity)),
+      subscribeUiLanguage(setLanguage),
     ];
     return () => unsubs.forEach((unsub) => unsub());
   }, []);
 
-  /**
-   * 投递消息到任一可用的 x.com 标签：活动标签优先，其余依次兜底。
-   * 重载扩展后旧标签的 content script 不响应（Receiving end does not exist），
-   * 逐个尝试总能找到活着的会话（若有）。
-   * 纯函数（不读 state），组件顶部申明保证 effect 依赖稳定。
-   */
-  async function sendToXPage(
-    message: { type: string; handle?: string; force?: boolean },
-  ): Promise<unknown> {
+  useEffect(() => {
+    document.documentElement.lang = language === 'zh' ? 'zh-CN' : 'en';
+  }, [language]);
+
+  async function sendToXPage(message: {
+    type: string;
+    handle?: string;
+    force?: boolean;
+  }): Promise<unknown> {
     const tabs = await browser.tabs.query({ url: 'https://x.com/*' });
-    const ordered = [...tabs].sort(
-      (a, b) => Number(b.active ?? false) - Number(a.active ?? false),
-    );
+    const ordered = [...tabs].sort((a, b) => Number(b.active ?? false) - Number(a.active ?? false));
     for (const tab of ordered) {
-      if (!tab.id) {
-        continue;
-      }
+      if (!tab.id) continue;
       try {
         return await browser.tabs.sendMessage(tab.id, message);
       } catch {
-        // 该标签没有接收方，试下一个
+        // Try the next x.com tab; hot reload can leave stale content scripts behind.
       }
     }
     throw new Error('no x.com receiver');
   }
 
-  /** 从活动 x.com 标签实时拉取当前页面黄框账号清单。 */
   async function refreshPageMarked(): Promise<void> {
     try {
-      const result = (await sendToXPage(PAGE_MARKED_MESSAGE)) as
-        | PageMarkedItem[]
-        | undefined;
-      setPageMarked(result ?? []);
+      const result = await sendToXPage(PAGE_MARKED_MESSAGE);
+      setPageMarked(asPageMarkedList(result));
     } catch {
-      setPageMarked([]); // 没有可用的 x.com 标签：空清单，按钮会给提示
+      setPageMarked([]);
     }
+  }
+
+  async function selectLanguage(next: UiLanguage): Promise<void> {
+    if (next === language) return;
+    setCardUrl(null);
+    setSyncMsg(null);
+    setNotice(null);
+    setLanguage(next);
+    await setUiLanguage(next);
+  }
+
+  async function setListUploads(enabled: boolean): Promise<void> {
+    await setCommunitySettings({ autoContribute: enabled });
+    if (enabled) {
+      await browser.runtime.sendMessage({ type: 'feedsieve:labels-sync' }).catch(() => undefined);
+      setContribution(await getContributionStats());
+    }
+  }
+
+  async function removeFromAllowlist(handle: string): Promise<void> {
+    await removeAllowed(handle);
+    await browser.runtime.sendMessage({ type: 'feedsieve:labels-sync' }).catch(() => undefined);
   }
 
   async function syncCommunityNow(): Promise<void> {
@@ -184,38 +298,34 @@ export default function App() {
       const res = (await browser.runtime.sendMessage({
         type: 'feedsieve:community-sync',
         force: true,
-      })) as {
-        outcome?: { status: string; version?: string; error?: string };
-      };
+      })) as { outcome?: { status: string; version?: string; error?: string } };
       const outcome = res?.outcome;
       if (outcome?.status === 'updated') {
-        setSyncMsg(`✅ 已更新 v${outcome.version}`);
+        setSyncMsg(t.synced(outcome.version));
       } else if (outcome?.status === 'unchanged') {
-        setSyncMsg('✅ 已是最新');
+        setSyncMsg(t.upToDate);
       } else if (outcome?.status === 'error') {
-        setSyncMsg(`⚠️ ${outcome.error ?? '同步失败'}`);
+        setSyncMsg(outcome.error ? `${t.syncFailed}: ${outcome.error}` : t.syncFailed);
       } else {
-        setSyncMsg('⚠️ 不可用');
+        setSyncMsg(t.unavailable);
       }
     } catch {
-      setSyncMsg('⚠️ 后台未就绪');
+      setSyncMsg(t.backgroundUnavailable);
     } finally {
       setSyncing(false);
     }
   }
 
-  /** 复制本机匿名安装 ID（维护者绑定 owner 特权用；普通用户无感）。 */
   async function copyInstallationId(): Promise<void> {
     try {
       const id = await getInstallationId();
       await navigator.clipboard.writeText(id);
-      setNotice('已复制安装 ID');
+      setNotice(t.copiedId);
     } catch {
-      setNotice('复制失败：请手动复制');
+      setNotice(t.copyFailed);
     }
   }
 
-  /** 一键拉黑：当前页面全部黄框账号（由活动 x.com 标签执行）。 */
   async function runBatch(): Promise<void> {
     setRunning(true);
     setNotice(null);
@@ -226,13 +336,12 @@ export default function App() {
       setBlockResult(result);
       await refreshPageMarked();
     } catch {
-      setNotice('请先打开或刷新 x.com');
+      setNotice(t.openXNotice);
     } finally {
       setRunning(false);
     }
   }
 
-  /** handle 缺省时撤销全部已拉黑账号。 */
   async function runUnblock(handle?: string): Promise<void> {
     setRunning(true);
     setNotice(null);
@@ -244,10 +353,9 @@ export default function App() {
         ...(handle ? { handle } : {}),
       })) as UnblockBatchResult;
       setUnblockResult(result);
-      // 撤销后已拉黑记录变化；页面黄框可能重新出现（X 服务端行为），刷新一次
       await refreshPageMarked();
     } catch {
-      setNotice('请先打开或刷新 x.com');
+      setNotice(t.openXNotice);
     } finally {
       setRunning(false);
     }
@@ -258,342 +366,548 @@ export default function App() {
   const failedSummary = (result: { failed: Array<{ handle: string; code: string }> } | null) =>
     result?.failed.length
       ? result.failed
-          .map((f) => `@${f.handle}（${FAILURE_LABELS[f.code] ?? f.code}）`)
-          .join('、')
+          .map(
+            (failure) =>
+              `@${failure.handle} (${FAILURE_LABELS[language][failure.code] ?? failure.code})`,
+          )
+          .join(' · ')
       : null;
 
-  // v0.6 战报：今日数据（daily-stats 按日累计）
   const today = daily.days[new Date().toISOString().slice(0, 10)] ?? {
     blocked: 0,
     detected: 0,
     unblocked: 0,
     byCategory: {},
   };
-  const reportText = buildReportText(today);
+  const reportText = buildReportText(today, language);
   const shareHref = shareUrl(reportText);
-  const timeSaved = estimateTimeSaved(today.detected);
-
-  /** 生成分享卡片图片（canvas -> dataURL，popup 预览 + 下载用）。 */
-  function makeCard(): void {
-    try {
-      const canvas = drawReportCard(today);
-      setCardUrl(canvas.toDataURL('image/png'));
-    } catch {
-      setCardUrl(null); // canvas 不可用（极老环境）时静默降级为纯文字分享
-    }
-  }
-  // 分类占比条形图：按数量降序，最多显示 4 类（克制）
+  const timeSaved = estimateTimeSaved(today.detected, language);
   const categoryBars = Object.entries(today.byCategory)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 4)
     .map(([key, count]) => ({
       key,
-      label: CATEGORY_LABELS[key] ?? key,
+      label: categoryLabel(key, language),
       count,
       pct: today.blocked > 0 ? Math.round((count / today.blocked) * 100) : 0,
     }));
 
+  function makeCard(): void {
+    try {
+      const canvas = drawReportCard(today, language);
+      setCardUrl(canvas.toDataURL('image/png'));
+    } catch {
+      setCardUrl(null);
+    }
+  }
+
+  const communityStatus = communityMeta ? t.listReady(communityMeta.count) : t.listLoading;
+
   return (
     <main className="popup">
       <header className="popup-header">
-        <h1>
-          福滤娃 <span className="popup-sub">FeedSieve</span>
-        </h1>
+        <div className="brand-lockup">
+          <img src="/icon-64.png" alt="" className="brand-icon" />
+          <h1>{t.brand}</h1>
+        </div>
+        {view === 'home' ? (
+          <div className={`sync-pill${communityMeta ? ' is-ready' : ''}`} title={communityStatus}>
+            <span className="sync-dot" aria-hidden="true" />
+            <span>{communityStatus}</span>
+          </div>
+        ) : null}
       </header>
 
-      {/* 今日战报：送走 N 个 + 分类明细 + 一键分享 */}
-      <section className="report-card">
-        <div className="report-head">
-          <span className="stat-label">今日战报</span>
-          <div className="report-actions">
-            <button
-              type="button"
-              className="report-card-btn"
-              title="生成分享卡片"
-              onClick={makeCard}
-            >
-              卡片
-            </button>
-            <a
-              className="report-share"
-              href={shareHref}
-              target="_blank"
-              rel="noreferrer"
-              title="分享到 X"
-            >
-              分享 ↗
-            </a>
-          </div>
-        </div>
-        {cardUrl ? (
-          <div className="report-card-preview">
-            <img src={cardUrl} alt="战报分享卡片" />
-            <a
-              className="report-card-download"
-              href={cardUrl}
-              download="feedsieve-report.png"
-            >
-              下载图片
-            </a>
-          </div>
-        ) : null}
-        <p className="report-text">{reportText}</p>
-        {today.detected > 0 ? (
-          <p className="report-sub">
-            标注 {today.detected} 个 · 撤销 {today.unblocked} 个 · 省下 {timeSaved.label}
-          </p>
-        ) : null}
-        {categoryBars.length > 0 ? (
-          <div className="report-bars">
-            {categoryBars.map((bar) => (
-              <div key={bar.key} className="report-bar">
-                <span className="report-bar-label">{bar.label}</span>
-                <div className="report-bar-track">
-                  <div
-                    className="report-bar-fill"
-                    style={{ width: `${Math.max(bar.pct, 4)}%` }}
-                  />
-                </div>
-                <span className="report-bar-count">{bar.count}</span>
+      <div className="popup-content">
+        {view === 'home' ? (
+          <div className="view-stack home-view">
+            <section className={`review-card${pageCount === 0 ? ' is-clean' : ''}`}>
+              <div className="section-heading">
+                <h2>{t.pageMarked}</h2>
+                <span className="count-badge" aria-label={`${t.pageMarked}: ${pageCount ?? 0}`}>
+                  {pageCount === null ? '…' : pageCount}
+                </span>
               </div>
-            ))}
-          </div>
-        ) : null}
-        {contribution && contribution.reports > 0 ? (
-          <p className="report-sub">
-            已为社区贡献 {contribution.reports} 条 · 被采纳 {contribution.adopted} 个
-          </p>
-        ) : null}
-      </section>
 
-      {/* 本地统计（动作只发生在本机） */}
-      <section className="stats-bar">
-        <span title="标注">🟡 {stats.detected}</span>
-        <span title="拉黑">⛔ {stats.blocked}</span>
-        <span title="撤销">↩️ {stats.unblocked}</span>
-      </section>
+              {pageCount === null ? (
+                <div className="loading-list" aria-hidden="true">
+                  <span />
+                  <span />
+                </div>
+              ) : pageCount === 0 ? (
+                <div className="clean-state">
+                  <span className="clean-state-icon">
+                    <AppIcon name="clean" size={24} />
+                  </span>
+                  <p>{running ? t.processing : t.pageClean}</p>
+                </div>
+              ) : (
+                <ul className="review-list">
+                  {pageMarked!.map((item) => (
+                    <li key={item.handle} className="review-item">
+                      <span className="account-avatar" aria-hidden="true">
+                        {item.handle.slice(0, 1).toUpperCase()}
+                      </span>
+                      <div className="account-info">
+                        <div className="account-line">
+                          <span className="account-handle">@{item.handle}</span>
+                          <span className="category-chip">
+                            {categoryLabel(item.category, language)}
+                          </span>
+                        </div>
+                        {item.reason ? <span className="account-reason">{item.reason}</span> : null}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
 
-      {/* 页面黄框：当前 X 页面的待拉黑账号清单（一键拉黑 = 全部） */}
-      <section className="list-card">
-        <div className="list-head">
-          <span className="stat-label">页面黄框</span>
-          <span className="list-count">{pageCount === null ? '…' : pageCount}</span>
-        </div>
+              {blockResult ? (
+                <p className="result-message" role="status">
+                  {t.blockedResult(blockResult.blocked.length)}
+                  {failedSummary(blockResult) ? (
+                    <span className="result-failure">
+                      {' '}
+                      · {t.failedResult(blockResult.failed.length)} · {failedSummary(blockResult)}
+                    </span>
+                  ) : null}
+                </p>
+              ) : null}
 
-        {pageCount === null ? (
-          <p className="list-empty">…</p>
-        ) : pageCount === 0 ? (
-          <p className="list-empty">
-            {running ? '处理中…' : '当前页面没有黄框账号'}
-          </p>
-        ) : (
-          <ul className="pending-list">
-            {pageMarked!.map((item) => (
-              <li key={item.handle} className="pending-item">
-                <div className="pending-info">
-                  <span className="pending-handle">@{item.handle}</span>
-                  {item.reason ? (
-                    <span className="pending-reason">{item.reason}</span>
+              <div className="primary-actions">
+                <button
+                  className="primary-action"
+                  disabled={!pageCount || running}
+                  onClick={() => void runBatch()}
+                >
+                  {running
+                    ? t.processing
+                    : pageCount
+                      ? `${t.blockPage} · ${pageCount}`
+                      : t.blockPage}
+                </button>
+                <button
+                  type="button"
+                  className="square-action"
+                  aria-label={t.refreshPage}
+                  title={t.refreshPage}
+                  disabled={running}
+                  onClick={() => void refreshPageMarked()}
+                >
+                  <AppIcon name="refresh" />
+                </button>
+              </div>
+            </section>
+
+            <section className="summary-card" aria-labelledby="today-title">
+              <div className="section-heading compact">
+                <h2 id="today-title">{t.todaySummary}</h2>
+                {today.detected > 0 ? (
+                  <button
+                    type="button"
+                    className="text-action"
+                    aria-expanded={reportExpanded}
+                    onClick={() => setReportExpanded((expanded) => !expanded)}
+                  >
+                    {reportExpanded ? t.hideDetails : t.showDetails}
+                  </button>
+                ) : null}
+              </div>
+              <div className="metric-grid" aria-label={t.todaySummary}>
+                <div>
+                  <strong>{today.detected}</strong>
+                  <span>{t.marked}</span>
+                </div>
+                <div>
+                  <strong>{today.blocked}</strong>
+                  <span>{t.blocked}</span>
+                </div>
+                <div>
+                  <strong>{today.unblocked}</strong>
+                  <span>{t.restored}</span>
+                </div>
+              </div>
+              {today.detected > 0 ? (
+                <p className="saved-time">
+                  {t.saved} <strong>{timeSaved.label}</strong>
+                </p>
+              ) : (
+                <p className="summary-empty">{t.todayQuiet}</p>
+              )}
+
+              {reportExpanded ? (
+                <div className="report-details">
+                  {categoryBars.length > 0 ? (
+                    <div className="report-bars">
+                      {categoryBars.map((bar) => (
+                        <div key={bar.key} className="report-bar">
+                          <span className="report-bar-label">{bar.label}</span>
+                          <div className="report-bar-track" aria-hidden="true">
+                            <div
+                              className="report-bar-fill"
+                              style={{ width: `${Math.max(bar.pct, 4)}%` }}
+                            />
+                          </div>
+                          <span className="report-bar-count">{bar.count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  {today.blocked > 0 ? (
+                    <div className="report-actions">
+                      <button type="button" className="secondary-inline" onClick={makeCard}>
+                        {t.reportCard}
+                      </button>
+                      <a
+                        className="secondary-inline"
+                        href={shareHref}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {t.share} ↗
+                      </a>
+                    </div>
+                  ) : null}
+                  {cardUrl ? (
+                    <div className="report-card-preview">
+                      <img src={cardUrl} alt={t.reportImageAlt} />
+                      <a className="text-action" href={cardUrl} download="feedsieve-report.png">
+                        {t.downloadImage}
+                      </a>
+                    </div>
                   ) : null}
                 </div>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {blockResult ? (
-          <p className="batch-summary">
-            ✅ 已拉黑 {blockResult.blocked.length}
-            {failedSummary(blockResult) ? (
-              <>
-                {' '}
-                · ⚠️ {blockResult.failed.length}
-                <span className="batch-fail">{failedSummary(blockResult)}</span>
-              </>
-            ) : null}
-          </p>
+              ) : null}
+            </section>
+          </div>
         ) : null}
-      </section>
 
-      <div className="action-row">
-        <button
-          className="primary-action"
-          disabled={!pageCount || running}
-          onClick={() => void runBatch()}
-        >
-          {running ? '处理中…' : `一键拉黑${pageCount ? `（页面 ${pageCount} 个）` : ''}`}
-        </button>
-        <button
-          className="icon-action"
-          title="刷新页面黄框清单"
-          disabled={running}
-          onClick={() => void refreshPageMarked()}
-        >
-          ⟳
-        </button>
+        {view === 'lists' ? (
+          <div className="view-stack lists-view">
+            <div className="list-tabs" role="tablist" aria-label={t.lists}>
+              <button
+                id="blocked-list-tab"
+                type="button"
+                role="tab"
+                aria-selected={listView === 'blocked'}
+                className={listView === 'blocked' ? 'is-selected' : ''}
+                onClick={() => setListView('blocked')}
+              >
+                <span>{t.manageBlocked}</span>
+                <strong>{blockedCount === null ? '…' : blockedCount}</strong>
+              </button>
+              <button
+                id="allowlist-tab"
+                type="button"
+                role="tab"
+                aria-selected={listView === 'allowlist'}
+                className={listView === 'allowlist' ? 'is-selected' : ''}
+                onClick={() => setListView('allowlist')}
+              >
+                <span>{t.falsePositiveList}</span>
+                <strong>{allowlist === null ? '…' : allowlist.length}</strong>
+              </button>
+            </div>
+
+            <section
+              className="manage-card"
+              role="tabpanel"
+              aria-labelledby={listView === 'blocked' ? 'blocked-list-tab' : 'allowlist-tab'}
+            >
+              {listView === 'blocked' ? (
+                <>
+                  {blockedCount === null ? (
+                    <div className="loading-list" aria-hidden="true">
+                      <span />
+                      <span />
+                      <span />
+                    </div>
+                  ) : blockedCount > 0 ? (
+                    <ul className="manage-list">
+                      {blocked!.map((account) => (
+                        <li key={account.handle} className="manage-item">
+                          <span className="account-avatar is-muted" aria-hidden="true">
+                            {account.handle.slice(0, 1).toUpperCase()}
+                          </span>
+                          <div className="account-info">
+                            <span className="account-handle">@{account.handle}</span>
+                            <span className="account-reason">
+                              {formatDate(account.blockedAt, language)}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            className="secondary-inline"
+                            disabled={running}
+                            onClick={() => void runUnblock(account.handle)}
+                          >
+                            {t.undo}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="empty-panel">
+                      <AppIcon name="lists" size={26} />
+                      <p>{t.noBlocked}</p>
+                    </div>
+                  )}
+
+                  {unblockResult ? (
+                    <p className="result-message" role="status">
+                      {t.restoredResult(unblockResult.unblocked.length)}
+                      {failedSummary(unblockResult) ? (
+                        <span className="result-failure">
+                          {' '}
+                          · {t.failedResult(unblockResult.failed.length)} ·{' '}
+                          {failedSummary(unblockResult)}
+                        </span>
+                      ) : null}
+                    </p>
+                  ) : null}
+                  {blockedCount ? (
+                    <button
+                      className="secondary-action"
+                      disabled={running}
+                      onClick={() => void runUnblock()}
+                    >
+                      {t.undoAll}
+                    </button>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  {allowlist === null ? (
+                    <div className="loading-list" aria-hidden="true">
+                      <span />
+                      <span />
+                    </div>
+                  ) : allowlist.length > 0 ? (
+                    <ul className="manage-list allowlist-list">
+                      {allowlist.map((item) => (
+                        <li key={item.handle} className="manage-item allowlist-item">
+                          <span className="account-avatar is-safe" aria-hidden="true">
+                            {item.handle.slice(0, 1).toUpperCase()}
+                          </span>
+                          <div className="account-info">
+                            <span className="account-handle">@{item.handle}</span>
+                            <span className="account-meta">
+                              {formatDate(item.addedAt, language)}
+                              {item.ruleId
+                                ? ` · ${item.ruleId}`
+                                : item.detectionSource
+                                  ? ` · ${item.detectionSource}`
+                                  : ''}
+                            </span>
+                            {item.detectionReason ? (
+                              <span className="account-reason" title={item.detectionReason}>
+                                {item.detectionReason}
+                              </span>
+                            ) : null}
+                          </div>
+                          <button
+                            type="button"
+                            className="remove-action"
+                            aria-label={`${t.removeAllowlist}: @${item.handle}`}
+                            title={t.removeAllowlist}
+                            onClick={() => void removeFromAllowlist(item.handle)}
+                          >
+                            ×
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="empty-panel">
+                      <AppIcon name="shield" size={26} />
+                      <p>{t.allowlistEmpty}</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </section>
+          </div>
+        ) : null}
+
+        {view === 'settings' ? (
+          <div className="view-stack settings-view">
+            <section className="settings-card">
+              <div className="settings-card-head">
+                <h2>{t.communityList}</h2>
+                <div className="settings-head-actions">
+                  <span
+                    className={`community-meta${communityMeta ? ' is-ready' : ''}`}
+                    title={
+                      communityMeta
+                        ? `v${communityMeta.version} · ${formatAgo(communityMeta.syncedAt, language)}`
+                        : t.listLoading
+                    }
+                  >
+                    {communityMeta ? `${communityMeta.count} · v${communityMeta.version}` : '…'}
+                  </span>
+                  <button
+                    type="button"
+                    className={`square-action small${syncing ? ' is-spinning' : ''}`}
+                    aria-label={t.syncNow}
+                    title={t.syncNow}
+                    disabled={syncing}
+                    onClick={() => void syncCommunityNow()}
+                  >
+                    <AppIcon name="refresh" size={18} />
+                  </button>
+                </div>
+              </div>
+              {syncMsg ? <p className="inline-notice">{syncMsg}</p> : null}
+
+              {community ? (
+                <div className="settings-fields">
+                  <label className="setting-row">
+                    <span className="setting-copy">
+                      <strong>{t.enabled}</strong>
+                    </span>
+                    <span className="toggle-switch">
+                      <input
+                        type="checkbox"
+                        checked={community.enabled}
+                        onChange={(event) =>
+                          void setCommunitySettings({ enabled: event.target.checked })
+                        }
+                      />
+                      <span aria-hidden="true" />
+                    </span>
+                  </label>
+
+                  <div className="setting-block">
+                    <div className="setting-copy">
+                      <strong>{t.strength}</strong>
+                    </div>
+                    <div className="strength-control" role="group" aria-label={t.strength}>
+                      {MARK_STRENGTHS.map((strength: MarkStrength) => (
+                        <button
+                          key={strength}
+                          type="button"
+                          className={community.strength === strength ? 'is-selected' : ''}
+                          title={STRENGTH_HINTS[language][strength]}
+                          onClick={() => void setCommunitySettings({ strength })}
+                        >
+                          <span>{STRENGTH_LABELS[language][strength]}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <label className="setting-row">
+                    <span className="setting-copy">
+                      <strong>{t.autoContribute}</strong>
+                    </span>
+                    <span className="toggle-switch">
+                      <input
+                        type="checkbox"
+                        checked={community.autoContribute}
+                        onChange={(event) => void setListUploads(event.target.checked)}
+                      />
+                      <span aria-hidden="true" />
+                    </span>
+                  </label>
+
+                  <div className="settings-meta-row">
+                    {contribution && (contribution.reports > 0 || contribution.rescues > 0) ? (
+                      <span className="contribution-chip">
+                        {t.contribution(contribution.reports, contribution.rescues)}
+                      </span>
+                    ) : (
+                      <span />
+                    )}
+                    <button
+                      type="button"
+                      className="text-action"
+                      title={t.copyInstallationIdHint}
+                      onClick={() => void copyInstallationId()}
+                    >
+                      {t.copyInstallationId}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="loading-list settings-loading" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+              )}
+            </section>
+
+            <section className="settings-card language-card">
+              <div className="setting-row static-row">
+                <span className="setting-copy">
+                  <strong>{t.languageSetting}</strong>
+                </span>
+                <div className="language-control" role="group" aria-label={t.language}>
+                  <button
+                    type="button"
+                    className={language === 'zh' ? 'is-selected' : ''}
+                    aria-pressed={language === 'zh'}
+                    onClick={() => void selectLanguage('zh')}
+                  >
+                    中文
+                  </button>
+                  <button
+                    type="button"
+                    className={language === 'en' ? 'is-selected' : ''}
+                    aria-pressed={language === 'en'}
+                    onClick={() => void selectLanguage('en')}
+                  >
+                    EN
+                  </button>
+                </div>
+              </div>
+            </section>
+          </div>
+        ) : null}
       </div>
 
-      {/* 已拉黑记录：撤销入口 */}
-      <section className="list-card blocked-card">
-        <div className="list-head">
-          <span className="stat-label">已拉黑</span>
-          <span className="list-count">
-            {blockedCount === null ? '…' : blockedCount}
+      {notice ? (
+        <p className="toast-notice" role="status">
+          {notice}
+        </p>
+      ) : null}
+
+      <nav className="bottom-nav" aria-label={t.primaryNavigation}>
+        <button
+          type="button"
+          className={view === 'home' ? 'is-active' : ''}
+          aria-current={view === 'home' ? 'page' : undefined}
+          onClick={() => setView('home')}
+        >
+          <span className="nav-icon-wrap">
+            <AppIcon name="clean" />
+            {pageCount ? <span className="nav-badge">{Math.min(pageCount, 99)}</span> : null}
           </span>
-        </div>
-
-        {blockedCount !== null && blockedCount > 0 ? (
-          <ul className="pending-list">
-            {blocked!.map((account) => (
-              <li key={account.handle} className="pending-item">
-                <div className="pending-info">
-                  <span className="pending-handle">@{account.handle}</span>
-                  <span className="pending-reason">{formatDate(account.blockedAt)}</span>
-                </div>
-                <button
-                  type="button"
-                  className="unblock-btn"
-                  disabled={running}
-                  onClick={() => void runUnblock(account.handle)}
-                >
-                  撤销
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-
-        {unblockResult ? (
-          <p className="batch-summary">
-            ↩️ 已撤销 {unblockResult.unblocked.length}
-            {failedSummary(unblockResult) ? (
-              <>
-                {' '}
-                · ⚠️ {unblockResult.failed.length}
-                <span className="batch-fail">{failedSummary(unblockResult)}</span>
-              </>
-            ) : null}
-          </p>
-        ) : null}
-      </section>
-
-      <button
-        className="secondary-action"
-        disabled={!blockedCount || running}
-        onClick={() => void runUnblock()}
-      >
-        全部撤销
-      </button>
-
-      {/* 社区名单：全局设置（无逐条弹窗；自动贡献默认开，关一次永远安静） */}
-      <section className="list-card">
-        <div className="list-head">
-          <span className="stat-label">社区名单</span>
-          <span className="list-count">
-            {communityMeta
-              ? `v${communityMeta.version} · ${communityMeta.count} 个 · ${formatAgo(communityMeta.syncedAt)}`
-              : '…'}
+          <span>{t.home}</span>
+        </button>
+        <button
+          type="button"
+          className={view === 'lists' ? 'is-active' : ''}
+          aria-current={view === 'lists' ? 'page' : undefined}
+          onClick={() => setView('lists')}
+        >
+          <span className="nav-icon-wrap">
+            <AppIcon name="lists" />
           </span>
-          <button
-            type="button"
-            className="icon-action"
-            title="立即同步"
-            disabled={syncing}
-            onClick={() => void syncCommunityNow()}
-          >
-            ⟳
-          </button>
-        </div>
-        {syncMsg ? <p className="sync-msg">{syncMsg}</p> : null}
-        {community ? (
-          <div className="settings-rows">
-            <label className="settings-row">
-              <span>启用</span>
-              <input
-                type="checkbox"
-                checked={community.enabled}
-                onChange={(e) =>
-                  void setCommunitySettings({ enabled: e.target.checked })
-                }
-              />
-            </label>
-            <div className="settings-row">
-              <span>强度</span>
-              <div className="seg">
-                {MARK_STRENGTHS.map((s: MarkStrength) => (
-                  <button
-                    key={s}
-                    type="button"
-                    className={community.strength === s ? 'seg-on' : ''}
-                    title={STRENGTH_HINTS[s]}
-                    onClick={() => void setCommunitySettings({ strength: s })}
-                  >
-                    {STRENGTH_LABELS[s]}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <label className="settings-row">
-              <span>自动贡献</span>
-              <input
-                type="checkbox"
-                checked={community.autoContribute}
-                onChange={(e) =>
-                  void setCommunitySettings({
-                    autoContribute: e.target.checked,
-                  })
-                }
-              />
-            </label>
-            <p className="settings-note">仅匿名上报：你拉黑的账号 + 分类</p>
-            <button
-              type="button"
-              className="install-id-btn"
-              title="复制本机安装 ID（维护者配置 owner 特权用，凭此识别你的票）"
-              onClick={() => void copyInstallationId()}
-            >
-              复制安装 ID
-            </button>
-          </div>
-        ) : (
-          <p className="list-empty">…</p>
-        )}
-      </section>
-
-      {/* 个人白名单：误标治理 */}
-      <section className="list-card">
-        <div className="list-head">
-          <span className="stat-label">白名单</span>
-          <span className="list-count">
-            {allowlist === null ? '…' : allowlist.length}
+          <span>{t.lists}</span>
+        </button>
+        <button
+          type="button"
+          className={view === 'settings' ? 'is-active' : ''}
+          aria-current={view === 'settings' ? 'page' : undefined}
+          onClick={() => setView('settings')}
+        >
+          <span className="nav-icon-wrap">
+            <AppIcon name="settings" />
           </span>
-        </div>
-        {allowlist !== null && allowlist.length > 0 ? (
-          <ul className="pending-list">
-            {allowlist.map((item) => (
-              <li key={item.handle} className="pending-item">
-                <div className="pending-info">
-                  <span className="pending-handle">@{item.handle}</span>
-                  <span className="pending-reason">{formatDate(item.addedAt)}</span>
-                </div>
-                <button
-                  type="button"
-                  className="remove-btn"
-                  title="移出白名单（恢复标注）"
-                  onClick={() => void removeAllowed(item.handle)}
-                >
-                  ✕
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="list-empty">点黄框「误标？」加入</p>
-        )}
-      </section>
-
-      {notice ? <p className="notice-error">{notice}</p> : null}
-      <footer className="popup-footer">标注永不隐藏 · 误伤可撤销</footer>
+          <span>{t.settings}</span>
+        </button>
+      </nav>
     </main>
   );
 }
