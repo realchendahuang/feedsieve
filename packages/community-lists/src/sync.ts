@@ -46,17 +46,11 @@ export interface SyncOptions {
  * 快照同步：manifest 比对版本 -> 变了才下载 -> sha256 校验 -> 结构校验 -> 整体写入。
  * 任何一步失败都保持 last-known-good 不动（store.set 只在全部通过后调用）。
  */
-export async function syncCommunitySnapshot(
-  options: SyncOptions,
-): Promise<SyncOutcome> {
+export async function syncCommunitySnapshot(options: SyncOptions): Promise<SyncOutcome> {
   const now = options.now ?? Date.now;
   try {
     const current = await options.store.get();
-    if (
-      !options.force &&
-      current &&
-      now() - current.synced_at < SYNC_INTERVAL_MS
-    ) {
+    if (!options.force && current && now() - current.synced_at < SYNC_INTERVAL_MS) {
       return { status: 'skipped' };
     }
   } catch (error) {
@@ -77,10 +71,7 @@ export async function syncCommunitySnapshot(
   return lastError;
 }
 
-async function syncFromSource(
-  source: SyncSource,
-  options: SyncOptions,
-): Promise<SyncOutcome> {
+async function syncFromSource(source: SyncSource, options: SyncOptions): Promise<SyncOutcome> {
   const now = options.now ?? Date.now;
   try {
     const current = await options.store.get();
@@ -99,9 +90,10 @@ async function syncFromSource(
       return { status: 'unchanged' };
     }
 
-    const file = manifest.value.files[0];
+    // manifest 同时公开机器 JSON 和人类可读 YAML；扩展必须明确选择机器文件。
+    const file = manifest.value.files.find((candidate) => candidate.path === 'official.json');
     if (!file) {
-      return { status: 'error', error: 'manifest_files_empty' };
+      return { status: 'error', error: 'machine_snapshot_missing' };
     }
     const snapshotRes = await options.fetchImpl(
       source.fileUrl(manifest.value.snapshot_version, file.path),
@@ -119,6 +111,9 @@ async function syncFromSource(
     }
     if (snapshot.value.snapshot_version !== manifest.value.snapshot_version) {
       return { status: 'error', error: 'version_mismatch' };
+    }
+    if (snapshot.value.entries.length !== file.entries) {
+      return { status: 'error', error: 'entry_count_mismatch' };
     }
 
     await options.store.set({

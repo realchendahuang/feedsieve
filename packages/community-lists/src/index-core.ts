@@ -1,33 +1,23 @@
-import { isStatusAllowed } from './strength';
-import type { CommunityEntry, MarkStrength, SnapshotBody } from './types';
+import type { CommunityEntry, SnapshotBody } from './types';
 
 export interface CommunityIndex {
   /** 构建自的快照版本 */
   version: string;
-  /** 当前强度下可见的条目数 */
+  /** 最终黑名单条目数 */
   size: number;
   /**
    * x_user_id 优先（handle 会改名，rest_id 稳定）；handle 大小写不敏感。
    * 未命中返回 null。
    */
-  lookup(
-    handle: string | null | undefined,
-    xUserId?: string | null,
-  ): CommunityEntry | null;
+  lookup(handle: string | null | undefined, xUserId?: string | null): CommunityEntry | null;
 }
 
-/** 从快照构建当前强度的本地索引；查询纯内存，滚动时间线零网络请求 */
-export function buildIndex(
-  snapshot: SnapshotBody,
-  strength: MarkStrength,
-): CommunityIndex {
+/** 从最终快照构建本地索引；查询纯内存，滚动时间线零网络请求。 */
+export function buildIndex(snapshot: SnapshotBody): CommunityIndex {
   const byHandle = new Map<string, CommunityEntry>();
   const byAlias = new Map<string, CommunityEntry>();
   const byUserId = new Map<string, CommunityEntry>();
   for (const entry of snapshot.entries) {
-    if (!isStatusAllowed(entry.status, strength)) {
-      continue;
-    }
     byHandle.set(entry.handle, entry);
     for (const alias of entry.aliases ?? []) {
       if (!byAlias.has(alias)) {

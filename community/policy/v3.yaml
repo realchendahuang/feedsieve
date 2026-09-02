@@ -1,0 +1,52 @@
+# FeedSieve 社区黑名单政策 v3 —— 公开事实源
+version: 3
+updated_at: '2026-09-02T00:00:00Z'
+
+description: >-
+  每个安装对每个账号只有一个当前选择：拉黑或误标。社区净票数达到 3 时进入
+  最终黑名单，低于 3 时自动退出。名单命中和批量拉黑不会反向生成社区票。
+
+community_blocklist:
+  formula: block_votes - false_positive_votes
+  min_net_votes: 3
+  one_current_vote_per_installation: true
+
+maintainer_source:
+  description: >-
+    维护者可通过受 ADMIN_TOKEN 保护的服务端页面加入或撤销条目。维护者条目是
+    独立且公开标注的来源，不计入社区票数，也不伪装成社区共识。
+  weighted_vote: false
+  public_source_label: maintainer
+
+# Community Score 只用于解释社区证据强弱，不决定是否进入最终名单。
+score:
+  saturation: 3
+  rescue_deduction: 1
+  temporal_spread_bonus_per_extra_day: 0.02
+  temporal_spread_bonus_max: 0.1
+  burst_min_reports: 5
+  burst_penalty_factor: 0.8
+
+reporter_trust:
+  default: 1.0
+  floor: 0.2
+  burst_threshold: 30
+  burst_decay: 0.1
+
+limits:
+  daily_report_base: 100
+  daily_rescue_base: 50
+  daily_min: 10
+  max_batch: 50
+
+principles:
+  - one_final_blocklist
+  - user_undo_always_wins
+  - blocking_requires_explicit_user_action
+  - report_and_false_positive_are_explicit_actions
+  - opinion_disagreement_is_not_spam
+  - list_entries_are_not_permanent_sentences
+  - maintainer_source_is_publicly_labeled
+  - maintainer_does_not_modify_community_votes
+  - following_list_stays_local
+  - community_batch_does_not_create_reports

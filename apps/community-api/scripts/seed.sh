@@ -1,36 +1,53 @@
 #!/usr/bin/env sh
-# 种子脚本：向 D1 accounts 表写入人工背书（status=strong）的种子条目。
+# 本地调试三票共识。只允许访问 localhost，绝不向线上伪造社区票。
 #
-# 用法: ./scripts/seed.sh <<'EOF'
-#   @Fox_Looper bot_spam
-#   spam_user99 adult_gray_traffic
-# EOF
-#
-# - 每行 "handle category"，# 开头为注释
-# - 幂等（INSERT OR IGNORE）；只增不改，误种用 admin promote dismissed 撤销
-# - handle 会被归一化（去@、小写），非法字符直接跳过
-set -e
-cd "$(dirname "$0")/.."
+# 先运行 pnpm dev，再：
+#   ./scripts/seed.sh <<'EOF'
+#   @spam_user bot_spam
+#   EOF
+set -eu
 
-now=$(date +%s)
+API="${FEEDSIEVE_API:-http://127.0.0.1:8787}"
+case "$API" in
+  http://127.0.0.1:*|http://localhost:*) ;;
+  *)
+    echo "error: seed.sh 只用于本地三票调试；线上条目请使用 /maintainer 管理页" >&2
+    exit 1
+    ;;
+esac
+
 count=0
-
 while read -r handle category; do
   case "$handle" in ''|\#*) continue ;; esac
-  h=$(printf '%s' "$handle" | sed 's/^@//' | tr '[:upper:]' '[:lower:]')
-  case "$h" in
+  normalized=$(printf '%s' "$handle" | sed 's/^@//' | tr '[:upper:]' '[:lower:]')
+  case "$normalized" in
     *[!a-z0-9_]*|'') echo "skip invalid handle: $handle" >&2; continue ;;
   esac
+  if [ "${#normalized}" -gt 15 ]; then
+    echo "skip invalid handle: $handle" >&2
+    continue
+  fi
   case "$category" in
     bot_spam|copy_paste|ai_slop|advertising|adult_gray_traffic|scam_phishing|engagement_bait|other) ;;
     *) echo "skip invalid category: $category" >&2; continue ;;
   esac
-  pnpm exec wrangler d1 execute feedsieve-community --remote \
-    --config wrangler.local.jsonc \
-    --command "INSERT OR IGNORE INTO accounts (handle, category, status, report_count, rescue_count, first_report_at, updated_at) VALUES ('$h', '$category', 'strong', 1, 0, $now, $now)" \
-    >/dev/null
+
+  vote=1
+  while [ "$vote" -le 3 ]; do
+    payload=$(node -e '
+      const [handle, category, vote] = process.argv.slice(1);
+      process.stdout.write(JSON.stringify({
+        installation_id: `local-consensus-${vote}-${handle}`,
+        client_version: "local-debug",
+        reports: [{ handle, reason: category }],
+      }));
+    ' "$normalized" "$category" "$vote")
+    curl -fsS -X POST -H 'content-type: application/json' \
+      --data "$payload" "$API/v1/reports" >/dev/null
+    vote=$((vote + 1))
+  done
   count=$((count + 1))
+  echo "seeded local consensus: @$normalized (3 net votes)"
 done
 
-echo "seeded $count accounts (status=strong)"
-echo "记得执行 ./scripts/admin.sh publish 让条目进入快照"
+echo "done: $count account(s); open $API/v1/blocklist/latest.yaml"

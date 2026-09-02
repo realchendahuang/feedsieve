@@ -118,15 +118,12 @@ feedsieve/
 │       └── migrations/
 │
 ├── community/
-│   ├── source/
-│   │   ├── recommended.yaml
-│   │   └── packs/
 │   ├── lists/
 │   │   ├── manifest.json
-│   │   ├── recommended.json
-│   │   └── packs/
+│   │   ├── official.json
+│   │   └── blocklist.yaml
 │   ├── policy/
-│   │   └── v1.yaml
+│   │   └── v3.yaml
 │   ├── schema/
 │   │   └── account-list.schema.json
 │   └── changelog/
@@ -486,45 +483,40 @@ v0.4 落地形态：
 
 > **一个人送走垃圾，所有人都可以少看一次。**
 
-但社区层不等于“5 人举报就永久封禁”。
-
-状态：
+社区层只有一个可逆门槛，不再发布 candidate / recommended / strong：
 
 ```text
-normal
-candidate
-recommended
-strong
+net_votes = block_votes - false_positive_votes
+net_votes >= 3 -> community source active
+net_votes < 3  -> community source inactive
 ```
+
+另有独立的 `maintainer` 来源：由服务端受保护的管理页维护，不修改社区票。最终名单是两个来源的并集，快照用 `sources` 明示原因。
 
 ### 7.2 公开 Policy，不硬编码
 
 阈值和评分配置放：
 
 ```text
-community/policy/v1.yaml
+community/policy/v3.yaml
 ```
 
-第一版建议：
+当前唯一入榜政策：
 
 ```yaml
-candidate:
-  min_independent_reports: 5
+community_blocklist:
+  formula: block_votes - false_positive_votes
+  min_net_votes: 3
+  one_current_vote_per_installation: true
 
-recommended:
-  min_effective_score: 8
-  min_distinct_days: 2
-  max_rescue_ratio: 0.25
-
-strong:
-  min_effective_score: 20
-  min_distinct_days: 3
-  max_rescue_ratio: 0.15
+maintainer_source:
+  weighted_vote: false
+  public_source_label: maintainer
 ```
 
 这些数字是冷启动默认值，不是永恒真理。以后用公开 PR 修改。
 
-### 7.3 Community Score v1
+### 7.3 Community Score
 
 先使用简单可解释算法：
 
@@ -538,24 +530,23 @@ effective score
 - abuse penalty
 ```
 
-不要第一版用 ML 黑盒决定名单。
+该分数只用于解释和排序，不决定是否入榜；入榜只看公开净票公式。不要用 ML 黑盒决定名单。
 
-### 7.4 Reporter Trust v1
+### 7.4 Reporter Trust
 
 第一版：
 
 - 新安装实例默认 trust = 1.0
 - 一个 installation 对一个目标只能有一个当前有效 vote
-- 连续异常大量举报降低权重
-- 长期和社区结果一致可缓慢提升
-- 经常被 Rescue 推翻则降低
-- trust 设置上下限
+- 连续异常大量上报会降低 trust
+- trust 只收紧该安装的每日限额，不改变单票权重
+- trust 有公开下限，保留基本参与能力
 
 不要求用户注册。
 
 浏览器本地生成随机 installation id；后续再考虑签名身份。
 
-### 7.5 Rescue
+### 7.5 False-positive vote
 
 区分：
 
@@ -571,7 +562,7 @@ effective score
 ### 8.1 YAML 是公开审计源
 
 ```text
-community/source/recommended.yaml
+community/lists/blocklist.yaml
 ```
 
 作用：
@@ -599,22 +590,18 @@ community/lists/official.json（由 scripts/mirror-community-lists.sh 从线上�
 构建链：
 
 ```text
-DB / governance change
+Community votes / maintainer change
       ↓
-generate YAML snapshot
+generate one final entry set
       ↓
-JSON Schema validation
-      ↓
-deterministic YAML -> JSON
-      ↓
-checksum
+readable YAML + machine JSON + checksums
       ↓
 Git commit / release
       ↓
 extension update
 ```
 
-### 8.3 Account Entry v1
+### 8.3 Account Entry v2
 
 `x_user_id` 不再作为必须字段：
 
@@ -624,10 +611,12 @@ extension update
   aliases:
     - old_handle
   category: bot_spam
-  status: recommended
+  sources: [community, maintainer]
+  maintainer_note: '维护者确认该账号持续发送钓鱼链接'
   community_score: 0.91
   report_count: 27
   rescue_count: 2
+  net_votes: 25
   first_seen_at: '2026-08-20T12:00:00Z'
   updated_at: '2026-08-26T00:00:00Z'
   evidence_post_ids:
@@ -646,12 +635,18 @@ community/lists/manifest.json
 
 ```json
 {
-  "schema_version": 1,
-  "snapshot_version": "2026.08.26.1",
-  "generated_at": "2026-08-26T00:00:00Z",
+  "schema_version": 2,
+  "policy_version": 3,
+  "snapshot_version": "2026.09.02.1",
+  "generated_at": "2026-09-02T00:00:00Z",
   "files": [
     {
       "path": "official.json",
+      "sha256": "...",
+      "entries": 1234
+    },
+    {
+      "path": "blocklist.yaml",
       "sha256": "...",
       "entries": 1234
     }
@@ -668,8 +663,8 @@ v1 单文件。
 当单个列表明显变大后再分片，例如：
 
 ```text
-recommended/00.json
-recommended/01.json
+official/00.json
+official/01.json
 ...
 ```
 
@@ -688,8 +683,11 @@ recommended/01.json
 ```text
 POST /v1/reports
 POST /v1/rescues
+POST /v1/labels/retract
 GET  /v1/snapshots/latest
-GET  /v1/accounts/:handle        # optional explainability endpoint
+GET  /v1/blocklist/latest.yaml
+GET  /maintainer
+GET|POST|DELETE /admin/blocklist
 ```
 
 ### 9.2 Report
@@ -722,34 +720,29 @@ GET  /v1/accounts/:handle        # optional explainability endpoint
 
 ```text
 accounts
-- id
 - handle
 - x_user_id nullable
-- status
-- community_score
+- report_count
+- rescue_count
 - first_seen_at
 - updated_at
 
-account_aliases
-- account_id
-- handle
-- first_seen_at
-- last_seen_at
-
-reporters
+active_labels
 - installation_id_hash
-- trust_score
-- created_at
+- handle
+- label(blocked|allowed)
 - updated_at
 
-votes
-- reporter_id
-- account_id
-- kind(report|rescue)
+maintainer_blocklist
+- handle
+- category
 - reason
-- evidence_post_id nullable
-- created_at
-- updated_at
+- active
+- created_at / updated_at
+
+maintainer_blocklist_audit
+- action(add|update|remove)
+- handle / reason / created_at
 
 snapshots
 - version
@@ -938,7 +931,7 @@ Next task
 
 只放很小的用户设置，例如：
 
-- 标注强度
+- 最终名单索引（不按启发式强度二次筛选）
 - UI preference
 
 不要放大名单。
@@ -1223,13 +1216,14 @@ Community list PR 的检查（validate / build / checksum / diff）后续以本�
 - Report
 - Rescue
 - rate limit
-- score v1
+- 一安装一账号一张当前票
+- 维护者独立来源与审计
 
-验收：用户主动贡献后，后端可聚合并生成候选结果。
+验收：用户主动贡献后，后端按净票公式更新最终名单；维护者来源不改变社区票。
 
 ### Phase 6 — Open List Pipeline
 
-- policy/v1.yaml
+- policy/v3.yaml
 - YAML generator
 - JSON builder
 - CI

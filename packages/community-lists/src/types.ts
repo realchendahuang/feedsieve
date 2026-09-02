@@ -1,5 +1,5 @@
 /**
- * 社区快照协议 v1（与 apps/community-api 的产出一一对应）。
+ * 最终黑名单快照协议 v2（与 apps/community-api 的产出一一对应）。
  * 该包是纯 TS 消费端：不依赖 chrome/browser，同步逻辑全部依赖注入，可完整单测。
  */
 
@@ -16,17 +16,22 @@ export interface SnapshotManifest {
   files: SnapshotManifestFile[];
 }
 
-export type CommunityStatus = 'candidate' | 'recommended' | 'strong';
+export type CommunitySource = 'community' | 'maintainer';
 
 export interface CommunityEntry {
   handle: string;
   x_user_id: string | null;
   category: string;
-  status: CommunityStatus;
-  /** 可解释分数 [0,1]（v0.3 起随快照下发；旧快照缓存可能没有，可选） */
-  community_score?: number;
+  /** 为什么进入最终名单；社区共识、维护者明确加入，或两者兼有。 */
+  sources: CommunitySource[];
+  /** 维护者来源的公开说明；不存在维护者来源时省略。 */
+  maintainer_note?: string;
+  /** 可解释的社区证据分数 [0,1]；维护者单源条目为 0。 */
+  community_score: number;
   report_count: number;
   rescue_count: number;
+  /** report_count - rescue_count；仅用于公开解释，不由客户端再次判定入榜。 */
+  net_votes: number;
   /** 换号别名：同 x_user_id 的历史 handle（可选） */
   aliases?: string[];
   /**
@@ -65,7 +70,7 @@ export interface StoredSnapshot {
   synced_at: number;
 }
 
-/** 标注强度：清爽(仅 strong) / 标准(strong+recommended) / 大扫除(全部) */
+/** 启发式提示强度；不再筛选服务器已经确定的最终黑名单。 */
 export type MarkStrength = 'refresh' | 'standard' | 'deep_clean';
 
 export const MARK_STRENGTHS: readonly MarkStrength[] = [
@@ -77,8 +82,5 @@ export const MARK_STRENGTHS: readonly MarkStrength[] = [
 export const DEFAULT_MARK_STRENGTH: MarkStrength = 'standard';
 
 export function isMarkStrength(value: unknown): value is MarkStrength {
-  return (
-    typeof value === 'string' &&
-    (MARK_STRENGTHS as readonly string[]).includes(value)
-  );
+  return typeof value === 'string' && (MARK_STRENGTHS as readonly string[]).includes(value);
 }

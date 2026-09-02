@@ -6,7 +6,7 @@
  *   + 多天持续出现加成：+2%/额外天，封顶 +0.1
  *   - 单日集中爆发打折：report_count ≥ 5 且全部落在 1 天内 → ×0.8
  *
- * 输出 clamp 到 [0,1]，两位小数。所有参数公开在 community/policy/v1.yaml。
+ * 输出 clamp 到 [0,1]，两位小数。所有参数公开在 community/policy/v3.yaml。
  */
 
 export const SCORE_POLICY = {

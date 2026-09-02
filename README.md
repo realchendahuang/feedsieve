@@ -51,6 +51,12 @@ The technical rule is simple:
 
 「设置 → 关键词规则」支持添加自己的词或短语；官方词库按黄推、投资诈骗、加密骗局、兼职刷单、贷款诈骗、博彩引流、互动诱导、通用营销引流分成 8 个行业包，首次安装与本次升级默认全部开启，分类开关直接显示在第一层。关闭的包完全不参与检测；点分类标题后仍可逐条移除或恢复。当前预置 778 条公开规则，其中“黄推 / 成人引流”扩充到 629 条；昵称、账号名、正文和简介都会参与匹配。完整短语会忽略插入的空格、标点和 emoji，“同城 + 上门”一类有序组合还允许中间插入少量文字。词库不随扩展版本冻结：仓库公开源文件经校验后发布到 Cloudflare R2，扩展打开 X 页面时、回到前台时及每 15 分钟检查更新，校验失败则保留上一次可信版本。命中只显示黄框；所有黄标都会进入当前页面的一键拉黑清单，但拉黑必须由用户主动点击，自定义词永远只保存在本机。词库的收录依据、发布方式和边界见 [`docs/research/KEYWORD_PRESETS.md`](docs/research/KEYWORD_PRESETS.md)。
 
+### 个人配置备份与迁移
+
+FeedSieve 不需要账号，也不会把你的个人关键词做自动云同步。设置里的「备份与迁移」可显式导出一份 JSON，再在另一台电脑、重装后的扩展或另一个 Chrome Profile 中预览后导入。文件只包含自定义关键词、官方词库的分类/单条开关、界面语言和社区名单的显示强度；不包含 X 登录态、安装 ID、黑白名单、关注保护、拉黑历史、执行队列、统计或「名单上传」授权。导入始终先预览，再由你选择合并或替换；它不会调用 X 的 Block/Unblock，也不会产生社区上报。
+
+这里的三种“同步”彼此独立：官方词库是所有用户共用的公开更新；真实拉黑由 X 原生状态同步到你的其他 X 端；个人过滤习惯则只通过你主动选择的本地备份文件迁移。
+
 ## 安装
 
 - Chrome Web Store：审核通过后补链接
@@ -155,11 +161,22 @@ FeedSieve 希望做到：
 
 > **连黑名单本身都应该晒在阳光下。**
 
+## 一张最终黑名单，两个透明来源
+
+社区名单不再分 candidate / recommended / strong，也不由扩展偷偷再算一次门槛：
+
+- 每个安装对每个账号只有一张当前票；`净票数 = 拉黑票 - 误标票`，净票数达到 3 自动进入最终名单，低于 3 自动退出。
+- 维护者可通过受 `ADMIN_TOKEN` 保护的 [`/maintainer`](apps/community-api/README.md) 网页直接加入或撤销条目。它是独立的 `maintainer` 来源，不增加社区票数，也不伪装成社区共识。
+- 最终名单是两类来源的并集；同一账号可同时标注 `community` 和 `maintainer`。
+- 从最终名单一键拉黑不会反向产生新票；插件仍会排除关注、个人白名单和已经拉黑的账号，并等待用户明确点击。
+
+完整机制与字段见 [`community/README.md`](community/README.md)。
+
 ## YAML for humans, JSON for machines
 
 ### YAML — 公开审计源
 
-[`community/source/recommended.yaml`](community/source/recommended.yaml)
+[`community/lists/blocklist.yaml`](community/lists/blocklist.yaml)
 
 用于：
 
@@ -187,11 +204,11 @@ FeedSieve 希望做到：
 链路：
 
 ```text
-Community Reports
+Current Community Votes + Explicit Maintainer Entries
       ↓
-Open Scoring Policy
-      ↓
-YAML Snapshot
+One Final Blocklist
+      ├─→ readable blocklist.yaml
+      └─→ verified official.json
       ↓
 Validate
       ↓

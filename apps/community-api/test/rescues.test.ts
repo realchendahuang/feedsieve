@@ -151,12 +151,12 @@ describe('POST /v1/rescues', () => {
     });
   });
 
-  it('auto-demotes a candidate back to new when rescues catch up with reports', async () => {
+  it('stays out while net votes are below 3', async () => {
     const handle = 'rescue_demote';
-    // 2 票 = candidate（阈值下调后够格）；再用 2 个抢救票追平 → 降回 new
+    // 2 票本来就低于唯一入榜门槛；误标票继续降低净票数。
     await postReports('rrrrrrrr-6001-4001-8000-rrrrrrrrrrrr', handle);
     await postReports('rrrrrrrr-6002-4002-8000-rrrrrrrrrrrr', handle);
-    expect((await accountRow(handle))?.status).toBe('candidate');
+    expect((await accountRow(handle))?.status).toBe('new');
 
     const rescuers = [
       'ssssssss-7004-4004-8000-ssssssssssss',
@@ -171,20 +171,20 @@ describe('POST /v1/rescues', () => {
     expect(row?.status).toBe('new');
   });
 
-  it('owner rescue is a final veto (dismissed, never resurrected)', async () => {
+  it('a false-positive vote lowers net votes and a later block vote can restore the entry', async () => {
     const handle = 'owner_veto';
     await report3(handle);
     expect((await accountRow(handle))?.status).toBe('strong');
 
     await postRescues({
-      installation_id: env.OWNER_INSTALLATION_ID ?? 'owner-test-install-0001',
+      installation_id: 'owner-test-install-0001',
       rescues: [{ handle }],
     });
-    expect((await accountRow(handle))?.status).toBe('dismissed');
+    expect((await accountRow(handle))?.status).toBe('new');
 
-    // 再举报也不复活
+    // 4 - 1 = 3，重新进入最终名单。
     await postReports('rrrrrrrr-6009-4009-8000-rrrrrrrrrrrr', handle);
-    expect((await accountRow(handle))?.status).toBe('dismissed');
+    expect((await accountRow(handle))?.status).toBe('strong');
   });
 
   it('envelopes: empty array / oversized batch are rejected', async () => {

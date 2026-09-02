@@ -4,12 +4,10 @@ import worker from '../src/index';
 import { deriveStatus } from '../src/rating';
 
 const ORIGIN = 'https://api.example.com';
-
-/** 测试注入的 owner 安装（见 wrangler.jsonc miniflare bindings / .dev.vars） */
-const OWNER_INSTALL: string = env.OWNER_INSTALLATION_ID ?? 'owner-test-install-0001';
+const LEGACY_OWNER_INSTALL = 'owner-test-install-0001';
 
 async function report(installationId: string, handle: string) {
-  const res = await worker.fetch(
+  const response = await worker.fetch(
     new Request(`${ORIGIN}/v1/reports`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -20,100 +18,88 @@ async function report(installationId: string, handle: string) {
     }),
     env,
   );
-  expect(res.status).toBe(200);
+  expect(response.status).toBe(200);
 }
 
 async function rescue(installationId: string, handle: string) {
-  const res = await worker.fetch(
+  const response = await worker.fetch(
     new Request(`${ORIGIN}/v1/rescues`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        installation_id: installationId,
-        rescues: [{ handle }],
-      }),
+      body: JSON.stringify({ installation_id: installationId, rescues: [{ handle }] }),
     }),
     env,
   );
-  expect(res.status).toBe(200);
+  expect(response.status).toBe(200);
 }
 
-async function statusOf(handle: string): Promise<string | undefined> {
-  return (
-    await env.DB.prepare('SELECT status FROM accounts WHERE handle = ?1')
-      .bind(handle)
-      .first<{ status: string }>()
-  )?.status;
+async function account(handle: string) {
+  return env.DB.prepare(
+    'SELECT status, report_count, rescue_count, owner_votes FROM accounts WHERE handle = ?1',
+  )
+    .bind(handle)
+    .first<{
+      status: string;
+      report_count: number;
+      rescue_count: number;
+      owner_votes: number;
+    }>();
 }
 
-describe('owner 特权（v0.5）', () => {
-  it('owner 拉黑 1 票即 strong（黑名单即最高置信）', async () => {
-    await report(OWNER_INSTALL, 'owner_blocked');
-    expect(await statusOf('owner_blocked')).toBe('strong');
+describe('没有隐藏的 owner 票权', () => {
+  it('旧 owner 安装和普通安装完全相同：一票仍然不入榜', async () => {
+    await report(LEGACY_OWNER_INSTALL, 'owner_vote');
+    expect(await account('owner_vote')).toMatchObject({
+      status: 'new',
+      report_count: 1,
+      rescue_count: 0,
+      owner_votes: 0,
+    });
   });
 
-  it('owner 抢救 = 最终裁决：置 dismissed（永久退出，后续举报不复活）', async () => {
-    // 先让普通用户把它举报到 3 票 strong
-    await report('arch-0001-4001-8000-aaaaaaaaaaaa', 'owner_vetoed');
-    await report('arch-0002-4002-8000-bbbbbbbbbbbb', 'owner_vetoed');
-    await report('arch-0003-4003-8000-cccccccccccc', 'owner_vetoed');
-    expect(await statusOf('owner_vetoed')).toBe('strong');
+  it('旧 owner 误标只是普通负票，不是永久否决', async () => {
+    const handle = 'owner_rescue';
+    for (const id of [
+      'owner-rule-0001-4001-8001-aaaaaaaaaaaa',
+      'owner-rule-0002-4002-8002-bbbbbbbbbbbb',
+      'owner-rule-0003-4003-8003-cccccccccccc',
+    ]) {
+      await report(id, handle);
+    }
+    expect((await account(handle))?.status).toBe('strong');
 
-    // owner 抢救：置 dismissed
-    await rescue(OWNER_INSTALL, 'owner_vetoed');
-    expect(await statusOf('owner_vetoed')).toBe('dismissed');
+    await rescue(LEGACY_OWNER_INSTALL, handle);
+    expect(await account(handle)).toMatchObject({
+      status: 'new',
+      report_count: 3,
+      rescue_count: 1,
+    });
 
-    // 再举报也不复活：auto-rate 对 dismissed 保持终态
-    await report('arch-0004-4004-8000-dddddddddddd', 'owner_vetoed');
-    expect(await statusOf('owner_vetoed')).toBe('dismissed');
-  });
-
-  it('普通用户抢救：candidate 且 rescue >= report 时降回 new', async () => {
-    await report('norm-0001-5001-8000-eeeeeeeeeeee', 'rescue_demote');
-    await report('norm-0002-5002-8000-ffffffffffff', 'rescue_demote');
-    expect(await statusOf('rescue_demote')).toBe('candidate');
-
-    await rescue('norm-0003-5003-8000-gggggggggggg', 'rescue_demote');
-    await rescue('norm-0004-5004-8000-hhhhhhhhhhhh', 'rescue_demote');
-    // rescue(2) >= report(2) → new（退出快照）
-    expect(await statusOf('rescue_demote')).toBe('new');
+    await report('owner-rule-0004-4004-8004-dddddddddddd', handle);
+    expect(await account(handle)).toMatchObject({
+      status: 'strong',
+      report_count: 4,
+      rescue_count: 1,
+    });
   });
 });
 
-describe('deriveStatus 白盒逻辑', () => {
-  it('dismissed 是终态', () => {
-    expect(
-      deriveStatus({ handle: 'x', status: 'dismissed', report_count: 99, rescue_count: 0, owner_votes: 0 }),
-    ).toBe('dismissed');
+describe('deriveStatus 唯一公式', () => {
+  it('只看 block - false_positive 是否达到 3', () => {
+    expect(deriveStatus({ handle: 'a', status: 'new', report_count: 3, rescue_count: 0 })).toBe(
+      'strong',
+    );
+    expect(deriveStatus({ handle: 'b', status: 'strong', report_count: 3, rescue_count: 1 })).toBe(
+      'new',
+    );
+    expect(deriveStatus({ handle: 'c', status: 'new', report_count: 5, rescue_count: 2 })).toBe(
+      'strong',
+    );
   });
 
-  it('owner 票优先于票数', () => {
+  it('历史 owner_votes 和历史 status 都不能改变结果', () => {
     expect(
-      deriveStatus({ handle: 'x', status: 'new', report_count: 0, rescue_count: 0, owner_votes: 2 }),
-    ).toBe('strong');
-  });
-
-  it('rescue >= report 降级', () => {
-    expect(
-      deriveStatus({ handle: 'x', status: 'candidate', report_count: 2, rescue_count: 3, owner_votes: 0 }),
-    ).toBe('new');
-  });
-
-  it('降级阈值与升级阈值独立', () => {
-    expect(
-      deriveStatus({ handle: 'x', status: 'strong', report_count: 3, rescue_count: 3, owner_votes: 0 }),
-    ).toBe('new');
-  });
-
-  it('阈值：>=3 strong / >=2 candidate / 其余 new', () => {
-    expect(
-      deriveStatus({ handle: 'a', status: 'new', report_count: 3, rescue_count: 0, owner_votes: 0 }),
-    ).toBe('strong');
-    expect(
-      deriveStatus({ handle: 'b', status: 'new', report_count: 2, rescue_count: 0, owner_votes: 0 }),
-    ).toBe('candidate');
-    expect(
-      deriveStatus({ handle: 'c', status: 'new', report_count: 1, rescue_count: 0, owner_votes: 0 }),
+      deriveStatus({ handle: 'x', status: 'dismissed', report_count: 0, rescue_count: 0 }),
     ).toBe('new');
   });
 });

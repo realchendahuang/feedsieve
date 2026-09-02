@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Detection } from '@feedsieve/detector';
 import type { CommunityEntry } from '@feedsieve/community-lists';
-import { classifyDetection, isCommunityBlockEligible } from './detection-policy';
+import { classifyDetection } from './detection-policy';
 
 function detection(source: Detection['source']): Detection {
   return { handle: 'spam', marked: true, source, reason: 'test', ruleId: 'test' };
@@ -12,9 +12,11 @@ function entry(overrides: Partial<CommunityEntry> = {}): CommunityEntry {
     handle: 'spam',
     x_user_id: '1',
     category: 'bot_spam',
-    status: 'strong',
+    sources: ['community'],
+    community_score: 0.63,
     report_count: 5,
     rescue_count: 0,
+    net_votes: 5,
     first_seen_at: '2026-09-01T00:00:00Z',
     updated_at: '2026-09-01T00:00:00Z',
     evidence_post_ids: [],
@@ -44,7 +46,7 @@ describe('扩展检测安全政策', () => {
     );
   });
 
-  it('只有 strong 且达到独立票数门槛的账号名单命中可进页面批量候选', () => {
+  it('服务端最终名单命中直接进入批量候选，不在扩展重算门槛', () => {
     expect(
       classifyDetection({
         detection: detection('community-list'),
@@ -55,23 +57,22 @@ describe('扩展检测安全政策', () => {
     expect(
       classifyDetection({
         detection: detection('community-list'),
-        strength: 'deep_clean',
-        communityEntry: entry({ status: 'candidate' }),
+        strength: 'refresh',
+        communityEntry: entry({
+          sources: ['maintainer'],
+          maintainer_note: '维护者确认的诈骗账号',
+          community_score: 0,
+          report_count: 0,
+          rescue_count: 0,
+          net_votes: 0,
+        }),
       }),
-    ).toBe('review');
+    ).toBe('block-candidate');
     expect(
       classifyDetection({
         detection: detection('community-list'),
-        strength: 'standard',
-        communityEntry: entry({ report_count: 1 }),
+        strength: 'deep_clean',
       }),
     ).toBe('review');
-  });
-
-  it('云端一键清理使用更高门槛', () => {
-    expect(isCommunityBlockEligible(entry())).toBe(true);
-    expect(isCommunityBlockEligible(entry({ report_count: 2 }))).toBe(false);
-    expect(isCommunityBlockEligible(entry({ rescue_count: 1 }))).toBe(false);
-    expect(isCommunityBlockEligible(entry({ status: 'recommended' }))).toBe(false);
   });
 });

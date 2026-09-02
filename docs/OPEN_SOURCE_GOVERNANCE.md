@@ -34,28 +34,27 @@ FeedSieve 不只开源浏览器插件代码。
 不建议只发布：
 
 ```json
-[
-  "@spam1",
-  "@spam2"
-]
+["@spam1", "@spam2"]
 ```
 
 更推荐发布带元数据的版本化快照：
 
 ```json
 {
-  "schema_version": 1,
-  "list_version": "2026.08.26.1",
-  "generated_at": "2026-08-26T00:00:00Z",
+  "schema_version": 2,
+  "snapshot_version": "2026.09.02.1",
+  "generated_at": "2026-09-02T00:00:00Z",
   "entries": [
     {
       "x_user_id": "123456789",
       "handle": "example_spam",
       "category": "bot_spam",
-      "status": "recommended",
+      "sources": ["community", "maintainer"],
+      "maintainer_note": "维护者确认该账号持续发送钓鱼链接",
       "community_score": 0.91,
       "report_count": 27,
       "rescue_count": 2,
+      "net_votes": 25,
       "first_seen_at": "2026-08-20T12:00:00Z",
       "updated_at": "2026-08-26T00:00:00Z",
       "evidence_post_ids": ["0000000000000000000"]
@@ -88,20 +87,18 @@ Handle 可以修改。
 community/
 ├── README.md
 ├── lists/
-│   ├── recommended.json
-│   ├── strong.json
-│   └── packs/
-│       ├── bot-spam.json
-│       ├── ai-slop.json
-│       ├── crypto-scam.json
-│       └── adult-spam.json
+│   ├── official.json
+│   ├── blocklist.yaml
+│   └── manifest.json
+├── policy/
+│   └── v3.yaml
 ├── schema/
 │   └── account-list.schema.json
 └── changelog/
     └── YYYY-MM-DD.json
 ```
 
-第一版可以只维护 `recommended.json`，以后再拆分。
+只维护一张最终名单，不再按 candidate / recommended / strong 拆文件。
 
 ## 5. 公开什么，不公开什么
 
@@ -117,6 +114,7 @@ community/
 - 阈值
 - 版本记录
 - 加入 / 移除原因
+- 来源（社区 / 维护者）与维护者公开说明
 
 ### 不应该公开
 
@@ -133,18 +131,14 @@ community/
 
 ## 6. 名单最好由程序生成
 
-长期不建议管理员直接手工编辑最终 JSON。
+维护者可以通过受保护页面维护独立来源，但最终 YAML / JSON 仍必须由程序生成，不能直接手改运行时文件。
 
 推荐流程：
 
 ```text
-Community Reports
+Current Community Votes + Maintainer Entries
       ↓
-Open Scoring Algorithm
-      ↓
-Candidate Set
-      ↓
-Validation / Safeguards
+Open Net-vote Policy + Audit
       ↓
 Generated JSON Snapshot
       ↓

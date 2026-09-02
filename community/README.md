@@ -1,97 +1,76 @@
-# FeedSieve Community Lists
+# FeedSieve 公开黑名单
 
-这里存放 FeedSieve 公开社区名单的**仓库镜像**与治理政策文档。
+这里保存线上最终黑名单的仓库镜像、公开政策、机器协议和关键词包。
 
-> 名单的权威来源是线上社区 API（`apps/community-api`，Worker + D1）：
-> 上报在这里聚合、人工审核闸门在这里生效、快照在这里生成。
-> 本目录由 `scripts/mirror-community-lists.sh` 从线上拉取并提交，**不要手改 lists/ 下的文件**。
+核心原则：
 
-核心原则不变：
+> 连黑名单本身都应该晒在阳光下；执行拉黑仍然必须由用户明确点击。
 
-> **连黑名单本身都应该晒在阳光下。**
+## 最终名单怎么产生
 
-## 名单从哪来（v0.2 起的真实链路）
+最终名单只有两个透明来源：
 
 ```text
-用户拉黑（主动动作）
-      ↓ POST /v1/reports（匿名安装哈希，去重、限速）
-Community API D1 聚合
-      ↓ 自动只到 candidate（≥3 独立安装）
-人工审核（admin CLI）
-      ↓ recommended / strong 必须人工提升；dismissed = 驳回
-generateSnapshot：确定性 JSON + manifest + sha256
-      ↓ GET /v1/snapshots/latest
-官方实例分发（主源）
-      ├─→ 扩展运行时同步（manifest 比对 → 校验和 → last-known-good 本地索引）
-      └─→ scripts/mirror-community-lists.sh 拉回本目录并提交
-                └─→ GitHub diff = 公开审计日志；jsDelivr = 分发兜底源
+community
+  每个安装对每个账号只有一个当前选择
+  净票数 = 拉黑票 - 误标票
+  净票数 >= 3 时进入；低于 3 时自动退出
 
-公开关键词源（`keyword-packs/source.json`）
-      ↓ 构建校验 + SHA-256
-版本化 JSON + manifest（提交到仓库）
-      ├─→ 发布到 Cloudflare R2
-      └─→ GET /v1/keyword-packs/latest → 扩展每 15 分钟检查 / 手动同步
+maintainer
+  维护者通过服务端 /maintainer 页面明确加入或撤销
+  不计入社区票，不伪装成社区共识
+
+final blocklist = community ∪ maintainer
 ```
 
-## 目录
+同一个账号可能同时显示两个来源。撤销维护者来源后，如果社区净票仍达到 3，账号仍留在名单；社区降到 3 以下时，如果维护者来源仍有效，账号也仍留在名单。
+
+从社区名单执行的一键批量拉黑不会生成新票，避免名单自我放大。关注账号、个人白名单和已经拉黑的账号在本机被排除；扩展只在用户点击后逐个调用 X 原生 Block。
+
+## 给人看与给机器看
+
+- [`lists/blocklist.yaml`](lists/blocklist.yaml)：当前公开名单的人类可读版本，适合 GitHub 阅读、Diff 和审计。
+- [`lists/official.json`](lists/official.json)：内容相同的机器版本，供扩展校验后建立本地索引。
+- [`lists/manifest.json`](lists/manifest.json)：版本、政策版本、条目数和两个文件的 SHA-256。
+- [`policy/v3.yaml`](policy/v3.yaml)：唯一阈值、计票与维护者来源的公开政策。
+- [`schema/account-list.schema.json`](schema/account-list.schema.json)：JSON 快照协议。
+
+`lists/` 是线上 Worker 快照的仓库镜像，由 [`../scripts/mirror-community-lists.sh`](../scripts/mirror-community-lists.sh) 下载全部 manifest 文件并逐个验证 SHA-256。镜像变更应作为普通 Git diff 提交。
+
+## 快照条目
+
+每条 entry 都必须回答“为什么它在名单里”：
+
+| 字段                               | 含义                                     |
+| ---------------------------------- | ---------------------------------------- |
+| `handle` / `x_user_id` / `aliases` | 账号身份与已知改名                       |
+| `category`                         | 垃圾类型                                 |
+| `sources`                          | `community`、`maintainer` 或两者         |
+| `maintainer_note`                  | 维护者来源存在时必须公开的说明           |
+| `report_count`                     | 当前独立拉黑票数                         |
+| `rescue_count`                     | 当前独立误标票数                         |
+| `net_votes`                        | 两者之差；仅作解释，客户端不重算入榜资格 |
+| `evidence_post_ids`                | 可选公开证据推文 ID                      |
+
+公开快照不包含安装哈希、IP、Cookie、X 凭证、浏览历史或原始推文文本。
+
+## 维护者怎么快速维护
+
+部署者在 Cloudflare 中设置 `ADMIN_TOKEN`，然后打开：
 
 ```text
-community/
-├── README.md
-├── lists/
-│   ├── manifest.json          # 镜像：版本入口 + 每文件 sha256
-│   ├── official.json          # 镜像：快照本体（扩展的 jsDelivr 兜底源）
-│   └── recommended.json       # 内置兜底名单（构建期随扩展打包，当前为空）
-├── keyword-packs/
-│   ├── source.json             # 公开、人工可审阅的词库来源（唯一编辑入口）
-│   ├── adult-high-recall.json  # 黄推 / 成人引流分类的高召回补充词
-│   ├── official.json           # 由构建脚本生成，随扩展打包作离线兜底
-│   └── manifest.json           # 版本 + SHA-256，和 R2 latest 保持同字节
-├── policy/
-│   └── v1.yaml                # 公开评分政策（阈值当前在 API 的 POLICY 常量，v0.3 迁入）
-└── schema/
-    └── account-list.schema.json
+https://你的 API 域名/maintainer
 ```
 
-高召回补充词只是行业词包的数据源，不在产品里形成单独品牌或订阅项。更新 `source.json` 或分类数据文件后，提升 `pack_version`，重新构建、审阅并发布到 R2；扩展无需升级即可在下一次 15 分钟检查时取得新规则。
+令牌只输入到该标签页并保存在 `sessionStorage`，不会写入仓库、扩展包或页面源码。每次加入、更新、撤销都会写入 `maintainer_blocklist_audit`，并立即发布新快照。管理页面代码本身是公开的，权限边界只在服务端 Bearer 校验。
 
-## 审计方式
-
-- **看变更**：`git log -p community/lists/official.json` —— 每次名单变化都有 diff
-- **看实时**：`curl https://feedsieve-api.chendahuang.com/v1/snapshots/latest`
-- **质疑条目**：开 Issue，附 handle 与理由；维护者核实后 `admin.sh promote <handle> dismissed` 并发布新快照
-- **自部署**：`apps/community-api/README.md` 有完整步骤，扩展设置可指向任意实例（协议相同）
-
-## Account Identity v1
-
-- `handle`: required（小写主键）
-- `x_user_id`: optional（稳定 ID，handle 改名后仍可命中）
-- `aliases`: v0.3
-
-## 快照条目字段（official.json）
-
-每条 entry 都回答「它为什么在名单里」：
-
-| 字段                            | 含义                                                                       |
-| ------------------------------- | -------------------------------------------------------------------------- |
-| `handle` / `x_user_id`          | 身份                                                                       |
-| `category`                      | 垃圾分类（bot_spam / scam_phishing / adult_gray_traffic / copy_paste / …） |
-| `status`                        | candidate / recommended / strong（仅人工可授予后两者）                     |
-| `report_count` / `rescue_count` | 独立安装上报数 / 误判挽回数                                                |
-| `first_seen_at` / `updated_at`  | 进入与更新时间                                                             |
-| `evidence_post_ids`             | 可选公开证据（≤5 条）                                                      |
-
-## 不公开举报者侧数据
-
-公开的是**标注与名单决策**，不是举报者隐私。
-
-- 公开：聚合名单、分类、票数、状态、时间、可选证据、全部算法与阈值
-- 不公开：原始 installation id（服务端只存加盐哈希）、IP、Cookie、X 凭证、浏览历史
+本地三票流程可用 `apps/community-api/scripts/seed.sh` 调试；脚本拒绝非 localhost 地址，不能用来向线上伪造社区共识。
 
 ## 治理红线
 
-- 标注自动，拉黑永远用户显式触发
-- 名单不是永久刑罚：Rescue / Removal 在 v0.3 落地，此前人工 dismissed 立即生效
-- **Block garbage, not opinions.** 政治立场、价值观、兴趣偏好不进官方名单
-
-详细文档见 [`../docs/`](../docs/)（TECHNICAL_SPEC / COMMUNITY_FILTERING / OPEN_SOURCE_GOVERNANCE）。
+- 一人一账号一张当前票；同一安装的新选择覆盖旧选择。
+- 维护者没有隐藏加权票，也没有永久否决票。
+- 维护者直接来源必须公开标注并给出说明。
+- 名单命中和批量拉黑不产生新社区票。
+- 观点、政治立场、价值观和兴趣差异不是垃圾证据。
+- 最终拉黑权属于用户。

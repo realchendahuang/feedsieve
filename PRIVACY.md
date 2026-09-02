@@ -16,6 +16,7 @@ FeedSieve（福滤娃）是 X（Twitter）扩展：黄框标注垃圾账号，�
 - 你的 X 关注列表：用于形成每个用户自己的「关注保护」名单，只保存在浏览器本地，绝不作为白名单或抢救票上传。
 - X 登录凭证（ct0 / bearer）：仅在你的浏览器内、你点击拉黑/撤销时，用于向 x.com 本身发起请求。不读取、不存储、不发送给 FeedSieve 或任何第三方。
 - 浏览历史、私信、密码：不收集。
+- 个人配置备份：只有你点击「导出个人配置」或选择文件导入时，扩展才会在本机创建或读取 JSON 文件。它仅含自定义关键词、官方词库开关、界面语言和社区名单显示偏好；不含登录态、安装 ID、黑白名单、关注保护、历史、队列、统计或名单上传授权。该功能不会自动上传文件或内容。
 
 ### 离开设备的数据
 
@@ -62,6 +63,7 @@ FeedSieve（福滤娃）是 X（Twitter）扩展：黄框标注垃圾账号，�
 - Your X following list: used as a per-user protection list and stored locally only. It is never uploaded as an allow or rescue vote.
 - Your X session credentials (ct0 / bearer): used only inside your browser, only when you click block/unblock, only against x.com itself. Never read, stored, or sent to FeedSieve or any third party.
 - Browsing history, direct messages, passwords: not collected.
+- Personal config backup: only an explicit “Export personal config” click or file import creates or reads a local JSON file. It contains custom keywords, official-rule switches, UI language, and community display preferences only; it excludes sign-in data, installation IDs, lists, following protection, history, queues, statistics, and the list-upload consent. This feature never uploads the file or its contents automatically.
 
 ### Data that leaves the device
 

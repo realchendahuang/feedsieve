@@ -99,7 +99,7 @@ Selector 全部放到 `packages/x-adapter/src/selectors`。
 
 输入 FeedItem，输出标注结论（mark + reason + source）：
 
-- 社区名单命中（v0.1 先用内置 `community/lists/recommended.json`）
+- 最终社区名单命中（离线兜底使用 `community/lists/official.json`）
 - 账号启发式 v1：默认名 + 随机数字、垃圾域名链接、模板化文本
 - **每个标注必须可解释**
 
@@ -208,7 +208,8 @@ cancelled
 
 ```text
 community/lists/manifest.json
-community/lists/recommended.json
+community/lists/official.json
+community/lists/blocklist.yaml
 ```
 
 Extension：
@@ -220,11 +221,7 @@ Extension：
 - 本地 index（供 Detector 查询）
 - 网络失败使用 last-known-good snapshot
 
-标注强度：
-
-- 清爽：仅 Strong 名单命中标注
-- 标准：Strong + Recommended 标注
-- 大扫除：Strong + Recommended + Candidate 标注
+服务器快照已经是最终名单，扩展不得按强度二次筛选。清爽 / 标准 / 彻底只控制名单之外的间接证据提示。
 
 验收：
 
@@ -283,15 +280,15 @@ snapshots
 Policy：
 
 ```text
-community/policy/v1.yaml
+community/policy/v3.yaml
 ```
 
-默认：
+唯一社区门槛与维护者来源：
 
 ```text
->= 5 independent reports -> candidate
-score + time spread -> recommended
-higher score + lower rescue -> strong
+net_votes = block_votes - false_positive_votes
+net_votes >= 3 -> community source active
+final blocklist = community source ∪ maintainer source
 ```
 
 生成：
@@ -299,7 +296,7 @@ higher score + lower rescue -> strong
 ```text
 DB
  ↓
-Open Scoring
+Open net-vote policy + audited maintainer entries
  ↓
 YAML Snapshot
  ↓
@@ -318,10 +315,12 @@ Git / Release
 - optional x_user_id
 - aliases
 - category
-- status
+- sources
+- optional maintainer_note
 - community_score
 - report_count
 - rescue_count
+- net_votes
 - first_seen_at
 - updated_at
 - optional evidence_post_ids

@@ -36,9 +36,11 @@ export interface ActiveKeywordRule {
 }
 
 const STORAGE_KEY = 'keywordRulesV1';
-const MAX_CUSTOM_RULES = 80;
+export const MAX_CUSTOM_KEYWORD_RULES = 80;
 const MAX_PHRASE_LENGTH = 80;
-const CATEGORY_ID_RE = /^[a-z][a-z0-9_]{1,63}$/;
+// 与远程关键词包的 ID 格式一致，避免后续新增带连字符或下划线的官方分类/规则
+// 在本地设置和备份迁移中被错误丢弃。
+const OFFICIAL_ID_RE = /^[a-z][a-z0-9_-]{1,95}$/;
 const SUBSCRIPTION_DEFAULTS_VERSION = 2 as const;
 
 function flattenOfficialRules(catalog: KeywordPackCatalog): OfficialKeywordRule[] {
@@ -56,7 +58,11 @@ export const OFFICIAL_KEYWORD_RULES: readonly OfficialKeywordRule[] = flattenOff
   BUNDLED_KEYWORD_PACK_CATALOG,
 );
 
-function normalizePhrase(value: string): string {
+/**
+ * 自定义词的稳定比较键：导入/合并也必须和实际匹配使用同一套归一化，
+ * 否则“ＡＢＣ”和“abc”会在备份恢复时重复出现。
+ */
+export function normalizeKeywordPhrase(value: string): string {
   return value
     .trim()
     .normalize('NFKC')
@@ -65,7 +71,7 @@ function normalizePhrase(value: string): string {
 }
 function textForMatch(value: string): string {
   // 去掉空白、标点、emoji/符号，处理“同·城 上-门”“福 利”等规避写法。
-  return normalizePhrase(value).replace(/[\p{P}\p{S}\s]+/gu, '');
+  return normalizeKeywordPhrase(value).replace(/[\p{P}\p{S}\s]+/gu, '');
 }
 function orderedTermsMatch(value: string, terms: readonly string[], maxGap: number): boolean {
   const haystack = textForMatch(value);
@@ -91,7 +97,7 @@ function normalizeSettings(value: unknown): KeywordRuleSettings {
   const raw = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
   const disabledOfficialRuleIds = Array.isArray(raw.disabledOfficialRuleIds)
     ? raw.disabledOfficialRuleIds.filter(
-        (id): id is string => typeof id === 'string' && /^[a-z][a-z0-9-]{2,95}$/.test(id),
+        (id): id is string => typeof id === 'string' && OFFICIAL_ID_RE.test(id),
       )
     : [];
   // v0.7.4 首次安装和旧版升级都统一启用全部官方词库。迁移标记写入后，才把
@@ -102,7 +108,7 @@ function normalizeSettings(value: unknown): KeywordRuleSettings {
     ? Array.isArray(raw.subscribedCategoryIds)
       ? raw.subscribedCategoryIds.filter(
           (category): category is string =>
-            typeof category === 'string' && CATEGORY_ID_RE.test(category),
+            typeof category === 'string' && OFFICIAL_ID_RE.test(category),
         )
       : []
     : BUNDLED_KEYWORD_PACK_CATALOG.packs.map((pack) => pack.id);
@@ -117,7 +123,7 @@ function normalizeSettings(value: unknown): KeywordRuleSettings {
             ? [{ id, phrase, createdAt: Number(candidate.createdAt) || 0 }]
             : [];
         })
-        .slice(0, MAX_CUSTOM_RULES)
+        .slice(0, MAX_CUSTOM_KEYWORD_RULES)
     : [];
   return {
     subscriptionDefaultsVersion: SUBSCRIPTION_DEFAULTS_VERSION,
@@ -136,10 +142,10 @@ export async function addCustomKeywordRule(value: string): Promise<KeywordRuleSe
   const phrase = value.trim();
   if (!isValidPhrase(phrase)) throw new Error('invalid_keyword_phrase');
   const settings = await getKeywordRuleSettings();
-  const normalized = normalizePhrase(phrase);
-  if (settings.customRules.some((rule) => normalizePhrase(rule.phrase) === normalized))
+  const normalized = normalizeKeywordPhrase(phrase);
+  if (settings.customRules.some((rule) => normalizeKeywordPhrase(rule.phrase) === normalized))
     return settings;
-  if (settings.customRules.length >= MAX_CUSTOM_RULES) throw new Error('keyword_rule_limit');
+  if (settings.customRules.length >= MAX_CUSTOM_KEYWORD_RULES) throw new Error('keyword_rule_limit');
   const next = {
     ...settings,
     customRules: [
@@ -149,6 +155,18 @@ export async function addCustomKeywordRule(value: string): Promise<KeywordRuleSe
   };
   await saveKeywordRuleSettings(next);
   return next;
+}
+
+/**
+ * 备份恢复等需要整体替换“个人关键词设置”的路径使用这个入口。
+ * 它仍然只写 keywordRulesV1，绝不会碰社区、队列或任何 X 动作状态。
+ */
+export async function replaceKeywordRuleSettings(
+  settings: KeywordRuleSettings,
+): Promise<KeywordRuleSettings> {
+  const normalized = normalizeSettings(settings);
+  await saveKeywordRuleSettings(normalized);
+  return normalized;
 }
 export async function removeCustomKeywordRule(id: string): Promise<KeywordRuleSettings> {
   const settings = await getKeywordRuleSettings();

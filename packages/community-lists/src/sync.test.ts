@@ -1,11 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { sha256Hex } from './hash';
-import {
-  syncCommunitySnapshot,
-  workerSource,
-  type SnapshotStore,
-  type SyncSource,
-} from './sync';
+import { syncCommunitySnapshot, workerSource, type SnapshotStore, type SyncSource } from './sync';
 import { parseSnapshotBody } from './validate';
 import type { StoredSnapshot } from './types';
 
@@ -22,7 +17,7 @@ function jsonResponse(payload: unknown, status = 200): Response {
 
 function snapshotBodyText(version = VERSION, entries: unknown[] = []): string {
   return JSON.stringify({
-    schema_version: 1,
+    schema_version: 2,
     snapshot_version: version,
     generated_at: '2026-08-28T00:00:00Z',
     entries,
@@ -31,10 +26,13 @@ function snapshotBodyText(version = VERSION, entries: unknown[] = []): string {
 
 function manifest(overrides: Record<string, unknown> = {}) {
   return {
-    schema_version: 1,
+    schema_version: 2,
     snapshot_version: VERSION,
     generated_at: '2026-08-28T00:00:00Z',
-    files: [{ path: 'official.json', sha256: SHA, entries: 0 }],
+    files: [
+      { path: 'blocklist.yaml', sha256: 'a'.repeat(64), entries: 0 },
+      { path: 'official.json', sha256: SHA, entries: 0 },
+    ],
     ...overrides,
   };
 }
@@ -71,7 +69,10 @@ describe('syncCommunitySnapshot', () => {
   it('downloads, verifies checksum, and stores a new snapshot', async () => {
     const body = snapshotBodyText();
     const store = memoryStore();
-    const fetchImpl = okFetch(body, manifest({ files: [{ path: 'official.json', sha256: await realSha(body), entries: 0 }] }));
+    const fetchImpl = okFetch(
+      body,
+      manifest({ files: [{ path: 'official.json', sha256: await realSha(body), entries: 0 }] }),
+    );
 
     const outcome = await syncCommunitySnapshot({
       sources: [workerSource(API)],
@@ -83,6 +84,30 @@ describe('syncCommunitySnapshot', () => {
     expect(outcome).toEqual({ status: 'updated', version: VERSION });
     expect(store.data?.snapshot_version).toBe(VERSION);
     expect(JSON.parse(store.data!.body).entries).toEqual([]);
+  });
+
+  it('selects official.json when the readable YAML is listed first', async () => {
+    const body = snapshotBodyText();
+    const store = memoryStore();
+    const fetchImpl = okFetch(
+      body,
+      manifest({
+        files: [
+          { path: 'blocklist.yaml', sha256: 'a'.repeat(64), entries: 0 },
+          { path: 'official.json', sha256: await realSha(body), entries: 0 },
+        ],
+      }),
+    );
+
+    expect(
+      await syncCommunitySnapshot({
+        sources: [workerSource(API)],
+        fetchImpl,
+        store,
+        force: true,
+      }),
+    ).toEqual({ status: 'updated', version: VERSION });
+    expect(store.data?.body).toBe(body);
   });
 
   it('rejects a snapshot whose checksum does not match the manifest', async () => {
@@ -107,7 +132,9 @@ describe('syncCommunitySnapshot', () => {
       synced_at: 1,
     };
     const store = memoryStore(good);
-    const fetchImpl = vi.fn(async () => new Response('nope', { status: 500 })) as unknown as (url: string) => Promise<Response>;
+    const fetchImpl = vi.fn(async () => new Response('nope', { status: 500 })) as unknown as (
+      url: string,
+    ) => Promise<Response>;
 
     const outcome = await syncCommunitySnapshot({
       sources: [workerSource(API)],
@@ -132,7 +159,9 @@ describe('syncCommunitySnapshot', () => {
         return new Response('down', { status: 503 });
       }
       if (url === mirror.manifestUrl) {
-        return jsonResponse(manifest({ files: [{ path: 'official.json', sha256: await realSha(body), entries: 0 }] }));
+        return jsonResponse(
+          manifest({ files: [{ path: 'official.json', sha256: await realSha(body), entries: 0 }] }),
+        );
       }
       return new Response(body, { status: 200 });
     }) as unknown as (url: string) => Promise<Response>;
@@ -171,7 +200,10 @@ describe('syncCommunitySnapshot', () => {
       body,
       synced_at: 0,
     });
-    const fetchImpl = okFetch(body, manifest({ files: [{ path: 'official.json', sha256: await realSha(body), entries: 0 }] }));
+    const fetchImpl = okFetch(
+      body,
+      manifest({ files: [{ path: 'official.json', sha256: await realSha(body), entries: 0 }] }),
+    );
 
     const outcome = await syncCommunitySnapshot({
       sources: [workerSource(API)],
@@ -199,14 +231,17 @@ describe('syncCommunitySnapshot', () => {
     const badBody = snapshotBodyText(VERSION, [{ handle: '!!!' }]);
     const badEntries = await syncCommunitySnapshot({
       sources: [workerSource(API)],
-      fetchImpl: okFetch(badBody, manifest({ files: [{ path: 'official.json', sha256: await realSha(badBody), entries: 1 }] })),
+      fetchImpl: okFetch(
+        badBody,
+        manifest({
+          files: [{ path: 'official.json', sha256: await realSha(badBody), entries: 1 }],
+        }),
+      ),
       store,
       force: true,
     });
-    // 坏条目被跳过后 entries=[] 仍是合法快照；存储保留原始字节，索引层负责再过滤
-    expect(badEntries).toEqual({ status: 'updated', version: VERSION });
-    const stored = parseSnapshotBody((await store.get())!.body);
-    expect(stored.ok && stored.value.entries).toEqual([]);
+    expect(badEntries).toEqual({ status: 'error', error: 'invalid_snapshot_entry' });
+    expect(await store.get()).toBeNull();
   });
 });
 
@@ -215,9 +250,11 @@ describe('parseSnapshotBody: content evidence (v0.4)', () => {
     handle: 'evidence_user',
     x_user_id: null,
     category: 'copy_paste',
-    status: 'candidate',
+    sources: ['community'],
+    community_score: 0.63,
     report_count: 5,
     rescue_count: 0,
+    net_votes: 5,
     first_seen_at: '2026-08-28T00:00:00Z',
     updated_at: '2026-08-28T00:00:00Z',
     evidence_post_ids: [],
@@ -226,7 +263,7 @@ describe('parseSnapshotBody: content evidence (v0.4)', () => {
   function parse(entries: unknown[]) {
     const result = parseSnapshotBody(
       JSON.stringify({
-        schema_version: 1,
+        schema_version: 2,
         snapshot_version: VERSION,
         generated_at: '2026-08-28T00:00:00Z',
         entries,
@@ -244,20 +281,20 @@ describe('parseSnapshotBody: content evidence (v0.4)', () => {
         domains: ['Scam-Sity.Example'],
       },
     ]);
-    expect(entries[0]?.fingerprints).toEqual([
-      'aaaaaaaaaaaaaaaa',
-      'abcdef0123456789',
-    ]);
+    expect(entries[0]?.fingerprints).toEqual(['aaaaaaaaaaaaaaaa', 'abcdef0123456789']);
     expect(entries[0]?.domains).toEqual(['scam-sity.example']);
   });
 
-  it('drops the whole entry when evidence fields are malformed', () => {
-    const entries = parse([
-      { ...baseEntry, fingerprints: ['NOT-HEX'] }, // 指纹格式非法
-      { ...baseEntry, handle: 'second_user', domains: 'scam.example' }, // 非数组
-      { ...baseEntry, handle: 'third_user', fingerprints: ['a'.repeat(16)] }, // 合法对照
-    ]);
-    expect(entries.map((e) => e.handle)).toEqual(['third_user']);
+  it('rejects the whole snapshot when an evidence field is malformed', () => {
+    const result = parseSnapshotBody(
+      JSON.stringify({
+        schema_version: 2,
+        snapshot_version: VERSION,
+        generated_at: '2026-08-28T00:00:00Z',
+        entries: [{ ...baseEntry, fingerprints: ['NOT-HEX'] }],
+      }),
+    );
+    expect(result).toEqual({ ok: false, error: 'invalid_snapshot_entry' });
   });
 
   it('tolerates entries without evidence fields (older snapshots)', () => {

@@ -317,6 +317,48 @@ input:focus-visible + span {
   background: var(--fs-accent-faint);
 }
 
+.community-preview {
+  display: grid;
+  gap: 5px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.community-preview li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 9px;
+  border: 1px solid var(--fs-line);
+  border-radius: 9px;
+  background: rgb(255 255 255 / 64%);
+  color: var(--fs-ink-soft);
+  font-size: 10px;
+}
+
+.community-preview small {
+  color: var(--fs-muted);
+  font-size: 9px;
+}
+
+.community-preview .community-preview-more {
+  justify-content: center;
+  border-style: dashed;
+  color: var(--fs-muted);
+}
+
+.community-empty {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: var(--fs-canvas);
+  color: var(--fs-muted);
+  font-size: 9.5px;
+  line-height: 1.45;
+}
+
 .queue-panel {
   margin-top: 11px;
 }
@@ -1175,6 +1217,65 @@ input:focus-visible + span {
 
 .official-keyword-list input {
   accent-color: var(--fs-accent-strong);
+}
+
+.personal-config-actions {
+  display: flex;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.personal-config-actions .secondary-inline {
+  flex: 1;
+}
+
+.personal-config-file-input {
+  display: none;
+}
+
+.personal-config-preview {
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid #e8d484;
+  border-radius: 10px;
+  background: var(--fs-accent-faint);
+  color: var(--fs-ink-soft);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.personal-config-preview > strong {
+  display: block;
+  color: var(--fs-ink);
+  font-size: 11px;
+}
+
+.personal-config-preview > ul,
+.personal-config-change-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding-left: 16px;
+}
+
+.personal-config-change-list {
+  margin-top: 4px;
+  color: var(--fs-muted);
+}
+
+.personal-config-preview > p {
+  margin: 8px 0 0;
+}
+
+.personal-config-preview-actions {
+  align-items: center;
+  margin-top: 10px;
+}
+
+.personal-config-preview-actions .text-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
 }
 
 .settings-card-head h2 {

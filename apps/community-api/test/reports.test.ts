@@ -32,9 +32,7 @@ async function postOne(installationId: string, handle: string) {
 }
 
 async function accountRow(handle: string) {
-  return env.DB.prepare(
-    'SELECT status, report_count, category FROM accounts WHERE handle = ?1',
-  )
+  return env.DB.prepare('SELECT status, report_count, category FROM accounts WHERE handle = ?1')
     .bind(handle)
     .first<{ status: string; report_count: number; category: string }>();
 }
@@ -51,9 +49,7 @@ describe('POST /v1/reports', () => {
     expect(account?.status).toBe('new');
     expect(account?.category).toBe('bot_spam');
 
-    const stored = await env.DB.prepare(
-      'SELECT installation_id FROM reports WHERE handle = ?1',
-    )
+    const stored = await env.DB.prepare('SELECT installation_id FROM reports WHERE handle = ?1')
       .bind('spam_user')
       .first<{ installation_id: string }>();
     const expectedHash = await hashInstallationId(env.INSTALLATION_SALT, raw);
@@ -70,11 +66,11 @@ describe('POST /v1/reports', () => {
     expect(account?.report_count).toBe(1);
   });
 
-  it('auto-promotes by distinct installations: 2 -> candidate, 3 -> strong', async () => {
+  it('uses one threshold only: net 2 stays out, net 3 enters', async () => {
     await postOne('cccccccc-3333-4333-8333-cccccccccccc', 'thresh_user');
     await postOne('dddddddd-4444-4444-8444-dddddddddddd', 'thresh_user');
     const account = await accountRow('thresh_user');
-    expect(account?.status).toBe('candidate');
+    expect(account?.status).toBe('new');
     expect(account?.report_count).toBe(2);
 
     await postOne('eeeeeeee-5555-4555-8555-eeeeeeeeeeee', 'thresh_user');
@@ -111,7 +107,8 @@ describe('POST /v1/reports', () => {
 
     const many = Array.from({ length: 51 }, (_, i) => report(`user_${i}`));
     expect(
-      (await post({ installation_id: 'gggggggg-7777-4777-8777-gggggggggggg', reports: many })).status,
+      (await post({ installation_id: 'gggggggg-7777-4777-8777-gggggggggggg', reports: many }))
+        .status,
     ).toBe(413);
   });
 
@@ -135,10 +132,7 @@ describe('POST /v1/reports', () => {
 
 describe('CORS preflight', () => {
   it('answers OPTIONS for cross-origin posts', async () => {
-    const res = await worker.fetch(
-      new Request(`${ORIGIN}/v1/reports`, { method: 'OPTIONS' }),
-      env,
-    );
+    const res = await worker.fetch(new Request(`${ORIGIN}/v1/reports`, { method: 'OPTIONS' }), env);
     expect(res.status).toBe(204);
     expect(res.headers.get('access-control-allow-origin')).toBe('*');
   });

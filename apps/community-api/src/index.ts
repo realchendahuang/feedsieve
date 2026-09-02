@@ -3,9 +3,23 @@ import { Hono } from 'hono';
 import { checkBearerToken } from './lib/auth';
 import { hashInstallationId } from './lib/hash';
 import { processRetractionBatch } from './labels';
+import {
+  deactivateMaintainerEntry,
+  listMaintainerEntries,
+  MAINTAINER_CATEGORIES,
+  upsertMaintainerEntry,
+} from './maintainer-blocklist';
+import { maintainerPageHtml } from './maintainer-page';
 import { POLICY, processReportBatch, publicPolicy } from './reports';
 import { processRescueBatch } from './rescues';
-import { generateSnapshot, getLatestSnapshot, getSnapshotFile } from './snapshot';
+import {
+  generateSnapshot,
+  getLatestSnapshot,
+  getLatestSnapshotFile,
+  getSnapshotFile,
+  PUBLIC_BLOCKLIST_PACK,
+  SNAPSHOT_PACK,
+} from './snapshot';
 
 export function createApp() {
   const app = new Hono<{ Bindings: Cloudflare.Env }>();
@@ -27,13 +41,28 @@ export function createApp() {
     if (!result.ok) {
       return c.json({ error: result.error }, result.httpStatus);
     }
+    const published = await generateSnapshot(c.env);
     return c.json({
       policy: {
-        candidate_threshold: POLICY.candidateThreshold,
+        formula: 'block_votes - false_positive_votes',
+        min_net_votes: POLICY.communityNetThreshold,
         daily_report_limit: POLICY.dailyReportLimit,
       },
       results: result.results,
+      snapshot_version: published.version,
     });
+  });
+
+  // 管理页面代码可以公开；权限只由服务端 ADMIN_TOKEN 决定，令牌不进仓库、不进扩展。
+  app.get('/maintainer', (c) => {
+    c.header('Cache-Control', 'no-store');
+    c.header(
+      'Content-Security-Policy',
+      "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
+    );
+    c.header('Referrer-Policy', 'no-referrer');
+    c.header('X-Content-Type-Options', 'nosniff');
+    return c.html(maintainerPageHtml());
   });
 
   // 快照消费端点：manifest 短缓存，版本化文件按不可变缓存
@@ -45,9 +74,27 @@ export function createApp() {
   });
 
   app.get('/v1/snapshots/:version/:path', async (c) => {
-    const body = await getSnapshotFile(c.env, c.req.param('version'), c.req.param('path'));
+    const path = c.req.param('path');
+    const body = await getSnapshotFile(c.env, c.req.param('version'), path);
     if (!body) return c.json({ error: 'not_found' }, 404);
     c.header('Cache-Control', 'public, max-age=31536000, immutable');
+    return c.body(body, 200, {
+      'content-type':
+        path === PUBLIC_BLOCKLIST_PACK ? 'text/yaml; charset=utf-8' : 'application/json',
+    });
+  });
+
+  app.get('/v1/blocklist/latest.yaml', async (c) => {
+    const body = await getLatestSnapshotFile(c.env, PUBLIC_BLOCKLIST_PACK);
+    if (!body) return c.json({ error: 'no_snapshot' }, 404);
+    c.header('Cache-Control', 'public, max-age=300');
+    return c.body(body, 200, { 'content-type': 'text/yaml; charset=utf-8' });
+  });
+
+  app.get('/v1/blocklist/latest.json', async (c) => {
+    const body = await getLatestSnapshotFile(c.env, SNAPSHOT_PACK);
+    if (!body) return c.json({ error: 'no_snapshot' }, 404);
+    c.header('Cache-Control', 'public, max-age=300');
     return c.body(body, 200, { 'content-type': 'application/json' });
   });
 
@@ -78,7 +125,8 @@ export function createApp() {
     if (!result.ok) {
       return c.json({ error: result.error }, result.httpStatus);
     }
-    return c.json({ results: result.results });
+    const published = await generateSnapshot(c.env);
+    return c.json({ results: result.results, snapshot_version: published.version });
   });
 
   app.post('/v1/labels/retract', async (c) => {
@@ -87,7 +135,8 @@ export function createApp() {
     if (!result.ok) {
       return c.json({ error: result.error }, result.httpStatus);
     }
-    return c.json({ results: result.results });
+    const published = await generateSnapshot(c.env);
+    return c.json({ results: result.results, snapshot_version: published.version });
   });
 
   // 公开政策：阈值不藏在后端黑箱里
@@ -123,16 +172,16 @@ export function createApp() {
       )
         .bind(installHash)
         .first<{ n: number }>(),
-      // 被采纳：该安装上报过的账号，最终进了快照（candidate/recommended/strong）
+      // 被采纳：该安装当前投了拉黑票，且账号社区净票数已达到公开门槛。
       c.env.DB.prepare(
         `SELECT COUNT(DISTINCT l.handle) AS n
          FROM active_labels l
          JOIN accounts a ON a.handle = l.handle
          WHERE l.installation_id = ?1
            AND l.label = 'blocked'
-           AND a.status IN ('candidate', 'recommended', 'strong')`,
+           AND a.report_count - a.rescue_count >= ?2`,
       )
-        .bind(installHash)
+        .bind(installHash, POLICY.communityNetThreshold)
         .first<{ n: number }>(),
     ]);
     return c.json({
@@ -142,7 +191,7 @@ export function createApp() {
     });
   });
 
-  // admin：ADMIN_TOKEN 保护；自动化只能到 candidate，提升/发布由人触发
+  // admin：只有服务端 ADMIN_TOKEN 能通过；公开仓库和扩展均不携带维护者权限。
   app.use('/admin/*', async (c, next) => {
     if (!(await checkBearerToken(c.req.header('authorization'), c.env.ADMIN_TOKEN))) {
       return c.json({ error: 'unauthorized' }, 401);
@@ -157,16 +206,44 @@ export function createApp() {
     });
   });
 
-  // 待审队列：new + candidate，按票数降序；给人工提升/驳回当工作面板
-  app.get('/admin/candidates', async (c) => {
+  app.get('/admin/blocklist', async (c) =>
+    c.json({
+      entries: await listMaintainerEntries(c.env, true),
+      categories: MAINTAINER_CATEGORIES,
+    }),
+  );
+
+  app.post('/admin/blocklist', async (c) => {
+    const body = await c.req.json().catch(() => undefined);
+    const result = await upsertMaintainerEntry(c.env, body);
+    if (!result.ok) return c.json({ error: result.error }, 400);
+    const published = await generateSnapshot(c.env);
+    return c.json({
+      action: result.action,
+      entry: result.entry,
+      snapshot_version: published.version,
+    });
+  });
+
+  app.delete('/admin/blocklist/:handle', async (c) => {
+    const result = await deactivateMaintainerEntry(c.env, c.req.param('handle'));
+    if (!result.ok) return c.json({ error: result.error }, 400);
+    const published = result.changed ? await generateSnapshot(c.env) : null;
+    return c.json({
+      changed: result.changed,
+      snapshot_version: published?.version ?? null,
+    });
+  });
+
+  // 社区票数诊断视图：只读，不允许维护者修改或加权社区票。
+  app.get('/admin/community-votes', async (c) => {
     const res = await c.env.DB.prepare(
       `SELECT handle, x_user_id, category, status, report_count, rescue_count,
               first_report_at, updated_at
        FROM accounts
-       WHERE status IN ('new', 'candidate')
-       ORDER BY report_count DESC, handle ASC`,
+       ORDER BY (report_count - rescue_count) DESC, handle ASC`,
     ).all();
-    return c.json({ candidates: res.results });
+    return c.json({ community_votes: res.results });
   });
 
   // 误标审计：只返回检测规则与聚合账号状态，不暴露匿名 installation hash。
@@ -198,9 +275,6 @@ export function createApp() {
     });
   });
 
-  // 人工提升/驳回已移除（v0.5 零人工：状态全部由 auto-rate 派生）。
-  // 保留待审队列视图（纯只读，透明度用）。
-
   app.notFound((c) => c.json({ error: 'not_found' }, 404));
 
   app.onError((error, c) => {
@@ -211,8 +285,7 @@ export function createApp() {
   return app;
 }
 
-// v0.5 零人工：每小时 cron 自动 publish。publish 只产生新版本当内容有变化
-// （auto-rate 收敛 + 投票变化），无变化时保持最新版本不动。
+// 定时发布是兜底校验；正常投票和维护者修改已在请求完成前立即发布。
 async function scheduledAutoPublish(env: Cloudflare.Env): Promise<void> {
   try {
     const before = await env.DB.prepare('SELECT COUNT(*) AS n FROM snapshots').first<{

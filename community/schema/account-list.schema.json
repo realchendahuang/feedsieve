@@ -1,44 +1,47 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://feedsieve.dev/schema/account-list.schema.json",
-  "title": "FeedSieve Community Account List",
+  "title": "FeedSieve Final Community Blocklist Snapshot",
   "type": "object",
-  "required": ["schema_version", "list_version", "entries"],
+  "required": ["schema_version", "snapshot_version", "generated_at", "entries"],
   "properties": {
-    "schema_version": { "type": "integer", "minimum": 1 },
-    "list_version": { "type": "string", "minLength": 1 },
-    "generated_at": { "type": ["string", "null"], "format": "date-time" },
-    "description": { "type": "string" },
+    "schema_version": { "const": 2 },
+    "policy_version": { "const": 3 },
+    "snapshot_version": {
+      "type": "string",
+      "pattern": "^[0-9]{4}\\.[0-9]{2}\\.[0-9]{2}\\.[0-9]{1,4}$"
+    },
+    "generated_at": { "type": "string", "format": "date-time" },
     "entries": {
       "type": "array",
       "items": {
         "type": "object",
         "required": [
           "handle",
+          "x_user_id",
+          "aliases",
           "category",
-          "status",
+          "sources",
           "community_score",
           "report_count",
           "rescue_count",
+          "net_votes",
           "first_seen_at",
-          "updated_at"
+          "updated_at",
+          "evidence_post_ids"
         ],
         "properties": {
+          "handle": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_]{1,15}$"
+          },
           "x_user_id": {
             "type": ["string", "null"],
             "pattern": "^[0-9]+$"
           },
-          "handle": {
-            "type": "string",
-            "minLength": 1,
-            "pattern": "^[A-Za-z0-9_]{1,15}$"
-          },
           "aliases": {
             "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": "^[A-Za-z0-9_]{1,15}$"
-            },
+            "items": { "type": "string", "pattern": "^[A-Za-z0-9_]{1,15}$" },
             "uniqueItems": true
           },
           "category": {
@@ -54,13 +57,17 @@
               "other"
             ]
           },
-          "status": {
-            "type": "string",
-            "enum": ["candidate", "recommended", "strong"]
+          "sources": {
+            "type": "array",
+            "items": { "enum": ["community", "maintainer"] },
+            "minItems": 1,
+            "uniqueItems": true
           },
+          "maintainer_note": { "type": "string", "minLength": 4, "maxLength": 240 },
           "community_score": { "type": "number", "minimum": 0, "maximum": 1 },
           "report_count": { "type": "integer", "minimum": 0 },
           "rescue_count": { "type": "integer", "minimum": 0 },
+          "net_votes": { "type": "integer" },
           "first_seen_at": { "type": "string", "format": "date-time" },
           "updated_at": { "type": "string", "format": "date-time" },
           "evidence_post_ids": {
@@ -69,14 +76,12 @@
             "uniqueItems": true
           },
           "fingerprints": {
-            "description": "已知垃圾模板指纹（v0.4）：归一化话术文本的 64bit 哈希，原文不出设备",
             "type": "array",
             "items": { "type": "string", "pattern": "^[0-9a-f]{16}$" },
             "uniqueItems": true,
             "maxItems": 8
           },
           "domains": {
-            "description": "垃圾外链域名（v0.4）：仅 hostname，小写",
             "type": "array",
             "items": {
               "type": "string",
@@ -84,8 +89,19 @@
             },
             "uniqueItems": true,
             "maxItems": 8
-          }
+          },
+          "campaign_entry_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_]{1,15}$"
+          },
+          "campaign_size": { "type": "integer", "minimum": 2 }
         },
+        "allOf": [
+          {
+            "if": { "properties": { "sources": { "contains": { "const": "maintainer" } } } },
+            "then": { "required": ["maintainer_note"] }
+          }
+        ],
         "additionalProperties": false
       }
     }

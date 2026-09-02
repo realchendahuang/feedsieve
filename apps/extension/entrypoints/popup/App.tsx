@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import {
   getBlockedAccounts,
   subscribeBlocked,
@@ -40,7 +40,6 @@ import {
   subscribePersistentBlockQueue,
   type PersistentBlockQueueState,
 } from '../../src/lib/block-queue-store';
-import { isCommunityBlockEligible } from '../../src/lib/detection-policy';
 import {
   categoryLabel,
   defaultUiLanguage,
@@ -56,6 +55,7 @@ import {
   getKeywordRuleSettings,
   isOfficialKeywordCategorySubscribed,
   removeCustomKeywordRule,
+  replaceKeywordRuleSettings,
   setOfficialKeywordCategorySubscribed,
   setOfficialKeywordRuleEnabled,
   subscribeKeywordRules,
@@ -67,6 +67,16 @@ import {
   subscribeKeywordPackCatalog,
   type KeywordPackCatalog,
 } from '../../src/lib/keyword-packs';
+import {
+  createPersonalConfigDocument,
+  MAX_PERSONAL_CONFIG_BYTES,
+  parsePersonalConfigDocument,
+  preparePersonalConfigImport,
+  serializePersonalConfigDocument,
+  type PersonalConfigImportMode,
+  type PersonalConfigImportResult,
+  type PersonalConfigParseError,
+} from '../../src/lib/personal-config';
 import {
   MARK_STRENGTHS,
   parseSnapshotBody,
@@ -90,6 +100,11 @@ interface ManualBlockResult {
   ok: boolean;
   handle?: string;
   code?: string;
+}
+
+interface PersonalConfigPreviewState {
+  merge: PersonalConfigImportResult;
+  replace: PersonalConfigImportResult;
 }
 
 type PopupView = 'home' | 'lists' | 'settings';
@@ -189,14 +204,14 @@ const STRENGTH_LABELS: Record<UiLanguage, Record<MarkStrength, string>> = {
 
 const STRENGTH_HINTS: Record<UiLanguage, Record<MarkStrength, string>> = {
   zh: {
-    refresh: '只标记强证据账号',
-    standard: '标记强证据和推荐账号',
-    deep_clean: '也标记候选、相似话术和可疑域名',
+    refresh: '最终黑名单始终生效；尽量减少间接证据提示',
+    standard: '最终黑名单与已启用词库正常生效',
+    deep_clean: '最终黑名单之外，也提示相似话术和可疑域名',
   },
   en: {
-    refresh: 'Only mark accounts with strong evidence',
-    standard: 'Mark strong and recommended accounts',
-    deep_clean: 'Also mark candidates, similar wording, and suspicious domains',
+    refresh: 'The final blocklist stays on; minimize indirect-evidence prompts',
+    standard: 'Use the final blocklist and enabled keyword rules',
+    deep_clean: 'Also show similar wording and suspicious-domain prompts',
   },
 };
 
@@ -280,6 +295,12 @@ export default function App() {
   );
   const [expandedKeywordCategory, setExpandedKeywordCategory] = useState<string | null>(null);
   const [customKeyword, setCustomKeyword] = useState('');
+  const personalConfigInputRef = useRef<HTMLInputElement>(null);
+  const [personalConfigPreview, setPersonalConfigPreview] =
+    useState<PersonalConfigPreviewState | null>(null);
+  const [personalConfigMessage, setPersonalConfigMessage] = useState<string | null>(null);
+  const [personalConfigError, setPersonalConfigError] = useState<string | null>(null);
+  const [personalConfigBusy, setPersonalConfigBusy] = useState(false);
   const [following, setFollowing] = useState<FollowingAllowlistItem[] | null>(null);
   const [followingSync, setFollowingSync] = useState<FollowingSyncState>({
     status: 'idle',
@@ -290,6 +311,33 @@ export default function App() {
   const [communityEntries, setCommunityEntries] = useState<CommunityEntry[]>([]);
 
   const t = UI_COPY[language];
+
+  const applyCommunitySnapshotState = useCallback(
+    (snapshot: Awaited<ReturnType<typeof getCommunitySnapshot>>): void => {
+      if (!snapshot) {
+        setCommunityEntries([]);
+        setCommunityMeta(null);
+        return;
+      }
+      const parsed = parseSnapshotBody(snapshot.body);
+      if (!parsed.ok) {
+        setCommunityEntries([]);
+        setCommunityMeta(null);
+        return;
+      }
+      setCommunityEntries(parsed.value.entries);
+      setCommunityMeta({
+        version: snapshot.snapshot_version,
+        count: parsed.value.entries.length,
+        syncedAt: snapshot.synced_at,
+      });
+    },
+    [],
+  );
+
+  async function loadCommunitySnapshotState(): Promise<void> {
+    applyCommunitySnapshotState(await getCommunitySnapshot());
+  }
 
   useEffect(() => {
     void getUiLanguage().then(setLanguage);
@@ -309,23 +357,15 @@ export default function App() {
     void sendToXPage(PAGE_MARKED_MESSAGE)
       .then((result) => setPageMarked(asPageMarkedList(result)))
       .catch(() => setPageMarked([]));
-    void getCommunitySnapshot().then((snapshot) => {
-      if (!snapshot) return;
-      const parsed = parseSnapshotBody(snapshot.body);
-      if (parsed.ok) {
-        setCommunityEntries(parsed.value.entries);
-        setCommunityMeta({
-          version: snapshot.snapshot_version,
-          count: parsed.value.entries.length,
-          syncedAt: snapshot.synced_at,
-        });
-      }
-    });
+    void getCommunitySnapshot().then(applyCommunitySnapshotState);
     const unsubs = [
       subscribeBlocked(setBlocked),
       subscribeDaily(setDaily),
       subscribeAllowlist(setAllowlist),
-      subscribeCommunity(() => void getCommunitySettings().then(setCommunity)),
+      subscribeCommunity(() => {
+        void getCommunitySettings().then(setCommunity);
+        void getCommunitySnapshot().then(applyCommunitySnapshotState);
+      }),
       subscribeUiLanguage(setLanguage),
       subscribeKeywordRules(setKeywordRules),
       subscribeKeywordPackCatalog(setKeywordCatalog),
@@ -334,7 +374,7 @@ export default function App() {
       subscribePersistentBlockQueue(setQueue),
     ];
     return () => unsubs.forEach((unsub) => unsub());
-  }, []);
+  }, [applyCommunitySnapshotState]);
 
   useEffect(() => {
     document.documentElement.lang = language === 'zh' ? 'zh-CN' : 'en';
@@ -400,8 +440,10 @@ export default function App() {
       })) as { outcome?: { status: string; version?: string; error?: string } };
       const outcome = res?.outcome;
       if (outcome?.status === 'updated') {
+        await loadCommunitySnapshotState();
         setSyncMsg(t.synced(outcome.version));
       } else if (outcome?.status === 'unchanged') {
+        await loadCommunitySnapshotState();
         setSyncMsg(t.upToDate);
       } else if (outcome?.status === 'error') {
         setSyncMsg(outcome.error ? `${t.syncFailed}: ${outcome.error}` : t.syncFailed);
@@ -534,6 +576,110 @@ export default function App() {
     }
   }
 
+  function personalConfigErrorMessage(error: PersonalConfigParseError): string {
+    switch (error) {
+      case 'file_too_large':
+        return t.personalConfigFileTooLarge;
+      case 'unsupported_version':
+        return t.personalConfigUnsupportedVersion;
+      case 'invalid_json':
+      case 'invalid_format':
+      case 'invalid_payload':
+        return t.personalConfigInvalid;
+    }
+  }
+
+  function exportPersonalConfig(): void {
+    if (!keywordRules || !community) return;
+    setPersonalConfigError(null);
+    setPersonalConfigMessage(null);
+    try {
+      const body = serializePersonalConfigDocument(
+        createPersonalConfigDocument({
+          keywordRules,
+          community,
+          language,
+          catalog: keywordCatalog,
+        }),
+      );
+      const objectUrl = URL.createObjectURL(new Blob([body], { type: 'application/json' }));
+      const anchor = document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = `feedsieve-personal-config-${new Date().toISOString().slice(0, 10)}.json`;
+      anchor.style.display = 'none';
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+      setPersonalConfigMessage(t.personalConfigExported);
+    } catch {
+      setPersonalConfigError(t.personalConfigExportFailed);
+    }
+  }
+
+  function choosePersonalConfigFile(): void {
+    if (!keywordRules || !community || personalConfigBusy) return;
+    setPersonalConfigError(null);
+    setPersonalConfigMessage(null);
+    personalConfigInputRef.current?.click();
+  }
+
+  async function readPersonalConfigFile(event: ChangeEvent<HTMLInputElement>): Promise<void> {
+    const file = event.currentTarget.files?.[0];
+    // 同一文件再次选择时也要触发 change；读取后立即清空 input。
+    event.currentTarget.value = '';
+    if (!file || !keywordRules || !community) return;
+    setPersonalConfigError(null);
+    setPersonalConfigMessage(null);
+    setPersonalConfigPreview(null);
+    if (file.size > MAX_PERSONAL_CONFIG_BYTES) {
+      setPersonalConfigError(t.personalConfigFileTooLarge);
+      return;
+    }
+    try {
+      const parsed = parsePersonalConfigDocument(await file.text());
+      if (!parsed.ok) {
+        setPersonalConfigError(personalConfigErrorMessage(parsed.error));
+        return;
+      }
+      const context = { keywordRules, community, language, catalog: keywordCatalog };
+      setPersonalConfigPreview({
+        merge: preparePersonalConfigImport(parsed.document, context, 'merge'),
+        replace: preparePersonalConfigImport(parsed.document, context, 'replace'),
+      });
+    } catch {
+      setPersonalConfigError(t.personalConfigReadFailed);
+    }
+  }
+
+  async function applyPersonalConfig(mode: PersonalConfigImportMode): Promise<void> {
+    const prepared = personalConfigPreview?.[mode];
+    if (!prepared?.next || personalConfigBusy) return;
+    setPersonalConfigBusy(true);
+    setPersonalConfigError(null);
+    try {
+      const [nextKeywordRules, nextCommunity] = await Promise.all([
+        replaceKeywordRuleSettings(prepared.next.keywordRules),
+        setCommunitySettings({
+          enabled: prepared.next.preferences.communityEnabled,
+          strength: prepared.next.preferences.markStrength,
+        }),
+      ]);
+      await setUiLanguage(prepared.next.preferences.uiLanguage);
+      setKeywordRules(nextKeywordRules);
+      setCommunity(nextCommunity);
+      setLanguage(prepared.next.preferences.uiLanguage);
+      setPersonalConfigPreview(null);
+      setPersonalConfigMessage(
+        UI_COPY[prepared.next.preferences.uiLanguage].personalConfigImported,
+      );
+    } catch {
+      setPersonalConfigError(t.personalConfigApplyFailed);
+    } finally {
+      setPersonalConfigBusy(false);
+    }
+  }
+
   async function startFollowingSync(): Promise<void> {
     setSyncing(true);
     setNotice(null);
@@ -584,17 +730,45 @@ export default function App() {
   const officialKeywordRules = keywordCatalog.packs.flatMap((pack) =>
     pack.rules.map((rule) => ({ ...rule, category: pack.id })),
   );
+  const keywordCategoryNames = new Map(
+    keywordCatalog.packs.map((pack) => [pack.id, pack.name[language]]),
+  );
+  const officialKeywordRuleNames = new Map(
+    officialKeywordRules.map((rule) => [rule.id, rule.name[language]]),
+  );
+  const personalConfigMergePreview = personalConfigPreview?.merge.preview ?? null;
+  const personalConfigReplacePreview = personalConfigPreview?.replace.preview ?? null;
+  const personalConfigPreferenceChanges = personalConfigMergePreview
+    ? [
+        personalConfigMergePreview.languageChange
+          ? `${t.languageSetting} → ${
+              personalConfigMergePreview.languageChange.to === 'zh' ? '中文' : 'EN'
+            }`
+          : null,
+        personalConfigMergePreview.communityEnabledChange
+          ? `${t.enabled} → ${
+              personalConfigMergePreview.communityEnabledChange.to
+                ? t.personalConfigOn
+                : t.personalConfigOff
+            }`
+          : null,
+        personalConfigMergePreview.markStrengthChange
+          ? `${t.strength} → ${
+              STRENGTH_LABELS[language][personalConfigMergePreview.markStrengthChange.to]
+            }`
+          : null,
+      ].filter((value): value is string => value !== null)
+    : [];
   const blockedCount = blocked?.length ?? null;
   const protectedHandles = new Set([
     ...(allowlist ?? []).map((item) => item.handle),
     ...(following ?? []).map((item) => item.handle),
     ...(blocked ?? []).map((item) => item.handle),
   ]);
-  const cloudHighConfidence = communityEntries.filter(isCommunityBlockEligible);
-  const cloudEligible = cloudHighConfidence.filter(
+  const cloudEligible = communityEntries.filter(
     (entry) => !protectedHandles.has(entry.handle.toLowerCase()),
   );
-  const cloudExcluded = cloudHighConfidence.length - cloudEligible.length;
+  const cloudExcluded = communityEntries.length - cloudEligible.length;
   const queueSummary = blockQueueProgress(queue);
   const queueDone = queueSummary.success + queueSummary.failed;
   const followingSyncActive =
@@ -778,6 +952,30 @@ export default function App() {
                   {t.cloudProtected} <strong>{cloudExcluded}</strong>
                 </span>
               </div>
+
+              {cloudEligible.length > 0 ? (
+                <ul className="community-preview" aria-label={t.communityPreview}>
+                  {cloudEligible.slice(0, 5).map((entry) => (
+                    <li key={entry.handle}>
+                      <span>@{entry.handle}</span>
+                      <small>
+                        {entry.sources.includes('maintainer') && entry.sources.includes('community')
+                          ? t.communitySourceBoth(entry.net_votes)
+                          : entry.sources.includes('maintainer')
+                            ? t.communitySourceMaintainer
+                            : t.communitySourceVotes(entry.net_votes)}
+                      </small>
+                    </li>
+                  ))}
+                  {cloudEligible.length > 5 ? (
+                    <li className="community-preview-more">
+                      {t.communityMore(cloudEligible.length - 5)}
+                    </li>
+                  ) : null}
+                </ul>
+              ) : (
+                <p className="community-empty">{t.communityEmpty}</p>
+              )}
 
               {queue && queueSummary.total > 0 ? (
                 <div className="queue-panel">
@@ -1212,6 +1410,173 @@ export default function App() {
                         </div>
                       );
                     })}
+                  </div>
+                </div>
+              ) : null}
+            </section>
+
+            <section className="settings-card personal-config-card">
+              <div className="settings-card-head">
+                <h2>{t.personalConfig}</h2>
+              </div>
+              <p className="card-hint">{t.personalConfigHint}</p>
+              <div className="personal-config-actions">
+                <button
+                  type="button"
+                  className="secondary-inline"
+                  disabled={!keywordRules || !community || personalConfigBusy}
+                  onClick={exportPersonalConfig}
+                >
+                  {t.exportPersonalConfig}
+                </button>
+                <button
+                  type="button"
+                  className="secondary-inline"
+                  disabled={!keywordRules || !community || personalConfigBusy}
+                  onClick={choosePersonalConfigFile}
+                >
+                  {t.importPersonalConfig}
+                </button>
+              </div>
+              <input
+                ref={personalConfigInputRef}
+                className="personal-config-file-input"
+                type="file"
+                accept="application/json,.json"
+                aria-label={t.importPersonalConfig}
+                onChange={(event) => void readPersonalConfigFile(event)}
+              />
+              {personalConfigError ? (
+                <p className="inline-notice result-failure" role="alert">
+                  {personalConfigError}
+                </p>
+              ) : null}
+              {personalConfigMessage ? (
+                <p className="inline-notice" role="status">
+                  {personalConfigMessage}
+                </p>
+              ) : null}
+              {personalConfigMergePreview && personalConfigReplacePreview ? (
+                <div className="personal-config-preview" role="status">
+                  <strong>{t.personalConfigPreview}</strong>
+                  <ul>
+                    <li>
+                      <strong>{t.personalConfigMerge}</strong>{' '}
+                      {t.personalConfigCustomPreview(
+                        personalConfigMergePreview.customRules.backupCount,
+                        personalConfigMergePreview.customRules.resultCount,
+                        personalConfigMergePreview.customRules.addedCount,
+                        personalConfigMergePreview.customRules.alreadyPresentCount,
+                      )}
+                    </li>
+                    <li>
+                      <strong>{t.personalConfigReplace}</strong>{' '}
+                      {t.personalConfigReplaceCustomPreview(
+                        personalConfigReplacePreview.customRules.resultCount,
+                        personalConfigReplacePreview.customRules.removedCount,
+                      )}
+                    </li>
+                    {personalConfigMergePreview.categoryChanges.length > 0 ? (
+                      <li>
+                        {t.personalConfigCategories(
+                          personalConfigMergePreview.categoryChanges.length,
+                        )}
+                        <ul className="personal-config-change-list">
+                          {personalConfigMergePreview.categoryChanges.slice(0, 3).map((change) => (
+                            <li key={change.id}>
+                              {keywordCategoryNames.get(change.id) ?? change.id} →{' '}
+                              {change.to ? t.personalConfigOn : t.personalConfigOff}
+                            </li>
+                          ))}
+                          {personalConfigMergePreview.categoryChanges.length > 3 ? (
+                            <li>
+                              {t.personalConfigMore(
+                                personalConfigMergePreview.categoryChanges.length - 3,
+                              )}
+                            </li>
+                          ) : null}
+                        </ul>
+                      </li>
+                    ) : null}
+                    {personalConfigMergePreview.ruleChanges.length > 0 ? (
+                      <li>
+                        {t.personalConfigRules(personalConfigMergePreview.ruleChanges.length)}
+                        <ul className="personal-config-change-list">
+                          {personalConfigMergePreview.ruleChanges.slice(0, 3).map((change) => (
+                            <li key={change.id}>
+                              {officialKeywordRuleNames.get(change.id) ?? change.id} →{' '}
+                              {change.to ? t.personalConfigOff : t.personalConfigOn}
+                            </li>
+                          ))}
+                          {personalConfigMergePreview.ruleChanges.length > 3 ? (
+                            <li>
+                              {t.personalConfigMore(
+                                personalConfigMergePreview.ruleChanges.length - 3,
+                              )}
+                            </li>
+                          ) : null}
+                        </ul>
+                      </li>
+                    ) : null}
+                    {personalConfigPreferenceChanges.length > 0 ? (
+                      <li>
+                        {t.personalConfigPreferences(personalConfigPreferenceChanges.length)}
+                        <ul className="personal-config-change-list">
+                          {personalConfigPreferenceChanges.map((label) => (
+                            <li key={label}>{label}</li>
+                          ))}
+                        </ul>
+                      </li>
+                    ) : null}
+                    {personalConfigMergePreview.ignoredCategoryIds.length > 0 ||
+                    personalConfigMergePreview.ignoredRuleIds.length > 0 ? (
+                      <li>
+                        {t.personalConfigIgnored(
+                          personalConfigMergePreview.ignoredCategoryIds.length,
+                          personalConfigMergePreview.ignoredRuleIds.length,
+                        )}
+                      </li>
+                    ) : null}
+                    {personalConfigMergePreview.categoryChanges.length === 0 &&
+                    personalConfigMergePreview.ruleChanges.length === 0 &&
+                    personalConfigPreferenceChanges.length === 0 &&
+                    personalConfigMergePreview.customRules.addedCount === 0 &&
+                    personalConfigReplacePreview.customRules.removedCount === 0 ? (
+                      <li>{t.personalConfigNoChanges}</li>
+                    ) : null}
+                  </ul>
+                  {personalConfigPreview?.merge.preview.customRules.exceedsLimit ? (
+                    <p className="result-failure">
+                      {t.personalConfigMergeLimit(
+                        personalConfigPreview.merge.preview.customRules.resultCount,
+                      )}
+                    </p>
+                  ) : null}
+                  <div className="personal-config-actions personal-config-preview-actions">
+                    <button
+                      type="button"
+                      className="secondary-inline"
+                      disabled={personalConfigBusy || !personalConfigPreview?.merge.next}
+                      onClick={() => void applyPersonalConfig('merge')}
+                    >
+                      {t.personalConfigMerge}
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary-inline"
+                      disabled={personalConfigBusy || !personalConfigPreview?.replace.next}
+                      onClick={() => void applyPersonalConfig('replace')}
+                    >
+                      {t.personalConfigReplace}
+                    </button>
+                    <button
+                      type="button"
+                      className="text-action"
+                      disabled={personalConfigBusy}
+                      onClick={() => setPersonalConfigPreview(null)}
+                    >
+                      {t.personalConfigCancel}
+                    </button>
                   </div>
                 </div>
               ) : null}

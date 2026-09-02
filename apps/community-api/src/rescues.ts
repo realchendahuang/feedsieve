@@ -29,10 +29,9 @@ function nowSeconds(): number {
 }
 
 /**
- * 抢救票：认为某条社区标注可能误伤时投出。
- * 语义：一个安装对一个 handle 只能投一票；rescue 只作用于已存在的账号。
- * 自动降级闸门（对称于自动升级）：candidate 账号 rescue_count >= report_count
- * 时降回 new（退出快照）；recommended / strong 的去留只归人工。
+ * 误标票：认为某条社区标注可能误伤时投出。
+ * 一个安装对一个 handle 只有一个当前选择；误标票只作用于已存在的账号。
+ * 每次改判后统一按 report_count - rescue_count >= 3 重算社区来源。
  */
 export async function processRescueBatch(
   env: Cloudflare.Env,
@@ -88,8 +87,6 @@ export async function processRescueBatch(
 
   const identity = await installationHash(env, installationId);
   const installHash = identity.hash;
-  // owner（维护者）特权（v0.5）：owner 的抢救 = 最终裁决 —— 账号永久退出名单
-  // （dismissed），后续普通举报不复活（auto-rate 只看 new/candidate/strong）。
   const today = utcToday();
   const now = nowSeconds();
 
@@ -172,7 +169,7 @@ export async function processRescueBatch(
       results[item.resultIndex].status = 'duplicate';
       continue;
     }
-    const exists = await refreshAccountFromLabels(env, canonical, identity.ownerHash);
+    const exists = await refreshAccountFromLabels(env, canonical);
     if (!exists) {
       // 名单里没有这个账号：负标签仍保存在 active_labels，后续一旦有正票建档便立即生效。
       results[item.resultIndex].status = 'unknown';

@@ -3,7 +3,8 @@
 #
 # 用法:
 #   ./admin.sh health                    检查服务存活
-#   ./admin.sh candidates                待审队列（只读，透明度用）
+#   ./admin.sh community-votes           社区票数（只读，透明度用）
+#   ./admin.sh blocklist                 维护者条目（含已撤销）
 #   ./admin.sh false-positives           误标反馈（按规则汇总 + 最近记录）
 #   ./admin.sh publish                   生成并发布新快照版本（cron 已自动跑，手动是保险丝）
 #
@@ -28,8 +29,11 @@ case "$cmd" in
   health)
     curl -sS "$API/healthz"
     ;;
-  candidates)
-    curl -sS -H "$AUTH" "$API/admin/candidates"
+  community-votes)
+    curl -sS -H "$AUTH" "$API/admin/community-votes"
+    ;;
+  blocklist)
+    curl -sS -H "$AUTH" "$API/admin/blocklist"
     ;;
   false-positives)
     curl -sS -H "$AUTH" "$API/admin/false-positives"
@@ -38,7 +42,7 @@ case "$cmd" in
     curl -sS -X POST -H "$AUTH" "$API/admin/publish"
     ;;
   *)
-    echo "用法: admin.sh <health|candidates|false-positives|publish>" >&2
+    echo "用法: admin.sh <health|community-votes|blocklist|false-positives|publish>" >&2
     exit 1
     ;;
 esac

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { buildIndex } from './index-core';
-import { isStatusAllowed } from './strength';
 import {
   DEFAULT_MARK_STRENGTH,
   isMarkStrength,
@@ -9,80 +8,78 @@ import {
   type SnapshotBody,
 } from './types';
 
-function entry(overrides: Record<string, unknown>): CommunityEntry {
-  const base: CommunityEntry = {
+function entry(overrides: Partial<CommunityEntry> = {}): CommunityEntry {
+  return {
     handle: 'spam_user',
     x_user_id: null,
     category: 'bot_spam',
-    status: 'strong',
+    sources: ['community'],
+    community_score: 0.63,
     report_count: 5,
-    rescue_count: 0,
-    first_seen_at: '2026-08-01T00:00:00Z',
-    updated_at: '2026-08-01T00:00:00Z',
+    rescue_count: 1,
+    net_votes: 4,
+    first_seen_at: '2026-09-01T00:00:00Z',
+    updated_at: '2026-09-01T00:00:00Z',
     evidence_post_ids: [],
+    ...overrides,
   };
-  return { ...base, ...overrides } as CommunityEntry;
 }
 
 const snapshot: SnapshotBody = {
-  schema_version: 1,
-  snapshot_version: '2026.08.28.1',
-  generated_at: '2026-08-28T00:00:00Z',
+  schema_version: 2,
+  snapshot_version: '2026.09.02.1',
+  generated_at: '2026-09-02T00:00:00Z',
   entries: [
-    entry({}),
-    entry({ handle: 'rec_user', status: 'recommended', x_user_id: '42' }),
-    entry({ handle: 'cand_user', status: 'candidate', report_count: 3 }),
+    entry(),
+    entry({
+      handle: 'maintained',
+      x_user_id: '42',
+      sources: ['maintainer'],
+      maintainer_note: '维护者确认的钓鱼账号',
+      community_score: 0,
+      report_count: 0,
+      rescue_count: 0,
+      net_votes: 0,
+    }),
     entry({ handle: 'spam_old', aliases: ['renamed_1', 'renamed_2'] }),
   ],
 };
 
-describe('strength gating (candidate 只在大扫除档可见)', () => {
-  it('maps strength levels to status floors', () => {
-    expect(isStatusAllowed('strong', 'refresh')).toBe(true);
-    expect(isStatusAllowed('recommended', 'refresh')).toBe(false);
-    expect(isStatusAllowed('recommended', 'standard')).toBe(true);
-    expect(isStatusAllowed('candidate', 'standard')).toBe(false);
-    expect(isStatusAllowed('candidate', 'deep_clean')).toBe(true);
-  });
-
-  it('validates and rejects bad strength values', () => {
+describe('heuristic strength setting', () => {
+  it('still validates the local heuristic setting without filtering the final list', () => {
     expect(isMarkStrength('standard')).toBe(true);
     expect(isMarkStrength('nuclear')).toBe(false);
     expect(DEFAULT_MARK_STRENGTH satisfies MarkStrength).toBe('standard');
+    expect(buildIndex(snapshot).size).toBe(3);
   });
 });
 
-describe('buildIndex lookup', () => {
-  it('filters entries by strength', () => {
-    expect(buildIndex(snapshot, 'refresh').size).toBe(2);
-    expect(buildIndex(snapshot, 'standard').size).toBe(3);
-    expect(buildIndex(snapshot, 'deep_clean').size).toBe(4);
+describe('final blocklist index lookup', () => {
+  it('includes every server-published source without client-side threshold logic', () => {
+    const index = buildIndex(snapshot);
+    expect(index.lookup('spam_user')?.sources).toEqual(['community']);
+    expect(index.lookup('maintained')?.sources).toEqual(['maintainer']);
   });
 
   it('looks up by handle case-insensitively and tolerates @', () => {
-    const index = buildIndex(snapshot, 'deep_clean');
+    const index = buildIndex(snapshot);
     expect(index.lookup('@SPAM_user')?.category).toBe('bot_spam');
-    expect(index.lookup('rec_user')?.status).toBe('recommended');
   });
 
   it('matches renamed handles through the alias table', () => {
-    const index = buildIndex(snapshot, 'deep_clean');
+    const index = buildIndex(snapshot);
     expect(index.lookup('renamed_1')?.handle).toBe('spam_old');
     expect(index.lookup('@Renamed_2')?.handle).toBe('spam_old');
-    // 别名不重复计入 size（size 数的是正主条目）
-    expect(index.size).toBe(4);
+    expect(index.size).toBe(3);
   });
 
-  it('prefers x_user_id (stable across handle renames)', () => {
-    const index = buildIndex(snapshot, 'deep_clean');
-    expect(index.lookup('rec_user', '42')?.handle).toBe('rec_user');
-    // ID 命中优先：即使 handle 改名成新名字，旧 handle 查不到也仍能靠 ID 命中
-    expect(index.lookup(null, '42')?.handle).toBe('rec_user');
+  it('prefers stable x_user_id across handle renames', () => {
+    const index = buildIndex(snapshot);
+    expect(index.lookup(null, '42')?.handle).toBe('maintained');
   });
 
   it('returns null on miss', () => {
-    const index = buildIndex(snapshot, 'refresh');
-    expect(index.lookup('cand_user')).toBeNull();
+    const index = buildIndex(snapshot);
     expect(index.lookup('unknown')).toBeNull();
     expect(index.lookup(null, '999999')).toBeNull();
   });

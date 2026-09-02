@@ -50,37 +50,52 @@ curl https://你的域名/healthz
 
 ## 端点
 
-| 端点                               | 状态 | 说明                                           |
-| ---------------------------------- | ---- | ---------------------------------------------- |
-| `GET /healthz`                     | ✅   | 存活检查                                       |
-| `POST /v1/reports`                 | ✅   | 显式上报（匿名安装哈希、去重、限速，批量 ≤50） |
-| `POST /v1/rescues`                 | ✅   | 显式误标/抢救反馈（可带检测来源、规则与理由）  |
-| `POST /v1/labels/retract`          | ✅   | 本地名单删除后撤回当前票（原始审计证据保留）   |
-| `GET /v1/snapshots/latest`         | ✅   | manifest（版本 + sha256 + 条目数，短缓存）     |
-| `GET /v1/snapshots/:version/:file` | ✅   | 快照文件（immutable 缓存）                     |
-| `GET /v1/keyword-packs/latest`     | ✅   | R2 词库 manifest（版本 + SHA-256，短缓存）    |
-| `GET /v1/keyword-packs/:version/:file` | ✅ | R2 版本化词库文件（immutable 缓存）            |
-| `POST /admin/publish`              | ✅   | 生成并发布新快照版本                           |
-| `GET /admin/candidates`            | ✅   | 待审队列（new + candidate，按票数降序）        |
-| `GET /admin/false-positives`       | ✅   | 误标规则汇总 + 最近反馈（不返回安装标识）      |
+| 端点                                   | 状态 | 说明                                           |
+| -------------------------------------- | ---- | ---------------------------------------------- |
+| `GET /healthz`                         | ✅   | 存活检查                                       |
+| `POST /v1/reports`                     | ✅   | 显式上报（匿名安装哈希、去重、限速，批量 ≤50） |
+| `POST /v1/rescues`                     | ✅   | 显式误标/抢救反馈（可带检测来源、规则与理由）  |
+| `POST /v1/labels/retract`              | ✅   | 本地名单删除后撤回当前票（原始审计证据保留）   |
+| `GET /v1/snapshots/latest`             | ✅   | manifest（版本 + sha256 + 条目数，短缓存）     |
+| `GET /v1/snapshots/:version/:file`     | ✅   | 快照文件（immutable 缓存）                     |
+| `GET /v1/blocklist/latest.yaml`        | ✅   | 当前最终黑名单（人类可读 YAML）                |
+| `GET /v1/blocklist/latest.json`        | ✅   | 当前最终黑名单（机器 JSON）                    |
+| `GET /v1/keyword-packs/latest`         | ✅   | R2 词库 manifest（版本 + SHA-256，短缓存）     |
+| `GET /v1/keyword-packs/:version/:file` | ✅   | R2 版本化词库文件（immutable 缓存）            |
+| `GET /maintainer`                      | ✅   | 维护者黑名单管理页面（页面公开，操作需 token） |
+| `POST /admin/publish`                  | ✅   | 生成并发布新快照版本                           |
+| `GET /admin/blocklist`                 | ✅   | 维护者条目（含已撤销）                         |
+| `POST /admin/blocklist`                | ✅   | 加入或更新维护者条目并立即发布                 |
+| `DELETE /admin/blocklist/:handle`      | ✅   | 撤销维护者来源并立即发布                       |
+| `GET /admin/community-votes`           | ✅   | 社区聚合票数诊断视图（只读）                   |
+| `GET /admin/false-positives`           | ✅   | 误标规则汇总 + 最近反馈（不返回安装标识）      |
 
-自动评级：普通独立票达到 2 票进入 `candidate`、达到 3 票进入 `strong`；
-owner 拉黑一票可到 `strong`，owner 误标会变成 `dismissed`（永不出现在快照里）。
-`new` = 票数未达阈值。
+社区只有一个公式：`report_count - rescue_count >= 3` 时进入最终名单，低于 3 时退出。
+维护者条目存放在独立的 `maintainer_blocklist` 表，不参与社区计票。最终快照取两者并集，
+并通过 `sources` 公开标注 `community` / `maintainer`；不存在隐藏 owner 权重或永久否决。
 
 计票以 `active_labels` 为准：一个匿名安装对一个账号只能保留一个当前判断，
 后一次“拉黑 / 白名单”会覆盖前一次，避免同一用户同时贡献正负票。`reports` 与
 `rescues` 仍保留规则和内容证据，供误标审计使用；名单删除只撤票，不抹审计记录。
 
-## 管理 CLI
+## 维护者页面与 CLI
+
+打开 `https://你的域名/maintainer`，输入部署时设置的 `ADMIN_TOKEN`。令牌只保存在当前
+标签页的 `sessionStorage`；仓库、扩展和页面源码都不包含它。加入、更新、撤销操作会写入
+`maintainer_blocklist_audit`，并在请求完成前生成新快照。
 
 ```sh
-apps/community-api/scripts/admin.sh candidates          # 待审队列
+apps/community-api/scripts/admin.sh community-votes     # 社区票数诊断
+apps/community-api/scripts/admin.sh blocklist           # 维护者条目
 apps/community-api/scripts/admin.sh false-positives     # 误标审计
 apps/community-api/scripts/admin.sh publish             # 发布新快照
 ```
 
 令牌读 `FEEDSIEVE_ADMIN_TOKEN` 或 `~/.feedsieve-secrets.txt`；`FEEDSIEVE_API` 可指向自部署实例。
+
+需要本地验证“三个不同安装投票后入榜”时，启动 `pnpm dev` 后把账号喂给
+`apps/community-api/scripts/seed.sh`。该脚本只接受 `localhost` / `127.0.0.1`，线上维护请用
+维护者页面，禁止用种子脚本制造虚假共识。
 
 ## 公开词库发布
 

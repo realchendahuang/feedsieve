@@ -1,0 +1,65 @@
+# FeedSieve 公开社区黑名单
+# 拉黑仍需用户在扩展中明确点击；社区批量拉黑不会反向增加票数。
+schema_version: 2
+version: '2026.09.02.1'
+generated_at: '2026-09-02T02:15:00.000Z'
+rule:
+  formula: 'block_votes - false_positive_votes'
+  min_net_votes: 3
+summary:
+  accounts: 6
+entries:
+  - handle: 'cndon91'
+    x_user_id: null
+    category: 'adult_gray_traffic'
+    sources: ['maintainer']
+    votes: { block: 1, false_positive: 0, net: 1 }
+    maintainer_note: '历史人工背书条目迁移；后续可由维护者页面更新或撤销'
+    first_seen_at: '2026-08-30T07:30:09.000Z'
+    updated_at: '2026-08-30T07:30:09.000Z'
+    evidence_post_ids: []
+  - handle: 'crypto_teacher'
+    x_user_id: null
+    category: 'scam_phishing'
+    sources: ['maintainer']
+    votes: { block: 1, false_positive: 0, net: 1 }
+    maintainer_note: '历史人工背书条目迁移；后续可由维护者页面更新或撤销'
+    first_seen_at: '2026-08-30T07:30:09.000Z'
+    updated_at: '2026-08-30T07:30:09.000Z'
+    evidence_post_ids: []
+  - handle: 'lucky_winner99'
+    x_user_id: null
+    category: 'copy_paste'
+    sources: ['maintainer']
+    votes: { block: 1, false_positive: 0, net: 1 }
+    maintainer_note: '历史人工背书条目迁移；后续可由维护者页面更新或撤销'
+    first_seen_at: '2026-08-30T07:30:09.000Z'
+    updated_at: '2026-08-30T07:30:09.000Z'
+    evidence_post_ids: []
+  - handle: 'newaccount7'
+    x_user_id: null
+    category: 'bot_spam'
+    sources: ['maintainer']
+    votes: { block: 1, false_positive: 0, net: 1 }
+    maintainer_note: '历史人工背书条目迁移；后续可由维护者页面更新或撤销'
+    first_seen_at: '2026-08-30T07:30:09.000Z'
+    updated_at: '2026-08-30T07:30:09.000Z'
+    evidence_post_ids: []
+  - handle: 'spamking88'
+    x_user_id: null
+    category: 'copy_paste'
+    sources: ['maintainer']
+    votes: { block: 1, false_positive: 0, net: 1 }
+    maintainer_note: '历史人工背书条目迁移；后续可由维护者页面更新或撤销'
+    first_seen_at: '2026-08-30T07:30:09.000Z'
+    updated_at: '2026-08-30T07:30:09.000Z'
+    evidence_post_ids: []
+  - handle: 'trxminer07'
+    x_user_id: null
+    category: 'scam_phishing'
+    sources: ['maintainer']
+    votes: { block: 1, false_positive: 0, net: 1 }
+    maintainer_note: '历史人工背书条目迁移；后续可由维护者页面更新或撤销'
+    first_seen_at: '2026-08-30T07:30:09.000Z'
+    updated_at: '2026-08-30T07:30:09.000Z'
+    evidence_post_ids: []

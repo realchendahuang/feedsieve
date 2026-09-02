@@ -3,9 +3,8 @@ import { installationHash, refreshAccountFromLabels, setActiveLabel } from './la
 
 // Phase D 会把阈值搬进 policy 文件/端点；先集中放这里
 export const POLICY = {
-  // v0.5 自动评级（低配阈值：当前用户规模小，高阈值反而没数据）
-  candidateThreshold: 2, // 独立安装票数达到 → candidate（默认档可见）
-  strongThreshold: 3, // 独立安装票数达到 → strong（全档可见）
+  // 唯一入榜公式：独立拉黑票 - 独立误标票 >= 3。
+  communityNetThreshold: 3,
   dailyReportLimit: 100, // 单安装每日上报上限（实际限额 = 此值 × trust，见下）
   rescueDailyLimit: 50, // 单安装每日抢救上限（同样乘 trust）
   minDailyLimit: 10, // 限额下限：无论 trust 多低，保留基本参与能力
@@ -20,14 +19,15 @@ export function effectiveDailyLimit(baseLimit: number, trust: number): number {
   return Math.max(POLICY.minDailyLimit, Math.round(baseLimit * trust));
 }
 
-/** 公开政策快照（/v1/policy 与 manifest 内嵌；与 community/policy/v1.yaml 对应） */
+/** 公开政策快照（/v1/policy 与 manifest 内嵌；与 community/policy/v3.yaml 对应） */
 export function publicPolicy() {
   return {
-    version: 2,
-    candidate: { min_independent_reports: POLICY.candidateThreshold },
-    strong: { min_independent_reports: POLICY.strongThreshold },
-    owner: { description: 'maintainer votes count as strong instantly' },
-    auto_demote: 'rescue_ge_reports',
+    version: 3,
+    blocklist: {
+      formula: 'block_votes - false_positive_votes',
+      min_net_votes: POLICY.communityNetThreshold,
+      one_current_vote_per_installation: true,
+    },
     limits: {
       daily_report_base: POLICY.dailyReportLimit,
       daily_rescue_base: POLICY.rescueDailyLimit,
@@ -104,8 +104,6 @@ export async function processReportBatch(
 
   const identity = await installationHash(env, installationId);
   const installHash = identity.hash;
-  // owner（维护者）特权（v0.5）：owner 拉的号 = 最高置信证据，直接 strong，不走多数流程。
-  // 识别只靠安装 ID 比对（secret 配置），匿名性不变；纸上不落原始 ID。
   const today = utcToday();
   const now = nowSeconds();
 
@@ -199,20 +197,20 @@ export async function processReportBatch(
     touchedHandles.set(canonical, { ...r, handle: canonical });
   }
 
-  // 先保证账号存在，再从 active_labels 全量重算当前正票、负票、owner 票与分类。
+  // 先保证账号存在，再从 active_labels 全量重算当前正票、负票与分类。
   // 这样“正 -> 负 -> 正”的改判和同标签证据更新都不会让聚合计数漂移。
   for (const [handle, report] of touchedHandles) {
     await env.DB.prepare(
       `INSERT INTO accounts
-         (handle, x_user_id, category, status, report_count, rescue_count, owner_votes, first_report_at, updated_at)
-       VALUES (?1, ?2, ?3, 'new', 0, 0, 0, ?4, ?4)
+         (handle, x_user_id, category, status, report_count, rescue_count, first_report_at, updated_at)
+       VALUES (?1, ?2, ?3, 'new', 0, 0, ?4, ?4)
        ON CONFLICT(handle) DO UPDATE SET
          x_user_id = COALESCE(excluded.x_user_id, accounts.x_user_id),
          updated_at = ?4`,
     )
       .bind(handle, report.xUserId, report.reason, now)
       .run();
-    await refreshAccountFromLabels(env, handle, identity.ownerHash);
+    await refreshAccountFromLabels(env, handle);
   }
 
   return { ok: true, results };

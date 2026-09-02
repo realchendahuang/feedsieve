@@ -6,7 +6,6 @@
 import {
   buildIndex,
   isMarkStrength,
-  isStatusAllowed,
   parseSnapshotBody,
   workerSource,
   DEFAULT_MARK_STRENGTH,
@@ -16,6 +15,7 @@ import {
   type StoredSnapshot,
   type SyncSource,
 } from '@feedsieve/community-lists';
+import bundledSnapshotJson from '../../../../community/lists/official.json';
 
 export const COMMUNITY_API_BASE = 'https://feedsieve-api.chendahuang.com';
 
@@ -28,6 +28,12 @@ export const COMMUNITY_SYNC_SOURCES: SyncSource[] = [workerSource(COMMUNITY_API_
 
 const SNAPSHOT_KEY = 'communitySnapshot';
 const SETTINGS_KEY = 'communitySettings';
+const BUNDLED_SNAPSHOT_BODY = `${JSON.stringify(bundledSnapshotJson, null, 2)}\n`;
+const BUNDLED_SNAPSHOT: StoredSnapshot = {
+  snapshot_version: bundledSnapshotJson.snapshot_version,
+  body: BUNDLED_SNAPSHOT_BODY,
+  synced_at: Date.parse(bundledSnapshotJson.generated_at),
+};
 
 export interface CommunitySettings {
   /** 社区名单总开关（关掉后只跑启发式 + 内置名单） */
@@ -49,13 +55,23 @@ export const DEFAULT_COMMUNITY_SETTINGS: CommunitySettings = {
   autoContribute: true,
 };
 
-export async function getCommunitySnapshot(): Promise<StoredSnapshot | null> {
+async function getStoredCommunitySnapshot(): Promise<StoredSnapshot | null> {
   const result = await browser.storage.local.get(SNAPSHOT_KEY);
   const value = result[SNAPSHOT_KEY] as StoredSnapshot | undefined;
-  if (!value || typeof value.snapshot_version !== 'string' || typeof value.body !== 'string') {
-    return null;
+  if (value && typeof value.snapshot_version === 'string' && typeof value.body === 'string') {
+    const parsed = parseSnapshotBody(value.body);
+    if (parsed.ok && parsed.value.snapshot_version === value.snapshot_version) {
+      return value;
+    }
   }
-  return value;
+  return null;
+}
+
+export async function getCommunitySnapshot(): Promise<StoredSnapshot | null> {
+  const stored = await getStoredCommunitySnapshot();
+  if (stored) return stored;
+  // 首装、开发环境无 API、旧 schema 缓存失效时仍能使用随扩展发布的最终名单。
+  return BUNDLED_SNAPSHOT;
 }
 
 export async function setCommunitySnapshot(value: StoredSnapshot): Promise<void> {
@@ -64,7 +80,8 @@ export async function setCommunitySnapshot(value: StoredSnapshot): Promise<void>
 
 /** 传给 community-lists 同步器的存储适配器 */
 export const snapshotStore = {
-  get: getCommunitySnapshot,
+  // 同步节流只能看真正写入 storage 的远端快照，不能把打包兜底误当成刚同步。
+  get: getStoredCommunitySnapshot,
   set: setCommunitySnapshot,
 };
 
@@ -103,7 +120,7 @@ export function subscribeCommunity(onChange: () => void): () => void {
 
 export interface RuntimeCommunity {
   index: CommunityIndex;
-  /** 当前强度下可见的 handle 集合（detect 的 list 入参用） */
+  /** 服务端最终黑名单的 handle 集合（detect 的 list 入参用） */
   handleSet: Set<string>;
   /**
    * 已知垃圾模板指纹集合（v0.4）。间接证据：仅「大扫除」档聚合下发，
@@ -136,15 +153,10 @@ export async function buildRuntimeCommunity(): Promise<RuntimeCommunity | null> 
   if (!parsed.ok) {
     return null;
   }
-  const index = buildIndex(parsed.value, settings.strength);
-  const handleSet = new Set<string>();
-  for (const entry of parsed.value.entries) {
-    if (isStatusAllowed(entry.status, settings.strength)) {
-      handleSet.add(entry.handle);
-    }
-  }
+  const index = buildIndex(parsed.value);
+  const handleSet = new Set(parsed.value.entries.map((entry) => entry.handle));
   // 指纹/域名是比名单弱的间接证据（换号复用话术、垃圾域名），
-  // 按用户拍板只在「大扫除」档启用；快照条目本身已按强度过滤。
+  // 按用户拍板只在「大扫除」档启用；最终账号名单不受启发式强度筛选。
   const deepClean = settings.strength === 'deep_clean';
   const fingerprintSet = new Set<string>();
   const domainSet = new Set<string>();

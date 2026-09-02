@@ -1,16 +1,12 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 import worker from '../src/index';
-import { SNAPSHOT_PACK } from '../src/snapshot';
+import { PUBLIC_BLOCKLIST_PACK, SNAPSHOT_PACK } from '../src/snapshot';
 
 const ORIGIN = 'https://api.example.com';
 const ADMIN = env.ADMIN_TOKEN;
 
-async function report(
-  installationId: string,
-  handle: string,
-  extra: Record<string, unknown> = {},
-) {
+async function report(installationId: string, handle: string, extra: Record<string, unknown> = {}) {
   const res = await worker.fetch(
     new Request(`${ORIGIN}/v1/reports`, {
       method: 'POST',
@@ -36,16 +32,14 @@ async function publish(token?: string) {
 }
 
 interface Manifest {
+  schema_version: number;
   snapshot_version: string;
   generated_at: string;
   files: { path: string; sha256: string; entries: number }[];
 }
 
 async function sha256HexOf(input: string): Promise<string> {
-  const digest = await crypto.subtle.digest(
-    'SHA-256',
-    new TextEncoder().encode(input),
-  );
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
   return Array.from(new Uint8Array(digest))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
@@ -66,16 +60,13 @@ describe('snapshot pipeline', () => {
     expect(snapshot_version).toMatch(/^\d{4}\.\d{2}\.\d{2}\.\d{1,4}$/);
     expect(files[0].entries).toBe(0);
 
-    const latest = await worker.fetch(
-      new Request(`${ORIGIN}/v1/snapshots/latest`),
-      env,
-    );
+    const latest = await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), env);
     expect(latest.status).toBe(200);
     const manifest = (await latest.json()) as Manifest;
     expect(manifest.snapshot_version).toBe(snapshot_version);
   });
 
-  it('strong account lands in snapshot with matching sha256 and stable ordering', async () => {
+  it('net-vote account lands in the final snapshot and readable YAML', async () => {
     const installs = [
       'tttttttt-2001-4001-8000-tttttttttttt',
       'tttttttt-2002-4002-8000-tttttttttttt',
@@ -89,31 +80,40 @@ describe('snapshot pipeline', () => {
     await publish(ADMIN);
     const fileRes = await worker.fetch(
       new Request(
-        `${ORIGIN}/v1/snapshots/${((
-          (await (
-            await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), env)
-          ).json()) as Manifest
-        ).snapshot_version)}/${SNAPSHOT_PACK}`,
+        `${ORIGIN}/v1/snapshots/${
+          (
+            (await (
+              await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), env)
+            ).json()) as Manifest
+          ).snapshot_version
+        }/${SNAPSHOT_PACK}`,
       ),
       env,
     );
     expect(fileRes.status).toBe(200);
     const bodyText = await fileRes.text();
     const body = JSON.parse(bodyText) as {
+      schema_version: number;
       entries: {
         handle: string;
-        status: string;
+        sources: string[];
         community_score: number;
         report_count: number;
+        rescue_count: number;
+        net_votes: number;
         evidence_post_ids: string[];
       }[];
     };
 
+    expect(body.schema_version).toBe(2);
     expect(body.entries).toHaveLength(1);
     const entry = body.entries[0];
     expect(entry.handle).toBe('cand_user');
-    expect(entry.status).toBe('strong');
+    expect(entry).not.toHaveProperty('status');
+    expect(entry.sources).toEqual(['community']);
     expect(entry.report_count).toBe(4);
+    expect(entry.rescue_count).toBe(0);
+    expect(entry.net_votes).toBe(4);
     // 4 票同日：4/7 = 0.571 → 0.57（未达爆发线，不打折）
     expect(entry.community_score).toBe(0.57);
     expect(entry.evidence_post_ids).toEqual(['18000000000000000']);
@@ -123,6 +123,20 @@ describe('snapshot pipeline', () => {
     ).json()) as Manifest;
     expect(await sha256HexOf(bodyText)).toBe(latest.files[0].sha256);
     expect(fileRes.headers.get('cache-control')).toContain('immutable');
+
+    const yamlRes = await worker.fetch(new Request(`${ORIGIN}/v1/blocklist/latest.yaml`), env);
+    expect(yamlRes.status).toBe(200);
+    expect(yamlRes.headers.get('content-type')).toContain('yaml');
+    const yaml = await yamlRes.text();
+    expect(yaml).toContain('formula: "block_votes - false_positive_votes"');
+    expect(yaml).toContain('min_net_votes: 3');
+    expect(yaml).toContain('- handle: "cand_user"');
+    expect(yaml).toContain('sources: ["community"]');
+    expect(yaml).toContain('net: 4');
+
+    const yamlFile = latest.files.find((file) => file.path === PUBLIC_BLOCKLIST_PACK);
+    expect(yamlFile).toBeDefined();
+    expect(await sha256HexOf(yaml)).toBe(yamlFile?.sha256);
   });
 
   it('republishing unchanged content reuses the same version (no churn)', async () => {

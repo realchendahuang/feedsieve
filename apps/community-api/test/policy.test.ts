@@ -1,26 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import policyYaml from '../../community/policy/v1.yaml?raw';
+import policyYaml from '../../community/policy/v3.yaml?raw';
 import { POLICY } from '../src/reports';
 import { SCORE_POLICY } from '../src/lib/score';
 
 /**
- * 漂移守卫：community/policy/v1.yaml 是公开事实源，
+ * 漂移守卫：community/policy/v3.yaml 是公开事实源，
  * 代码常量改动必须同步 yaml（?raw 导入，构建期内联，不依赖运行时 fs）。
  */
 describe('policy yaml ↔ code constants', () => {
   const yaml = policyYaml;
 
-  it('candidate threshold matches', () => {
-    expect(yaml).toContain(`min_independent_reports: ${POLICY.candidateThreshold}`);
+  it('community net-vote threshold matches', () => {
+    expect(yaml).toContain('formula: block_votes - false_positive_votes');
+    expect(yaml).toContain(`min_net_votes: ${POLICY.communityNetThreshold}`);
   });
 
-  it('strong threshold matches', () => {
-    expect(yaml).toContain(`min_independent_reports: ${POLICY.strongThreshold}`);
-  });
-
-  it('zero-human-review principle is codified', () => {
-    expect(yaml).toContain('zero_human_review');
-    expect(yaml).toContain('owner_veto_is_final');
+  it('maintainer source is transparent and does not receive weighted votes', () => {
+    expect(yaml).toContain('weighted_vote: false');
+    expect(yaml).toContain('maintainer_source_is_publicly_labeled');
+    expect(yaml).toContain('maintainer_does_not_modify_community_votes');
   });
 
   it('limit values match', () => {
@@ -39,13 +37,9 @@ describe('policy yaml ↔ code constants', () => {
 
   it('score params match', () => {
     expect(yaml).toContain(`saturation: ${SCORE_POLICY.saturation}`);
-    expect(yaml).toContain(
-      `temporal_spread_bonus_per_extra_day: ${SCORE_POLICY.dayBonus}`,
-    );
+    expect(yaml).toContain(`temporal_spread_bonus_per_extra_day: ${SCORE_POLICY.dayBonus}`);
     expect(yaml).toContain(`temporal_spread_bonus_max: ${SCORE_POLICY.dayBonusCap}`);
     expect(yaml).toContain(`burst_min_reports: ${SCORE_POLICY.burstMinReports}`);
-    expect(yaml).toContain(
-      `burst_penalty_factor: ${SCORE_POLICY.burstPenaltyFactor}`,
-    );
+    expect(yaml).toContain(`burst_penalty_factor: ${SCORE_POLICY.burstPenaltyFactor}`);
   });
 });

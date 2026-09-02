@@ -10,21 +10,11 @@ interface ActiveLabelRow {
   label: AccountLabel;
 }
 
-async function ownerHash(env: Cloudflare.Env): Promise<string | null> {
-  return env.OWNER_INSTALLATION_ID
-    ? hashInstallationId(env.INSTALLATION_SALT, env.OWNER_INSTALLATION_ID)
-    : null;
-}
-
 export async function installationHash(
   env: Cloudflare.Env,
   installationId: string,
-): Promise<{ hash: string; ownerHash: string | null; isOwner: boolean }> {
-  const [hash, owner] = await Promise.all([
-    hashInstallationId(env.INSTALLATION_SALT, installationId),
-    ownerHash(env),
-  ]);
-  return { hash, ownerHash: owner, isOwner: owner !== null && hash === owner };
+): Promise<{ hash: string }> {
+  return { hash: await hashInstallationId(env.INSTALLATION_SALT, installationId) };
 }
 
 /**
@@ -62,10 +52,9 @@ export async function setActiveLabel(
 export async function refreshAccountFromLabels(
   env: Cloudflare.Env,
   handle: string,
-  knownOwnerHash?: string | null,
 ): Promise<boolean> {
   const account = await env.DB.prepare(
-    `SELECT handle, status, report_count, rescue_count, owner_votes
+    `SELECT handle, status, report_count, rescue_count
      FROM accounts WHERE handle = ?1`,
   )
     .bind(handle)
@@ -74,14 +63,12 @@ export async function refreshAccountFromLabels(
       status: string;
       report_count: number;
       rescue_count: number;
-      owner_votes: number;
     }>();
   if (!account) {
     return false;
   }
 
-  const owner = knownOwnerHash === undefined ? await ownerHash(env) : knownOwnerHash;
-  const [blocked, allowed, ownerLabel, category] = await Promise.all([
+  const [blocked, allowed, category] = await Promise.all([
     env.DB.prepare(
       `SELECT COUNT(*) AS n FROM active_labels
        WHERE handle = ?1 AND label = 'blocked'`,
@@ -94,11 +81,6 @@ export async function refreshAccountFromLabels(
     )
       .bind(handle)
       .first<{ n: number }>(),
-    owner
-      ? env.DB.prepare('SELECT label FROM active_labels WHERE installation_id = ?1 AND handle = ?2')
-          .bind(owner, handle)
-          .first<ActiveLabelRow>()
-      : Promise.resolve(null),
     env.DB.prepare(
       `SELECT r.reason
        FROM active_labels l
@@ -116,17 +98,12 @@ export async function refreshAccountFromLabels(
 
   const reportCount = blocked?.n ?? 0;
   const rescueCount = allowed?.n ?? 0;
-  const ownerVotes = ownerLabel?.label === 'blocked' ? 1 : 0;
-  const status =
-    account.status === 'dismissed' || ownerLabel?.label === 'allowed'
-      ? 'dismissed'
-      : deriveStatus({
-          handle,
-          status: account.status,
-          report_count: reportCount,
-          rescue_count: rescueCount,
-          owner_votes: ownerVotes,
-        });
+  const status = deriveStatus({
+    handle,
+    status: account.status,
+    report_count: reportCount,
+    rescue_count: rescueCount,
+  });
 
   await env.DB.prepare(
     `UPDATE accounts SET
@@ -142,7 +119,7 @@ export async function refreshAccountFromLabels(
       handle,
       reportCount,
       rescueCount,
-      ownerVotes,
+      0,
       status,
       category?.reason ?? null,
       Math.floor(Date.now() / 1000),
@@ -217,9 +194,9 @@ export async function processRetractionBatch(
       results.push({ handle: validated.handle, status: 'absent' });
       continue;
     }
-    await refreshAccountFromLabels(env, canonical, identity.ownerHash);
+    await refreshAccountFromLabels(env, canonical);
     if (canonical !== validated.handle) {
-      await refreshAccountFromLabels(env, validated.handle, identity.ownerHash);
+      await refreshAccountFromLabels(env, validated.handle);
     }
     results.push({ handle: validated.handle, status: 'retracted' });
   }

@@ -7,8 +7,6 @@ declare namespace Cloudflare {
     KEYWORD_PACKS?: R2Bucket;
     ADMIN_TOKEN: string;
     INSTALLATION_SALT: string;
-    /** 维护者安装实例的原始 ID（v0.5）：识别 owner 票用。放 secret，不入代码。 */
-    OWNER_INSTALLATION_ID?: string;
     TEST_MIGRATIONS: import('cloudflare:test').D1Migration[];
   }
 }

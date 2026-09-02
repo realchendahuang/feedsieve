@@ -31,7 +31,7 @@
 - Cloudflare Worker + Hono + D1 后端（代码同仓库开源，任何人可自部署）
 - Report API：拉黑后显式一键上报（匿名安装哈希、去重、限速）
 - 快照管线：聚合 → 确定性 JSON + manifest + sha256，版本化分发
-- 人工审核闸门：自动化只到 candidate（仅「大扫除」可见），recommended / strong 必须人工提升
+- 最终名单：社区净票达到 3 自动进入；维护者条目作为独立、公开标注的来源并入
 - 扩展消费端：manifest 比对 + 校验和 + last-known-good + 本地索引
 - 标注强度：清爽 / 标准 / 大扫除
 - 个人白名单一票否决（误杀治理）
@@ -45,7 +45,7 @@
 
 目标：**上报规模变大后，社区名单仍然可信。**
 
-状态（2026-08-28）：✅ Rescue API + 自动降级闸门（candidate 且 rescue ≥ report → 降回 new）；✅ Community Score v1（可解释公式入快照）；✅ Reporter Trust v1 + burst 检测（内部，不公开）；✅ aliases 换号追踪（同 rest_id 自动归并）；✅ `community/policy/v1.yaml` + `/v1/policy` 公开化 + drift 守卫。余：Changelog（后续版本）。
+状态（2026-09-02）：✅ 一安装一账号一张当前票；✅ 社区净票达到 3 入榜、低于 3 退出；✅ 维护者独立来源与审计页面；✅ Community Score（仅解释，不决定入榜）；✅ Reporter Trust + burst 限速；✅ aliases 换号追踪；✅ `community/policy/v3.yaml` + `/v1/policy` 公开化 + drift 守卫。
 
 成功标准（原）：
 
@@ -88,7 +88,7 @@ AI 识别（原 v0.5 规划）顺延至 v0.5.x / v0.6：**AI 是最后一层识�
 ## v0.7 — Block Pack 生态（已否决 2026-08-30）
 
 **不做。** 用户拍板：官方仓库单一来源，名单只走官方社区管线（上报 → 审核 → 快照 → 镜像）。
-第三方 Pack / Registry / 订阅 / 导入导出全部砍掉，不进入实施。
+第三方 Pack / Registry / 订阅，以及第三方或公共规则包的导入导出全部砍掉，不进入实施。这里不排除用户自己的「个人配置备份与迁移」：它只导出本地关键词与显示偏好，不接收第三方规则包、不自动同步、更不会触发 X 动作或社区计票。
 
 - ~~Third-party Block Pack~~
 - ~~Pack metadata / maintainer / version~~

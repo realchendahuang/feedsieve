@@ -19,16 +19,19 @@ const pageMarked = [
 ];
 
 const snapshotBody = JSON.stringify({
-  schema_version: 1,
-  snapshot_version: '2026.09.01.1',
+  schema_version: 2,
+  snapshot_version: '2026.09.02.1',
   generated_at: new Date(now - 18 * 60_000).toISOString(),
   entries: Array.from({ length: 47 }, (_, index) => ({
     handle: `spam_demo_${String(index).padStart(2, '0')}`,
     x_user_id: null,
     category: index % 2 === 0 ? 'copy_paste' : 'adult_gray_traffic',
-    status: index % 4 === 0 ? 'strong' : 'recommended',
-    report_count: 3 + (index % 8),
+    sources: index % 7 === 0 ? ['maintainer'] : ['community'],
+    ...(index % 7 === 0 ? { maintainer_note: '维护者确认的垃圾账号' } : {}),
+    community_score: index % 7 === 0 ? 0 : 0.5,
+    report_count: index % 7 === 0 ? 0 : 3 + (index % 8),
     rescue_count: 0,
+    net_votes: index % 7 === 0 ? 0 : 3 + (index % 8),
     first_seen_at: '2026-08-20T00:00:00Z',
     updated_at: '2026-09-01T00:00:00Z',
     evidence_post_ids: [],
@@ -44,7 +47,7 @@ const storageData = {
     autoContribute: true,
   },
   communitySnapshot: {
-    snapshot_version: '2026.09.01.1',
+    snapshot_version: '2026.09.02.1',
     body: snapshotBody,
     synced_at: now - 18 * 60_000,
   },
@@ -180,7 +183,7 @@ const previewBrowser = {
   },
   runtime: {
     getManifest: () => ({ version: '0.7.2' }),
-    sendMessage: async () => ({ outcome: { status: 'unchanged', version: '2026.09.01.1' } }),
+    sendMessage: async () => ({ outcome: { status: 'unchanged', version: '2026.09.02.1' } }),
   },
 };
 

@@ -39,7 +39,7 @@ FeedSieve 不应该只是每个用户各自维护一套关键词和黑名单。
 
 ---
 
-## 3. 分级门槛与批量安全线
+## 3. 唯一入榜门槛
 
 `5 个用户屏蔽 -> 自动永久进入全球黑名单` 风险太大：
 
@@ -49,30 +49,37 @@ FeedSieve 不应该只是每个用户各自维护一套关键词和黑名单。
 - 竞争对手恶意举报
 - 争议账号被当垃圾号
 
-因此状态分层：
+因此社区票必须可撤回、可抵消，而且只有一个公开门槛：
 
 ```text
-0 - 1 independent reports
-    -> normal
-
->= 2 independent reports
-    -> candidate
-
->= 3 independent reports
-    -> strong
+每个安装对每个账号只有一个当前选择：blocked 或 false_positive
+community net votes = block votes - false-positive votes
+net votes >= 3  -> 进入最终黑名单
+net votes < 3   -> 自动退出社区来源
 ```
 
-Candidate 只在「彻底」档供复核。云端和页面批量拉黑的过渡门槛统一为：`strong + report_count >= 3 + rescue_count = 0`。任何抢救票都会让账号退出批量候选。
+扩展只消费服务器发布的最终名单，不再根据 strong、票数或“必须零抢救”二次筛选。用户的“清爽 / 标准 / 彻底”设置只影响较弱的启发式提示，不改变最终名单账号是否可进入一键队列。
 
 具体阈值不硬编码在后端，公开在：
 
-[`../community/policy/v1.yaml`](../community/policy/v1.yaml)
+[`../community/policy/v3.yaml`](../community/policy/v3.yaml)
 
-用户标注强度：
+从最终名单启动批量操作时：
 
-- 清爽：仅 Strong 名单命中标注
-- 标准：Strong + Recommended 标注
-- 大扫除：Strong + Recommended + Candidate 标注
+- 关注列表、个人白名单、已拉黑账号先在本机排除；
+- 用户必须明确点击；
+- 队列逐个调用 X 原生 Block；
+- 这批 Block 不产生新的社区拉黑票，避免反馈回路。
+
+### 维护者来源
+
+冷启动和持续治理需要维护者能快速维护，但不应该给某个“特殊安装”一张隐藏的百倍票。设计采用独立来源：
+
+```text
+final blocklist = community consensus ∪ active maintainer entries
+```
+
+维护者通过受 `ADMIN_TOKEN` 保护的服务端 `/maintainer` 页面加入、更新或撤销账号。条目公开显示 `sources: [maintainer]` 和维护说明；如果同一账号也达到社区门槛，则显示两个来源。维护者操作不改变 `report_count`、`rescue_count` 或 `net_votes`，并写入审计表。
 
 ---
 
@@ -164,11 +171,9 @@ v1 原则：
 
 ---
 
-## 7. Community Filter Packs
+## 7. 官方分类
 
-不维护一个“宇宙总黑名单”。
-
-官方可维护：
+最终名单仍按垃圾类型分类：
 
 ```text
 Bot Spam

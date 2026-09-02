@@ -149,9 +149,9 @@ Detector 不知道 DOM，也不知道 Chrome。它只回答一个问题：**这�
 ```ts
 type MarkVerdict = {
   mark: boolean;
-  reason: string;            // 可解释理由，必须非空
+  reason: string; // 可解释理由，必须非空
   source: 'community' | 'heuristic' | 'fingerprint' | 'domain' | 'ai';
-  category?: string;         // bot_spam / adult_gray_traffic / ...
+  category?: string; // bot_spam / adult_gray_traffic / ...
   confidence?: number;
 };
 ```
@@ -196,7 +196,7 @@ type MarkVerdict = {
 Timeline 滚动时不实时访问后端。
 
 ```text
-Community API / GitHub
+Community API
        ↓
 manifest.json
        ↓
@@ -215,9 +215,9 @@ Detector lookup
 
 ### YAML / JSON
 
-- `community/source/*.yaml`: 可读、可 Review、可 Fork
-- `community/lists/*.json`: 运行时构建产物
-- `community/policy/v1.yaml`: 公开评分政策
+- `community/lists/blocklist.yaml`: 最终名单的可读镜像
+- `community/lists/official.json`: 同源机器快照
+- `community/policy/v3.yaml`: 公开计票与维护者来源政策
 
 `x_user_id` 为 optional，`handle` 是 MVP 必需字段。
 
@@ -228,7 +228,11 @@ Detector lookup
 ```text
 POST /v1/reports
 POST /v1/rescues
+POST /v1/labels/retract
 GET  /v1/snapshots/latest
+GET  /v1/blocklist/latest.yaml
+GET  /maintainer
+GET|POST|DELETE /admin/blocklist
 ```
 
 不负责替用户操作 X，也不需要用户 X OAuth。

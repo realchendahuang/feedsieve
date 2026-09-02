@@ -1,1 +1,38 @@
-{"schema_version":1,"snapshot_version":"2026.08.30.2","generated_at":"2026-08-30T08:56:38.299Z","policy":{"version":1,"candidate":{"min_independent_reports":3},"auto_demote":"candidate_rescue_ge_reports","limits":{"daily_report_base":100,"daily_rescue_base":50,"daily_min":10,"max_batch":50},"reporter_trust":{"default":1,"floor":0.2,"burst_threshold":30,"burst_decay":0.1}},"files":[{"path":"official.json","sha256":"63ab1efc3a3c252f4daa54910272a411a68ba1a04f88d6d2734fe86ba8c956c3","entries":6}]}
+{
+  "schema_version": 2,
+  "policy_version": 3,
+  "snapshot_version": "2026.09.02.1",
+  "generated_at": "2026-09-02T02:15:00.000Z",
+  "policy": {
+    "version": 3,
+    "blocklist": {
+      "formula": "block_votes - false_positive_votes",
+      "min_net_votes": 3,
+      "one_current_vote_per_installation": true
+    },
+    "limits": {
+      "daily_report_base": 100,
+      "daily_rescue_base": 50,
+      "daily_min": 10,
+      "max_batch": 50
+    },
+    "reporter_trust": {
+      "default": 1,
+      "floor": 0.2,
+      "burst_threshold": 30,
+      "burst_decay": 0.1
+    }
+  },
+  "files": [
+    {
+      "path": "official.json",
+      "sha256": "1773678920ba5eefb67c074d6d0815a7ca0620a622e93e3673f6836f73d7d6cd",
+      "entries": 6
+    },
+    {
+      "path": "blocklist.yaml",
+      "sha256": "d97ce70a483b13b9ef796aa92b1690af95231673305d1337182724a8d59e8229",
+      "entries": 6
+    }
+  ]
+}

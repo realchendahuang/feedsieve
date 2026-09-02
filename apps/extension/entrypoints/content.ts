@@ -80,10 +80,10 @@ import {
   subscribeKeywordPackCatalog,
   type KeywordPackCatalog,
 } from '../src/lib/keyword-packs';
-import builtinListJson from '../../../community/lists/recommended.json';
+import builtinListJson from '../../../community/lists/official.json';
 
 /**
- * 内置名单（构建期打包，entries 目前为空）：离线兜底。
+ * 最近一次公开最终名单随扩展打包，作为离线兜底。
  * 社区名单走运行时同步（background SW -> storage.local -> 这里建索引），
  * 服务器快照永远是权威来源。
  */
@@ -136,7 +136,7 @@ export default defineContentScript({
     const followingCache = new Set<string>();
     /** 已拉黑名单缓存：X 偶尔仍会展示已拉黑账号（f=live 等），需要标注 */
     const blockedCache = new Set<string>();
-    /** 社区名单运行时状态（快照同步 + 强度过滤后的索引） */
+    /** 社区最终名单运行时状态（快照同步后的索引） */
     let community: RuntimeCommunity | null = null;
     /** 检测总开关；关闭后仍保留用户主动「标记垃圾并拉黑」入口。 */
     let detectionEnabled = true;

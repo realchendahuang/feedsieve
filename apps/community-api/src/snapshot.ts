@@ -1,10 +1,13 @@
 import { sha256Hex } from './lib/hash';
 import { computeScore } from './lib/score';
+import { listMaintainerEntries } from './maintainer-blocklist';
 import { publicPolicy } from './reports';
+import { POLICY } from './reports';
 import { autoRateAccounts } from './rating';
 
-export const SNAPSHOT_SCHEMA_VERSION = 1;
+export const SNAPSHOT_SCHEMA_VERSION = 2;
 export const SNAPSHOT_PACK = 'official.json';
+export const PUBLIC_BLOCKLIST_PACK = 'blocklist.yaml';
 
 /** 单账号下发的指纹/域名证据上限，防快照膨胀 */
 const MAX_EVIDENCE_PER_ENTRY = 5;
@@ -17,14 +20,21 @@ const MIN_CAMPAIGN_ACCOUNTS = 2;
 export interface SnapshotEntry {
   handle: string;
   x_user_id: string | null;
+  aliases: string[];
   category: string;
-  status: string;
+  sources: Array<'community' | 'maintainer'>;
+  maintainer_note?: string;
   community_score: number;
   report_count: number;
   rescue_count: number;
+  net_votes: number;
   first_seen_at: string;
   updated_at: string;
   evidence_post_ids: string[];
+  fingerprints?: string[];
+  domains?: string[];
+  campaign_entry_id?: string;
+  campaign_size?: number;
 }
 
 function hamming(a: string, b: string): number {
@@ -143,7 +153,7 @@ function buildEntry(
   fingerprints: string[],
   domains: string[],
   campaign?: { entryId: string; size: number },
-) {
+): SnapshotEntry {
   let aliases: string[] = [];
   try {
     const parsed = JSON.parse(row.aliases) as unknown;
@@ -158,7 +168,7 @@ function buildEntry(
     x_user_id: row.x_user_id,
     aliases,
     category: row.category,
-    status: row.status,
+    sources: ['community'],
     community_score: computeScore({
       reportCount: row.report_count,
       rescueCount: row.rescue_count,
@@ -166,6 +176,7 @@ function buildEntry(
     }),
     report_count: row.report_count,
     rescue_count: row.rescue_count,
+    net_votes: row.report_count - row.rescue_count,
     first_seen_at: new Date(row.first_report_at * 1000).toISOString(),
     updated_at: new Date(row.updated_at * 1000).toISOString(),
     evidence_post_ids: evidence,
@@ -175,6 +186,61 @@ function buildEntry(
     // v0.5 Campaign：该条目所属簇的代表条目与规模（只在簇内 >= 2 账号时存在）
     ...(campaign ? { campaign_entry_id: campaign.entryId, campaign_size: campaign.size } : {}),
   };
+}
+
+function yamlString(value: string): string {
+  return JSON.stringify(value);
+}
+
+/** 可读公开 YAML：只包含最终黑名单，不包含内部候选或匿名安装数据。 */
+export function serializePublicBlocklistYaml(input: {
+  version: string;
+  generatedAt: string;
+  entries: SnapshotEntry[];
+}): string {
+  const lines = [
+    '# FeedSieve 公开社区黑名单',
+    '# 拉黑仍需用户在扩展中明确点击；社区批量拉黑不会反向增加票数。',
+    `schema_version: ${SNAPSHOT_SCHEMA_VERSION}`,
+    `version: ${yamlString(input.version)}`,
+    `generated_at: ${yamlString(input.generatedAt)}`,
+    'rule:',
+    '  formula: "block_votes - false_positive_votes"',
+    `  min_net_votes: ${POLICY.communityNetThreshold}`,
+    'summary:',
+    `  accounts: ${input.entries.length}`,
+  ];
+  if (input.entries.length === 0) {
+    lines.push('entries: []');
+    return `${lines.join('\n')}\n`;
+  }
+  lines.push('entries:');
+  for (const entry of input.entries) {
+    lines.push(
+      `  - handle: ${yamlString(entry.handle)}`,
+      `    x_user_id: ${entry.x_user_id ? yamlString(entry.x_user_id) : 'null'}`,
+      `    category: ${yamlString(entry.category)}`,
+      `    sources: [${entry.sources.map(yamlString).join(', ')}]`,
+      '    votes:',
+      `      block: ${entry.report_count}`,
+      `      false_positive: ${entry.rescue_count}`,
+      `      net: ${entry.net_votes}`,
+    );
+    if (entry.maintainer_note) {
+      lines.push(`    maintainer_note: ${yamlString(entry.maintainer_note)}`);
+    }
+    lines.push(
+      `    first_seen_at: ${yamlString(entry.first_seen_at)}`,
+      `    updated_at: ${yamlString(entry.updated_at)}`,
+    );
+    if (entry.evidence_post_ids.length === 0) {
+      lines.push('    evidence_post_ids: []');
+    } else {
+      lines.push('    evidence_post_ids:');
+      for (const id of entry.evidence_post_ids) lines.push(`      - ${yamlString(id)}`);
+    }
+  }
+  return `${lines.join('\n')}\n`;
 }
 
 async function collectEvidence(env: Cloudflare.Env, handle: string): Promise<string[]> {
@@ -270,15 +336,21 @@ async function collectContentEvidence(env: Cloudflare.Env): Promise<{
   return { fingerprintsByHandle, domainsByHandle };
 }
 
-export async function generateSnapshot(env: Cloudflare.Env): Promise<PublishedSnapshot> {
+export async function generateSnapshot(
+  env: Cloudflare.Env,
+  publishAttempt = 0,
+): Promise<PublishedSnapshot> {
   const now = new Date();
   const dateStamp = now.toISOString().slice(0, 10).replaceAll('-', '.');
 
-  // v0.5 零人工：出快照前先把全表状态按逻辑收敛一遍（owner 票 / 阈值 / 降级）
+  // 出快照前按唯一净票公式收敛历史状态字段。
   await autoRateAccounts(env);
 
   const latest = await env.DB.prepare(
-    'SELECT version FROM snapshots WHERE version LIKE ?1 ORDER BY version DESC LIMIT 1',
+    `SELECT version FROM snapshots
+     WHERE version LIKE ?1
+     ORDER BY CAST(substr(version, 12) AS INTEGER) DESC
+     LIMIT 1`,
   )
     .bind(`${dateStamp}.%`)
     .first<{ version: string }>();
@@ -288,11 +360,13 @@ export async function generateSnapshot(env: Cloudflare.Env): Promise<PublishedSn
     `SELECT handle, x_user_id, aliases, category, status, report_count, rescue_count,
             first_report_at, updated_at
      FROM accounts
-     WHERE status IN ('candidate', 'recommended', 'strong')
+     WHERE report_count - rescue_count >= ?1
      ORDER BY handle ASC`,
-  ).all<AccountRow>();
+  )
+    .bind(POLICY.communityNetThreshold)
+    .all<AccountRow>();
 
-  const entries = [];
+  const entries: SnapshotEntry[] = [];
   const dayRows = await env.DB.prepare(
     `SELECT r.handle, COUNT(DISTINCT date(r.created_at, 'unixepoch')) AS days
      FROM reports r
@@ -303,11 +377,15 @@ export async function generateSnapshot(env: Cloudflare.Env): Promise<PublishedSn
      GROUP BY r.handle`,
   ).all<{ handle: string; days: number }>();
   const daysByHandle = new Map(dayRows.results.map((r) => [r.handle, r.days] as const));
-  const rcRows = await env.DB.prepare('SELECT handle, report_count FROM accounts').all<{
-    handle: string;
-    report_count: number;
-  }>();
-  const reportCounts = new Map(rcRows.results.map((r) => [r.handle, r.report_count] as const));
+  const allAccountRows = await env.DB.prepare(
+    `SELECT handle, x_user_id, aliases, category, status, report_count, rescue_count,
+            first_report_at, updated_at
+     FROM accounts`,
+  ).all<AccountRow>();
+  const accountByHandle = new Map(allAccountRows.results.map((row) => [row.handle, row] as const));
+  const reportCounts = new Map(
+    allAccountRows.results.map((row) => [row.handle, row.report_count] as const),
+  );
   const { fingerprintsByHandle, domainsByHandle } = await collectContentEvidence(env);
   // 指纹簇（Campaign）：每个指纹的账号（已达标），汉明距离归簇
   const evidenceFpAccounts = new Map<string, string[]>();
@@ -334,29 +412,114 @@ export async function generateSnapshot(env: Cloudflare.Env): Promise<PublishedSn
     );
   }
 
-  const body = JSON.stringify({
-    schema_version: SNAPSHOT_SCHEMA_VERSION,
-    snapshot_version: version,
-    generated_at: now.toISOString(),
-    entries,
-  });
+  // 维护者条目是独立、透明来源，不制造社区票数。与社区条目重复时合并来源。
+  const byHandle = new Map(entries.map((entry) => [entry.handle, entry] as const));
+  for (const maintained of await listMaintainerEntries(env)) {
+    const existing = byHandle.get(maintained.handle);
+    if (existing) {
+      if (!existing.sources.includes('maintainer')) existing.sources.push('maintainer');
+      existing.maintainer_note = maintained.note;
+      existing.category = maintained.category;
+      if (maintained.x_user_id) existing.x_user_id = maintained.x_user_id;
+      if (
+        maintained.evidence_post_id &&
+        !existing.evidence_post_ids.includes(maintained.evidence_post_id)
+      ) {
+        existing.evidence_post_ids.push(maintained.evidence_post_id);
+        existing.evidence_post_ids.sort();
+      }
+      existing.updated_at = new Date(
+        Math.max(Date.parse(existing.updated_at), maintained.updated_at * 1000),
+      ).toISOString();
+      continue;
+    }
+    const belowThresholdAccount = accountByHandle.get(maintained.handle);
+    const entry: SnapshotEntry = belowThresholdAccount
+      ? buildEntry(
+          belowThresholdAccount,
+          await collectEvidence(env, maintained.handle),
+          daysByHandle.get(maintained.handle) ?? 1,
+          fingerprintsByHandle.get(maintained.handle) ?? [],
+          domainsByHandle.get(maintained.handle) ?? [],
+          campaigns.get(maintained.handle),
+        )
+      : {
+          handle: maintained.handle,
+          x_user_id: maintained.x_user_id,
+          aliases: [],
+          category: maintained.category,
+          sources: ['maintainer'],
+          community_score: 0,
+          report_count: 0,
+          rescue_count: 0,
+          net_votes: 0,
+          first_seen_at: new Date(maintained.created_at * 1000).toISOString(),
+          updated_at: new Date(maintained.updated_at * 1000).toISOString(),
+          evidence_post_ids: [],
+        };
+    entry.sources = ['maintainer'];
+    entry.maintainer_note = maintained.note;
+    entry.category = maintained.category;
+    if (maintained.x_user_id) entry.x_user_id = maintained.x_user_id;
+    entry.first_seen_at = new Date(
+      Math.min(Date.parse(entry.first_seen_at), maintained.created_at * 1000),
+    ).toISOString();
+    entry.updated_at = new Date(
+      Math.max(Date.parse(entry.updated_at), maintained.updated_at * 1000),
+    ).toISOString();
+    if (
+      maintained.evidence_post_id &&
+      !entry.evidence_post_ids.includes(maintained.evidence_post_id)
+    ) {
+      entry.evidence_post_ids.push(maintained.evidence_post_id);
+      entry.evidence_post_ids.sort();
+    }
+    entries.push(entry);
+    byHandle.set(entry.handle, entry);
+  }
+  entries.sort((a, b) => a.handle.localeCompare(b.handle));
 
-  const file: SnapshotFile = {
+  const generatedAt = now.toISOString();
+  const body = `${JSON.stringify(
+    {
+      schema_version: SNAPSHOT_SCHEMA_VERSION,
+      policy_version: 3,
+      snapshot_version: version,
+      generated_at: generatedAt,
+      entries,
+    },
+    null,
+    2,
+  )}\n`;
+
+  const machineFile: SnapshotFile = {
     path: SNAPSHOT_PACK,
     sha256: await sha256Hex(body),
     entries: entries.length,
     body,
   };
+  const yamlBody = serializePublicBlocklistYaml({ version, generatedAt, entries });
+  const yamlFile: SnapshotFile = {
+    path: PUBLIC_BLOCKLIST_PACK,
+    sha256: await sha256Hex(yamlBody),
+    entries: entries.length,
+    body: yamlBody,
+  };
 
   const manifest = {
     schema_version: SNAPSHOT_SCHEMA_VERSION,
+    policy_version: 3,
     snapshot_version: version,
-    generated_at: now.toISOString(),
+    generated_at: generatedAt,
     policy: publicPolicy(),
-    files: [{ path: file.path, sha256: file.sha256, entries: file.entries }],
+    files: [machineFile, yamlFile].map((file) => ({
+      path: file.path,
+      sha256: file.sha256,
+      entries: file.entries,
+    })),
   };
 
-  // v0.5 零人工：内容无变化则复用最新版本（cron 每小时跑，避免空转刷版本号）。
+  // 内容无变化则复用最新版本（cron 每小时跑，避免空转刷版本号）。
   // 比较 entries 内容（body 里的 generated_at 每次不同，不能整串比较）。
   const lastVersion = latest?.version ?? null;
   const lastBody = lastVersion ? await getSnapshotFile(env, lastVersion, SNAPSHOT_PACK) : null;
@@ -375,30 +538,57 @@ export async function generateSnapshot(env: Cloudflare.Env): Promise<PublishedSn
     }
   }
 
-  await env.DB.prepare(
-    `INSERT INTO snapshots (version, manifest_json, files_json, created_at)
+  const inserted = await env.DB.prepare(
+    `INSERT OR IGNORE INTO snapshots (version, manifest_json, files_json, created_at)
      VALUES (?1, ?2, ?3, ?4)`,
   )
     .bind(
       version,
-      JSON.stringify(manifest),
-      JSON.stringify({ [file.path]: file }),
+      `${JSON.stringify(manifest, null, 2)}\n`,
+      JSON.stringify({
+        [machineFile.path]: machineFile,
+        [yamlFile.path]: yamlFile,
+      }),
       Math.floor(now.getTime() / 1000),
     )
     .run();
 
-  return { version, manifest, files: { [file.path]: file } };
+  // 两个请求可能同时读取到同一 latest 版本。D1 只允许一个写入；另一个重读最新
+  // 内容，若内容已一致会直接复用，否则分配下一个序号。避免真实三票并发时返回 500。
+  if ((inserted.meta.changes ?? 0) === 0) {
+    if (publishAttempt >= 20) {
+      throw new Error('snapshot_publish_contention');
+    }
+    return generateSnapshot(env, publishAttempt + 1);
+  }
+
+  return {
+    version,
+    manifest,
+    files: {
+      [machineFile.path]: machineFile,
+      [yamlFile.path]: yamlFile,
+    },
+  };
 }
 
 /** 两次快照的 entries 内容是否相同（忽略 generated_at / 版本号等元信息）。 */
 function entriesContentEqual(lastBody: string, currentEntries: unknown[]): boolean {
-  let last: { entries?: unknown[] };
+  let last: { schema_version?: number; policy_version?: number; entries?: unknown[] };
   try {
-    last = JSON.parse(lastBody) as { entries?: unknown[] };
+    last = JSON.parse(lastBody) as {
+      schema_version?: number;
+      policy_version?: number;
+      entries?: unknown[];
+    };
   } catch {
     return false;
   }
-  if (!Array.isArray(last.entries)) {
+  if (
+    last.schema_version !== SNAPSHOT_SCHEMA_VERSION ||
+    last.policy_version !== 3 ||
+    !Array.isArray(last.entries)
+  ) {
     return false;
   }
   return JSON.stringify(last.entries) === JSON.stringify(currentEntries);
@@ -406,7 +596,9 @@ function entriesContentEqual(lastBody: string, currentEntries: unknown[]): boole
 
 export async function getLatestSnapshot(env: Cloudflare.Env): Promise<{ manifest: string } | null> {
   const row = await env.DB.prepare(
-    'SELECT manifest_json FROM snapshots ORDER BY created_at DESC, version DESC LIMIT 1',
+    `SELECT manifest_json FROM snapshots
+     ORDER BY substr(version, 1, 10) DESC, CAST(substr(version, 12) AS INTEGER) DESC
+     LIMIT 1`,
   ).first<{ manifest_json: string }>();
   return row ? { manifest: row.manifest_json } : null;
 }
@@ -416,12 +608,29 @@ export async function getSnapshotFile(
   version: string,
   path: string,
 ): Promise<string | null> {
-  if (!/^\d{4}\.\d{2}\.\d{2}\.\d{1,4}$/.test(version) || path !== SNAPSHOT_PACK) {
+  if (
+    !/^\d{4}\.\d{2}\.\d{2}\.\d{1,4}$/.test(version) ||
+    ![SNAPSHOT_PACK, PUBLIC_BLOCKLIST_PACK].includes(path)
+  ) {
     return null;
   }
   const row = await env.DB.prepare('SELECT files_json FROM snapshots WHERE version = ?1')
     .bind(version)
     .first<{ files_json: string }>();
+  if (!row) return null;
+  const files = JSON.parse(row.files_json) as Record<string, SnapshotFile>;
+  return files[path]?.body ?? null;
+}
+
+export async function getLatestSnapshotFile(
+  env: Cloudflare.Env,
+  path: typeof SNAPSHOT_PACK | typeof PUBLIC_BLOCKLIST_PACK,
+): Promise<string | null> {
+  const row = await env.DB.prepare(
+    `SELECT files_json FROM snapshots
+     ORDER BY substr(version, 1, 10) DESC, CAST(substr(version, 12) AS INTEGER) DESC
+     LIMIT 1`,
+  ).first<{ files_json: string }>();
   if (!row) return null;
   const files = JSON.parse(row.files_json) as Record<string, SnapshotFile>;
   return files[path]?.body ?? null;
