@@ -23,7 +23,7 @@ const CATEGORY_ORDER = [
 
 /**
  * 生成战报文案。示例：
- * 「福滤娃今日战报：送走 5 个垃圾号（机器人 2 · 诈骗 1 · 复读机 2）」
+ * 「福滤娃今日战报：送走 5 个垃圾号（机器人 2 · 诈骗 1 · 重复刷屏 2）」
  * 无拉黑时给空态文案（不鼓励硬分享）。
  */
 export function buildReportText(stat: DailyStat, language: UiLanguage = 'zh'): string {

@@ -51,6 +51,27 @@ export function createApp() {
     return c.body(body, 200, { 'content-type': 'application/json' });
   });
 
+  // 关键词包和账号社区名单分开：前者是公开、可订阅的“黄标规则”，
+  // 不承载举报或账号身份数据。R2 保留版本文件，latest manifest 只短缓存。
+  app.get('/v1/keyword-packs/latest', async (c) => {
+    const object = await c.env.KEYWORD_PACKS?.get('keyword-packs/latest.json');
+    if (!object) return c.json({ error: 'keyword_packs_unavailable' }, 503);
+    c.header('Cache-Control', 'public, max-age=300');
+    return c.body(await object.text(), 200, { 'content-type': 'application/json' });
+  });
+
+  app.get('/v1/keyword-packs/:version/:path', async (c) => {
+    const version = c.req.param('version');
+    const path = c.req.param('path');
+    if (!/^\d{4}\.\d{2}\.\d{2}\.\d{1,4}$/.test(version) || path !== 'official.json') {
+      return c.json({ error: 'not_found' }, 404);
+    }
+    const object = await c.env.KEYWORD_PACKS?.get(`keyword-packs/${version}/${path}`);
+    if (!object) return c.json({ error: 'not_found' }, 404);
+    c.header('Cache-Control', 'public, max-age=31536000, immutable');
+    return c.body(await object.text(), 200, { 'content-type': 'application/json' });
+  });
+
   app.post('/v1/rescues', async (c) => {
     const body = await c.req.json().catch(() => undefined);
     const result = await processRescueBatch(c.env, body);

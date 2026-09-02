@@ -10,12 +10,12 @@ const pageMarked = [
   {
     handle: 'crypto_gift88',
     category: 'scam_phishing',
-    reason: '可疑推广链接 · gift-airdrop.example',
+    reason: '5 人标记为诈骗',
   },
-  { handle: 'daily_alpha369', category: 'copy_paste', reason: '已知垃圾模板 · 社区名单匹配' },
-  { handle: 'beauty_live520', category: 'adult_gray_traffic', reason: '色情引流话术' },
-  { handle: 'auto_reply_bot', category: 'bot_spam', reason: '默认名称与随机数字' },
-  { handle: 'hot_topic_ai', category: 'ai_slop', reason: '重复模板内容' },
+  { handle: 'daily_alpha369', category: 'copy_paste', reason: '4 人标记为重复刷屏' },
+  { handle: 'beauty_live520', category: 'adult_gray_traffic', reason: '6 人标记为色情引流' },
+  { handle: 'auto_reply_bot', category: 'bot_spam', reason: '3 人标记为机器人' },
+  { handle: 'hot_topic_ai', category: 'ai_slop', reason: '5 人标记为 AI 垃圾' },
 ];
 
 const snapshotBody = JSON.stringify({
@@ -70,6 +70,16 @@ const storageData = {
     { handle: 'auto_answer369', xUserId: '1004', blockedAt: now - 2 * 24 * 60 * 60_000 },
     { handle: 'gray_traffic_x', xUserId: '1005', blockedAt: now - 3 * 24 * 60 * 60_000 },
   ],
+  followingAllowlistV1: Array.from({ length: 413 }, (_, index) => ({
+    handle: `followed_${index}`,
+    protectedAt: now - 10 * 60_000,
+    source: 'full-sync',
+  })),
+  followingSyncStateV1: {
+    status: 'complete',
+    collected: 413,
+    updatedAt: now - 10 * 60_000,
+  },
   allowlist: [
     {
       handle: 'real_creator',
@@ -156,11 +166,20 @@ const previewBrowser = {
           failed: [],
         };
       }
+      if (message.type === 'feedsieve:manual-spam-block') {
+        return { ok: true, handle: message.handle };
+      }
+      if (message.type === 'feedsieve:following-sync-start') {
+        return { status: 'waiting' };
+      }
+      if (message.type === 'feedsieve:community-block-start') {
+        return { status: 'started', count: 12 };
+      }
       return null;
     },
   },
   runtime: {
-    getManifest: () => ({ version: '0.7.1' }),
+    getManifest: () => ({ version: '0.7.2' }),
     sendMessage: async () => ({ outcome: { status: 'unchanged', version: '2026.09.01.1' } }),
   },
 };

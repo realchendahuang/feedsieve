@@ -49,14 +49,31 @@ describe('parseXApiResponse', () => {
                   entryId: 'conversationthread-1720000000000000002',
                   content: {
                     items: [
-                      { item: { itemContent: { tweet_results: { result: tweetResult({
-                        rest_id: '1720000000000000002',
-                        legacy: { full_text: 'reply text', lang: 'en' },
-                        core: { user_results: { result: {
-                          rest_id: '900000000000000002',
-                          legacy: { screen_name: 'replier01', name: 'Replier', description: '', following: false },
-                        } } },
-                      }) } } } },
+                      {
+                        item: {
+                          itemContent: {
+                            tweet_results: {
+                              result: tweetResult({
+                                rest_id: '1720000000000000002',
+                                legacy: { full_text: 'reply text', lang: 'en' },
+                                core: {
+                                  user_results: {
+                                    result: {
+                                      rest_id: '900000000000000002',
+                                      legacy: {
+                                        screen_name: 'replier01',
+                                        name: 'Replier',
+                                        description: '',
+                                        following: false,
+                                      },
+                                    },
+                                  },
+                                },
+                              }),
+                            },
+                          },
+                        },
+                      },
                     ],
                   },
                 },
@@ -87,26 +104,41 @@ describe('parseXApiResponse', () => {
             instructions: [
               {
                 entries: [
-                  entry('tweet-1', tweetResult({
-                    __typename: 'TweetWithVisibilityResults',
-                    tweet: tweetResult(),
-                    legacy: undefined,
-                    core: undefined,
-                  })),
-                  entry('tweet-2', tweetResult({
-                    legacy: {
-                      full_text: 'RT @other: hi',
-                      lang: 'en',
-                      retweeted_status_result: {
-                        result: tweetResult({
-                          core: { user_results: { result: {
-                            rest_id: '900000000000000003',
-                            legacy: { screen_name: 'original01', name: 'Orig', description: '', following: false },
-                          } } },
-                        }),
+                  entry(
+                    'tweet-1',
+                    tweetResult({
+                      __typename: 'TweetWithVisibilityResults',
+                      tweet: tweetResult(),
+                      legacy: undefined,
+                      core: undefined,
+                    }),
+                  ),
+                  entry(
+                    'tweet-2',
+                    tweetResult({
+                      legacy: {
+                        full_text: 'RT @other: hi',
+                        lang: 'en',
+                        retweeted_status_result: {
+                          result: tweetResult({
+                            core: {
+                              user_results: {
+                                result: {
+                                  rest_id: '900000000000000003',
+                                  legacy: {
+                                    screen_name: 'original01',
+                                    name: 'Orig',
+                                    description: '',
+                                    following: false,
+                                  },
+                                },
+                              },
+                            },
+                          }),
+                        },
                       },
-                    },
-                  })),
+                    }),
+                  ),
                   entry('promoted-tweet-3', tweetResult()),
                 ],
               },
@@ -143,7 +175,10 @@ describe('parseXApiResponse', () => {
         },
       },
     };
-    const parsed = parseXApiResponse('https://x.com/i/api/graphql/xxx/SearchTimeline?variables=', body);
+    const parsed = parseXApiResponse(
+      'https://x.com/i/api/graphql/xxx/SearchTimeline?variables=',
+      body,
+    );
     expect(parsed.matchedEndpoints).toEqual(['SearchTimeline']);
     expect(parsed.tweets).toHaveLength(1);
     expect(parsed.promoted).toHaveLength(1);
@@ -161,14 +196,32 @@ describe('parseXApiResponse', () => {
                 {
                   type: 'TimelineAddEntries',
                   entries: [
-                    { entryId: 'user-1', content: { itemContent: { user_results: { result: {
-                      rest_id: '900000000000000001',
-                      legacy: { screen_name: 'spamking88', blocking: false },
-                    } } } } },
-                    { entryId: 'user-2', content: { itemContent: { user_results: { result: {
-                      rest_id: '900000000000000009',
-                      legacy: { screen_name: 'already01', blocking: true },
-                    } } } } },
+                    {
+                      entryId: 'user-1',
+                      content: {
+                        itemContent: {
+                          user_results: {
+                            result: {
+                              rest_id: '900000000000000001',
+                              legacy: { screen_name: 'spamking88', blocking: false },
+                            },
+                          },
+                        },
+                      },
+                    },
+                    {
+                      entryId: 'user-2',
+                      content: {
+                        itemContent: {
+                          user_results: {
+                            result: {
+                              rest_id: '900000000000000009',
+                              legacy: { screen_name: 'already01', blocking: true },
+                            },
+                          },
+                        },
+                      },
+                    },
                   ],
                 },
               ],
@@ -177,7 +230,10 @@ describe('parseXApiResponse', () => {
         },
       },
     };
-    const parsed = parseXApiResponse('https://x.com/i/api/graphql/xxx/ListMembers?variables=', body);
+    const parsed = parseXApiResponse(
+      'https://x.com/i/api/graphql/xxx/ListMembers?variables=',
+      body,
+    );
     expect(parsed.listMembers).toEqual([
       { xUserId: '900000000000000001', handle: 'spamking88', blocking: false },
       { xUserId: '900000000000000009', handle: 'already01', blocking: true },
@@ -191,13 +247,80 @@ describe('parseXApiResponse', () => {
     expect(parsed.selfHandle).toBe('kim');
   });
 
+  it('parses Following accounts, stable IDs and the bottom cursor', () => {
+    const parsed = parseXApiResponse('https://x.com/i/api/graphql/query/Following?variables=', {
+      data: {
+        user: {
+          result: {
+            timeline: {
+              timeline: {
+                instructions: [
+                  {
+                    type: 'TimelineAddEntries',
+                    entries: [
+                      {
+                        entryId: 'user-1',
+                        content: {
+                          itemContent: {
+                            user_results: {
+                              result: {
+                                rest_id: '101',
+                                legacy: { screen_name: 'FollowedOne' },
+                              },
+                            },
+                          },
+                        },
+                      },
+                      {
+                        entryId: 'user-2',
+                        content: {
+                          itemContent: {
+                            user_results: {
+                              result: {
+                                rest_id: '102',
+                                core: { screen_name: 'CurrentShape', name: 'Current Shape' },
+                                profile_bio: { description: 'new user shape' },
+                                relationship_perspectives: { following: true },
+                              },
+                            },
+                          },
+                        },
+                      },
+                      {
+                        entryId: 'cursor-bottom-0',
+                        content: { cursorType: 'Bottom', value: 'next-cursor' },
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    });
+
+    expect(parsed.following).toEqual([
+      { handle: 'FollowedOne', xUserId: '101' },
+      { handle: 'CurrentShape', xUserId: '102' },
+    ]);
+    expect(parsed.followingCursor).toBe('next-cursor');
+  });
+
   it('returns empty result for unknown endpoints and garbage', () => {
     expect(parseXApiResponse('https://x.com/i/api/other', {}).matchedEndpoints).toEqual([]);
-    expect(parseXApiResponse('https://x.com/i/api/graphql/HomeTimeline', 'not-an-object' as never).tweets).toEqual([]);
+    expect(
+      parseXApiResponse('https://x.com/i/api/graphql/HomeTimeline', 'not-an-object' as never)
+        .tweets,
+    ).toEqual([]);
     expect(parseXApiResponse('https://x.com/i/api/graphql/HomeTimeline', null).tweets).toEqual([]);
     // 畸形条目安全跳过，不 throw
     const parsed = parseXApiResponse('https://x.com/i/api/graphql/HomeTimeline', {
-      data: { home: { home_timeline_urt: { instructions: [{ entries: [entry('tweet-1', { broken: true })] }] } } },
+      data: {
+        home: {
+          home_timeline_urt: { instructions: [{ entries: [entry('tweet-1', { broken: true })] }] },
+        },
+      },
     });
     expect(parsed.tweets).toEqual([]);
   });

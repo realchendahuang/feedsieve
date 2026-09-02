@@ -44,21 +44,27 @@ bash scripts/pack-store.sh
   ```text
   FeedSieve（福滤娃）是 X（Twitter）时间线的赛博清洁工。
 
-  看到什么就标注什么，绝不隐藏内容：
-  • 垃圾账号在时间线上被黄框标出，徽章写明原因（机器人、色情引流、诈骗、复制粘贴……）
+  高置信才标注，绝不隐藏内容：
+  • 高置信垃圾账号在时间线上被黄框标出，徽章使用“3 人标记为诈骗”等普通理由
   • 你依然能看到每一条推文，判断权在你
 
   拉黑永远由你按下按钮：
+  • 插件漏识别时，在推文旁或面板中“标记垃圾并拉黑”
   • 点单个黄框拉黑一个账号
   • 或打开扩展面板，一键拉黑当前页面全部黄框账号
+  • 社区清理只处理至少 3 人确认且无人抢救的账号，并自动排除关注、白名单和已拉黑账号
   • 拉黑全部可撤销（「已拉黑」列表 → 撤销）
+
+  关注保护：
+  • 可将自己的完整关注列表同步为本地保护名单
+  • 关注列表不上传社区
 
   社区名单（可选，默认开启，可关闭）：
   • 内置社区维护的垃圾账号名单，自动标注
   • 你维护的黑名单匿名上传为正样本：账号名、分类、话术指纹哈希与外链域名
   • 你维护的白名单匿名上传为负样本：账号名与当时的检测规则，帮助纠正误标
 
-  隐私（一行版）：凭证不出浏览器、推文原文不出设备，只同步你明确维护的黑白名单；可在设置中关闭。
+  隐私（一行版）：凭证、推文原文和关注列表不出设备，只同步你明确维护的黑白名单；可在设置中关闭。
   完整政策：https://github.com/realchendahuang/feedsieve/blob/main/PRIVACY.md
 
   适用范围：x.com。标注永不隐藏 · 误伤可撤销。
@@ -81,7 +87,7 @@ bash scripts/pack-store.sh
   | -------------------------------------------------- | -------------------------------------------------------------------- |
   | `storage`                                          | 缓存社区名单快照、用户设置、本地统计、已拉黑记录                     |
   | 主机权限 `https://x.com/*`                         | 内容脚本在时间线识别账号并标注；用户点击时经 X 自身会话执行拉黑/撤销 |
-  | 主机权限 `https://feedsieve-api.chendahuang.com/*` | 自有 API：下载经校验的社区名单快照；开启名单上传时同步匿名黑白标签 |
+  | 主机权限 `https://feedsieve-api.chendahuang.com/*` | 自有 API：下载经校验的社区名单快照；开启名单上传时同步匿名黑白标签   |
 
 - **数据使用勾选**（收集 = 离开设备的数据）：
   - ✅ 网站内容（Website content）——拉黑对象的话术指纹（单向哈希）与外链域名
@@ -98,7 +104,10 @@ What FeedSieve does
 - Marks spam accounts on x.com with a yellow frame (a visual border only) plus a
   badge explaining why. It never hides, collapses, or removes content.
 - Blocking happens ONLY on explicit user clicks: single block on a marked tweet,
-  or batch block via the popup. Every block can be undone in the popup.
+  manual “Mark spam & block”, or batch block via the popup. Every block can be
+  undone in the popup.
+- The user's following list can be synced as a local-only protection list. It is
+  excluded from batch actions and is never uploaded as a community vote.
 
 How to test
 1. Open https://x.com (e.g. https://x.com/search?q=spam&f=live). Accounts in the
@@ -106,7 +115,8 @@ How to test
 2. Open the popup: it lists the accounts currently marked on the page. Click
    "一键拉黑" to block them via the logged-in user's own X session; the popup
    shows per-account results and an unblock list.
-3. Popup → Settings: "List uploads / 名单上传" (on by default) controls both
+3. Paste an X handle or profile URL into "漏网账号" to test the manual path.
+4. Popup → Settings: "List uploads / 名单上传" (on by default) controls both
    blocklist and allowlist uploads; turning it off stops them. The ⟳ button
    syncs the community snapshot.
 
@@ -123,7 +133,14 @@ Permissions rationale
   maintains in the local blocklist or allowlist. Block entries include handle,
   category, one-way content-fingerprint hash, and external link hostnames;
   allow entries include handle and available false-positive rule evidence.
+  The local following-protection list and blocks copied from Community Clean are
+  explicitly excluded from uploads.
   Both use a random installation ID that is stored server-side only as a salted hash.
+
+  Keyword-rule packs are public data only: the extension downloads a version manifest and
+  JSON pack from this same API, verifies the SHA-256 checksum and schema, and caches the
+  last known-good copy. Users explicitly subscribe to industry packs; a match only shows a
+  review highlight and never auto-blocks, bulk-blocks, or uploads a report.
 
 Why a MAIN-world content script
 - x.com renders account data through its own GraphQL responses. A page-context

@@ -36,12 +36,12 @@ const snapshot: SnapshotBody = {
   ],
 };
 
-describe('strength gating (v0.5 零人工：candidate 默认档可见)', () => {
+describe('strength gating (candidate 只在大扫除档可见)', () => {
   it('maps strength levels to status floors', () => {
     expect(isStatusAllowed('strong', 'refresh')).toBe(true);
     expect(isStatusAllowed('recommended', 'refresh')).toBe(false);
     expect(isStatusAllowed('recommended', 'standard')).toBe(true);
-    expect(isStatusAllowed('candidate', 'standard')).toBe(true);
+    expect(isStatusAllowed('candidate', 'standard')).toBe(false);
     expect(isStatusAllowed('candidate', 'deep_clean')).toBe(true);
   });
 
@@ -55,7 +55,7 @@ describe('strength gating (v0.5 零人工：candidate 默认档可见)', () => {
 describe('buildIndex lookup', () => {
   it('filters entries by strength', () => {
     expect(buildIndex(snapshot, 'refresh').size).toBe(2);
-    expect(buildIndex(snapshot, 'standard').size).toBe(4);
+    expect(buildIndex(snapshot, 'standard').size).toBe(3);
     expect(buildIndex(snapshot, 'deep_clean').size).toBe(4);
   });
 

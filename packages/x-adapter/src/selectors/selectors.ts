@@ -19,6 +19,12 @@ export const tweetSelectors = {
   authorLink: '[data-testid="User-Name"] a[href^="/"]',
   /** 正文文本区。 */
   text: '[data-testid="tweetText"]',
+  /**
+   * 推文底部动作栏锁定锨。X 会调整按钮数量，因此不靠 CSS class：
+   * 找 like/unlike 按钮后再 closest([role=group])。
+   */
+  actionAnchor: '[data-testid="like"], [data-testid="unlike"]',
+  actionGroup: '[role="group"]',
 } as const;
 
 export const menuSelectors = {

@@ -1,0 +1,225 @@
+{
+  "schema_version": 1,
+  "pack_version": "2026.09.02.2",
+  "generated_at": null,
+  "packs": [
+    {
+      "id": "adult_gray_traffic",
+      "name": { "zh": "黄推 / 成人引流", "en": "Adult bait" },
+      "description": {
+        "zh": "福利隐语、成人内容和主页导流的完整话术",
+        "en": "Full adult-content traffic phrases"
+      },
+      "source_refs": ["local_x_miss_2026-09-01"],
+      "rules": [
+        ["adult-fu-not-black", "我福不黑"],
+        ["adult-benefits-profile", "福利在主页"],
+        ["adult-benefits-bio", "福利在简介"],
+        ["adult-tap-profile-benefits", "点击头像看福利"],
+        ["adult-profile-collect-benefits", "主页自取福利"],
+        ["adult-enter-profile-benefits", "进主页看福利"],
+        ["adult-benefit-video-profile", "福利视频在主页"],
+        ["adult-benefit-video-bio", "福利视频在简介"],
+        ["adult-benefit-link-profile", "福利链接在主页"],
+        ["adult-benefit-link-bio", "福利链接在简介"],
+        ["adult-private-message-video", "私信看福利视频"],
+        ["adult-private-message-benefit", "私信发福利视频"],
+        ["adult-benefit-collection-profile", "福利合集在主页"],
+        ["adult-video-collection-profile", "视频合集在主页"],
+        ["adult-profile-get-benefits", "主页领取福利"]
+      ]
+    },
+    {
+      "id": "scam_phishing",
+      "name": { "zh": "投资 / 带单诈骗", "en": "Investment scams" },
+      "description": {
+        "zh": "保本、高收益、荐股、内幕消息等诱导话术",
+        "en": "Guaranteed-return and insider-tip lures"
+      },
+      "source_refs": ["cn_financial_regulator_2025", "csrc_ai_investment_2026", "ftc_crypto_2026"],
+      "rules": [
+        ["scam-guaranteed-profit", "稳赚不赔"],
+        ["scam-principal-high-interest", "保本高息"],
+        ["scam-principal-interest-guaranteed", "保本保息"],
+        ["scam-high-return-no-risk", "高收益无风险"],
+        ["scam-high-rebate", "高额返利"],
+        ["scam-insider-tip", "内幕消息"],
+        ["scam-expert-guarantee", "专家保证"],
+        ["scam-teacher-signal", "老师带单"],
+        ["scam-daily-return-three-percent", "日收益3%"],
+        ["scam-stable-high-return", "稳定高收益"],
+        ["scam-low-risk-high-return", "低风险高收益"],
+        ["scam-risk-free-return", "无风险收益"],
+        ["scam-guaranteed-principal-safe", "保证本金安全"],
+        ["scam-never-lose-money", "绝对不会亏损"],
+        ["scam-inside-stock-tip", "内部荐股"],
+        ["scam-free-stock-tip", "免费荐股"],
+        ["scam-follow-teacher-earn", "跟着老师赚钱"],
+        ["scam-vip-investment-group", "VIP投资群"],
+        ["scam-exclusive-investment-channel", "独家投资渠道"],
+        ["scam-bull-stock-insider-tip", "牛股内幕消息"]
+      ]
+    },
+    {
+      "id": "crypto_scam",
+      "name": { "zh": "加密货币骗局", "en": "Crypto scams" },
+      "description": {
+        "zh": "空投、免费领取、双倍返还和保证收益话术",
+        "en": "Airdrop, giveaway, doubling, and guaranteed-return lures"
+      },
+      "source_refs": ["ftc_crypto_2026", "cn_financial_regulator_2025"],
+      "rules": [
+        ["crypto-usdt-airdrop", "USDT空投"],
+        ["crypto-free-usdt", "免费领取USDT"],
+        ["crypto-free-airdrop-claim", "免费领取空投"],
+        ["crypto-airdrop-candy", "空投糖果"],
+        ["crypto-price-only-rises", "币值只涨不跌"],
+        ["crypto-claim-your-airdrop", "claim your airdrop"],
+        ["crypto-free-usdt-en", "free usdt"],
+        ["crypto-usdt-giveaway", "usdt giveaway"],
+        ["crypto-send-usdt-get", "send usdt get"],
+        ["crypto-double-your-crypto", "double your crypto"],
+        ["crypto-double-your-bitcoin", "double your bitcoin"],
+        ["crypto-claim-free-crypto", "claim free crypto"],
+        ["crypto-guaranteed-returns", "guaranteed crypto returns"],
+        ["crypto-web3-airdrop-benefits", "web3空投福利"],
+        ["crypto-wallet-airdrop-claim", "钱包空投领取"],
+        ["crypto-onchain-airdrop-claim", "链上空投领取"],
+        ["crypto-airdrop-reward-claim", "领取空投奖励"],
+        ["crypto-signup-usdt", "注册领取USDT"]
+      ]
+    },
+    {
+      "id": "task_job_scam",
+      "name": { "zh": "兼职刷单 / 任务诈骗", "en": "Task and job scams" },
+      "description": {
+        "zh": "刷单、点赞返佣、垫资任务和求职收费话术",
+        "en": "Fake task, commission, and paid-job lures"
+      },
+      "source_refs": [
+        "ftc_task_scams_2024",
+        "shanghai_police_job_scams_2026",
+        "cac_brushing_scams_2019"
+      ],
+      "rules": [
+        ["task-brushing-rebate", "刷单返利"],
+        ["task-part-time-brushing", "兼职刷单"],
+        ["task-like-earn-commission", "点赞赚佣金"],
+        ["task-like-rebate", "点赞返佣"],
+        ["task-product-optimization", "商品优化任务"],
+        ["task-data-optimization", "数据优化任务"],
+        ["task-task-commission", "任务返佣"],
+        ["task-advance-funds", "垫付资金做任务"],
+        ["task-top-up-unlock", "充值解锁任务"],
+        ["task-combo-task", "连单任务"],
+        ["task-frozen-order-unlock", "卡单需要解冻"],
+        ["task-training-fee", "先交培训费"],
+        ["task-high-pay-job-guarantee", "高薪包就业"],
+        ["task-daily-paid-job", "工资日结"],
+        ["task-daily-high-pay", "日结高薪"],
+        ["task-no-experience-daily-pay", "无需经验日结"],
+        ["task-recruit-brushing", "招聘兼职刷单"],
+        ["task-complete-for-commission", "做任务领佣金"]
+      ]
+    },
+    {
+      "id": "loan_scam",
+      "name": { "zh": "贷款 / 解冻诈骗", "en": "Loan and freeze-fee scams" },
+      "description": {
+        "zh": "无抵押低息、放款前收费和刷流水话术",
+        "en": "No-collateral loan and upfront-fee lures"
+      },
+      "source_refs": ["cn_antifraud_ten_rules_2026", "hubei_police_loan_scams_2020"],
+      "rules": [
+        ["loan-no-collateral-low-rate", "无抵押低利率"],
+        ["loan-no-collateral", "无抵押贷款"],
+        ["loan-no-qualification", "无需资质放款"],
+        ["loan-low-rate-fast", "低利率放款快"],
+        ["loan-guarantee-before-loan", "贷款前交保证金"],
+        ["loan-membership-fee", "先交会员费"],
+        ["loan-unfreeze-fee", "先交解冻费"],
+        ["loan-account-packaging", "包装账户流水"],
+        ["loan-run-flow-limit", "刷流水提额度"],
+        ["loan-repayment-ability", "验证还款能力"],
+        ["loan-review-fee", "贷款审核费"],
+        ["loan-pay-before-disbursement", "下款前交费"],
+        ["loan-service-fee", "贷款收取手续费"],
+        ["loan-account-freeze-fee", "账户冻结解冻费"],
+        ["loan-tax-before-disbursement", "放款前缴税"],
+        ["loan-agency-service", "代办贷款"],
+        ["loan-fast-disbursement", "快速放款"],
+        ["loan-instant-low-rate", "秒批低息"]
+      ]
+    },
+    {
+      "id": "gambling_diversion",
+      "name": { "zh": "博彩 / 赌场引流", "en": "Gambling diversion" },
+      "description": {
+        "zh": "博彩注册、送彩金和代理招募话术",
+        "en": "Casino registration, bonus, and agent lures"
+      },
+      "source_refs": ["community_spam_datasets"],
+      "rules": [
+        ["gambling-signup-bonus", "注册送送彩金"],
+        ["gambling-signup-trial", "注册送体验金"],
+        ["gambling-first-deposit-bonus", "首存送彩金"],
+        ["gambling-live-casino", "真人博彩"],
+        ["gambling-online-casino", "在线博彩平台"],
+        ["gambling-high-cashback", "高额返现博彩"],
+        ["gambling-card-bonus", "棋牌送彩金"],
+        ["gambling-cash-agent", "现金网招代理"],
+        ["gambling-sports-bonus", "体育投注送彩金"],
+        ["gambling-account-registration", "博彩开户注册"],
+        ["gambling-topup-customer-service", "上分下分客服"],
+        ["gambling-one-yuan-bonus", "一元送彩金"]
+      ]
+    },
+    {
+      "id": "engagement_bait",
+      "name": { "zh": "互动诱导", "en": "Engagement bait" },
+      "description": {
+        "zh": "关注、点赞、转发换取奖励的话术",
+        "en": "Follow, like, and repost-for-reward phrases"
+      },
+      "source_refs": ["community_spam_datasets"],
+      "rules": [
+        ["engagement-follow-repost", "关注并转发"],
+        ["engagement-repost-raffle", "关注转发抽奖"],
+        ["engagement-repost-follow", "转发并关注"],
+        ["engagement-follow-like-repost", "关注点赞转发"],
+        ["engagement-repost-cash", "转发抽现金"],
+        ["engagement-like-repost-raffle", "点赞转发抽奖"],
+        ["engagement-follow-comment-raffle", "关注评论抽奖"],
+        ["engagement-follow-dm-claim", "关注私信领取"],
+        ["engagement-repost-benefit-claim", "转发领取福利"],
+        ["engagement-follow-repost-en", "follow and repost"],
+        ["engagement-repost-to-win", "repost to win"],
+        ["engagement-like-follow-en", "like and follow"],
+        ["engagement-retweet-to-win", "retweet to win"]
+      ]
+    },
+    {
+      "id": "marketing_diversion",
+      "name": { "zh": "通用营销引流", "en": "Marketing diversion" },
+      "description": {
+        "zh": "私信、扫码、加群、主页链接导流话术",
+        "en": "DM, QR-code, group, and profile-link lures"
+      },
+      "source_refs": ["community_spam_datasets"],
+      "rules": [
+        ["marketing-scan-add-wechat", "扫码加微信"],
+        ["marketing-dm-send-link", "私信发你链接"],
+        ["marketing-click-profile-link", "点击主页链接"],
+        ["marketing-add-me-get-materials", "加我领取资料"],
+        ["marketing-join-group-get-benefits", "进群领取福利"],
+        ["marketing-dm-get-materials", "私信领取资料"],
+        ["marketing-reply-get-materials", "回复领取资料"],
+        ["marketing-add-wechat-get", "添加微信领取"],
+        ["marketing-profile-link-self-service", "主页链接自取"],
+        ["marketing-dm-get-resources", "私信获取资源"],
+        ["marketing-scan-get-materials", "扫码领取资料"],
+        ["marketing-join-group-get-materials", "加群领取资料"]
+      ]
+    }
+  ]
+}

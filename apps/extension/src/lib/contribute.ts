@@ -9,6 +9,7 @@
 import { COMMUNITY_API_BASE, getCommunitySettings } from './community-store';
 import { getAllowlist, type FalsePositiveEvidence } from './allowlist';
 import { getBlockedAccounts } from './blocked-accounts';
+import { categoryForKeywordRuleId } from './keyword-rules';
 
 export interface ContributionItem {
   handle: string;
@@ -154,6 +155,10 @@ export function categoryFromDetection(
       return 'scam_phishing';
     }
     return communityCategory ?? 'other';
+  }
+  const keywordCategory = categoryForKeywordRuleId(ruleId);
+  if (keywordCategory) {
+    return keywordCategory;
   }
   switch (ruleId) {
     case 'porn-bait-zh':
@@ -383,6 +388,11 @@ async function collectLocalLabels(): Promise<Map<string, LocalLabel>> {
   const [blocked, allowed] = await Promise.all([getBlockedAccounts(), getAllowlist()]);
   const labels = new Map<string, LocalLabel>();
   for (const item of blocked) {
+    // 云端名单/页面批量拉黑只是「采用既有结论」，不是独立发现。
+    // 若再上传为 Report，会形成「下发 -> 批量拉黑 -> 票数更高」的自我放大。
+    if (item.communityVote === false) {
+      continue;
+    }
     labels.set(item.handle, {
       label: 'blocked',
       handle: item.handle,

@@ -130,4 +130,27 @@ describe('本地黑白名单同步', () => {
     await expect(syncLocalLabels()).resolves.toMatchObject({ retracted: 1, pending: 0 });
     expect(String(fetchMock.mock.calls[2]![0])).toContain('/v1/labels/retract');
   });
+
+  it('云端批量拉黑只执行用户动作，不把名单条目再次回灌成社区举报', async () => {
+    storage.blockedAccounts = [
+      {
+        handle: 'cloud_spam',
+        blockedAt: 100,
+        category: 'other',
+        origin: 'community-batch',
+        communityVote: false,
+      },
+    ];
+    storage.followingAllowlistV1 = [
+      { handle: 'private_follow', protectedAt: 100, source: 'full-sync' },
+    ];
+
+    await expect(syncLocalLabels()).resolves.toEqual({
+      blocked: 0,
+      allowed: 0,
+      retracted: 0,
+      pending: 0,
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });

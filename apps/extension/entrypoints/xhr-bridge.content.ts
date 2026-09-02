@@ -35,7 +35,7 @@ export default defineContentScript({
       try {
         const parsed = parseXApiResponse(url, body);
         if (parsed.matchedEndpoints.length > 0) {
-          emit(parsed);
+          emit({ ...parsed, sourceUrl: url });
         }
       } catch {
         // 非 JSON / 解析失败：静默，绝不影响页面
@@ -44,18 +44,19 @@ export default defineContentScript({
 
     // ---------- fetch 钩子（X 的部分 GraphQL 请求走 fetch） ----------
     const origFetch = window.fetch;
-    window.fetch = async function patchedFetch(
-      this: unknown,
-      ...args: Parameters<typeof fetch>
-    ) {
+    window.fetch = async function patchedFetch(this: unknown, ...args: Parameters<typeof fetch>) {
       const response = await origFetch.apply(this ?? window, args);
       try {
         const input = args[0];
         const url =
           typeof input === 'string'
             ? input
-            : (input instanceof Request ? input.url : response.url) ?? '';
-        if (url.includes('/i/api/') || url.includes('api.x.com') || url.includes('api.twitter.com')) {
+            : ((input instanceof Request ? input.url : response.url) ?? '');
+        if (
+          url.includes('/i/api/') ||
+          url.includes('api.x.com') ||
+          url.includes('api.twitter.com')
+        ) {
           // clone 后异步读 body，不消费原响应（页面照常拿到数据）
           void response
             .clone()

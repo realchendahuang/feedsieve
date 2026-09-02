@@ -48,7 +48,7 @@ describe('popup App 渲染冒烟', () => {
 
     expect(rootEl.textContent).toContain('福滤娃');
     expect(rootEl.textContent).toContain('当前页面');
-    expect(rootEl.textContent).toContain('当前页面很干净');
+    expect(rootEl.textContent).toContain('当前页面没有高置信待处理账号');
     expect(rootEl.textContent).toContain('全部拉黑');
     expect(rootEl.textContent).toContain('今日概览');
     expect(rootEl.textContent).toContain('清理');
@@ -61,9 +61,18 @@ describe('popup App 渲染冒烟', () => {
 
     await act(async () => buttonWithText(rootEl, '设置').click());
     expect(rootEl.textContent).toContain('检测强度');
+    expect(rootEl.textContent).toContain('关键词规则');
+    expect(rootEl.textContent).toContain('官方预置词库');
+    expect(rootEl.textContent).toContain('黄推 / 成人引流');
+    expect(rootEl.textContent).toContain('未订阅');
+    expect(rootEl.textContent).toContain('订阅此词库');
     expect(rootEl.textContent).not.toContain('误标较多时');
     expect(rootEl.textContent).not.toContain('标注不隐藏内容');
     expect(rootEl.textContent).not.toContain('X 页面清理');
+
+    await act(async () => buttonWithText(rootEl, '订阅此词库').click());
+    expect(rootEl.textContent).toContain('退订此词库');
+    expect(rootEl.textContent).toContain('15/15');
 
     await act(async () => buttonWithText(rootEl, 'EN').click());
     expect(rootEl.textContent).toContain('FeedSieve');
@@ -88,7 +97,7 @@ describe('popup App 渲染冒烟', () => {
         sendMessage: vi
           .fn()
           .mockResolvedValue([
-            { handle: 'spamking88', category: 'copy_paste', reason: '已知垃圾模板' },
+            { handle: 'spamking88', category: 'copy_paste', reason: '3 人标记为重复刷屏' },
           ]),
       },
     });
@@ -97,7 +106,7 @@ describe('popup App 渲染冒烟', () => {
     await new Promise((r) => setTimeout(r, 150));
 
     expect(rootEl.textContent).toContain('@spamking88');
-    expect(rootEl.textContent).toContain('已知垃圾模板');
+    expect(rootEl.textContent).toContain('3 人标记为重复刷屏');
     expect(rootEl.textContent).toContain('全部拉黑 · 1');
   });
 });

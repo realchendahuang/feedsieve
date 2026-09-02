@@ -1,6 +1,7 @@
 {
   "name": "feedsieve",
   "private": true,
+  "type": "module",
   "packageManager": "pnpm@11.11.0",
   "engines": {
     "node": ">=22"
@@ -11,6 +12,9 @@
     "typecheck": "pnpm -r run typecheck",
     "test": "vitest run",
     "test:watch": "vitest",
+    "keyword-packs:build": "node scripts/build-keyword-packs.mjs",
+    "keyword-packs:check": "node scripts/build-keyword-packs.mjs --check",
+    "keyword-packs:publish": "sh scripts/publish-keyword-packs.sh",
     "build:extension": "pnpm --filter @feedsieve/extension build",
     "verify": "sh scripts/verify.sh"
   },

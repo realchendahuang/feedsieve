@@ -318,6 +318,7 @@ describe('heuristic: templated-text', () => {
       expect(detect({ handle: 'student', text: '老师批评了一下我的方案，改' })).toBeNull();
     });
   });
+
 });
 
 describe('heuristics are individually explainable', () => {

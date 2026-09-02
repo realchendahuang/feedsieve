@@ -7,6 +7,9 @@ set -e
 echo '==> lint'
 pnpm lint
 
+echo '==> keyword pack artifacts'
+pnpm keyword-packs:check
+
 echo '==> typecheck'
 pnpm typecheck
 

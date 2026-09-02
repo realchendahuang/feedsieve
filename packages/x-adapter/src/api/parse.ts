@@ -33,11 +33,20 @@ export interface ParsedListMember {
   blocking?: boolean;
 }
 
+export interface ParsedFollowingAccount {
+  handle: string;
+  xUserId?: string;
+}
+
 export interface ParsedApiData {
   tweets: ParsedTweet[];
   promoted: ParsedTweet[];
   listMembers: ParsedListMember[];
-  following: string[];
+  following: ParsedFollowingAccount[];
+  /** Following 分页的底部 cursor；无 cursor 表示已到末页。 */
+  followingCursor?: string;
+  /** MAIN-world bridge 回填的原始请求 URL，用于用户显式启动全量同步后继续分页。 */
+  sourceUrl?: string;
   /** 当前登录账号（来自 settings.json 响应）。 */
   selfHandle?: string;
   /** 命中的端点类别，便于调试与统计。 */
@@ -54,6 +63,40 @@ const EMPTY: ParsedApiData = {
   following: [],
   matchedEndpoints: [],
 };
+
+interface ParsedUserResult {
+  handle: string;
+  xUserId?: string;
+  displayName?: string;
+  bio?: string;
+  following?: boolean;
+  blocking?: boolean;
+}
+
+/**
+ * X 在 2026-09 将 User 的 legacy 字段拆到了 core / profile_bio /
+ * relationship_perspectives；一段迁移期内两种响应会并存。
+ */
+function parseUserResult(result: Json): ParsedUserResult | null {
+  const legacy = result?.legacy;
+  const core = result?.core;
+  const relationship = result?.relationship_perspectives;
+  const handle: string | undefined = legacy?.screen_name ?? core?.screen_name;
+  if (!handle) return null;
+  const xUserId = result?.rest_id;
+  const displayName = legacy?.name ?? core?.name;
+  const bio = legacy?.description ?? result?.profile_bio?.description;
+  const following = legacy?.following ?? relationship?.following;
+  const blocking = legacy?.blocking ?? relationship?.blocking;
+  return {
+    handle,
+    ...(xUserId ? { xUserId: String(xUserId) } : {}),
+    ...(displayName ? { displayName } : {}),
+    ...(typeof bio === 'string' ? { bio } : {}),
+    ...(typeof following === 'boolean' ? { following } : {}),
+    ...(typeof blocking === 'boolean' ? { blocking } : {}),
+  };
+}
 
 function emptyWith(matchedEndpoints: string[]): ParsedApiData {
   return { ...EMPTY, matchedEndpoints };
@@ -74,19 +117,18 @@ function parseTweetResult(result: Json, isPromoted = false): ParsedTweet | null 
       }
     }
     const legacy = result?.legacy;
-    const userLegacy = result?.core?.user_results?.result?.legacy;
-    const handle: string | undefined = userLegacy?.screen_name;
-    if (!handle) {
+    const user = parseUserResult(result?.core?.user_results?.result);
+    if (!user) {
       return null;
     }
     return {
       postId: result?.rest_id,
       author: {
-        handle,
-        xUserId: result?.core?.user_results?.result?.rest_id,
-        displayName: userLegacy?.name,
-        bio: userLegacy?.description,
-        following: userLegacy?.following,
+        handle: user.handle,
+        ...(user.xUserId ? { xUserId: user.xUserId } : {}),
+        ...(user.displayName ? { displayName: user.displayName } : {}),
+        ...(typeof user.bio === 'string' ? { bio: user.bio } : {}),
+        ...(typeof user.following === 'boolean' ? { following: user.following } : {}),
         lang: legacy?.lang,
       },
       text: legacy?.full_text ?? '',
@@ -122,8 +164,7 @@ function collectTimelineTweets(entries: Json): ParsedTweet[] {
 }
 
 function parseTweetDetail(body: Json): ParsedApiData {
-  const instructions =
-    body?.data?.threaded_conversation_with_injections_v2?.instructions;
+  const instructions = body?.data?.threaded_conversation_with_injections_v2?.instructions;
   const entries = instructions?.[0]?.entries;
   const data = emptyWith(['TweetDetail']);
   data.tweets = collectTimelineTweets(entries);
@@ -131,8 +172,7 @@ function parseTweetDetail(body: Json): ParsedApiData {
 }
 
 function parseHomeTimeline(body: Json): ParsedApiData {
-  const entries =
-    body?.data?.home?.home_timeline_urt?.instructions?.[0]?.entries;
+  const entries = body?.data?.home?.home_timeline_urt?.instructions?.[0]?.entries;
   const all = collectTimelineTweets(entries);
   const data = emptyWith(['HomeTimeline']);
   data.tweets = all.filter((t) => !t.isPromoted);
@@ -141,8 +181,7 @@ function parseHomeTimeline(body: Json): ParsedApiData {
 }
 
 function parseListTimeline(body: Json): ParsedApiData {
-  const entries =
-    body?.data?.list?.tweets_timeline?.timeline?.instructions?.[0]?.entries;
+  const entries = body?.data?.list?.tweets_timeline?.timeline?.instructions?.[0]?.entries;
   const all = collectTimelineTweets(entries);
   const data = emptyWith(['ListLatestTweetsTimeline']);
   data.tweets = all.filter((t) => !t.isPromoted);
@@ -151,8 +190,7 @@ function parseListTimeline(body: Json): ParsedApiData {
 }
 
 function parseSearchTimeline(body: Json): ParsedApiData {
-  const instructions =
-    body?.data?.search_by_raw_query?.search_timeline?.timeline?.instructions;
+  const instructions = body?.data?.search_by_raw_query?.search_timeline?.timeline?.instructions;
   const entries = instructions?.[0]?.entries;
   const all = collectTimelineTweets(entries);
   const data = emptyWith(['SearchTimeline']);
@@ -163,8 +201,7 @@ function parseSearchTimeline(body: Json): ParsedApiData {
 
 function parseListMembers(body: Json): ParsedApiData {
   const data = emptyWith(['ListMembers']);
-  for (const instruction of body?.data?.list?.members_timeline?.timeline
-    ?.instructions ?? []) {
+  for (const instruction of body?.data?.list?.members_timeline?.timeline?.instructions ?? []) {
     if (instruction?.type !== 'TimelineAddEntries') {
       continue;
     }
@@ -172,14 +209,12 @@ function parseListMembers(body: Json): ParsedApiData {
       if (!String(entry?.entryId ?? '').startsWith('user-')) {
         continue;
       }
-      const result = entry?.content?.itemContent?.user_results?.result;
-      const xUserId: string | undefined = result?.rest_id;
-      const handle: string | undefined = result?.legacy?.screen_name;
-      if (xUserId && handle) {
+      const user = parseUserResult(entry?.content?.itemContent?.user_results?.result);
+      if (user?.xUserId) {
         data.listMembers.push({
-          xUserId,
-          handle,
-          blocking: result?.legacy?.blocking,
+          xUserId: user.xUserId,
+          handle: user.handle,
+          ...(typeof user.blocking === 'boolean' ? { blocking: user.blocking } : {}),
         });
       }
     }
@@ -189,16 +224,28 @@ function parseListMembers(body: Json): ParsedApiData {
 
 function parseFollowing(body: Json): ParsedApiData {
   const data = emptyWith(['Following']);
-  for (const instruction of body?.data?.user?.result?.timeline?.timeline
-    ?.instructions ?? []) {
+  for (const instruction of body?.data?.user?.result?.timeline?.timeline?.instructions ?? []) {
     if (instruction?.type !== 'TimelineAddEntries') {
       continue;
     }
     for (const entry of instruction?.entries ?? []) {
-      const handle: string | undefined =
-        entry?.content?.itemContent?.user_results?.result?.legacy?.screen_name;
-      if (handle) {
-        data.following.push(handle);
+      const user = parseUserResult(entry?.content?.itemContent?.user_results?.result);
+      if (user) {
+        data.following.push({
+          handle: user.handle,
+          ...(user.xUserId ? { xUserId: user.xUserId } : {}),
+        });
+        continue;
+      }
+      const cursorType = String(entry?.content?.cursorType ?? '').toLowerCase();
+      const entryId = String(entry?.entryId ?? '').toLowerCase();
+      const cursor = entry?.content?.value;
+      if (
+        typeof cursor === 'string' &&
+        cursor &&
+        (cursorType === 'bottom' || entryId.startsWith('cursor-bottom'))
+      ) {
+        data.followingCursor = cursor;
       }
     }
   }

@@ -3,6 +3,8 @@
 declare namespace Cloudflare {
   interface Env {
     DB: D1Database;
+    /** 公开、版本化的关键词词库生成物；源文件仍提交在 community/keyword-packs/。 */
+    KEYWORD_PACKS?: R2Bucket;
     ADMIN_TOKEN: string;
     INSTALLATION_SALT: string;
     /** 维护者安装实例的原始 ID（v0.5）：识别 owner 票用。放 secret，不入代码。 */

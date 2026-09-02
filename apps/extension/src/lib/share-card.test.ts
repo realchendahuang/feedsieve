@@ -17,7 +17,7 @@ describe('buildReportText', () => {
       byCategory: { bot_spam: 2, scam_phishing: 1, copy_paste: 2 },
     };
     expect(buildReportText(stat)).toBe(
-      '福滤娃今日战报：已拉黑 5 个垃圾账号（机器人 2 · 复读机 2 · 诈骗 1）',
+      '福滤娃今日战报：已拉黑 5 个垃圾账号（机器人 2 · 重复刷屏 2 · 诈骗 1）',
     );
   });
 

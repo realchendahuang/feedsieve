@@ -25,6 +25,12 @@ generateSnapshot：确定性 JSON + manifest + sha256
       ├─→ 扩展运行时同步（manifest 比对 → 校验和 → last-known-good 本地索引）
       └─→ scripts/mirror-community-lists.sh 拉回本目录并提交
                 └─→ GitHub diff = 公开审计日志；jsDelivr = 分发兜底源
+
+公开关键词源（`keyword-packs/source.json`）
+      ↓ 构建校验 + SHA-256
+版本化 JSON + manifest（提交到仓库）
+      ├─→ 发布到 Cloudflare R2
+      └─→ GET /v1/keyword-packs/latest → 扩展 6 小时同步 / 手动同步
 ```
 
 ## 目录
@@ -36,6 +42,10 @@ community/
 │   ├── manifest.json          # 镜像：版本入口 + 每文件 sha256
 │   ├── official.json          # 镜像：快照本体（扩展的 jsDelivr 兜底源）
 │   └── recommended.json       # 内置兜底名单（构建期随扩展打包，当前为空）
+├── keyword-packs/
+│   ├── source.json             # 公开、人工可审阅的词库来源（唯一编辑入口）
+│   ├── official.json           # 由构建脚本生成，随扩展打包作离线兜底
+│   └── manifest.json           # 版本 + SHA-256，和 R2 latest 保持同字节
 ├── policy/
 │   └── v1.yaml                # 公开评分政策（阈值当前在 API 的 POLICY 常量，v0.3 迁入）
 └── schema/
@@ -59,14 +69,14 @@ community/
 
 每条 entry 都回答「它为什么在名单里」：
 
-| 字段 | 含义 |
-| --- | --- |
-| `handle` / `x_user_id` | 身份 |
-| `category` | 垃圾分类（bot_spam / scam_phishing / adult_gray_traffic / copy_paste / …） |
-| `status` | candidate / recommended / strong（仅人工可授予后两者） |
-| `report_count` / `rescue_count` | 独立安装上报数 / 误判挽回数 |
-| `first_seen_at` / `updated_at` | 进入与更新时间 |
-| `evidence_post_ids` | 可选公开证据（≤5 条） |
+| 字段                            | 含义                                                                       |
+| ------------------------------- | -------------------------------------------------------------------------- |
+| `handle` / `x_user_id`          | 身份                                                                       |
+| `category`                      | 垃圾分类（bot_spam / scam_phishing / adult_gray_traffic / copy_paste / …） |
+| `status`                        | candidate / recommended / strong（仅人工可授予后两者）                     |
+| `report_count` / `rescue_count` | 独立安装上报数 / 误判挽回数                                                |
+| `first_seen_at` / `updated_at`  | 进入与更新时间                                                             |
+| `evidence_post_ids`             | 可选公开证据（≤5 条）                                                      |
 
 ## 不公开举报者侧数据
 

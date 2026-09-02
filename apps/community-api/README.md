@@ -1,6 +1,6 @@
 # @feedsieve/community-api
 
-FeedSieve 社区名单后端：Cloudflare Worker + Hono + D1。收上报、攒名单、发名单。
+FeedSieve 社区名单与公开关键词后端：Cloudflare Worker + Hono + D1 + R2。D1 收上报、攒名单；R2 分发版本化的公开关键词包。
 
 官方实例：`https://feedsieve-api.chendahuang.com`（由项目维护者运营）。
 **代码完全开源，任何人都可以部署自己的实例。**
@@ -35,12 +35,14 @@ pnpm typecheck
 ```sh
 wrangler login
 wrangler d1 create feedsieve-community        # 记下输出的 database_id
+wrangler r2 bucket create feedsieve-keyword-packs
 cp wrangler.local.example.jsonc wrangler.local.jsonc
 #   编辑 wrangler.local.jsonc：填 account_id、database_id、你的域名
 wrangler d1 migrations apply feedsieve-community --remote --config wrangler.local.jsonc
 echo "your-admin-token" | wrangler secret put ADMIN_TOKEN --config wrangler.local.jsonc
 echo "your-salt"        | wrangler secret put INSTALLATION_SALT --config wrangler.local.jsonc
 pnpm deploy                                   # = wrangler deploy --config wrangler.local.jsonc
+pnpm keyword-packs:publish                    # 发布仓库中已审阅的词库版本到 R2
 curl https://你的域名/healthz
 ```
 
@@ -56,6 +58,8 @@ curl https://你的域名/healthz
 | `POST /v1/labels/retract`          | ✅   | 本地名单删除后撤回当前票（原始审计证据保留）   |
 | `GET /v1/snapshots/latest`         | ✅   | manifest（版本 + sha256 + 条目数，短缓存）     |
 | `GET /v1/snapshots/:version/:file` | ✅   | 快照文件（immutable 缓存）                     |
+| `GET /v1/keyword-packs/latest`     | ✅   | R2 词库 manifest（版本 + SHA-256，短缓存）    |
+| `GET /v1/keyword-packs/:version/:file` | ✅ | R2 版本化词库文件（immutable 缓存）            |
 | `POST /admin/publish`              | ✅   | 生成并发布新快照版本                           |
 | `GET /admin/candidates`            | ✅   | 待审队列（new + candidate，按票数降序）        |
 | `GET /admin/false-positives`       | ✅   | 误标规则汇总 + 最近反馈（不返回安装标识）      |
@@ -77,3 +81,15 @@ apps/community-api/scripts/admin.sh publish             # 发布新快照
 ```
 
 令牌读 `FEEDSIEVE_ADMIN_TOKEN` 或 `~/.feedsieve-secrets.txt`；`FEEDSIEVE_API` 可指向自部署实例。
+
+## 公开词库发布
+
+词库唯一编辑入口是仓库根目录的 `community/keyword-packs/source.json`，生成物和 manifest 也必须提交，方便每个变更接受 Git diff / PR 审阅。发布不需要也不应该修改扩展代码：
+
+```sh
+pnpm keyword-packs:build
+pnpm keyword-packs:check
+pnpm keyword-packs:publish
+```
+
+Worker 仅从 R2 读取 `keyword-packs/latest.json` 和 `keyword-packs/<version>/official.json`；扩展按 manifest 校验 SHA-256 后缓存。远程产物缺失或校验失败时，扩展继续使用 last-known-good 版本。

@@ -1,6 +1,7 @@
 import { syncCommunitySnapshot } from '@feedsieve/community-lists';
 import { COMMUNITY_SYNC_SOURCES, snapshotStore } from '../src/lib/community-store';
 import { flushContributions } from '../src/lib/contribute';
+import { syncKeywordPackCatalog } from '../src/lib/keyword-packs';
 
 export default defineBackground(() => {
   // MV3 service worker 随时可能被回收：这里只做事件入口。
@@ -14,10 +15,15 @@ export default defineBackground(() => {
     });
   }
 
+  function syncKeywordPacks(force: boolean) {
+    return syncKeywordPackCatalog({ force });
+  }
+
   browser.runtime.onInstalled.addListener((details) => {
     console.info(`[FeedSieve] installed (${details.reason})`);
     // 安装/更新后立即拉一次社区快照（跳过 6h 节流）
     void sync(true);
+    void syncKeywordPacks(true);
     // 升级后补传历史黑名单/白名单；同步状态会防止重复上传。
     void flushContributions();
   });
@@ -25,6 +31,7 @@ export default defineBackground(() => {
   browser.runtime.onStartup.addListener(() => {
     // 节流由 syncCommunitySnapshot 内部控制（6h）
     void sync(false);
+    void syncKeywordPacks(false);
     // 补交上次网络失败时积压的社区贡献
     void flushContributions();
   });
@@ -35,6 +42,12 @@ export default defineBackground(() => {
     if (msg?.type === 'feedsieve:community-sync') {
       return sync(msg.force === true).then((outcome) => ({
         type: 'feedsieve:community-sync',
+        outcome,
+      }));
+    }
+    if (msg?.type === 'feedsieve:keyword-packs-sync') {
+      return syncKeywordPacks(msg.force === true).then((outcome) => ({
+        type: 'feedsieve:keyword-packs-sync',
         outcome,
       }));
     }

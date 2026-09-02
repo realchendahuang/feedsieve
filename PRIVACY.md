@@ -12,7 +12,8 @@ FeedSieve（福滤娃）是 X（Twitter）扩展：黄框标注垃圾账号，�
 ### 只在本地处理（绝不出设备）
 
 - X 页面内容：推文文本、昵称、简介、链接 —— 用于识别垃圾账号。
-- 识别结果与动作记录：标注、拉黑、撤销、白名单、本地统计。
+- 识别结果与动作记录：标注、拉黑、撤销、白名单、本地统计，以及你自定义的关键词规则、对官方预置词包的订阅/启停状态和最近一次校验通过的公开词库版本缓存。
+- 你的 X 关注列表：用于形成每个用户自己的「关注保护」名单，只保存在浏览器本地，绝不作为白名单或抢救票上传。
 - X 登录凭证（ct0 / bearer）：仅在你的浏览器内、你点击拉黑/撤销时，用于向 x.com 本身发起请求。不读取、不存储、不发送给 FeedSieve 或任何第三方。
 - 浏览历史、私信、密码：不收集。
 
@@ -22,7 +23,7 @@ FeedSieve（福滤娃）是 X（Twitter）扩展：黄框标注垃圾账号，�
 扩展从官方 API `feedsieve-api.chendahuang.com` 下载社区名单快照（JSON，经 SHA-256 校验）。该请求不包含你的任何个人数据。
 
 **2. 黑白名单上传（默认开启，可一键关闭）**
-开启「名单上传」时，扩展同步你明确维护的本地黑名单和白名单，包括升级前已保存在本机的历史记录。它不上传仅仅浏览过、仅仅被标注但未处理的账号。
+开启「名单上传」时，扩展同步你明确维护的本地黑名单和白名单，包括升级前已保存在本机的历史记录。它不上传仅仅浏览过、仅仅被标注但未处理的账号；也不上传关注保护名单、你的自定义关键词或官方词库的订阅/启停状态。公开词库下载不携带安装 ID、X 账号、浏览历史或自定义词；由本地关键词触发的拉黑会明确标记为仅本地，不会回灌成社区举报票；直接执行「社区清理」产生的批量拉黑同样只记录在本机。
 
 - 黑名单：`handle`（对方账号名）、可选 `x_user_id`、分类、话术指纹单向哈希、外链 hostname（最多 5 个）
 - 白名单：`handle`、可选 `x_user_id`、当时的检测来源、规则 ID 与检测理由（旧记录可能只有 handle）
@@ -58,6 +59,7 @@ FeedSieve（福滤娃）是 X（Twitter）扩展：黄框标注垃圾账号，�
 
 - X page content: tweet text, display names, bios, links — used to detect spam accounts.
 - Detection results and actions: marks, blocks, unblocks, allowlist, local stats.
+- Your X following list: used as a per-user protection list and stored locally only. It is never uploaded as an allow or rescue vote.
 - Your X session credentials (ct0 / bearer): used only inside your browser, only when you click block/unblock, only against x.com itself. Never read, stored, or sent to FeedSieve or any third party.
 - Browsing history, direct messages, passwords: not collected.
 
@@ -67,7 +69,7 @@ FeedSieve（福滤娃）是 X（Twitter）扩展：黄框标注垃圾账号，�
 The extension downloads the community snapshot (JSON, SHA-256 verified) from the official API `feedsieve-api.chendahuang.com`. No personal data is included in this request.
 
 **2. Blocklist and allowlist uploads (default on, one toggle to disable)**
-When “List uploads” is enabled, the extension syncs the local blocklist and allowlist entries you explicitly maintain, including records already stored locally before an upgrade. Merely viewed or merely marked accounts are never uploaded.
+When “List uploads” is enabled, the extension syncs the local blocklist and allowlist entries you explicitly maintain, including records already stored locally before an upgrade. Merely viewed or merely marked accounts are never uploaded. Neither is the following-protection list. Blocks performed by Community Clean are kept as local action records and do not create new community report votes.
 
 - Blocklist: `handle`, optional `x_user_id`, category, one-way content fingerprint, and up to five external link hostnames
 - Allowlist: `handle`, optional `x_user_id`, detection source, rule ID, and the detector's reason when available; legacy records may contain only the handle

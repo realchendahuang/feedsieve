@@ -363,14 +363,9 @@ export type DetectContext = {
 
 export type MarkVerdict = {
   mark: boolean;
-  reason: string;             // 可解释理由，必须非空
-  source:
-    | 'community'
-    | 'heuristic'
-    | 'fingerprint'
-    | 'domain'
-    | 'ai';
-  category?: string;          // bot_spam / adult_gray_traffic / ...
+  reason: string; // 可解释理由，必须非空
+  source: 'community' | 'heuristic' | 'fingerprint' | 'domain' | 'ai';
+  category?: string; // bot_spam / adult_gray_traffic / ...
   confidence?: number;
   ruleId?: string;
   evidence?: Record<string, unknown>;
@@ -382,12 +377,14 @@ export type MarkVerdict = {
 固定为：
 
 ```text
-1. Community 名单命中     -> mark（按标注强度分级）
-2. 本地启发式            -> mark
-3. Content Fingerprint   -> mark（后期）
-4. Domain 信誉           -> mark（后期）
-5. Optional AI           -> mark（最后）
-6. Default               -> 不标注
+1. 用户手动标记           -> block + 可选社区贡献
+2. Strong Community 名单 -> mark；满足 3 票且 0 抢救才进入批量候选
+3. Recommended/Candidate -> mark 供复核，不进入批量候选
+4. Content Fingerprint   -> 仅彻底档 review，不进入批量候选
+5. Domain 信誉           -> 仅彻底档 review，不进入批量候选
+6. 用户配置的关键词/官方完整话术词库 -> 本地 review，不进入批量候选、不上传社区
+7. 未配置的单关键词/昵称特征 -> 不进入用户标注层
+8. Default               -> 不标注，但保留手动入口
 ```
 
 标注强度决定名单命中范围：
@@ -398,9 +395,9 @@ export type MarkVerdict = {
 大扫除：Strong + Recommended + Candidate 命中标注
 ```
 
-### 6.2 v0.1 本地启发式
+### 6.2 本地弱信号
 
-必须实现（全部可解释、有 ruleId）：
+Detector 可以保留以下信号用于离线评测、证据收集和未来组合模型：
 
 - 机器人账号特征：默认名 + 长随机数字后缀的 handle
 - 垃圾域名链接：推文链接命中已知垃圾 hostname 列表
@@ -418,7 +415,7 @@ export type HeuristicRule = {
 };
 ```
 
-启发式只产生「标注 + 理由」，不产生任何页面动作。
+任何单条启发式都不能直接给用户账号加黄框，更不能进入批量拉黑。间接证据只在彻底档提示复核；面向用户的理由必须翻译为普通描述，不显示 ruleId、指纹、模板等算法术语。
 
 ### 6.3 Content Fingerprint
 
@@ -623,7 +620,7 @@ extension update
 
 ```yaml
 - handle: example_spam
-  x_user_id: "123456789" # optional
+  x_user_id: '123456789' # optional
   aliases:
     - old_handle
   category: bot_spam
@@ -631,10 +628,10 @@ extension update
   community_score: 0.91
   report_count: 27
   rescue_count: 2
-  first_seen_at: "2026-08-20T12:00:00Z"
-  updated_at: "2026-08-26T00:00:00Z"
+  first_seen_at: '2026-08-20T12:00:00Z'
+  updated_at: '2026-08-26T00:00:00Z'
   evidence_post_ids:
-    - "0000000000000000000"
+    - '0000000000000000000'
 ```
 
 ### 8.4 Snapshot Manifest
@@ -865,7 +862,7 @@ pending -> running -> success | failed
 ```ts
 type PendingEntry = {
   handle: string;
-  reason: string;          // 来自 Detector 的标注理由
+  reason: string; // 来自 Detector 的标注理由
   markedAt: number;
   source: MarkVerdict['source'];
 };
@@ -999,23 +996,29 @@ atomic replace old snapshot
 
 ```text
 ┌────────────────────────────────┐
-│ ⚠ 疑似垃圾：名单命中 · bot_spam  │  <- 黄框 + 理由
+│ ⚠ 3 人标记为机器人               │  <- 黄框 + 普通理由
 │ （推文内容原样显示）              │
-│ [✓ 加入待拉黑] [顺手拉黑] [为什么] │
+│ [标记垃圾并拉黑] [误标？]          │
 └────────────────────────────────┘
 ```
 
 - 黄框只影响样式，**不影响任何内容显示**
-- 理由标签必须可点击展开详情（score / reports / 规则 id）
-- 标注进入待拉黑列表后自动勾选；用户可取消
+- 理由优先显示人数与可理解分类；技术字段留在调试数据，不放主界面
+- 只有高置信候选进入当前页面批量列表
+- 未命中账号的 X 操作栏仍提供「标记垃圾」入口
 
 ### Popup
 
 ```text
-待拉黑 47 个
-[列表：每个账号 + 理由 + 移除]
-[一键拉黑 47 个]  <- 主按钮
-[进度条：12 / 47] [暂停] [取消]
+当前页面 5 个
+[列表：每个高置信账号 + 普通理由]
+[全部拉黑 5 个]
+
+漏网账号 [@用户名或主页链接] [标记垃圾并拉黑]
+
+社区清理 47 个
+[自动排除关注 / 白名单 / 已拉黑]
+[一键开始清理] [进度：12 / 47] [暂停] [取消]
 今日送走 38 个
 ```
 

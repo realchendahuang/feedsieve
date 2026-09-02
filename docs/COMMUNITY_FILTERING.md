@@ -18,11 +18,11 @@ FeedSieve 不应该只是每个用户各自维护一套关键词和黑名单。
 
 在 X 推文 / 账号旁提供极简动作：
 
-- `顺手拉黑`（原生 Block）
+- `标记垃圾并拉黑`（原生 Block；插件漏识别时也可用）
 - `放回来`（原生 Unblock）
 - `这条还能抢救`（Community Rescue Vote）
 
-拉黑成功后，用户可以选择是否把这次识别贡献给社区。
+用户主动标记成功后，按「名单上传」设置决定是否把这次判断贡献给社区。从现有社区名单执行批量拉黑不会再次生成举报票，避免反馈回路自我放大。
 
 推荐原因：
 
@@ -39,7 +39,7 @@ FeedSieve 不应该只是每个用户各自维护一套关键词和黑名单。
 
 ---
 
-## 3. “5 个人屏蔽”只作为 Candidate 门槛
+## 3. 分级门槛与批量安全线
 
 `5 个用户屏蔽 -> 自动永久进入全球黑名单` 风险太大：
 
@@ -52,18 +52,17 @@ FeedSieve 不应该只是每个用户各自维护一套关键词和黑名单。
 因此状态分层：
 
 ```text
-0 - 4 independent reports
+0 - 1 independent reports
     -> normal
 
->= 5 independent reports
+>= 2 independent reports
     -> candidate
 
-score + time spread + rescue ratio
-    -> recommended
-
-higher score + longer spread + low rescue
+>= 3 independent reports
     -> strong
 ```
+
+Candidate 只在「彻底」档供复核。云端和页面批量拉黑的过渡门槛统一为：`strong + report_count >= 3 + rescue_count = 0`。任何抢救票都会让账号退出批量候选。
 
 具体阈值不硬编码在后端，公开在：
 
@@ -161,6 +160,8 @@ v1 原则：
 
 名单不是永久刑罚。
 
+用户自己的 X 关注列表是另一个概念：它是本地私有保护名单，不作为 Rescue，不上传服务端。只有用户之后明确把其中某个账号「标记垃圾并拉黑」，最新的人工判断才覆盖这层保护。
+
 ---
 
 ## 7. Community Filter Packs
@@ -211,7 +212,7 @@ aliases      optional
 
 ```yaml
 - handle: example_spam
-  x_user_id: "123456789" # optional
+  x_user_id: '123456789' # optional
   aliases:
     - old_handle
 ```

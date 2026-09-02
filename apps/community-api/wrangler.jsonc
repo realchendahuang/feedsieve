@@ -8,14 +8,20 @@
   "compatibility_date": "2026-08-01",
   "observability": { "enabled": true },
   "triggers": {
-    "crons": ["0 * * * *"]
+    "crons": ["0 * * * *"],
   },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "feedsieve-community",
       "database_id": "00000000-0000-0000-0000-000000000000",
-      "migrations_dir": "migrations"
-    }
-  ]
+      "migrations_dir": "migrations",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "KEYWORD_PACKS",
+      "bucket_name": "feedsieve-keyword-packs",
+    },
+  ],
 }

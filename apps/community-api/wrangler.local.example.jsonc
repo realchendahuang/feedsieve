@@ -15,5 +15,11 @@
       "database_id": "RUN_npx_wrangler_d1_create_AND_PASTE_THE_ID",
       "migrations_dir": "migrations"
     }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "KEYWORD_PACKS",
+      "bucket_name": "feedsieve-keyword-packs"
+    }
   ]
 }
