@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "pack_version": "2026.09.02.3",
+  "pack_version": "2026.09.02.5",
   "generated_at": null,
   "packs": [
     {
@@ -10,7 +10,8 @@
         "zh": "福利隐语、成人内容和主页导流的完整话术",
         "en": "Full adult-content traffic phrases"
       },
-      "source_refs": ["local_x_miss_2026-09-01"],
+      "source_refs": ["external_sensitive_terms_reference_2026-09-02", "local_x_miss_2026-09-01"],
+      "rules_source": "adult-high-recall.json",
       "rules": [
         ["adult-fu-not-black", "我福不黑"],
         ["adult-benefits-profile", "福利在主页"],
@@ -38,7 +39,79 @@
         ["adult-young-woman-door", "少妇上门"],
         ["adult-national-airdrop", "全国空降"],
         ["adult-local-airdrop", "同城空降"],
-        ["adult-offline-private-date", "线下私约"]
+        ["adult-offline-private-date", "线下私约"],
+        {
+          "id": "adult-terms-local-door",
+          "phrase": "同城 + 上门",
+          "terms": ["同城", "上门"],
+          "max_gap": 12
+        },
+        {
+          "id": "adult-terms-local-hookup",
+          "phrase": "同城 + 约炮",
+          "terms": ["同城", "约炮"],
+          "max_gap": 12
+        },
+        {
+          "id": "adult-terms-local-private-date",
+          "phrase": "同城 + 私约",
+          "terms": ["同城", "私约"],
+          "max_gap": 12
+        },
+        {
+          "id": "adult-terms-nearby-available",
+          "phrase": "附近 + 可约",
+          "terms": ["附近", "可约"],
+          "max_gap": 12
+        },
+        {
+          "id": "adult-terms-nearby-door",
+          "phrase": "附近 + 上门",
+          "terms": ["附近", "上门"],
+          "max_gap": 12
+        },
+        {
+          "id": "adult-terms-beauty-door",
+          "phrase": "美女 + 上门",
+          "terms": ["美女", "上门"],
+          "max_gap": 10
+        },
+        {
+          "id": "adult-terms-girl-door",
+          "phrase": "妹 + 上门",
+          "terms": ["妹", "上门"],
+          "max_gap": 8
+        },
+        {
+          "id": "adult-terms-student-door",
+          "phrase": "学生妹 + 上门",
+          "terms": ["学生妹", "上门"],
+          "max_gap": 10
+        },
+        {
+          "id": "adult-terms-flight-attendant-door",
+          "phrase": "空姐 + 上门",
+          "terms": ["空姐", "上门"],
+          "max_gap": 10
+        },
+        {
+          "id": "adult-terms-benefit-profile",
+          "phrase": "福利 + 主页",
+          "terms": ["福利", "主页"],
+          "max_gap": 12
+        },
+        {
+          "id": "adult-terms-benefit-bio",
+          "phrase": "福利 + 简介",
+          "terms": ["福利", "简介"],
+          "max_gap": 12
+        },
+        {
+          "id": "adult-terms-local-airdrop",
+          "phrase": "同城 + 空降",
+          "terms": ["同城", "空降"],
+          "max_gap": 10
+        }
       ]
     },
     {
@@ -69,7 +142,55 @@
         ["scam-follow-teacher-earn", "跟着老师赚钱"],
         ["scam-vip-investment-group", "VIP投资群"],
         ["scam-exclusive-investment-channel", "独家投资渠道"],
-        ["scam-bull-stock-insider-tip", "牛股内幕消息"]
+        ["scam-bull-stock-insider-tip", "牛股内幕消息"],
+        {
+          "id": "scam-terms-teacher-signal",
+          "phrase": "老师 + 带单",
+          "terms": ["老师", "带单"],
+          "max_gap": 14
+        },
+        {
+          "id": "scam-terms-insider-tip",
+          "phrase": "内幕 + 消息",
+          "terms": ["内幕", "消息"],
+          "max_gap": 10
+        },
+        {
+          "id": "scam-terms-guaranteed-profit",
+          "phrase": "稳赚 + 不赔",
+          "terms": ["稳赚", "不赔"],
+          "max_gap": 10
+        },
+        {
+          "id": "scam-terms-principal-interest",
+          "phrase": "保本 + 高息",
+          "terms": ["保本", "高息"],
+          "max_gap": 12
+        },
+        {
+          "id": "scam-terms-high-return-risk-free",
+          "phrase": "高收益 + 无风险",
+          "terms": ["高收益", "无风险"],
+          "max_gap": 16
+        },
+        {
+          "id": "scam-terms-free-stock-tip",
+          "phrase": "免费 + 荐股",
+          "terms": ["免费", "荐股"],
+          "max_gap": 14
+        },
+        {
+          "id": "scam-terms-group-stock-tip",
+          "phrase": "加群 + 荐股",
+          "terms": ["加群", "荐股"],
+          "max_gap": 16
+        },
+        {
+          "id": "scam-terms-follow-earn",
+          "phrase": "跟单 + 赚钱",
+          "terms": ["跟单", "赚钱"],
+          "max_gap": 16
+        }
       ]
     },
     {
@@ -98,7 +219,43 @@
         ["crypto-wallet-airdrop-claim", "钱包空投领取"],
         ["crypto-onchain-airdrop-claim", "链上空投领取"],
         ["crypto-airdrop-reward-claim", "领取空投奖励"],
-        ["crypto-signup-usdt", "注册领取USDT"]
+        ["crypto-signup-usdt", "注册领取USDT"],
+        {
+          "id": "crypto-terms-free-usdt",
+          "phrase": "免费 + 领取 + USDT",
+          "terms": ["免费", "领取", "USDT"],
+          "max_gap": 14
+        },
+        {
+          "id": "crypto-terms-wallet-airdrop",
+          "phrase": "钱包 + 空投",
+          "terms": ["钱包", "空投"],
+          "max_gap": 16
+        },
+        {
+          "id": "crypto-terms-onchain-airdrop",
+          "phrase": "链上 + 空投",
+          "terms": ["链上", "空投"],
+          "max_gap": 16
+        },
+        {
+          "id": "crypto-terms-signup-usdt",
+          "phrase": "注册 + USDT",
+          "terms": ["注册", "USDT"],
+          "max_gap": 16
+        },
+        {
+          "id": "crypto-terms-send-double",
+          "phrase": "发送 + 双倍返还",
+          "terms": ["发送", "双倍返还"],
+          "max_gap": 18
+        },
+        {
+          "id": "crypto-terms-connect-airdrop",
+          "phrase": "连接钱包 + 领取空投",
+          "terms": ["连接钱包", "领取空投"],
+          "max_gap": 18
+        }
       ]
     },
     {
@@ -131,7 +288,43 @@
         ["task-daily-high-pay", "日结高薪"],
         ["task-no-experience-daily-pay", "无需经验日结"],
         ["task-recruit-brushing", "招聘兼职刷单"],
-        ["task-complete-for-commission", "做任务领佣金"]
+        ["task-complete-for-commission", "做任务领佣金"],
+        {
+          "id": "task-terms-like-commission",
+          "phrase": "点赞 + 返佣",
+          "terms": ["点赞", "返佣"],
+          "max_gap": 14
+        },
+        {
+          "id": "task-terms-task-commission",
+          "phrase": "任务 + 佣金",
+          "terms": ["任务", "佣金"],
+          "max_gap": 16
+        },
+        {
+          "id": "task-terms-topup-unlock",
+          "phrase": "充值 + 解锁任务",
+          "terms": ["充值", "解锁任务"],
+          "max_gap": 18
+        },
+        {
+          "id": "task-terms-advance-task",
+          "phrase": "垫付 + 任务",
+          "terms": ["垫付", "任务"],
+          "max_gap": 16
+        },
+        {
+          "id": "task-terms-daily-highpay",
+          "phrase": "日结 + 高薪",
+          "terms": ["日结", "高薪"],
+          "max_gap": 12
+        },
+        {
+          "id": "task-terms-parttime-brushing",
+          "phrase": "兼职 + 刷单",
+          "terms": ["兼职", "刷单"],
+          "max_gap": 16
+        }
       ]
     },
     {
@@ -160,7 +353,37 @@
         ["loan-tax-before-disbursement", "放款前缴税"],
         ["loan-agency-service", "代办贷款"],
         ["loan-fast-disbursement", "快速放款"],
-        ["loan-instant-low-rate", "秒批低息"]
+        ["loan-instant-low-rate", "秒批低息"],
+        {
+          "id": "loan-terms-no-collateral",
+          "phrase": "无抵押 + 放款",
+          "terms": ["无抵押", "放款"],
+          "max_gap": 16
+        },
+        {
+          "id": "loan-terms-fast-disbursement",
+          "phrase": "快速 + 放款",
+          "terms": ["快速", "放款"],
+          "max_gap": 14
+        },
+        {
+          "id": "loan-terms-fee-before",
+          "phrase": "下款前 + 交费",
+          "terms": ["下款前", "交费"],
+          "max_gap": 14
+        },
+        {
+          "id": "loan-terms-frozen-unfreeze",
+          "phrase": "账户冻结 + 解冻费",
+          "terms": ["账户冻结", "解冻费"],
+          "max_gap": 18
+        },
+        {
+          "id": "loan-terms-flow-limit",
+          "phrase": "刷流水 + 提额",
+          "terms": ["刷流水", "提额"],
+          "max_gap": 14
+        }
       ]
     },
     {
@@ -183,7 +406,37 @@
         ["gambling-sports-bonus", "体育投注送彩金"],
         ["gambling-account-registration", "博彩开户注册"],
         ["gambling-topup-customer-service", "上分下分客服"],
-        ["gambling-one-yuan-bonus", "一元送彩金"]
+        ["gambling-one-yuan-bonus", "一元送彩金"],
+        {
+          "id": "gambling-terms-signup-bonus",
+          "phrase": "注册 + 彩金",
+          "terms": ["注册", "彩金"],
+          "max_gap": 16
+        },
+        {
+          "id": "gambling-terms-firstdeposit-bonus",
+          "phrase": "首存 + 彩金",
+          "terms": ["首存", "彩金"],
+          "max_gap": 14
+        },
+        {
+          "id": "gambling-terms-casino-agent",
+          "phrase": "赌场 + 代理",
+          "terms": ["赌场", "代理"],
+          "max_gap": 16
+        },
+        {
+          "id": "gambling-terms-sports-bonus",
+          "phrase": "体育 + 彩金",
+          "terms": ["体育", "彩金"],
+          "max_gap": 16
+        },
+        {
+          "id": "gambling-terms-topup-service",
+          "phrase": "上分 + 客服",
+          "terms": ["上分", "客服"],
+          "max_gap": 16
+        }
       ]
     },
     {
@@ -207,7 +460,25 @@
         ["engagement-follow-repost-en", "follow and repost"],
         ["engagement-repost-to-win", "repost to win"],
         ["engagement-like-follow-en", "like and follow"],
-        ["engagement-retweet-to-win", "retweet to win"]
+        ["engagement-retweet-to-win", "retweet to win"],
+        {
+          "id": "engagement-terms-follow-raffle",
+          "phrase": "关注 + 抽奖",
+          "terms": ["关注", "抽奖"],
+          "max_gap": 18
+        },
+        {
+          "id": "engagement-terms-repost-cash",
+          "phrase": "转发 + 现金",
+          "terms": ["转发", "现金"],
+          "max_gap": 18
+        },
+        {
+          "id": "engagement-terms-like-reward",
+          "phrase": "点赞 + 奖励",
+          "terms": ["点赞", "奖励"],
+          "max_gap": 18
+        }
       ]
     },
     {
@@ -230,7 +501,37 @@
         ["marketing-profile-link-self-service", "主页链接自取"],
         ["marketing-dm-get-resources", "私信获取资源"],
         ["marketing-scan-get-materials", "扫码领取资料"],
-        ["marketing-join-group-get-materials", "加群领取资料"]
+        ["marketing-join-group-get-materials", "加群领取资料"],
+        {
+          "id": "marketing-terms-scan-wechat",
+          "phrase": "扫码 + 微信",
+          "terms": ["扫码", "微信"],
+          "max_gap": 16
+        },
+        {
+          "id": "marketing-terms-dm-link",
+          "phrase": "私信 + 链接",
+          "terms": ["私信", "链接"],
+          "max_gap": 18
+        },
+        {
+          "id": "marketing-terms-profile-link",
+          "phrase": "主页 + 链接",
+          "terms": ["主页", "链接"],
+          "max_gap": 18
+        },
+        {
+          "id": "marketing-terms-group-benefit",
+          "phrase": "进群 + 福利",
+          "terms": ["进群", "福利"],
+          "max_gap": 18
+        },
+        {
+          "id": "marketing-terms-add-get",
+          "phrase": "添加 + 领取",
+          "terms": ["添加", "领取"],
+          "max_gap": 18
+        }
       ]
     }
   ]

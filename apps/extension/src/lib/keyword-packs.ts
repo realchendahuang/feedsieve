@@ -4,6 +4,9 @@ export interface KeywordPackRule {
   id: string;
   phrase: string;
   name: { zh: string; en: string };
+  /** 有序分词组合：允许词之间插入少量字符，但不允许颠倒顺序。 */
+  terms?: string[];
+  max_gap?: number;
 }
 export interface KeywordPack {
   id: string;
@@ -31,7 +34,8 @@ interface StoredKeywordPackCatalog {
 
 export const KEYWORD_PACK_API_BASE = 'https://feedsieve-api.chendahuang.com';
 const STORAGE_KEY = 'keywordPacksSnapshotV1';
-const MAX_AGE_MS = 6 * 60 * 60 * 1000;
+/** X 页面活跃时每 15 分钟最多检查一次远程 manifest。 */
+export const KEYWORD_PACK_SYNC_MAX_AGE_MS = 15 * 60 * 1000;
 const VERSION_RE = /^\d{4}\.\d{2}\.\d{2}\.\d{1,4}$/;
 const ID_RE = /^[a-z][a-z0-9_-]{1,95}$/;
 function localized(value: unknown): value is { zh: string; en: string } {
@@ -83,13 +87,38 @@ export function parseKeywordPackCatalog(value: unknown): KeywordPackCatalog | nu
         ruleIds.has(rule.id) ||
         typeof rule.phrase !== 'string' ||
         rule.phrase.trim() !== rule.phrase ||
-        rule.phrase.length < 3 ||
+        rule.phrase.length < 1 ||
         rule.phrase.length > 80 ||
         !localized(rule.name)
       )
         return null;
+      const rawTerms = Array.isArray(rule.terms) ? rule.terms : undefined;
+      const terms = rawTerms
+        ? rawTerms.filter(
+            (term): term is string =>
+              typeof term === 'string' &&
+              term.trim() === term &&
+              term.length >= 1 &&
+              term.length <= 24,
+          )
+        : undefined;
+      if (terms && (terms.length !== rawTerms!.length || terms.length < 2 || terms.length > 5))
+        return null;
+      if (
+        terms &&
+        (typeof rule.max_gap !== 'number' ||
+          !Number.isInteger(rule.max_gap) ||
+          rule.max_gap < 0 ||
+          rule.max_gap > 32)
+      )
+        return null;
       ruleIds.add(rule.id);
-      rules.push({ id: rule.id, phrase: rule.phrase, name: rule.name });
+      rules.push({
+        id: rule.id,
+        phrase: rule.phrase,
+        name: rule.name,
+        ...(terms ? { terms, max_gap: rule.max_gap as number } : {}),
+      });
     }
     if (rules.length === 0) return null;
     packIds.add(pack.id);
@@ -187,7 +216,7 @@ export async function syncKeywordPackCatalog(
 ): Promise<KeywordPackSyncOutcome> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const stored = parseStored((await browser.storage.local.get(STORAGE_KEY))[STORAGE_KEY]);
-  if (!options.force && stored && Date.now() - stored.synced_at < MAX_AGE_MS)
+  if (!options.force && stored && Date.now() - stored.synced_at < KEYWORD_PACK_SYNC_MAX_AGE_MS)
     return { status: 'up_to_date', version: stored.pack_version };
   let manifestResponse: Response;
   try {

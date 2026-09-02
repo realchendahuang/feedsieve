@@ -300,6 +300,9 @@ export default function App() {
     void getCommunitySettings().then(setCommunity);
     void getKeywordRuleSettings().then(setKeywordRules);
     void getKeywordPackCatalog().then(setKeywordCatalog);
+    void browser.runtime
+      .sendMessage({ type: 'feedsieve:keyword-packs-sync' })
+      .catch(() => undefined);
     void getFollowingAllowlist().then(setFollowing);
     void getFollowingSyncState().then(setFollowingSync);
     void getPersistentBlockQueue().then(setQueue);

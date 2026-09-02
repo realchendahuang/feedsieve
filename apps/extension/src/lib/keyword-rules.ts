@@ -21,7 +21,7 @@ export interface CustomKeywordRule {
   createdAt: number;
 }
 export interface KeywordRuleSettings {
-  subscriptionDefaultsVersion: 1;
+  subscriptionDefaultsVersion: 2;
   subscribedCategoryIds: KeywordCategory[];
   disabledOfficialRuleIds: string[];
   customRules: CustomKeywordRule[];
@@ -31,13 +31,15 @@ export interface ActiveKeywordRule {
   source: 'official' | 'custom';
   phrase: string;
   category: KeywordCategory | 'other';
+  terms?: string[];
+  maxGap?: number;
 }
 
 const STORAGE_KEY = 'keywordRulesV1';
 const MAX_CUSTOM_RULES = 80;
 const MAX_PHRASE_LENGTH = 80;
 const CATEGORY_ID_RE = /^[a-z][a-z0-9_]{1,63}$/;
-const SUBSCRIPTION_DEFAULTS_VERSION = 1 as const;
+const SUBSCRIPTION_DEFAULTS_VERSION = 2 as const;
 
 function flattenOfficialRules(catalog: KeywordPackCatalog): OfficialKeywordRule[] {
   return catalog.packs.flatMap((pack) =>
@@ -62,7 +64,24 @@ function normalizePhrase(value: string): string {
     .toLocaleLowerCase();
 }
 function textForMatch(value: string): string {
-  return normalizePhrase(value).replace(/\s+/g, '');
+  // 去掉空白、标点、emoji/符号，处理“同·城 上-门”“福 利”等规避写法。
+  return normalizePhrase(value).replace(/[\p{P}\p{S}\s]+/gu, '');
+}
+function orderedTermsMatch(value: string, terms: readonly string[], maxGap: number): boolean {
+  const haystack = textForMatch(value);
+  let cursor = 0;
+  for (const term of terms) {
+    const needle = textForMatch(term);
+    const index = haystack.indexOf(needle, cursor);
+    if (index < 0) return false;
+    if (cursor > 0 && index - cursor > maxGap) return false;
+    cursor = index + needle.length;
+  }
+  return true;
+}
+function ruleMatchesText(value: string, rule: ActiveKeywordRule): boolean {
+  if (rule.terms?.length) return orderedTermsMatch(value, rule.terms, rule.maxGap ?? 12);
+  return textForMatch(value).includes(textForMatch(rule.phrase));
 }
 export function isValidPhrase(value: string): boolean {
   const phrase = value.trim();
@@ -75,7 +94,7 @@ function normalizeSettings(value: unknown): KeywordRuleSettings {
         (id): id is string => typeof id === 'string' && /^[a-z][a-z0-9-]{2,95}$/.test(id),
       )
     : [];
-  // v0.7.3 首次安装和旧版升级都统一启用全部官方词库。迁移标记写入后，才把
+  // v0.7.4 首次安装和旧版升级都统一启用全部官方词库。迁移标记写入后，才把
   // 订阅数组视为用户在新版里做出的明确选择，之后关闭全部也不会被重新打开。
   const hasCurrentSubscriptionDefaults =
     raw.subscriptionDefaultsVersion === SUBSCRIPTION_DEFAULTS_VERSION;
@@ -187,6 +206,7 @@ export function activeKeywordRules(
         source: 'official' as const,
         phrase: rule.phrase,
         category: rule.category,
+        ...(rule.terms ? { terms: rule.terms, maxGap: rule.max_gap } : {}),
       })),
   ];
 }
@@ -199,13 +219,14 @@ export function createKeywordHeuristics(
     check(input) {
       // 垃圾账号常把引流词直接放在昵称里，而正文只发图片或表情。
       // handle 也参与匹配，方便用户自定义拦截固定账号前缀。
-      const haystack = [input.displayName, input.handle, input.text, input.bio]
-        .filter(Boolean)
-        .join('\n');
-      if (!haystack || !textForMatch(haystack).includes(textForMatch(rule.phrase))) return null;
+      const fields = [input.displayName, input.handle, input.text, input.bio].filter(
+        (value): value is string => typeof value === 'string' && value.length > 0,
+      );
+      // 每个字段独立匹配，避免昵称末尾和正文开头偶然拼成一个规则。
+      if (!fields.some((field) => ruleMatchesText(field, rule))) return null;
       return rule.source === 'custom'
-        ? `你设置的关键词：“${rule.phrase}”`
-        : `官方关键词：“${rule.phrase}”`;
+        ? `命中你的关键词：${rule.phrase}`
+        : `命中官方规则：${rule.phrase}`;
     },
   }));
 }

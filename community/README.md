@@ -30,7 +30,7 @@ generateSnapshot：确定性 JSON + manifest + sha256
       ↓ 构建校验 + SHA-256
 版本化 JSON + manifest（提交到仓库）
       ├─→ 发布到 Cloudflare R2
-      └─→ GET /v1/keyword-packs/latest → 扩展 6 小时同步 / 手动同步
+      └─→ GET /v1/keyword-packs/latest → 扩展每 15 分钟检查 / 手动同步
 ```
 
 ## 目录
@@ -44,6 +44,7 @@ community/
 │   └── recommended.json       # 内置兜底名单（构建期随扩展打包，当前为空）
 ├── keyword-packs/
 │   ├── source.json             # 公开、人工可审阅的词库来源（唯一编辑入口）
+│   ├── adult-high-recall.json  # 黄推 / 成人引流分类的高召回补充词
 │   ├── official.json           # 由构建脚本生成，随扩展打包作离线兜底
 │   └── manifest.json           # 版本 + SHA-256，和 R2 latest 保持同字节
 ├── policy/
@@ -51,6 +52,8 @@ community/
 └── schema/
     └── account-list.schema.json
 ```
+
+高召回补充词只是行业词包的数据源，不在产品里形成单独品牌或订阅项。更新 `source.json` 或分类数据文件后，提升 `pack_version`，重新构建、审阅并发布到 R2；扩展无需升级即可在下一次 15 分钟检查时取得新规则。
 
 ## 审计方式
 

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   BUNDLED_KEYWORD_PACK_CATALOG,
   getKeywordPackCatalog,
+  KEYWORD_PACK_SYNC_MAX_AGE_MS,
   parseKeywordPackCatalog,
 } from './keyword-packs';
 
@@ -22,17 +23,31 @@ beforeEach(() => {
 });
 
 describe('远程关键词包契约', () => {
-  it('构建时词库包含可订阅行业包和大量完整短语', () => {
-    expect(BUNDLED_KEYWORD_PACK_CATALOG.pack_version).toBe('2026.09.02.3');
+  it('构建时词库包含八个可订阅行业包、成人高召回规则和分词组合', () => {
+    expect(BUNDLED_KEYWORD_PACK_CATALOG.pack_version).toBe('2026.09.02.5');
     expect(BUNDLED_KEYWORD_PACK_CATALOG.packs).toHaveLength(8);
     expect(
       BUNDLED_KEYWORD_PACK_CATALOG.packs.reduce((count, pack) => count + pack.rules.length, 0),
-    ).toBe(138);
+    ).toBe(778);
     expect(
       BUNDLED_KEYWORD_PACK_CATALOG.packs
         .find((pack) => pack.id === 'task_job_scam')
         ?.rules.some((rule) => rule.phrase === '刷单返利'),
     ).toBe(true);
+    expect(
+      BUNDLED_KEYWORD_PACK_CATALOG.packs.find((pack) => pack.id === 'adult_gray_traffic')?.rules,
+    ).toHaveLength(629);
+    expect(
+      BUNDLED_KEYWORD_PACK_CATALOG.packs
+        .find((pack) => pack.id === 'adult_gray_traffic')
+        ?.rules.find((rule) => rule.id === 'adult-terms-local-door'),
+    ).toMatchObject({
+      phrase: '同城 + 上门',
+      terms: ['同城', '上门'],
+      max_gap: 12,
+      name: { zh: '同城 + 上门', en: '同城 + 上门' },
+    });
+    expect(KEYWORD_PACK_SYNC_MAX_AGE_MS).toBe(15 * 60 * 1000);
   });
 
   it('拒绝重复规则 ID，避免远程包覆盖或混淆用户的逐条开关', () => {

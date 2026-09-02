@@ -21,7 +21,7 @@ export default defineBackground(() => {
 
   browser.runtime.onInstalled.addListener((details) => {
     console.info(`[FeedSieve] installed (${details.reason})`);
-    // 安装/更新后立即拉一次社区快照（跳过 6h 节流）
+    // 安装/更新后立即拉一次社区快照和关键词包。
     void sync(true);
     void syncKeywordPacks(true);
     // 升级后补传历史黑名单/白名单；同步状态会防止重复上传。
@@ -29,14 +29,14 @@ export default defineBackground(() => {
   });
 
   browser.runtime.onStartup.addListener(() => {
-    // 节流由 syncCommunitySnapshot 内部控制（6h）
+    // 社区名单与关键词包各自控制节流；关键词包当前每 15 分钟可检查一次 manifest。
     void sync(false);
     void syncKeywordPacks(false);
     // 补交上次网络失败时积压的社区贡献
     void flushContributions();
   });
 
-  // 内容脚本启动时请求一次同步（6h 节流）；popup 手动同步带 force，并回传结果
+  // 内容脚本启动/每 15 分钟/重新回到前台时请求关键词同步；popup 手动同步带 force。
   browser.runtime.onMessage.addListener((message: unknown) => {
     const msg = message as { type?: string; force?: boolean } | null;
     if (msg?.type === 'feedsieve:community-sync') {

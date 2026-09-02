@@ -76,6 +76,7 @@ import {
 import {
   BUNDLED_KEYWORD_PACK_CATALOG,
   getKeywordPackCatalog,
+  KEYWORD_PACK_SYNC_MAX_AGE_MS,
   subscribeKeywordPackCatalog,
   type KeywordPackCatalog,
 } from '../src/lib/keyword-packs';
@@ -172,12 +173,19 @@ export default defineContentScript({
       void refreshKeywordHeuristics().then(resetPageDecorations);
     });
     listenXhrBridge();
-    // 请 background SW 同步快照（SW 侧 6h 节流；发消息顺便唤醒 SW）
+    // 请 background SW 同步社区快照（社区名单仍按自己的节流策略更新）。
     void browser.runtime.sendMessage({ type: 'feedsieve:community-sync' }).catch(() => {
       // SW 暂不可达（开发热重载等）：下次页面加载再试
     });
-    void browser.runtime.sendMessage({ type: 'feedsieve:keyword-packs-sync' }).catch(() => {
-      // 词库远程同步失败时，继续用最后一次校验通过的版本或内置版本。
+    const requestKeywordPackSync = (): void => {
+      void browser.runtime.sendMessage({ type: 'feedsieve:keyword-packs-sync' }).catch(() => {
+        // 词库远程同步失败时，继续用最后一次校验通过的版本或内置版本。
+      });
+    };
+    requestKeywordPackSync();
+    window.setInterval(requestKeywordPackSync, KEYWORD_PACK_SYNC_MAX_AGE_MS);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') requestKeywordPackSync();
     });
     void pauseOrphanedPersistentQueue();
 
@@ -611,12 +619,7 @@ export default defineContentScript({
         const category =
           keywordCategoryFromCurrentCatalog(detection.ruleId) ??
           categoryFromDetection(detection.source, detection.ruleId, communityCategory);
-        markCell(
-          cell as HTMLElement,
-          detection,
-          category,
-          evidence,
-        );
+        markCell(cell as HTMLElement, detection, category, evidence);
       }
     }
 

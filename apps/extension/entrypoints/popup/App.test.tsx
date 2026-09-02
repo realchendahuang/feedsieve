@@ -21,6 +21,9 @@ beforeEach(() => {
       query: vi.fn().mockResolvedValue([{ id: 1 }]),
       sendMessage: vi.fn().mockResolvedValue({ blocked: [], failed: [] }),
     },
+    runtime: {
+      sendMessage: vi.fn().mockResolvedValue({ status: 'up_to_date' }),
+    },
   });
 });
 
@@ -108,6 +111,9 @@ describe('popup App 渲染冒烟', () => {
           .mockResolvedValue([
             { handle: 'spamking88', category: 'copy_paste', reason: '3 人标记为重复刷屏' },
           ]),
+      },
+      runtime: {
+        sendMessage: vi.fn().mockResolvedValue({ status: 'up_to_date' }),
       },
     });
 
