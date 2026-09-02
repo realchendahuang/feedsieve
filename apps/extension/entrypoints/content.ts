@@ -143,7 +143,7 @@ export default defineContentScript({
     let autoContribute = true;
     let strength: 'refresh' | 'standard' | 'deep_clean' = 'standard';
     let uiLanguage: UiLanguage = 'zh';
-    /** 用户词与官方可配置词库：只给人工确认黄框，绝不进入批量拉黑。 */
+    /** 用户词与官方可配置词库：只给人工确认黄框，必须由用户点击才会拉黑。 */
     let keywordHeuristics: ReturnType<typeof createKeywordHeuristics> = [];
     let keywordCatalog: KeywordPackCatalog = BUNDLED_KEYWORD_PACK_CATALOG;
     let runningFollowingSync: Promise<void> | null = null;
@@ -536,7 +536,7 @@ export default defineContentScript({
           detection = detect(input, {
             ...evidenceOptions,
             // 仅运行用户明确配置的字面短语和可逐条关闭的官方词库。
-            // 命中后只给人工确认黄框，永远不进入页面批量拉黑。
+            // 命中后给人工确认黄框；页面一键拉黑仍必须由用户显式点击。
             heuristics: keywordHeuristics,
           });
         }
@@ -616,7 +616,6 @@ export default defineContentScript({
           detection,
           category,
           evidence,
-          presentation === 'block-candidate',
         );
       }
     }
@@ -733,12 +732,12 @@ export default defineContentScript({
       detection: NonNullable<ReturnType<typeof detect>>,
       category: string,
       evidence: BlockEvidence,
-      batchEligible: boolean,
     ): void {
       cell.setAttribute(MARK_ATTRIBUTE, detection.source);
       attachBadge(cell, detection, category, evidence);
-      // 页面黄框集合：一键拉黑的数据源。已拉黑回显不在黑名单动作范围，跳过。
-      if (detection.source !== 'blocked' && batchEligible) {
+      // 页面上用户能看到的每一个黄框，都必须出现在 popup 的待处理清单里。
+      // 安全边界是「必须由用户点击一键拉黑」，而不是再暗藏一层不可见的置信门槛。
+      if (detection.source !== 'blocked') {
         pageMarked.set(detection.handle, {
           handle: detection.handle,
           category,

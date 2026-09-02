@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import worker from '../src/index';
 
 const ORIGIN = 'https://api.example.com';
-const VERSION = '2026.09.02.2';
+const VERSION = '2026.09.02.3';
 
 describe('keyword-pack R2 distribution', () => {
   it('serves a short-cached manifest and immutable versioned artifact from R2', async () => {

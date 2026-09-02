@@ -48,8 +48,8 @@ describe('popup App 渲染冒烟', () => {
 
     expect(rootEl.textContent).toContain('福滤娃');
     expect(rootEl.textContent).toContain('当前页面');
-    expect(rootEl.textContent).toContain('当前页面没有高置信待处理账号');
-    expect(rootEl.textContent).toContain('全部拉黑');
+    expect(rootEl.textContent).toContain('当前页面没有待处理账号');
+    expect(rootEl.textContent).toContain('一键拉黑全部');
     expect(rootEl.textContent).toContain('今日概览');
     expect(rootEl.textContent).toContain('清理');
     expect(rootEl.textContent).toContain('名单');
@@ -62,17 +62,26 @@ describe('popup App 渲染冒烟', () => {
     await act(async () => buttonWithText(rootEl, '设置').click());
     expect(rootEl.textContent).toContain('检测强度');
     expect(rootEl.textContent).toContain('关键词规则');
-    expect(rootEl.textContent).toContain('官方预置词库');
     expect(rootEl.textContent).toContain('黄推 / 成人引流');
-    expect(rootEl.textContent).toContain('未订阅');
-    expect(rootEl.textContent).toContain('订阅此词库');
+    expect(rootEl.textContent).not.toContain('官方预置词库');
+    expect(rootEl.textContent).not.toContain('未订阅');
+    expect(rootEl.textContent).not.toContain('福利隐语、成人内容和主页导流的完整话术');
     expect(rootEl.textContent).not.toContain('误标较多时');
     expect(rootEl.textContent).not.toContain('标注不隐藏内容');
     expect(rootEl.textContent).not.toContain('X 页面清理');
 
-    await act(async () => buttonWithText(rootEl, '订阅此词库').click());
-    expect(rootEl.textContent).toContain('退订此词库');
-    expect(rootEl.textContent).toContain('15/15');
+    const adultToggle = rootEl.querySelector(
+      'button[role="switch"][aria-label^="黄推 / 成人引流"]',
+    ) as HTMLButtonElement | null;
+    expect(adultToggle?.getAttribute('aria-checked')).toBe('true');
+    await act(async () => adultToggle?.click());
+    expect(adultToggle?.getAttribute('aria-checked')).toBe('false');
+
+    const adultTitle = [...rootEl.querySelectorAll<HTMLButtonElement>('.keyword-pack-title')].find(
+      (button) => button.textContent?.includes('黄推 / 成人引流'),
+    );
+    await act(async () => adultTitle?.click());
+    expect(rootEl.textContent).toContain('同城上门约炮');
 
     await act(async () => buttonWithText(rootEl, 'EN').click());
     expect(rootEl.textContent).toContain('FeedSieve');
@@ -107,6 +116,6 @@ describe('popup App 渲染冒烟', () => {
 
     expect(rootEl.textContent).toContain('@spamking88');
     expect(rootEl.textContent).toContain('3 人标记为重复刷屏');
-    expect(rootEl.textContent).toContain('全部拉黑 · 1');
+    expect(rootEl.textContent).toContain('一键拉黑全部 · 1');
   });
 });

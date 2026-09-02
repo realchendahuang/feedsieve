@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "pack_version": "2026.09.02.2",
+  "pack_version": "2026.09.02.3",
   "generated_at": null,
   "packs": [
     {
@@ -26,7 +26,19 @@
         ["adult-private-message-benefit", "私信发福利视频"],
         ["adult-benefit-collection-profile", "福利合集在主页"],
         ["adult-video-collection-profile", "视频合集在主页"],
-        ["adult-profile-get-benefits", "主页领取福利"]
+        ["adult-profile-get-benefits", "主页领取福利"],
+        ["adult-local-door-hookup", "同城上门约炮"],
+        ["adult-local-hookup", "同城约炮"],
+        ["adult-door-hookup", "上门约炮"],
+        ["adult-local-private-date", "同城私约"],
+        ["adult-local-available", "同城可约"],
+        ["adult-nearby-available", "附近可约"],
+        ["adult-real-person-door", "真人上门"],
+        ["adult-student-door", "学生妹上门"],
+        ["adult-young-woman-door", "少妇上门"],
+        ["adult-national-airdrop", "全国空降"],
+        ["adult-local-airdrop", "同城空降"],
+        ["adult-offline-private-date", "线下私约"]
       ]
     },
     {

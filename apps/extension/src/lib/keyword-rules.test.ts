@@ -10,6 +10,7 @@ import {
   setOfficialKeywordCategorySubscribed,
   setOfficialKeywordRuleEnabled,
 } from './keyword-rules';
+import { BUNDLED_KEYWORD_PACK_CATALOG } from './keyword-packs';
 
 let storage: Record<string, unknown>;
 
@@ -27,8 +28,7 @@ beforeEach(() => {
 });
 
 describe('本地关键词规则', () => {
-  it('用户订阅黄推引流词库后，目标成人引流样本会命中', async () => {
-    await setOfficialKeywordCategorySubscribed('adult_gray_traffic', true);
+  it('默认启用的黄推引流词库会命中目标成人引流样本', async () => {
     const settings = await getKeywordRuleSettings();
     const rule = createKeywordHeuristics(settings).find(
       (candidate) => candidate.id === 'keyword:official:adult-fu-not-black',
@@ -36,21 +36,45 @@ describe('本地关键词规则', () => {
     expect(rule?.check({ handle: 'bait', text: '应该没人比我玩的开了吧 🤚 😊 我福不黑不信你看' })).toContain(
       '我福不黑',
     );
-    expect(activeKeywordRules(settings)).toHaveLength(
-      OFFICIAL_KEYWORD_RULES.filter((rule) => rule.category === 'adult_gray_traffic').length,
-    );
+    expect(activeKeywordRules(settings)).toHaveLength(OFFICIAL_KEYWORD_RULES.length);
   });
 
-  it('官方词库默认不订阅，用户可只订阅自己要清理的行业', async () => {
+  it('首次安装默认订阅全部官方词库，用户仍可按行业关闭', async () => {
     let settings = await getKeywordRuleSettings();
-    expect(activeKeywordRules(settings)).toHaveLength(0);
-    expect(isOfficialKeywordCategorySubscribed(settings, 'adult_gray_traffic')).toBe(false);
+    expect(activeKeywordRules(settings)).toHaveLength(OFFICIAL_KEYWORD_RULES.length);
+    expect(isOfficialKeywordCategorySubscribed(settings, 'adult_gray_traffic')).toBe(true);
 
-    await setOfficialKeywordCategorySubscribed('crypto_scam', true);
+    await setOfficialKeywordCategorySubscribed('scam_phishing', false);
     settings = await getKeywordRuleSettings();
     expect(isOfficialKeywordCategorySubscribed(settings, 'crypto_scam')).toBe(true);
     expect(isOfficialKeywordCategorySubscribed(settings, 'scam_phishing')).toBe(false);
-    expect(activeKeywordRules(settings).every((rule) => rule.category === 'crypto_scam')).toBe(true);
+    expect(activeKeywordRules(settings).some((rule) => rule.category === 'scam_phishing')).toBe(
+      false,
+    );
+  });
+
+  it('旧版订阅状态升级时统一迁移为全部开启', async () => {
+    storage.keywordRulesV1 = {
+      subscribedCategoryIds: ['adult_gray_traffic'],
+      disabledOfficialRuleIds: [],
+      customRules: [],
+    };
+    const settings = await getKeywordRuleSettings();
+    expect(settings.subscribedCategoryIds).toHaveLength(
+      BUNDLED_KEYWORD_PACK_CATALOG.packs.length,
+    );
+  });
+
+  it('新版用户明确关闭全部词库后，空订阅不会被重新打开', async () => {
+    storage.keywordRulesV1 = {
+      subscriptionDefaultsVersion: 1,
+      subscribedCategoryIds: [],
+      disabledOfficialRuleIds: [],
+      customRules: [],
+    };
+    const settings = await getKeywordRuleSettings();
+    expect(settings.subscribedCategoryIds).toEqual([]);
+    expect(activeKeywordRules(settings)).toHaveLength(0);
   });
 
   it('用户移除官方短语后立刻不再生成该规则，但可恢复', async () => {
@@ -95,5 +119,15 @@ describe('本地关键词规则', () => {
     const rule = createKeywordHeuristics(settings).find((candidate) => candidate.id.startsWith('keyword:custom:'));
     expect(rule?.check({ handle: 'spam', text: '这是我的 专属 屏蔽词，请看简介' })).toContain('你设置的关键词');
     expect(rule?.check({ handle: 'normal', text: '这是普通讨论' })).toBeNull();
+  });
+
+  it('官方词同时匹配昵称和账号名，正文为空也能标记', async () => {
+    const settings = await getKeywordRuleSettings();
+    const rule = createKeywordHeuristics(settings).find(
+      (candidate) => candidate.id === 'keyword:official:adult-local-door-hookup',
+    );
+    expect(rule?.check({ handle: 'nearby_date', displayName: '同城上门约炮', text: '' })).toContain(
+      '同城上门约炮',
+    );
   });
 });

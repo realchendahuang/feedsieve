@@ -23,11 +23,11 @@ beforeEach(() => {
 
 describe('远程关键词包契约', () => {
   it('构建时词库包含可订阅行业包和大量完整短语', () => {
-    expect(BUNDLED_KEYWORD_PACK_CATALOG.pack_version).toBe('2026.09.02.2');
+    expect(BUNDLED_KEYWORD_PACK_CATALOG.pack_version).toBe('2026.09.02.3');
     expect(BUNDLED_KEYWORD_PACK_CATALOG.packs).toHaveLength(8);
     expect(
       BUNDLED_KEYWORD_PACK_CATALOG.packs.reduce((count, pack) => count + pack.rules.length, 0),
-    ).toBe(126);
+    ).toBe(138);
     expect(
       BUNDLED_KEYWORD_PACK_CATALOG.packs
         .find((pack) => pack.id === 'task_job_scam')

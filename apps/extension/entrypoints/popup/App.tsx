@@ -52,7 +52,6 @@ import {
   type UiLanguage,
 } from '../../src/lib/i18n';
 import {
-  activeKeywordRules,
   addCustomKeywordRule,
   getKeywordRuleSettings,
   isOfficialKeywordCategorySubscribed,
@@ -279,6 +278,7 @@ export default function App() {
   const [keywordCatalog, setKeywordCatalog] = useState<KeywordPackCatalog>(
     BUNDLED_KEYWORD_PACK_CATALOG,
   );
+  const [expandedKeywordCategory, setExpandedKeywordCategory] = useState<string | null>(null);
   const [customKeyword, setCustomKeyword] = useState('');
   const [following, setFollowing] = useState<FollowingAllowlistItem[] | null>(null);
   const [followingSync, setFollowingSync] = useState<FollowingSyncState>({
@@ -578,9 +578,6 @@ export default function App() {
   }
 
   const pageCount = pageMarked?.length ?? null;
-  const activeKeywordCount = keywordRules
-    ? activeKeywordRules(keywordRules, keywordCatalog).length
-    : null;
   const officialKeywordRules = keywordCatalog.packs.flatMap((pack) =>
     pack.rules.map((rule) => ({ ...rule, category: pack.id })),
   );
@@ -1065,7 +1062,6 @@ export default function App() {
                 <h2>{t.followingProtection}</h2>
                 <span className="community-meta is-ready">{following?.length ?? '…'}</span>
               </div>
-              <p className="card-hint">{t.followingProtected(following?.length ?? 0)}</p>
               {followingSyncStale ? (
                 <p className="inline-notice result-failure">{t.syncFollowingInterrupted}</p>
               ) : followingSyncActive ? (
@@ -1090,22 +1086,16 @@ export default function App() {
             <section className="settings-card keyword-rules-card">
               <div className="settings-card-head">
                 <h2>{t.keywordRules}</h2>
-                <div className="settings-head-actions">
-                  <span className="community-meta is-ready">
-                    v{keywordCatalog.pack_version} · {activeKeywordCount ?? '…'}
-                  </span>
-                  <button
-                    type="button"
-                    className="square-action small"
-                    aria-label={t.syncKeywordPacks}
-                    title={t.syncKeywordPacks}
-                    onClick={() => void syncKeywordPacks()}
-                  >
-                    <AppIcon name="refresh" size={18} />
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  className="square-action small"
+                  aria-label={t.syncKeywordPacks}
+                  title={`${t.syncKeywordPacks} · v${keywordCatalog.pack_version}`}
+                  onClick={() => void syncKeywordPacks()}
+                >
+                  <AppIcon name="refresh" size={18} />
+                </button>
               </div>
-              <p className="card-hint">{t.keywordRulesHint}</p>
 
               <form
                 className="keyword-add-form"
@@ -1128,10 +1118,6 @@ export default function App() {
 
               {keywordRules ? (
                 <div className="keyword-rules-body">
-                  <div className="keyword-section-head">
-                    <strong>{t.myKeywords}</strong>
-                    <span>{keywordRules.customRules.length}</span>
-                  </div>
                   {keywordRules.customRules.length > 0 ? (
                     <ul className="keyword-list custom-keyword-list">
                       {keywordRules.customRules.map((rule) => (
@@ -1149,20 +1135,7 @@ export default function App() {
                         </li>
                       ))}
                     </ul>
-                  ) : (
-                    <p className="keyword-empty">{t.noCustomKeywords}</p>
-                  )}
-
-                  <div className="keyword-section-head official-keyword-head">
-                    <strong>{t.officialKeywords}</strong>
-                    <span>
-                      {
-                        activeKeywordRules(keywordRules, keywordCatalog).filter(
-                          (rule) => rule.source === 'official',
-                        ).length
-                      }
-                    </span>
-                  </div>
+                  ) : null}
                   <div className="official-keyword-groups">
                     {keywordCatalog.packs.map((category) => {
                       const rules = officialKeywordRules.filter(
@@ -1177,60 +1150,63 @@ export default function App() {
                             (rule) => !keywordRules.disabledOfficialRuleIds.includes(rule.id),
                           ).length
                         : 0;
+                      const expanded = expandedKeywordCategory === category.id;
                       return (
-                        <details key={category.id}>
-                          <summary>
-                            <span>
-                              <strong>{category.name[language]}</strong>
-                              <small>{category.description[language]}</small>
-                            </span>
-                            <em>
-                              {subscribed
-                                ? `${enabledCount}/${rules.length}`
-                                : t.keywordPackNotSubscribed}
-                            </em>
-                          </summary>
-                          <div className="keyword-category-action">
+                        <div className="keyword-pack" key={category.id}>
+                          <div className="keyword-pack-row">
                             <button
                               type="button"
+                              className="keyword-pack-title"
+                              aria-expanded={expanded}
+                              title={category.description[language]}
+                              onClick={() =>
+                                setExpandedKeywordCategory(expanded ? null : category.id)
+                              }
+                            >
+                              <span aria-hidden="true">{expanded ? '−' : '+'}</span>
+                              <strong>{category.name[language]}</strong>
+                            </button>
+                            <button
+                              type="button"
+                              role="switch"
+                              className={`keyword-pack-toggle${subscribed ? ' is-on' : ''}`}
+                              aria-checked={subscribed}
+                              aria-label={`${category.name[language]} · ${
+                                subscribed ? t.unsubscribeKeywordPack : t.subscribeKeywordPack
+                              }`}
+                              title={`${enabledCount}/${rules.length}`}
                               onClick={() =>
                                 void toggleOfficialKeywordCategory(category.id, !subscribed)
                               }
                             >
-                              {subscribed ? t.unsubscribeKeywordPack : t.subscribeKeywordPack}
+                              <span />
                             </button>
                           </div>
-                          <ul className="keyword-list official-keyword-list">
-                            {rules.map((rule) => {
-                              const enabled =
-                                subscribed &&
-                                !keywordRules.disabledOfficialRuleIds.includes(rule.id);
-                              return (
-                                <li key={rule.id} className={enabled ? '' : 'is-disabled'}>
-                                  <label>
-                                    <input
-                                      type="checkbox"
-                                      checked={enabled}
-                                      disabled={!subscribed}
-                                      onChange={(event) =>
-                                        void toggleOfficialKeyword(rule.id, event.target.checked)
-                                      }
-                                    />
-                                    <span>{rule.name[language]}</span>
-                                  </label>
-                                  <button
-                                    type="button"
-                                    className="keyword-state-action"
-                                    disabled={!subscribed}
-                                    onClick={() => void toggleOfficialKeyword(rule.id, !enabled)}
-                                  >
-                                    {enabled ? t.removeKeyword : t.restoreKeyword}
-                                  </button>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        </details>
+                          {expanded ? (
+                            <ul className="keyword-list official-keyword-list">
+                              {rules.map((rule) => {
+                                const enabled =
+                                  subscribed &&
+                                  !keywordRules.disabledOfficialRuleIds.includes(rule.id);
+                                return (
+                                  <li key={rule.id} className={enabled ? '' : 'is-disabled'}>
+                                    <label>
+                                      <input
+                                        type="checkbox"
+                                        checked={enabled}
+                                        disabled={!subscribed}
+                                        onChange={(event) =>
+                                          void toggleOfficialKeyword(rule.id, event.target.checked)
+                                        }
+                                      />
+                                      <span>{rule.name[language]}</span>
+                                    </label>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          ) : null}
+                        </div>
                       );
                     })}
                   </div>

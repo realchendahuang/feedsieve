@@ -21,6 +21,7 @@ export interface CustomKeywordRule {
   createdAt: number;
 }
 export interface KeywordRuleSettings {
+  subscriptionDefaultsVersion: 1;
   subscribedCategoryIds: KeywordCategory[];
   disabledOfficialRuleIds: string[];
   customRules: CustomKeywordRule[];
@@ -36,6 +37,7 @@ const STORAGE_KEY = 'keywordRulesV1';
 const MAX_CUSTOM_RULES = 80;
 const MAX_PHRASE_LENGTH = 80;
 const CATEGORY_ID_RE = /^[a-z][a-z0-9_]{1,63}$/;
+const SUBSCRIPTION_DEFAULTS_VERSION = 1 as const;
 
 function flattenOfficialRules(catalog: KeywordPackCatalog): OfficialKeywordRule[] {
   return catalog.packs.flatMap((pack) =>
@@ -73,12 +75,18 @@ function normalizeSettings(value: unknown): KeywordRuleSettings {
         (id): id is string => typeof id === 'string' && /^[a-z][a-z0-9-]{2,95}$/.test(id),
       )
     : [];
-  const subscribedCategoryIds = Array.isArray(raw.subscribedCategoryIds)
-    ? raw.subscribedCategoryIds.filter(
-        (category): category is string =>
-          typeof category === 'string' && CATEGORY_ID_RE.test(category),
-      )
-    : [];
+  // v0.7.3 首次安装和旧版升级都统一启用全部官方词库。迁移标记写入后，才把
+  // 订阅数组视为用户在新版里做出的明确选择，之后关闭全部也不会被重新打开。
+  const hasCurrentSubscriptionDefaults =
+    raw.subscriptionDefaultsVersion === SUBSCRIPTION_DEFAULTS_VERSION;
+  const subscribedCategoryIds = hasCurrentSubscriptionDefaults
+    ? Array.isArray(raw.subscribedCategoryIds)
+      ? raw.subscribedCategoryIds.filter(
+          (category): category is string =>
+            typeof category === 'string' && CATEGORY_ID_RE.test(category),
+        )
+      : []
+    : BUNDLED_KEYWORD_PACK_CATALOG.packs.map((pack) => pack.id);
   const customRules = Array.isArray(raw.customRules)
     ? raw.customRules
         .flatMap((item): CustomKeywordRule[] => {
@@ -93,6 +101,7 @@ function normalizeSettings(value: unknown): KeywordRuleSettings {
         .slice(0, MAX_CUSTOM_RULES)
     : [];
   return {
+    subscriptionDefaultsVersion: SUBSCRIPTION_DEFAULTS_VERSION,
     subscribedCategoryIds: [...new Set(subscribedCategoryIds)],
     disabledOfficialRuleIds: [...new Set(disabledOfficialRuleIds)],
     customRules,
@@ -188,7 +197,11 @@ export function createKeywordHeuristics(
   return activeKeywordRules(settings, catalog).map((rule) => ({
     id: `keyword:${rule.id}`,
     check(input) {
-      const haystack = [input.text, input.bio].filter(Boolean).join('\n');
+      // 垃圾账号常把引流词直接放在昵称里，而正文只发图片或表情。
+      // handle 也参与匹配，方便用户自定义拦截固定账号前缀。
+      const haystack = [input.displayName, input.handle, input.text, input.bio]
+        .filter(Boolean)
+        .join('\n');
       if (!haystack || !textForMatch(haystack).includes(textForMatch(rule.phrase))) return null;
       return rule.source === 'custom'
         ? `你设置的关键词：“${rule.phrase}”`
