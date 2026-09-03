@@ -6,6 +6,7 @@ export const UI_COPY = {
   zh: {
     brand: '福滤娃',
     home: '清理',
+    overview: '概览',
     lists: '名单',
     primaryNavigation: '主要导航',
     language: '语言',
@@ -166,6 +167,7 @@ export const UI_COPY = {
   en: {
     brand: 'FeedSieve',
     home: 'Clean',
+    overview: 'Overview',
     lists: 'Lists',
     primaryNavigation: 'Primary navigation',
     language: 'Language',
@@ -328,7 +330,7 @@ export const UI_COPY = {
 } as const;
 
 export function defaultUiLanguage(): UiLanguage {
-  return navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en';
+  return 'zh';
 }
 
 export async function getUiLanguage(): Promise<UiLanguage> {

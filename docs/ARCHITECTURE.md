@@ -231,8 +231,7 @@ POST /v1/rescues
 POST /v1/labels/retract
 GET  /v1/snapshots/latest
 GET  /v1/blocklist/latest.yaml
-GET  /maintainer
-GET|POST|DELETE /admin/blocklist
+GET|POST|DELETE /api/admin/* (仅管理域 + Cloudflare Access)
 ```
 
 不负责替用户操作 X，也不需要用户 X OAuth。

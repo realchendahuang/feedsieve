@@ -79,7 +79,7 @@ net votes < 3   -> 自动退出社区来源
 final blocklist = community consensus ∪ active maintainer entries
 ```
 
-维护者通过受 `ADMIN_TOKEN` 保护的服务端 `/maintainer` 页面加入、更新或撤销账号。条目公开显示 `sources: [maintainer]` 和维护说明；如果同一账号也达到社区门槛，则显示两个来源。维护者操作不改变 `report_count`、`rescue_count` 或 `net_votes`，并写入审计表。
+维护者通过受 Cloudflare Access 保护的独立 React 管理后台加入、更新或撤销账号。条目公开显示 `sources: [maintainer]` 和维护说明；如果同一账号也达到社区门槛，则显示两个来源。维护者操作不改变 `report_count`、`rescue_count` 或 `net_votes`，草稿保存和显式发布均写入审计表。
 
 ---
 

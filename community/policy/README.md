@@ -15,7 +15,7 @@ community source is active when net_votes >= 3
 
 维护者条目是独立来源，不是加权社区票：
 
-- 只通过服务端 `ADMIN_TOKEN` 保护的管理接口修改；
+- 只通过受 Cloudflare Access 保护的管理后台修改；
 - 快照公开显示 `sources: [maintainer]` 和 `maintainer_note`；
 - 不改变社区票数；
 - 每次变更写审计表；

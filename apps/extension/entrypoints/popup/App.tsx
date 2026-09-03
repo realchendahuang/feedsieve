@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import {
   getBlockedAccounts,
   subscribeBlocked,
@@ -7,6 +8,7 @@ import {
 import { getDailyStats, subscribeDaily, type DailyStats } from '../../src/lib/daily-stats';
 import { buildReportText, shareUrl } from '../../src/lib/share-card';
 import { estimateTimeSaved } from '../../src/lib/time-saved';
+import { getStats, subscribeStats, type LocalStats } from '../../src/lib/local-stats';
 import {
   getContributionStats,
   getInstallationId,
@@ -107,13 +109,13 @@ interface PersonalConfigPreviewState {
   replace: PersonalConfigImportResult;
 }
 
-type PopupView = 'home' | 'lists' | 'settings';
+type PopupView = 'home' | 'overview' | 'settings';
 type ListView = 'blocked' | 'allowlist';
 type AppIconName = 'clean' | 'lists' | 'settings' | 'refresh' | 'shield';
 
 function initialPopupView(): PopupView {
   const value = new URLSearchParams(globalThis.location?.search ?? '').get('view');
-  return value === 'lists' || value === 'settings' ? value : 'home';
+  return value === 'overview' || value === 'settings' ? value : 'home';
 }
 
 function initialListView(): ListView {
@@ -175,6 +177,61 @@ function AppIcon({ name, size = 20 }: { name: AppIconName; size?: number }) {
     >
       {paths[name]}
     </svg>
+  );
+}
+
+function HelpIcon({ text }: { text: string }) {
+  const [tooltip, setTooltip] = useState<{
+    left: number;
+    top: number;
+    placement: 'top' | 'bottom';
+  } | null>(null);
+  const tooltipId = useId();
+
+  const showTooltip = (target: HTMLElement) => {
+    const rect = target.getBoundingClientRect();
+    const placement = rect.top > 84 ? 'top' : 'bottom';
+    const left = Math.min(Math.max(rect.left + rect.width / 2, 120), window.innerWidth - 120);
+    setTooltip({
+      left,
+      top: placement === 'top' ? rect.top - 8 : rect.bottom + 8,
+      placement,
+    });
+  };
+
+  return (
+    <>
+      <span
+        className="help-icon"
+        role="img"
+        tabIndex={0}
+        aria-label={text}
+        aria-describedby={tooltip ? tooltipId : undefined}
+        onMouseEnter={(event) => showTooltip(event.currentTarget)}
+        onMouseLeave={() => setTooltip(null)}
+        onFocus={(event) => showTooltip(event.currentTarget)}
+        onBlur={() => setTooltip(null)}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') setTooltip(null);
+        }}
+      >
+        !
+      </span>
+      {tooltip
+        ? createPortal(
+            <span
+              id={tooltipId}
+              role="tooltip"
+              className="help-tooltip"
+              data-placement={tooltip.placement}
+              style={{ left: tooltip.left, top: tooltip.top }}
+            >
+              {text}
+            </span>,
+            document.body,
+          )
+        : null}
+    </>
   );
 }
 
@@ -272,6 +329,7 @@ export default function App() {
   const [pageMarked, setPageMarked] = useState<PageMarkedItem[] | null>(null);
   const [blocked, setBlocked] = useState<BlockedAccount[] | null>(null);
   const [daily, setDaily] = useState<DailyStats>({ days: {} });
+  const [stats, setStats] = useState<LocalStats>({ detected: 0, blocked: 0, unblocked: 0 });
   const [contribution, setContribution] = useState<ContributionStats | null>(null);
   const [cardUrl, setCardUrl] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
@@ -294,6 +352,7 @@ export default function App() {
     BUNDLED_KEYWORD_PACK_CATALOG,
   );
   const [expandedKeywordCategory, setExpandedKeywordCategory] = useState<string | null>(null);
+  const [keywordRulesOpen, setKeywordRulesOpen] = useState(false);
   const [customKeyword, setCustomKeyword] = useState('');
   const personalConfigInputRef = useRef<HTMLInputElement>(null);
   const [personalConfigPreview, setPersonalConfigPreview] =
@@ -343,6 +402,7 @@ export default function App() {
     void getUiLanguage().then(setLanguage);
     void getBlockedAccounts().then(setBlocked);
     void getDailyStats().then(setDaily);
+    void getStats().then(setStats);
     void getContributionStats().then(setContribution);
     void getAllowlist().then(setAllowlist);
     void getCommunitySettings().then(setCommunity);
@@ -361,6 +421,7 @@ export default function App() {
     const unsubs = [
       subscribeBlocked(setBlocked),
       subscribeDaily(setDaily),
+      subscribeStats(setStats),
       subscribeAllowlist(setAllowlist),
       subscribeCommunity(() => {
         void getCommunitySettings().then(setCommunity);
@@ -379,6 +440,12 @@ export default function App() {
   useEffect(() => {
     document.documentElement.lang = language === 'zh' ? 'zh-CN' : 'en';
   }, [language]);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timeout = window.setTimeout(() => setNotice(null), 4_000);
+    return () => window.clearTimeout(timeout);
+  }, [notice]);
 
   async function sendToXPage(message: {
     type: string;
@@ -940,10 +1007,11 @@ export default function App() {
 
             <section className="community-clean-card" aria-labelledby="community-clean-title">
               <div className="section-heading compact">
-                <h2 id="community-clean-title">{t.communityClean}</h2>
+                <h2 id="community-clean-title">
+                  {t.communityClean} <HelpIcon text={t.communityCleanHint} />
+                </h2>
                 <span className="count-badge">{cloudEligible.length}</span>
               </div>
-              <p className="card-hint">{t.communityCleanHint}</p>
               <div className="community-clean-metrics">
                 <span>
                   {t.cloudEligible} <strong>{cloudEligible.length}</strong>
@@ -1111,8 +1179,27 @@ export default function App() {
           </div>
         ) : null}
 
-        {view === 'lists' ? (
+        {view === 'overview' ? (
           <div className="view-stack lists-view">
+            <section className="summary-card overview-total">
+              <div className="section-heading compact">
+                <h2>{t.overview}</h2>
+              </div>
+              <div className="metric-grid" aria-label={t.overview}>
+                <div>
+                  <strong>{stats.detected}</strong>
+                  <span>{t.marked}</span>
+                </div>
+                <div>
+                  <strong>{stats.blocked}</strong>
+                  <span>{t.blocked}</span>
+                </div>
+                <div>
+                  <strong>{stats.unblocked}</strong>
+                  <span>{t.restored}</span>
+                </div>
+              </div>
+            </section>
             <div className="list-tabs" role="tablist" aria-label={t.lists}>
               <button
                 id="blocked-list-tab"
@@ -1286,19 +1373,30 @@ export default function App() {
 
             <section className="settings-card keyword-rules-card">
               <div className="settings-card-head">
-                <h2>{t.keywordRules}</h2>
-                <button
-                  type="button"
-                  className="square-action small"
-                  aria-label={t.syncKeywordPacks}
-                  title={`${t.syncKeywordPacks} · v${keywordCatalog.pack_version}`}
-                  onClick={() => void syncKeywordPacks()}
-                >
-                  <AppIcon name="refresh" size={18} />
-                </button>
+                <h2>
+                  {t.keywordRules} <HelpIcon text={t.keywordRulesHint} />
+                </h2>
+                <div className="settings-head-actions">
+                  <button
+                    type="button"
+                    className="text-action"
+                    aria-expanded={keywordRulesOpen}
+                    onClick={() => setKeywordRulesOpen((open) => !open)}
+                  >
+                    {keywordRulesOpen ? t.hideDetails : t.showDetails}
+                  </button>
+                  <button
+                    type="button"
+                    className="square-action small"
+                    aria-label={t.syncKeywordPacks}
+                    onClick={() => void syncKeywordPacks()}
+                  >
+                    <AppIcon name="refresh" size={18} />
+                  </button>
+                </div>
               </div>
 
-              <form
+              {keywordRulesOpen ? <><form
                 className="keyword-add-form"
                 onSubmit={(event) => {
                   event.preventDefault();
@@ -1359,13 +1457,13 @@ export default function App() {
                               type="button"
                               className="keyword-pack-title"
                               aria-expanded={expanded}
-                              title={category.description[language]}
                               onClick={() =>
                                 setExpandedKeywordCategory(expanded ? null : category.id)
                               }
                             >
                               <span aria-hidden="true">{expanded ? '−' : '+'}</span>
                               <strong>{category.name[language]}</strong>
+                              <HelpIcon text={category.description[language]} />
                             </button>
                             <button
                               type="button"
@@ -1412,14 +1510,15 @@ export default function App() {
                     })}
                   </div>
                 </div>
-              ) : null}
+              ) : null}</> : null}
             </section>
 
             <section className="settings-card personal-config-card">
               <div className="settings-card-head">
-                <h2>{t.personalConfig}</h2>
+                <h2>
+                  {t.personalConfig} <HelpIcon text={t.personalConfigHint} />
+                </h2>
               </div>
-              <p className="card-hint">{t.personalConfigHint}</p>
               <div className="personal-config-actions">
                 <button
                   type="button"
@@ -1638,10 +1737,10 @@ export default function App() {
                           key={strength}
                           type="button"
                           className={community.strength === strength ? 'is-selected' : ''}
-                          title={STRENGTH_HINTS[language][strength]}
                           onClick={() => void setCommunitySettings({ strength })}
                         >
                           <span>{STRENGTH_LABELS[language][strength]}</span>
+                          <HelpIcon text={STRENGTH_HINTS[language][strength]} />
                         </button>
                       ))}
                     </div>
@@ -1672,11 +1771,11 @@ export default function App() {
                     <button
                       type="button"
                       className="text-action"
-                      title={t.copyInstallationIdHint}
                       onClick={() => void copyInstallationId()}
                     >
                       {t.copyInstallationId}
                     </button>
+                    <HelpIcon text={t.copyInstallationIdHint} />
                   </div>
                 </div>
               ) : (
@@ -1738,14 +1837,14 @@ export default function App() {
         </button>
         <button
           type="button"
-          className={view === 'lists' ? 'is-active' : ''}
-          aria-current={view === 'lists' ? 'page' : undefined}
-          onClick={() => setView('lists')}
+          className={view === 'overview' ? 'is-active' : ''}
+          aria-current={view === 'overview' ? 'page' : undefined}
+          onClick={() => setView('overview')}
         >
           <span className="nav-icon-wrap">
             <AppIcon name="lists" />
           </span>
-          <span>{t.lists}</span>
+          <span>{t.overview}</span>
         </button>
         <button
           type="button"

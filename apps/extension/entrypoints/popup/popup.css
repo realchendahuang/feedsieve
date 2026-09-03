@@ -281,11 +281,53 @@ input:focus-visible + span {
   font-size: 13px;
 }
 
-.card-hint {
-  margin: 7px 0 0;
+.help-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin-left: 4px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
   color: var(--fs-muted);
-  font-size: 10px;
-  line-height: 1.45;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  vertical-align: 1px;
+  cursor: help;
+}
+
+.help-tooltip {
+  position: fixed;
+  z-index: 1000;
+  width: max-content;
+  max-width: min(220px, calc(100vw - 24px));
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #292720;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 20%);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  pointer-events: none;
+  text-align: left;
+  white-space: normal;
+}
+
+.help-tooltip[data-placement='top'] {
+  transform: translate(-50%, -100%);
+}
+
+.help-tooltip[data-placement='bottom'] {
+  transform: translateX(-50%);
+}
+
+.help-icon:focus-visible {
+  outline: 2px solid var(--fs-accent);
+  outline-offset: 2px;
 }
 
 .community-clean-metrics {

@@ -1,6 +1,6 @@
 {
   "name": "@feedsieve/community-api",
-  "version": "0.7.4",
+  "version": "0.7.5",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,7 +10,8 @@
     "deploy": "wrangler deploy --config wrangler.local.jsonc"
   },
   "dependencies": {
-    "hono": "^4.13.5"
+    "hono": "^4.13.5",
+    "jose": "^6.1.3"
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "^1.1.0",

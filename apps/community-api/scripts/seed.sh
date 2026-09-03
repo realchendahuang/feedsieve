@@ -11,7 +11,7 @@ API="${FEEDSIEVE_API:-http://127.0.0.1:8787}"
 case "$API" in
   http://127.0.0.1:*|http://localhost:*) ;;
   *)
-    echo "error: seed.sh 只用于本地三票调试；线上条目请使用 /maintainer 管理页" >&2
+    echo "error: seed.sh 只用于本地三票调试；线上条目请使用受 Cloudflare Access 保护的管理后台" >&2
     exit 1
     ;;
 esac

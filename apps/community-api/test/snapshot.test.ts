@@ -1,10 +1,9 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 import worker from '../src/index';
-import { PUBLIC_BLOCKLIST_PACK, SNAPSHOT_PACK } from '../src/snapshot';
+import { generateSnapshot, PUBLIC_BLOCKLIST_PACK, SNAPSHOT_PACK } from '../src/snapshot';
 
 const ORIGIN = 'https://api.example.com';
-const ADMIN = env.ADMIN_TOKEN;
 
 async function report(installationId: string, handle: string, extra: Record<string, unknown> = {}) {
   const res = await worker.fetch(
@@ -19,16 +18,6 @@ async function report(installationId: string, handle: string, extra: Record<stri
     env,
   );
   expect(res.status).toBe(200);
-}
-
-async function publish(token?: string) {
-  return worker.fetch(
-    new Request(`${ORIGIN}/admin/publish`, {
-      method: 'POST',
-      headers: token ? { authorization: `Bearer ${token}` } : {},
-    }),
-    env,
-  );
 }
 
 interface Manifest {
@@ -46,17 +35,23 @@ async function sha256HexOf(input: string): Promise<string> {
 }
 
 describe('snapshot pipeline', () => {
-  it('admin auth: publish requires bearer token', async () => {
-    expect((await publish()).status).toBe(401);
-    expect((await publish('wrong-token')).status).toBe(401);
+  it('retires the raw bearer-token publish endpoint', async () => {
+    const response = await worker.fetch(
+      new Request(`${ORIGIN}/admin/publish`, {
+        method: 'POST',
+        headers: { authorization: 'Bearer no-longer-accepted' },
+      }),
+      env,
+    );
+    expect(response.status).toBe(410);
+    expect(await response.json()).toEqual({ error: 'admin_moved_to_access' });
   });
 
   it('empty publish -> manifest with zero entries; new-status accounts excluded', async () => {
     await report('ssssssss-1000-4000-8000-ssssssssssss', 'only_new_user');
 
-    const res = await publish(ADMIN);
-    expect(res.status).toBe(200);
-    const { snapshot_version, files } = (await res.json()) as Manifest;
+    const result = await generateSnapshot(env);
+    const { snapshot_version, files } = result.manifest as unknown as Manifest;
     expect(snapshot_version).toMatch(/^\d{4}\.\d{2}\.\d{2}\.\d{1,4}$/);
     expect(files[0].entries).toBe(0);
 
@@ -77,7 +72,7 @@ describe('snapshot pipeline', () => {
       evidence_post_id: '18000000000000000',
     });
 
-    await publish(ADMIN);
+    await generateSnapshot(env);
     const fileRes = await worker.fetch(
       new Request(
         `${ORIGIN}/v1/snapshots/${
@@ -140,8 +135,8 @@ describe('snapshot pipeline', () => {
   });
 
   it('republishing unchanged content reuses the same version (no churn)', async () => {
-    const first = (await (await publish(ADMIN)).json()) as Manifest;
-    const second = (await (await publish(ADMIN)).json()) as Manifest;
+    const first = (await generateSnapshot(env)).manifest as unknown as Manifest;
+    const second = (await generateSnapshot(env)).manifest as unknown as Manifest;
     // v0.5 零人工：内容没变化就不产生新版本（cron 每小时跑，不刷版本号）
     expect(second.snapshot_version).toBe(first.snapshot_version);
   });

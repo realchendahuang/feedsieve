@@ -8,4 +8,5 @@ dist/
 !.env.example
 .DS_Store
 coverage/
+*.tsbuildinfo
 *.log

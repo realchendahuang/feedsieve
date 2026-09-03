@@ -686,8 +686,7 @@ POST /v1/rescues
 POST /v1/labels/retract
 GET  /v1/snapshots/latest
 GET  /v1/blocklist/latest.yaml
-GET  /maintainer
-GET|POST|DELETE /admin/blocklist
+GET|POST|DELETE /api/admin/* (仅管理域 + Cloudflare Access)
 ```
 
 ### 9.2 Report

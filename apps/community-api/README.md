@@ -39,14 +39,33 @@ wrangler r2 bucket create feedsieve-keyword-packs
 cp wrangler.local.example.jsonc wrangler.local.jsonc
 #   编辑 wrangler.local.jsonc：填 account_id、database_id、你的域名
 wrangler d1 migrations apply feedsieve-community --remote --config wrangler.local.jsonc
-echo "your-admin-token" | wrangler secret put ADMIN_TOKEN --config wrangler.local.jsonc
-echo "your-salt"        | wrangler secret put INSTALLATION_SALT --config wrangler.local.jsonc
+echo "your-salt" | wrangler secret put INSTALLATION_SALT --config wrangler.local.jsonc
+pnpm --filter @feedsieve/admin build
 pnpm deploy                                   # = wrangler deploy --config wrangler.local.jsonc
 pnpm keyword-packs:publish                    # 发布仓库中已审阅的词库版本到 R2
 curl https://你的域名/healthz
 ```
 
 注意：中国大陆访问 `*.workers.dev` 不可靠，务必绑定自定义域。
+
+## 维护后台
+
+管理端位于 `apps/admin/`，使用 React、TanStack Router 和 TanStack Query 构建；生产静态资源由同一个 Worker 的 `ASSETS` 绑定提供。它不是令牌输入页、拼接 HTML 或手改 JSON 的替代品。
+
+为自己的实例配置一个独立的管理子域（例如 `admin.example.com`），把它写入 `ADMIN_HOST`，并在 Cloudflare Zero Trust 中创建一个 **Self-hosted** Access 应用：
+
+1. 目标设为该管理子域，并只关联维护者允许策略。
+2. 在该应用的“其他设置”复制 **Application Audience (AUD) tag**。
+3. 写入 Worker 密钥后重新部署：
+
+```sh
+echo "AUD_TAG" | wrangler secret put ACCESS_AUD --config wrangler.local.jsonc
+echo "https://TEAM.cloudflareaccess.com/cdn-cgi/access/certs" | wrangler secret put ACCESS_JWKS_URL --config wrangler.local.jsonc
+echo "owner@example.com" | wrangler secret put ACCESS_ALLOWED_EMAILS --config wrangler.local.jsonc
+pnpm deploy
+```
+
+维护者通过 Cloudflare Access 邮箱一次性验证码进入后台；Worker 会同时校验 `Cf-Access-Jwt-Assertion` 的签名、Audience 和允许邮箱。后台提供账号草稿与显式发布、词库分类和规则管理、去标识化反馈、发布归档与回退。普通 API 域名不会提供这些端点。
 
 ## 端点
 
@@ -62,13 +81,12 @@ curl https://你的域名/healthz
 | `GET /v1/blocklist/latest.json`        | ✅   | 当前最终黑名单（机器 JSON）                    |
 | `GET /v1/keyword-packs/latest`         | ✅   | R2 词库 manifest（版本 + SHA-256，短缓存）     |
 | `GET /v1/keyword-packs/:version/:file` | ✅   | R2 版本化词库文件（immutable 缓存）            |
-| `GET /maintainer`                      | ✅   | 维护者黑名单管理页面（页面公开，操作需 token） |
-| `POST /admin/publish`                  | ✅   | 生成并发布新快照版本                           |
-| `GET /admin/blocklist`                 | ✅   | 维护者条目（含已撤销）                         |
-| `POST /admin/blocklist`                | ✅   | 加入或更新维护者条目并立即发布                 |
-| `DELETE /admin/blocklist/:handle`      | ✅   | 撤销维护者来源并立即发布                       |
-| `GET /admin/community-votes`           | ✅   | 社区聚合票数诊断视图（只读）                   |
-| `GET /admin/false-positives`           | ✅   | 误标规则汇总 + 最近反馈（不返回安装标识）      |
+| `GET /api/admin/dashboard`             | ✅   | 后台概览（仅管理域 + Cloudflare Access）       |
+| `GET/POST /api/admin/accounts`         | ✅   | 账号草稿管理（仅管理域 + Cloudflare Access）   |
+| `POST /api/admin/accounts/publish`     | ✅   | 显式发布账号草稿                               |
+| `GET/POST /api/admin/keywords/*`       | ✅   | 词库分类、规则、发布与回退                     |
+| `GET /api/admin/feedback`              | ✅   | 去标识化的误标反馈                             |
+| `GET/POST /api/admin/releases/*`       | ✅   | 发布记录与回退                                 |
 
 社区只有一个公式：`report_count - rescue_count >= 3` 时进入最终名单，低于 3 时退出。
 维护者条目存放在独立的 `maintainer_blocklist` 表，不参与社区计票。最终快照取两者并集，
@@ -78,24 +96,9 @@ curl https://你的域名/healthz
 后一次“拉黑 / 白名单”会覆盖前一次，避免同一用户同时贡献正负票。`reports` 与
 `rescues` 仍保留规则和内容证据，供误标审计使用；名单删除只撤票，不抹审计记录。
 
-## 维护者页面与 CLI
-
-打开 `https://你的域名/maintainer`，输入部署时设置的 `ADMIN_TOKEN`。令牌只保存在当前
-标签页的 `sessionStorage`；仓库、扩展和页面源码都不包含它。加入、更新、撤销操作会写入
-`maintainer_blocklist_audit`，并在请求完成前生成新快照。
-
-```sh
-apps/community-api/scripts/admin.sh community-votes     # 社区票数诊断
-apps/community-api/scripts/admin.sh blocklist           # 维护者条目
-apps/community-api/scripts/admin.sh false-positives     # 误标审计
-apps/community-api/scripts/admin.sh publish             # 发布新快照
-```
-
-令牌读 `FEEDSIEVE_ADMIN_TOKEN` 或 `~/.feedsieve-secrets.txt`；`FEEDSIEVE_API` 可指向自部署实例。
-
 需要本地验证“三个不同安装投票后入榜”时，启动 `pnpm dev` 后把账号喂给
 `apps/community-api/scripts/seed.sh`。该脚本只接受 `localhost` / `127.0.0.1`，线上维护请用
-维护者页面，禁止用种子脚本制造虚假共识。
+受 Cloudflare Access 保护的管理后台，禁止用种子脚本制造虚假共识。
 
 ## 公开词库发布
 

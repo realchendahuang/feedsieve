@@ -108,6 +108,32 @@ async function chooseFile(input: HTMLInputElement, file: File): Promise<void> {
 }
 
 describe('popup App 渲染冒烟', () => {
+  it('automatically clears transient notices', async () => {
+    vi.useFakeTimers();
+    try {
+      const rootEl = renderApp();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(150);
+      });
+
+      await act(async () => buttonWithText(rootEl, '设置').click());
+      const syncButton = rootEl.querySelector<HTMLButtonElement>('button[aria-label="同步词库"]');
+      if (!syncButton) throw new Error('keyword-pack sync button not found');
+      await act(async () => {
+        syncButton.click();
+        await Promise.resolve();
+      });
+
+      expect(rootEl.textContent).toContain('词库已同步');
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(4_000);
+      });
+      expect(rootEl.textContent).not.toContain('词库已同步');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('renders header and empty page-marked hint without throwing', async () => {
     const rootEl = renderApp();
     // 等 storage/tabs 异步 resolve 完成（加载态「…」过渡到空态提示）；
@@ -123,16 +149,18 @@ describe('popup App 渲染冒烟', () => {
     expect(rootEl.textContent).toContain('一键开始清理 6 个');
     expect(rootEl.textContent).toContain('今日概览');
     expect(rootEl.textContent).toContain('清理');
-    expect(rootEl.textContent).toContain('名单');
+    expect(rootEl.textContent).toContain('概览');
     expect(rootEl.textContent).toContain('设置');
 
-    await act(async () => buttonWithText(rootEl, '名单').click());
+    await act(async () => buttonWithText(rootEl, '概览').click());
     expect(rootEl.textContent).toContain('拉黑记录');
     expect(rootEl.textContent).toContain('误标白名单');
 
     await act(async () => buttonWithText(rootEl, '设置').click());
     expect(rootEl.textContent).toContain('检测强度');
     expect(rootEl.textContent).toContain('关键词规则');
+    expect(rootEl.textContent).not.toContain('黄推 / 成人引流');
+    await act(async () => buttonWithText(rootEl, '详情').click());
     expect(rootEl.textContent).toContain('黄推 / 成人引流');
     expect(rootEl.textContent).not.toContain('官方预置词库');
     expect(rootEl.textContent).not.toContain('未订阅');
@@ -157,6 +185,26 @@ describe('popup App 渲染冒烟', () => {
     await act(async () => buttonWithText(rootEl, 'EN').click());
     expect(rootEl.textContent).toContain('FeedSieve');
     expect(rootEl.textContent).toContain('Detection level');
+  });
+
+  it('renders a real hover help overlay instead of relying on a native title', async () => {
+    const rootEl = renderApp();
+    await new Promise((r) => setTimeout(r, 150));
+
+    const helpIcon = rootEl.querySelector<HTMLElement>(
+      '[aria-label="显示服务器发布的最终名单；拉黑仍由你一键确认，并自动保护关注、白名单和已拉黑账号。"]',
+    );
+    if (!helpIcon) throw new Error('community help icon not found');
+
+    await act(async () => {
+      helpIcon.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    });
+    expect(document.body.querySelector('[role="tooltip"]')?.textContent).toContain('服务器发布的最终名单');
+
+    await act(async () => {
+      helpIcon.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
+    });
+    expect(document.body.querySelector('[role="tooltip"]')).toBeNull();
   });
 
   it('renders page-marked accounts after querying the active x.com tab', async () => {

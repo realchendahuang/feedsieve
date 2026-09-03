@@ -6,8 +6,20 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-08-01",
   "observability": { "enabled": true },
+  "assets": {
+    "directory": "../admin/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": true
+  },
   "account_id": "YOUR_CLOUDFLARE_ACCOUNT_ID",
-  "routes": [{ "pattern": "your-api.example.com", "custom_domain": true }],
+  "routes": [
+    { "pattern": "your-api.example.com", "custom_domain": true },
+    { "pattern": "admin.your-api.example.com", "custom_domain": true }
+  ],
+  "vars": {
+    "ADMIN_HOST": "admin.your-api.example.com"
+  },
   "d1_databases": [
     {
       "binding": "DB",

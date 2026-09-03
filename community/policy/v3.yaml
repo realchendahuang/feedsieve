@@ -13,7 +13,7 @@ community_blocklist:
 
 maintainer_source:
   description: >-
-    维护者可通过受 ADMIN_TOKEN 保护的服务端页面加入或撤销条目。维护者条目是
+    维护者仅可通过受 Cloudflare Access 保护的 React 管理后台维护条目。维护者条目是
     独立且公开标注的来源，不计入社区票数，也不伪装成社区共识。
   weighted_vote: false
   public_source_label: maintainer

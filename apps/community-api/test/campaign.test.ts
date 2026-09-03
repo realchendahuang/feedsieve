@@ -1,9 +1,9 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 import worker from '../src/index';
+import { generateSnapshot } from '../src/snapshot';
 
 const ORIGIN = 'https://api.example.com';
-const ADMIN = env.ADMIN_TOKEN;
 
 /** 同一话术模板的两个变体（换词后汉明距离 <= 2，v0.5 SimHash） */
 const FP_A = 'aaaaaaaaaaaaaaaa'; // 变体 A（0xa = 1010）
@@ -51,14 +51,7 @@ interface Entry {
 }
 
 async function publishAndGetEntry(handle: string): Promise<Entry | undefined> {
-  const publish = await worker.fetch(
-    new Request(`${ORIGIN}/admin/publish`, {
-      method: 'POST',
-      headers: { authorization: `Bearer ${ADMIN}` },
-    }),
-    env,
-  );
-  expect(publish.status).toBe(200);
+  await generateSnapshot(env);
   const latest = (await (
     await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), env)
   ).json()) as { snapshot_version: string; files: { path: string }[] };

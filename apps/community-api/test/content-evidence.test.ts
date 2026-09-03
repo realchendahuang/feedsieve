@@ -1,10 +1,9 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 import worker from '../src/index';
-import { SNAPSHOT_PACK } from '../src/snapshot';
+import { generateSnapshot, SNAPSHOT_PACK } from '../src/snapshot';
 
 const ORIGIN = 'https://api.example.com';
-const ADMIN = env.ADMIN_TOKEN;
 
 const FP_A = 'aaaaaaaaaaaaaaaa';
 const FP_C = 'cccccccccccccccc';
@@ -49,14 +48,7 @@ interface Entry {
 }
 
 async function publishAndGetEntry(handle: string): Promise<Entry | undefined> {
-  const publish = await worker.fetch(
-    new Request(`${ORIGIN}/admin/publish`, {
-      method: 'POST',
-      headers: { authorization: `Bearer ${ADMIN}` },
-    }),
-    env,
-  );
-  expect(publish.status).toBe(200);
+  await generateSnapshot(env);
   const latest = (await (
     await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), env)
   ).json()) as { snapshot_version: string };

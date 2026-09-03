@@ -1,15 +1,26 @@
 import { cors } from 'hono/cors';
 import { Hono } from 'hono';
-import { checkBearerToken } from './lib/auth';
-import { hashInstallationId } from './lib/hash';
-import { processRetractionBatch } from './labels';
 import {
-  deactivateMaintainerEntry,
-  listMaintainerEntries,
-  MAINTAINER_CATEGORIES,
-  upsertMaintainerEntry,
-} from './maintainer-blocklist';
-import { maintainerPageHtml } from './maintainer-page';
+  deactivateAdminAccountDraft,
+  listAdminAccountDrafts,
+  listAdminReleases,
+  publishAdminAccountDrafts,
+  recordAdminAudit,
+  rollbackAdminAccountRelease,
+  saveAdminAccountDraft,
+} from './admin-accounts';
+import { verifyAccess } from './lib/access';
+import { hashInstallationId } from './lib/hash';
+import {
+  disableAdminKeyword,
+  listAdminKeywords,
+  publishAdminKeywords,
+  rollbackAdminKeywordRelease,
+  saveAdminKeywordPack,
+  saveAdminKeywordRule,
+} from './keyword-admin';
+import { MAINTAINER_CATEGORIES } from './maintainer-blocklist';
+import { processRetractionBatch } from './labels';
 import { POLICY, processReportBatch, publicPolicy } from './reports';
 import { processRescueBatch } from './rescues';
 import {
@@ -21,8 +32,19 @@ import {
   SNAPSHOT_PACK,
 } from './snapshot';
 
+function isAdminHost(request: Request, env: Cloudflare.Env): boolean {
+  const configured = env.ADMIN_HOST?.trim().toLowerCase();
+  return Boolean(configured) && new URL(request.url).hostname.toLowerCase() === configured;
+}
+
+function staticAssetRequest(request: Request): Request {
+  // assets.not_found_handling = single-page-application resolves TanStack routes
+  // to the shell while keeping the incoming URL intact.
+  return request;
+}
+
 export function createApp() {
-  const app = new Hono<{ Bindings: Cloudflare.Env }>();
+  const app = new Hono<{ Bindings: Cloudflare.Env; Variables: { maintainerEmail: string } }>();
 
   // 扩展 content script 会跨域 POST，必须放行预检
   app.use('*', cors());
@@ -53,17 +75,129 @@ export function createApp() {
     });
   });
 
-  // 管理页面代码可以公开；权限只由服务端 ADMIN_TOKEN 决定，令牌不进仓库、不进扩展。
-  app.get('/maintainer', (c) => {
-    c.header('Cache-Control', 'no-store');
-    c.header(
-      'Content-Security-Policy',
-      "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; img-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
-    );
-    c.header('Referrer-Policy', 'no-referrer');
-    c.header('X-Content-Type-Options', 'nosniff');
-    return c.html(maintainerPageHtml());
+  // React 管理端使用 Cloudflare Access 身份；此路由永远不接受旧的 Bearer 凭据。
+  app.use('/api/admin/*', async (c, next) => {
+    if (!isAdminHost(c.req.raw, c.env)) return c.json({ error: 'not_found' }, 404);
+    const identity = await verifyAccess(c.req.raw, c.env);
+    if (!identity) return c.json({ error: 'access_required' }, 401);
+    c.set('maintainerEmail', identity.email);
+    await next();
   });
+
+  app.get('/api/admin/me', (c) => c.json({ email: c.get('maintainerEmail') }));
+
+  app.get('/api/admin/dashboard', async (c) => {
+    const [drafts, votes, feedback, snapshot] = await Promise.all([
+      listAdminAccountDrafts(c.env),
+      c.env.DB.prepare('SELECT COUNT(*) AS n FROM accounts').first<{ n: number }>(),
+      c.env.DB.prepare('SELECT COUNT(*) AS n FROM rescues').first<{ n: number }>(),
+      getLatestSnapshot(c.env),
+    ]);
+    return c.json({
+      maintainer_entries: drafts.filter((entry) => entry.active).length,
+      community_accounts: votes?.n ?? 0,
+      false_positive_feedback: feedback?.n ?? 0,
+      snapshot_version: snapshot ? JSON.parse(snapshot.manifest).snapshot_version ?? null : null,
+    });
+  });
+
+  app.get('/api/admin/accounts', async (c) =>
+    c.json({ entries: await listAdminAccountDrafts(c.env), categories: MAINTAINER_CATEGORIES }),
+  );
+  app.post('/api/admin/accounts', async (c) => {
+    const result = await saveAdminAccountDraft(c.env, await c.req.json().catch(() => undefined));
+    if (!result.ok) return c.json({ error: result.error }, 400);
+    await recordAdminAudit(c.env, c.get('maintainerEmail'), `${result.action}_draft`, 'account', result.entry.handle);
+    return c.json({ action: result.action, entry: result.entry }, 201);
+  });
+  app.delete('/api/admin/accounts/:handle', async (c) => {
+    const result = await deactivateAdminAccountDraft(c.env, c.req.param('handle'));
+    if (!result.ok) return c.json({ error: result.error }, 400);
+    if (result.changed) {
+      await recordAdminAudit(c.env, c.get('maintainerEmail'), 'remove_draft', 'account', c.req.param('handle'));
+    }
+    return c.json({ changed: result.changed });
+  });
+  app.post('/api/admin/accounts/publish', async (c) => {
+    try {
+      return c.json(await publishAdminAccountDrafts(c.env, c.get('maintainerEmail')));
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : 'publish_failed' }, 400);
+    }
+  });
+
+  app.get('/api/admin/keywords', async (c) => c.json(await listAdminKeywords(c.env)));
+  app.post('/api/admin/keywords/packs', async (c) => {
+    const item = await saveAdminKeywordPack(c.env, await c.req.json().catch(() => undefined), c.get('maintainerEmail'));
+    return item ? c.json(item, 201) : c.json({ error: 'invalid_pack' }, 400);
+  });
+  app.post('/api/admin/keywords/rules', async (c) => {
+    const item = await saveAdminKeywordRule(c.env, await c.req.json().catch(() => undefined), c.get('maintainerEmail'));
+    return item ? c.json(item, 201) : c.json({ error: 'invalid_rule' }, 400);
+  });
+  app.delete('/api/admin/keywords/packs/:id', async (c) =>
+    c.json({
+      changed: await disableAdminKeyword(c.env, 'admin_keyword_packs', c.req.param('id'), c.get('maintainerEmail')),
+    }),
+  );
+  app.delete('/api/admin/keywords/rules/:id', async (c) =>
+    c.json({
+      changed: await disableAdminKeyword(c.env, 'admin_keyword_rules', c.req.param('id'), c.get('maintainerEmail')),
+    }),
+  );
+  app.post('/api/admin/keywords/publish', async (c) => {
+    try {
+      return c.json(await publishAdminKeywords(c.env, c.get('maintainerEmail')));
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : 'publish_failed' }, 400);
+    }
+  });
+
+  // 只展示去标识化的规则级反馈；维护者不能读取安装 ID 或原始浏览内容。
+  app.get('/api/admin/feedback', async (c) => {
+    const [summary, feedback] = await Promise.all([
+      c.env.DB.prepare(
+        `SELECT COALESCE(detection_source, 'unknown') AS detection_source,
+                COALESCE(rule_id, 'unknown') AS rule_id,
+                COUNT(*) AS count
+         FROM rescues
+         GROUP BY detection_source, rule_id
+         ORDER BY count DESC, detection_source, rule_id`,
+      ).all(),
+      c.env.DB.prepare(
+        `SELECT r.handle, r.detection_source, r.rule_id, r.detection_reason,
+                r.client_version, r.created_at, a.category, a.status,
+                a.report_count, a.rescue_count
+         FROM rescues r
+         LEFT JOIN accounts a ON a.handle = r.handle
+         ORDER BY r.created_at DESC, r.id DESC
+         LIMIT 200`,
+      ).all(),
+    ]);
+    return c.json({ summary: summary.results, feedback: feedback.results });
+  });
+
+  app.get('/api/admin/releases', async (c) => c.json({ releases: await listAdminReleases(c.env) }));
+  app.post('/api/admin/releases/:id/rollback', async (c) => {
+    const id = Number(c.req.param('id'));
+    const releases = await listAdminReleases(c.env);
+    const release = releases.find((item) => item.id === id);
+    if (!release) return c.json({ error: 'release_not_found' }, 404);
+    try {
+      return c.json(
+        release.kind === 'accounts'
+          ? await rollbackAdminAccountRelease(c.env, id, c.get('maintainerEmail'))
+          : await rollbackAdminKeywordRelease(c.env, release.version, c.get('maintainerEmail')),
+      );
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : 'rollback_failed' }, 400);
+    }
+  });
+
+  // 旧的拼接 HTML 维护页已废弃；新的后台只通过受 Access 保护的独立域名提供。
+  app.get('/maintainer', (c) => c.json({ error: 'admin_moved_to_access' }, 410));
+  // 旧 Bearer-token 管理 API 也一并退役，不能成为 Access 的旁路。
+  app.all('/admin/*', (c) => c.json({ error: 'admin_moved_to_access' }, 410));
 
   // 快照消费端点：manifest 短缓存，版本化文件按不可变缓存
   app.get('/v1/snapshots/latest', async (c) => {
@@ -191,88 +325,12 @@ export function createApp() {
     });
   });
 
-  // admin：只有服务端 ADMIN_TOKEN 能通过；公开仓库和扩展均不携带维护者权限。
-  app.use('/admin/*', async (c, next) => {
-    if (!(await checkBearerToken(c.req.header('authorization'), c.env.ADMIN_TOKEN))) {
-      return c.json({ error: 'unauthorized' }, 401);
+  // 只有独立后台域名会落到前端资产；公开 API 域名不再暴露管理界面。
+  app.get('*', async (c) => {
+    if (!isAdminHost(c.req.raw, c.env) || !c.env.ASSETS) {
+      return c.json({ error: 'not_found' }, 404);
     }
-    await next();
-  });
-  app.post('/admin/publish', async (c) => {
-    const published = await generateSnapshot(c.env);
-    return c.json({
-      snapshot_version: published.version,
-      files: published.manifest.files,
-    });
-  });
-
-  app.get('/admin/blocklist', async (c) =>
-    c.json({
-      entries: await listMaintainerEntries(c.env, true),
-      categories: MAINTAINER_CATEGORIES,
-    }),
-  );
-
-  app.post('/admin/blocklist', async (c) => {
-    const body = await c.req.json().catch(() => undefined);
-    const result = await upsertMaintainerEntry(c.env, body);
-    if (!result.ok) return c.json({ error: result.error }, 400);
-    const published = await generateSnapshot(c.env);
-    return c.json({
-      action: result.action,
-      entry: result.entry,
-      snapshot_version: published.version,
-    });
-  });
-
-  app.delete('/admin/blocklist/:handle', async (c) => {
-    const result = await deactivateMaintainerEntry(c.env, c.req.param('handle'));
-    if (!result.ok) return c.json({ error: result.error }, 400);
-    const published = result.changed ? await generateSnapshot(c.env) : null;
-    return c.json({
-      changed: result.changed,
-      snapshot_version: published?.version ?? null,
-    });
-  });
-
-  // 社区票数诊断视图：只读，不允许维护者修改或加权社区票。
-  app.get('/admin/community-votes', async (c) => {
-    const res = await c.env.DB.prepare(
-      `SELECT handle, x_user_id, category, status, report_count, rescue_count,
-              first_report_at, updated_at
-       FROM accounts
-       ORDER BY (report_count - rescue_count) DESC, handle ASC`,
-    ).all();
-    return c.json({ community_votes: res.results });
-  });
-
-  // 误标审计：只返回检测规则与聚合账号状态，不暴露匿名 installation hash。
-  // 旧客户端没有 source/rule/reason，因此用 unknown 归组但仍保留记录。
-  app.get('/admin/false-positives', async (c) => {
-    const [summary, recent] = await Promise.all([
-      c.env.DB.prepare(
-        `SELECT
-           COALESCE(detection_source, 'unknown') AS detection_source,
-           COALESCE(rule_id, 'unknown') AS rule_id,
-           COUNT(*) AS count
-         FROM rescues
-         GROUP BY detection_source, rule_id
-         ORDER BY count DESC, detection_source, rule_id`,
-      ).all(),
-      c.env.DB.prepare(
-        `SELECT r.handle, r.detection_source, r.rule_id, r.detection_reason,
-                r.client_version, r.created_at,
-                a.category, a.status, a.report_count, a.rescue_count
-         FROM rescues r
-         LEFT JOIN accounts a ON a.handle = r.handle
-         ORDER BY r.created_at DESC, r.id DESC
-         LIMIT 200`,
-      ).all(),
-    ]);
-    return c.json({
-      summary: summary.results,
-      false_positives: recent.results,
-    });
+    return c.env.ASSETS.fetch(staticAssetRequest(c.req.raw));
   });
 
   app.notFound((c) => c.json({ error: 'not_found' }, 404));

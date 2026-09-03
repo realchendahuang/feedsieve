@@ -17,7 +17,7 @@ community
   净票数 >= 3 时进入；低于 3 时自动退出
 
 maintainer
-  维护者通过服务端 /maintainer 页面明确加入或撤销
+  维护者通过受 Cloudflare Access 保护的管理后台明确加入或撤销
   不计入社区票，不伪装成社区共识
 
 final blocklist = community ∪ maintainer
@@ -56,13 +56,13 @@ final blocklist = community ∪ maintainer
 
 ## 维护者怎么快速维护
 
-部署者在 Cloudflare 中设置 `ADMIN_TOKEN`，然后打开：
+部署者为独立管理子域配置 Cloudflare Access，再打开：
 
 ```text
-https://你的 API 域名/maintainer
+https://admin.你的 API 域名
 ```
 
-令牌只输入到该标签页并保存在 `sessionStorage`，不会写入仓库、扩展包或页面源码。每次加入、更新、撤销都会写入 `maintainer_blocklist_audit`，并立即发布新快照。管理页面代码本身是公开的，权限边界只在服务端 Bearer 校验。
+维护者经邮箱一次性验证码登录。每次草稿保存、发布和回退都会写审计记录；维护者草稿只有显式“发布”才会更新公开名单。Worker 同时校验 Access JWT 的签名、Audience 和允许邮箱，公开 API 域不提供管理接口。
 
 本地三票流程可用 `apps/community-api/scripts/seed.sh` 调试；脚本拒绝非 localhost 地址，不能用来向线上伪造社区共识。
 

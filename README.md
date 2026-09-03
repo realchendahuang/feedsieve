@@ -166,7 +166,7 @@ FeedSieve 希望做到：
 社区名单不再分 candidate / recommended / strong，也不由扩展偷偷再算一次门槛：
 
 - 每个安装对每个账号只有一张当前票；`净票数 = 拉黑票 - 误标票`，净票数达到 3 自动进入最终名单，低于 3 自动退出。
-- 维护者可通过受 `ADMIN_TOKEN` 保护的 [`/maintainer`](apps/community-api/README.md) 网页直接加入或撤销条目。它是独立的 `maintainer` 来源，不增加社区票数，也不伪装成社区共识。
+- 维护者通过受 Cloudflare Access 保护的 [React 管理后台](apps/community-api/README.md) 维护草稿、显式发布或回退条目。它是独立的 `maintainer` 来源，不增加社区票数，也不伪装成社区共识。
 - 最终名单是两类来源的并集；同一账号可同时标注 `community` 和 `maintainer`。
 - 从最终名单一键拉黑不会反向产生新票；插件仍会排除关注、个人白名单和已经拉黑的账号，并等待用户明确点击。
 
