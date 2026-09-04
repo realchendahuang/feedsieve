@@ -84,7 +84,7 @@ pnpm deploy
 | `GET /api/admin/dashboard`             | ✅   | 后台概览（仅管理域 + Cloudflare Access）       |
 | `GET/POST /api/admin/accounts`         | ✅   | 账号草稿管理（仅管理域 + Cloudflare Access）   |
 | `POST /api/admin/accounts/publish`     | ✅   | 显式发布账号草稿                               |
-| `GET/POST /api/admin/keywords/*`       | ✅   | 词库分类、规则、发布与回退                     |
+| `GET/POST /api/admin/keywords/*`       | ✅   | 词库分类、规则、发布、回退与显式导入           |
 | `GET /api/admin/feedback`              | ✅   | 去标识化的误标反馈                             |
 | `GET/POST /api/admin/releases/*`       | ✅   | 发布记录与回退                                 |
 
