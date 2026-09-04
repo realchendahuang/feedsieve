@@ -9,6 +9,7 @@ import {
 } from '../src/admin-accounts';
 import { listMaintainerEntries } from '../src/maintainer-blocklist';
 import {
+  importKeywordCatalog,
   listAdminKeywords,
   publishAdminKeywords,
   saveAdminKeywordPack,
@@ -45,9 +46,21 @@ describe('Access 管理后台工作区', () => {
     }));
     await env.KEYWORD_PACKS.put(`keyword-packs/${VERSION}/official.json`, JSON.stringify(source));
 
+    // 导入是显式动作：空表时列表不自动拉取，需要维护者主动导入。
+    expect(await listAdminKeywords(env)).toEqual({ packs: [], rules: [] });
+    const importResult = await importKeywordCatalog(env);
+    expect(importResult).toMatchObject({ imported: true, packs: 1, rules: 1 });
+    // 已有草稿时重复导入是幂等 no-op，不会覆盖维护者草稿。
+    expect(await importKeywordCatalog(env)).toMatchObject({ imported: false });
+
     const imported = await listAdminKeywords(env);
-    expect(imported.packs).toContainEqual(expect.objectContaining({ id: 'workflow_pack', name_zh: '工作流分类' }));
-    expect(imported.rules).toContainEqual(expect.objectContaining({ id: 'workflow-rule', phrase: '工作流词组' }));
+    expect(imported.packs).toContainEqual(expect.objectContaining({ id: 'workflow_pack', name_zh: '工作流分类', active: true }));
+    expect(imported.rules).toContainEqual(expect.objectContaining({ id: 'workflow-rule', phrase: '工作流词组', active: true }));
+
+    // 搜索参数过滤规则列表。
+    const searched = await listAdminKeywords(env, { q: '工作流' });
+    expect(searched.rules).toHaveLength(1);
+    expect(await listAdminKeywords(env, { q: '不存在的词组' })).toMatchObject({ rules: [] });
 
     const pack = await saveAdminKeywordPack(env, {
       name_zh: '新增分类',
@@ -80,8 +93,17 @@ describe('Access 管理后台工作区', () => {
       category: 'scam_phishing',
       note: '用于验证名单草稿和发布流程',
     });
-    expect(saved).toMatchObject({ ok: true, entry: { handle, active: true } });
+    expect(saved).toMatchObject({ ok: true, action: 'add', entry: { handle, active: true } });
+    expect(await saveAdminAccountDraft(env, {
+      handle,
+      category: 'scam_phishing',
+      note: '用于验证名单草稿和发布流程二',
+    })).toMatchObject({ ok: true, action: 'update' });
     expect((await listMaintainerEntries(env, true)).find((entry) => entry.handle === handle)).toBeUndefined();
+
+    // 搜索参数过滤草稿列表。
+    expect(await listAdminAccountDrafts(env, { q: handle })).toHaveLength(1);
+    expect(await listAdminAccountDrafts(env, { q: 'nomatchhandle' })).toHaveLength(0);
 
     const first = await publishAdminAccountDrafts(env, 'maintainer@example.com');
     expect(first.snapshot_version).toMatch(/^\d{4}\.\d{2}\.\d{2}\.\d+$/);

@@ -48,6 +48,15 @@ td:nth-child(3) { max-width: 440px; }
 .pack-card summary span:last-child { min-width: 26px; border-radius: 999px; padding: 3px 8px; color: #6b5800; background: #fff3bf; text-align: center; font-size: 12px; }
 .pack-body { border-top: 1px solid #eeeae0; padding: 14px; }
 .pack-body > .table-wrap { margin-top: 12px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 22px; }
+.search-input { width: min(320px, 100%); min-height: 38px; border: 1px solid #dcd7ca; border-radius: 8px; padding: 8px 10px; color: #25241f; background: #fffefa; outline: none; }
+.search-input:focus { border-color: #c9a900; box-shadow: 0 0 0 3px rgb(255 220 84 / 30%); }
+.field-error { color: #a43224; font-size: 12px; font-weight: 650; }
+.confirm-overlay { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: rgb(30 29 25 / 35%); }
+.confirm-card { width: min(420px, calc(100vw - 40px)); border-radius: 14px; background: #fff; padding: 20px; box-shadow: 0 18px 50px rgb(0 0 0 / 18%); }
+.confirm-card h2 { margin: 0; font-size: 17px; letter-spacing: -.02em; }
+.confirm-card p { margin: 10px 0 16px; color: #615d54; font-size: 13.5px; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
 @media (max-width: 780px) {
   .shell { grid-template-columns: 1fr; }
   .sidebar { gap: 12px; border-right: 0; border-bottom: 1px solid #e2dfd5; padding: 16px; }

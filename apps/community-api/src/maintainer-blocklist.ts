@@ -76,83 +76,26 @@ export async function listMaintainerEntries(
   return result.results.map((row) => ({ ...row, active: row.active === 1 }));
 }
 
-export async function upsertMaintainerEntry(
-  env: Cloudflare.Env,
-  raw: unknown,
-): Promise<
-  | { ok: true; action: 'add' | 'update'; entry: MaintainerBlocklistEntry }
-  | { ok: false; error: string }
-> {
-  const validated = validateMaintainerEntry(raw);
-  if (!validated.ok) return validated;
-  const input = validated.value;
-  const previous = await env.DB.prepare('SELECT handle FROM maintainer_blocklist WHERE handle = ?1')
-    .bind(input.handle)
-    .first<{ handle: string }>();
-  const action = previous ? 'update' : 'add';
-  const now = Math.floor(Date.now() / 1000);
-  await env.DB.prepare(
-    `INSERT INTO maintainer_blocklist
-       (handle, x_user_id, category, reason, evidence_post_id, active, created_at, updated_at)
-     VALUES (?1, ?2, ?3, ?4, ?5, 1, ?6, ?6)
-     ON CONFLICT(handle) DO UPDATE SET
-       x_user_id = COALESCE(excluded.x_user_id, maintainer_blocklist.x_user_id),
-       category = excluded.category,
-       reason = excluded.reason,
-       evidence_post_id = excluded.evidence_post_id,
-       active = 1,
-       updated_at = excluded.updated_at`,
-  )
-    .bind(input.handle, input.xUserId, input.category, input.note, input.evidencePostId, now)
-    .run();
-  await env.DB.prepare(
-    `INSERT INTO maintainer_blocklist_audit
-       (action, handle, category, reason, evidence_post_id, created_at)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
-  )
-    .bind(action, input.handle, input.category, input.note, input.evidencePostId, now)
-    .run();
-  const entry = (await listMaintainerEntries(env, true)).find(
-    (candidate) => candidate.handle === input.handle,
-  );
-  if (!entry) return { ok: false, error: 'write_failed' };
-  return { ok: true, action, entry };
-}
+// 发布名单时用 DB.batch 批量写入；单条 upsert/deactivate 的旧函数已删除，
+// SQL 抽成常量保证 batch 与语义测试走同一份语句。
+export const MAINTAINER_UPSERT_SQL = `
+  INSERT INTO maintainer_blocklist
+    (handle, x_user_id, category, reason, evidence_post_id, active, created_at, updated_at)
+  VALUES (?1, ?2, ?3, ?4, ?5, 1, ?6, ?6)
+  ON CONFLICT(handle) DO UPDATE SET
+    x_user_id = COALESCE(excluded.x_user_id, maintainer_blocklist.x_user_id),
+    category = excluded.category,
+    reason = excluded.reason,
+    evidence_post_id = excluded.evidence_post_id,
+    active = 1,
+    updated_at = excluded.updated_at`;
 
-export async function deactivateMaintainerEntry(
-  env: Cloudflare.Env,
-  handle: string,
-): Promise<{ ok: true; changed: boolean } | { ok: false; error: string }> {
-  const normalized = handle.trim().replace(/^@+/, '').toLowerCase();
-  if (!/^[a-z0-9_]{1,15}$/.test(normalized)) {
-    return { ok: false, error: 'invalid_handle' };
-  }
-  const current = await env.DB.prepare(
-    `SELECT category, reason, evidence_post_id, active
-     FROM maintainer_blocklist WHERE handle = ?1`,
-  )
-    .bind(normalized)
-    .first<{
-      category: string;
-      reason: string;
-      evidence_post_id: string | null;
-      active: number;
-    }>();
-  if (!current || current.active !== 1) return { ok: true, changed: false };
-  const now = Math.floor(Date.now() / 1000);
-  await env.DB.prepare(
-    'UPDATE maintainer_blocklist SET active = 0, updated_at = ?2 WHERE handle = ?1',
-  )
-    .bind(normalized, now)
-    .run();
-  await env.DB.prepare(
-    `INSERT INTO maintainer_blocklist_audit
-       (action, handle, category, reason, evidence_post_id, created_at)
-     VALUES ('remove', ?1, ?2, ?3, ?4, ?5)`,
-  )
-    .bind(normalized, current.category, current.reason, current.evidence_post_id, now)
-    .run();
-  return { ok: true, changed: true };
-}
+export const MAINTAINER_AUDIT_INSERT_SQL = `
+  INSERT INTO maintainer_blocklist_audit
+    (action, handle, category, reason, evidence_post_id, created_at)
+  VALUES (?1, ?2, ?3, ?4, ?5, ?6)`;
+
+export const MAINTAINER_DEACTIVATE_SQL =
+  'UPDATE maintainer_blocklist SET active = 0, updated_at = ?2 WHERE handle = ?1 AND active = 1';
 
 export { REPORT_REASONS as MAINTAINER_CATEGORIES };

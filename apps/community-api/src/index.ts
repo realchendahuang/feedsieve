@@ -2,6 +2,7 @@ import { cors } from 'hono/cors';
 import { Hono } from 'hono';
 import {
   deactivateAdminAccountDraft,
+  getAdminRelease,
   listAdminAccountDrafts,
   listAdminReleases,
   publishAdminAccountDrafts,
@@ -13,6 +14,7 @@ import { verifyAccess } from './lib/access';
 import { hashInstallationId } from './lib/hash';
 import {
   disableAdminKeyword,
+  importKeywordCatalog,
   listAdminKeywords,
   publishAdminKeywords,
   rollbackAdminKeywordRelease,
@@ -87,14 +89,14 @@ export function createApp() {
   app.get('/api/admin/me', (c) => c.json({ email: c.get('maintainerEmail') }));
 
   app.get('/api/admin/dashboard', async (c) => {
-    const [drafts, votes, feedback, snapshot] = await Promise.all([
-      listAdminAccountDrafts(c.env),
+    const [draftCount, votes, feedback, snapshot] = await Promise.all([
+      c.env.DB.prepare('SELECT COUNT(*) AS n FROM admin_account_drafts WHERE active = 1').first<{ n: number }>(),
       c.env.DB.prepare('SELECT COUNT(*) AS n FROM accounts').first<{ n: number }>(),
       c.env.DB.prepare('SELECT COUNT(*) AS n FROM rescues').first<{ n: number }>(),
       getLatestSnapshot(c.env),
     ]);
     return c.json({
-      maintainer_entries: drafts.filter((entry) => entry.active).length,
+      maintainer_entries: draftCount?.n ?? 0,
       community_accounts: votes?.n ?? 0,
       false_positive_feedback: feedback?.n ?? 0,
       snapshot_version: snapshot ? JSON.parse(snapshot.manifest).snapshot_version ?? null : null,
@@ -102,7 +104,10 @@ export function createApp() {
   });
 
   app.get('/api/admin/accounts', async (c) =>
-    c.json({ entries: await listAdminAccountDrafts(c.env), categories: MAINTAINER_CATEGORIES }),
+    c.json({
+      entries: await listAdminAccountDrafts(c.env, { q: c.req.query('q'), limit: 500 }),
+      categories: MAINTAINER_CATEGORIES,
+    }),
   );
   app.post('/api/admin/accounts', async (c) => {
     const result = await saveAdminAccountDraft(c.env, await c.req.json().catch(() => undefined));
@@ -126,7 +131,28 @@ export function createApp() {
     }
   });
 
-  app.get('/api/admin/keywords', async (c) => c.json(await listAdminKeywords(c.env)));
+  app.get('/api/admin/keywords', async (c) =>
+    c.json(await listAdminKeywords(c.env, {
+      q: c.req.query('q'),
+      packId: c.req.query('pack'),
+      limit: 1000,
+    })),
+  );
+  // 从 R2 公开词库导入维护者工作区是显式动作，不再挂在列表读取上。
+  app.post('/api/admin/keywords/import', async (c) => {
+    try {
+      const result = await importKeywordCatalog(c.env);
+      if (result.imported) {
+        await recordAdminAudit(c.env, c.get('maintainerEmail'), 'import', 'keyword_catalog', String(result.rules), {
+          packs: result.packs,
+          rules: result.rules,
+        });
+      }
+      return c.json(result);
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : 'import_failed' }, 400);
+    }
+  });
   app.post('/api/admin/keywords/packs', async (c) => {
     const item = await saveAdminKeywordPack(c.env, await c.req.json().catch(() => undefined), c.get('maintainerEmail'));
     return item ? c.json(item, 201) : c.json({ error: 'invalid_pack' }, 400);
@@ -180,8 +206,8 @@ export function createApp() {
   app.get('/api/admin/releases', async (c) => c.json({ releases: await listAdminReleases(c.env) }));
   app.post('/api/admin/releases/:id/rollback', async (c) => {
     const id = Number(c.req.param('id'));
-    const releases = await listAdminReleases(c.env);
-    const release = releases.find((item) => item.id === id);
+    // 按主键直查，历史发布记录（不在最近 100 条内）同样可以回退。
+    const release = Number.isInteger(id) ? await getAdminRelease(c.env, id) : null;
     if (!release) return c.json({ error: 'release_not_found' }, 404);
     try {
       return c.json(

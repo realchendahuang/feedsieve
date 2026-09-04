@@ -27,8 +27,8 @@ export interface KeywordPack {
   name_en: string;
   description_zh: string;
   description_en: string;
-  source_refs: string;
-  active: number;
+  source_refs: string[];
+  active: boolean;
   created_at: number;
   updated_at: number;
 }
@@ -37,9 +37,9 @@ export interface KeywordRule {
   id: string;
   pack_id: string;
   phrase: string;
-  terms: string | null;
+  terms: string[] | null;
   max_gap: number | null;
-  active: number;
+  active: boolean;
   created_at: number;
   updated_at: number;
 }
@@ -82,6 +82,15 @@ export interface Release {
   created_at: number;
 }
 
+function withQuery(path: string, params: Record<string, string | undefined>): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value) search.set(key, value);
+  }
+  const query = search.toString();
+  return query ? `${path}?${query}` : path;
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   if (init.body) headers.set('content-type', 'application/json');
@@ -99,12 +108,16 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 export const getDashboard = () => request<Dashboard>('/dashboard');
-export const getAccounts = () => request<AccountsResponse>('/accounts');
-export const getKeywords = () => request<KeywordsResponse>('/keywords');
+export const getAccounts = (q?: string) =>
+  request<AccountsResponse>(withQuery('/accounts', { q }));
+export const getKeywords = (params: { q?: string; packId?: string } = {}) =>
+  request<KeywordsResponse>(withQuery('/keywords', { q: params.q, pack: params.packId }));
 export const getFeedback = () => request<FeedbackResponse>('/feedback');
 export const getReleases = async () => (await request<{ releases: Release[] }>('/releases')).releases;
 export const getMe = () => request<{ email: string }>('/me');
 
+export const importKeywordCatalog = () =>
+  request<{ imported: boolean; packs: number; rules: number }>('/keywords/import', { method: 'POST' });
 export const saveAccount = (body: Record<string, unknown>) =>
   request<{ action: 'add' | 'update'; entry: AccountEntry }>('/accounts', {
     method: 'POST',
