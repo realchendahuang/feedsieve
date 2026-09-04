@@ -6,6 +6,10 @@
 
 > **不信你看。看不见就对了。**
 
+<p align="center">
+  <a href="https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph"><strong>在 Chrome 应用商店安装</strong></a>
+</p>
+
 **FeedSieve / 福滤娃** 是一个专门清理 X（Twitter）垃圾账号的开源工具：高置信社区名单会在你已登录的 `x.com` 页面上用黄框提示；插件没认出的账号，你也可以随手点「标记垃圾并拉黑」。所有拉黑都由你明确触发，并真实写入 X 黑名单。
 
 机器人刷屏、色情引流、广告轰炸、互动钓鱼、币圈老师——拉黑发生在 X 服务器上：**手机端同步消失，被拉黑的号再也无法回复你、@ 你、关注你。**
@@ -59,7 +63,7 @@ FeedSieve 不需要账号，也不会把你的个人关键词做自动云同步�
 
 ## 安装
 
-- Chrome Web Store：审核通过后补链接
+- Chrome Web Store：[商店页面](https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph)
 - 开发者加载：`pnpm install && pnpm build:extension`，Chrome 载入 `apps/extension/.output/chrome-mv3`
 - 隐私政策：[PRIVACY.md](PRIVACY.md) · 问题反馈：[Issues](https://github.com/realchendahuang/feedsieve/issues)
 
