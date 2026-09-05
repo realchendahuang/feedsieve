@@ -1,5 +1,6 @@
 import { cors } from 'hono/cors';
 import { Hono } from 'hono';
+import type { Context } from 'hono';
 import {
   deactivateAdminAccountDraft,
   getAdminRelease,
@@ -43,6 +44,21 @@ function staticAssetRequest(request: Request): Request {
   // assets.not_found_handling = single-page-application resolves TanStack routes
   // to the shell while keeping the incoming URL intact.
   return request;
+}
+
+type AdminContext = Context<{ Bindings: Cloudflare.Env; Variables: { maintainerEmail: string } }>;
+
+/** 词库工作区变更后立即重发公开词库：保存即生效，维护者无需再手动发布。 */
+async function republishKeywords(c: AdminContext, extra: Record<string, unknown> = {}): Promise<Response> {
+  try {
+    const published = await publishAdminKeywords(c.env, c.get('maintainerEmail'));
+    return c.json({ ...extra, version: published.version });
+  } catch (error) {
+    const code = error instanceof Error ? error.message : 'publish_failed';
+    // 移除全部分类时无法产出空词库：变更已生效，线上保持上一个版本。
+    if (code === 'no_active_packs') return c.json({ ...extra, version: null });
+    return c.json({ error: code }, 500);
+  }
 }
 
 export function createApp() {
@@ -113,15 +129,25 @@ export function createApp() {
     const result = await saveAdminAccountDraft(c.env, await c.req.json().catch(() => undefined));
     if (!result.ok) return c.json({ error: result.error }, 400);
     await recordAdminAudit(c.env, c.get('maintainerEmail'), `${result.action}_draft`, 'account', result.entry.handle);
-    return c.json({ action: result.action, entry: result.entry }, 201);
+    // 保存即生效：草稿落库后立刻同步公开名单并生成快照，维护者无需再手动发布。
+    try {
+      const published = await publishAdminAccountDrafts(c.env, c.get('maintainerEmail'));
+      return c.json({ action: result.action, entry: result.entry, snapshot_version: published.snapshot_version }, 201);
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : 'publish_failed' }, 500);
+    }
   });
   app.delete('/api/admin/accounts/:handle', async (c) => {
     const result = await deactivateAdminAccountDraft(c.env, c.req.param('handle'));
     if (!result.ok) return c.json({ error: result.error }, 400);
-    if (result.changed) {
-      await recordAdminAudit(c.env, c.get('maintainerEmail'), 'remove_draft', 'account', c.req.param('handle'));
+    if (!result.changed) return c.json({ changed: false });
+    await recordAdminAudit(c.env, c.get('maintainerEmail'), 'remove_draft', 'account', c.req.param('handle'));
+    try {
+      const published = await publishAdminAccountDrafts(c.env, c.get('maintainerEmail'));
+      return c.json({ changed: true, snapshot_version: published.snapshot_version });
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : 'publish_failed' }, 500);
     }
-    return c.json({ changed: result.changed });
   });
   app.post('/api/admin/accounts/publish', async (c) => {
     try {
@@ -155,22 +181,24 @@ export function createApp() {
   });
   app.post('/api/admin/keywords/packs', async (c) => {
     const item = await saveAdminKeywordPack(c.env, await c.req.json().catch(() => undefined), c.get('maintainerEmail'));
-    return item ? c.json(item, 201) : c.json({ error: 'invalid_pack' }, 400);
+    if (!item) return c.json({ error: 'invalid_pack' }, 400);
+    return republishKeywords(c, { id: item.id });
   });
   app.post('/api/admin/keywords/rules', async (c) => {
     const item = await saveAdminKeywordRule(c.env, await c.req.json().catch(() => undefined), c.get('maintainerEmail'));
-    return item ? c.json(item, 201) : c.json({ error: 'invalid_rule' }, 400);
+    if (!item) return c.json({ error: 'invalid_rule' }, 400);
+    return republishKeywords(c, { id: item.id });
   });
-  app.delete('/api/admin/keywords/packs/:id', async (c) =>
-    c.json({
-      changed: await disableAdminKeyword(c.env, 'admin_keyword_packs', c.req.param('id'), c.get('maintainerEmail')),
-    }),
-  );
-  app.delete('/api/admin/keywords/rules/:id', async (c) =>
-    c.json({
-      changed: await disableAdminKeyword(c.env, 'admin_keyword_rules', c.req.param('id'), c.get('maintainerEmail')),
-    }),
-  );
+  app.delete('/api/admin/keywords/packs/:id', async (c) => {
+    const changed = await disableAdminKeyword(c.env, 'admin_keyword_packs', c.req.param('id'), c.get('maintainerEmail'));
+    if (!changed) return c.json({ changed: false });
+    return republishKeywords(c, { changed });
+  });
+  app.delete('/api/admin/keywords/rules/:id', async (c) => {
+    const changed = await disableAdminKeyword(c.env, 'admin_keyword_rules', c.req.param('id'), c.get('maintainerEmail'));
+    if (!changed) return c.json({ changed: false });
+    return republishKeywords(c, { changed });
+  });
   app.post('/api/admin/keywords/publish', async (c) => {
     try {
       return c.json(await publishAdminKeywords(c.env, c.get('maintainerEmail')));

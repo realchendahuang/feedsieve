@@ -82,9 +82,9 @@ pnpm deploy
 | `GET /v1/keyword-packs/latest`         | ✅   | R2 词库 manifest（版本 + SHA-256，短缓存）     |
 | `GET /v1/keyword-packs/:version/:file` | ✅   | R2 版本化词库文件（immutable 缓存）            |
 | `GET /api/admin/dashboard`             | ✅   | 后台概览（仅管理域 + Cloudflare Access）       |
-| `GET/POST /api/admin/accounts`         | ✅   | 账号草稿管理（仅管理域 + Cloudflare Access）   |
-| `POST /api/admin/accounts/publish`     | ✅   | 显式发布账号草稿                               |
-| `GET/POST /api/admin/keywords/*`       | ✅   | 词库分类、规则、发布、回退与显式导入           |
+| `GET/POST/DELETE /api/admin/accounts`  | ✅   | 账号管理，保存/移除即自动发布（仅管理域 + Access） |
+| `POST /api/admin/accounts/publish`     | ✅   | 手动发布（一般无需调用，保存已自动发布）       |
+| `GET/POST/DELETE /api/admin/keywords/*`| ✅   | 词库分类、规则、回退与显式导入（变更即自动发布） |
 | `GET /api/admin/feedback`              | ✅   | 去标识化的误标反馈                             |
 | `GET/POST /api/admin/releases/*`       | ✅   | 发布记录与回退                                 |
 
