@@ -1,13 +1,48 @@
 import React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useSearch } from '@tanstack/react-router';
-import { useForm } from 'react-hook-form';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
-import { ConfirmDialog } from '../components/confirm';
-import { FlashMessage, useFlash } from '../components/flash';
-import { Loading, PageHeader } from '../components/layout';
-import { getAccounts, publishAccounts, removeAccount, saveAccount, type AccountEntry } from '../lib/api';
+import { toast } from 'sonner';
+import { Search } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Button, buttonVariants } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
+import { LoadError, Loading, PageHeader } from '../components/layout';
+import { getAccounts, removeAccount, saveAccount, type AccountEntry } from '../lib/api';
 import { errorText } from '../lib/errors';
 
 const accountSchema = z.object({
@@ -21,13 +56,7 @@ const accountSchema = z.object({
   }, '备注需要 4-240 字'),
 });
 
-type AccountFormValues = {
-  handle: string;
-  category: string;
-  x_user_id: string;
-  evidence_post_id: string;
-  note: string;
-};
+type AccountFormValues = z.infer<typeof accountSchema>;
 
 const blankAccount = (): AccountFormValues => ({
   handle: '',
@@ -47,184 +76,261 @@ function toFormValues(entry: AccountEntry): AccountFormValues {
   };
 }
 
-/** 编辑器是独立组件：key 随编辑目标变化整体重挂，表单默认值随之刷新，无需 effect 同步。 */
-function AccountEditor({
+function fieldError(message: string | undefined) {
+  return message ? <p className="text-xs font-medium text-destructive">{message}</p> : null;
+}
+
+function AccountEditorDialog({
   entry,
   categories,
-  busy,
-  onSave,
-  onCancel,
+  open,
+  pending,
+  onOpenChange,
+  onSubmit,
 }: {
   entry: AccountEntry | null;
   categories: readonly string[];
-  busy: boolean;
-  onSave: (values: AccountFormValues) => Promise<void>;
-  onCancel: () => void;
+  open: boolean;
+  pending: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (values: AccountFormValues) => void;
 }) {
-  const defaults = entry ? toFormValues(entry) : blankAccount();
   const form = useForm<AccountFormValues, unknown, AccountFormValues>({
     resolver: zodResolver(accountSchema),
-    defaultValues: defaults,
+    defaultValues: entry ? toFormValues(entry) : blankAccount(),
   });
   const errors = form.formState.errors;
-  const submit = form.handleSubmit(async (values) => onSave(values));
   return (
-    <form className="editor-card form-grid" onSubmit={submit} noValidate>
-      <label>账号
-        <input {...form.register('handle')} placeholder="@账号" />
-        {errors.handle ? <span className="field-error">{errors.handle.message}</span> : null}
-      </label>
-      <label>分类
-        <select {...form.register('category')}>
-          {categories.map((category) => <option key={category} value={category}>{category}</option>)}
-        </select>
-      </label>
-      <label>用户 ID<input {...form.register('x_user_id')} /></label>
-      <label>证据贴文 ID<input {...form.register('evidence_post_id')} /></label>
-      <label className="span-2">备注
-        <textarea {...form.register('note')} />
-        {errors.note ? <span className="field-error">{errors.note.message}</span> : null}
-      </label>
-      <div className="form-actions span-2">
-        <button type="submit" disabled={busy}>{entry ? '保存修改' : '保存草稿'}</button>
-        <button type="button" className="secondary" onClick={onCancel}>取消</button>
-      </div>
-    </form>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{entry ? '编辑账号' : '新增账号'}</DialogTitle>
+        </DialogHeader>
+        <form className="grid gap-4" onSubmit={form.handleSubmit(onSubmit)} noValidate>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="account-handle">账号</Label>
+              <Input id="account-handle" placeholder="@账号" {...form.register('handle')} />
+              {fieldError(errors.handle?.message)}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="account-category">分类</Label>
+              <Controller
+                name="category"
+                control={form.control}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger id="account-category" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {fieldError(errors.category?.message)}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="account-user-id">用户 ID</Label>
+              <Input id="account-user-id" {...form.register('x_user_id')} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="account-evidence">证据贴文 ID</Label>
+              <Input id="account-evidence" {...form.register('evidence_post_id')} />
+            </div>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="account-note">备注</Label>
+            <Textarea id="account-note" {...form.register('note')} />
+            {fieldError(errors.note?.message)}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              取消
+            </Button>
+            <Button type="submit" disabled={pending}>
+              保存
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
 export function AccountsPage() {
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
-  const search = useSearch({ strict: false }) as { q?: string; edit?: string };
-  const q = search.q?.trim() ?? '';
-  const accounts = useQuery({ queryKey: ['accounts', q], queryFn: () => getAccounts(q || undefined) });
-  const [flash, showFlash] = useFlash();
-  const [busy, setBusy] = React.useState(false);
+  const accounts = useQuery({ queryKey: ['accounts'], queryFn: getAccounts });
+  const [filter, setFilter] = React.useState('');
+  const [editor, setEditor] = React.useState<{ open: boolean; entry: AccountEntry | null }>({
+    open: false,
+    entry: null,
+  });
   const [removing, setRemoving] = React.useState<AccountEntry | null>(null);
-  const searchInput = React.useRef<HTMLInputElement>(null);
 
-  const entries = accounts.data?.entries ?? [];
-  const categories = accounts.data?.categories ?? ['scam_phishing'];
-  const editing = search.edit ?? null;
-  const editingEntry = editing
-    ? entries.find((entry) => entry.handle === editing && entry.active) ?? null
-    : null;
-  // key 里带上 updated_at：目标行内容变化（如加载完成）也会重挂，编辑目标不存在时保持 loading 占位。
-  const editorKey = editing ? `${editing}:${editingEntry?.updated_at ?? 'loading'}` : 'new';
-
-  const clearEdit = () => {
-    if (editing) {
-      navigate({ to: '/accounts', search: (prev) => ({ ...prev, edit: undefined }) });
-    }
+  const invalidate = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['accounts'] }),
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+    ]);
   };
 
-  // 编辑目标不存在（已移除）时清掉 edit 参数。
-  React.useEffect(() => {
-    if (editing && accounts.data && !editingEntry) clearEdit();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editing, accounts.data, editingEntry]);
-
-  const save = async (values: AccountFormValues) => {
-    setBusy(true);
-    try {
-      await saveAccount({
+  const saveMutation = useMutation({
+    mutationFn: (values: AccountFormValues) =>
+      saveAccount({
         handle: values.handle.trim().replace(/^@+/, '').toLowerCase(),
         category: values.category,
         x_user_id: values.x_user_id.trim() || null,
         evidence_post_id: values.evidence_post_id.trim() || null,
         note: values.note.trim(),
-      });
-      await queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      showFlash('success', editing ? '草稿已更新' : '草稿已保存');
-      clearEdit();
-    } catch (error) {
-      showFlash('error', errorText(error));
-    } finally {
-      setBusy(false);
-    }
-  };
+      }),
+    onSuccess: async () => {
+      await invalidate();
+      toast.success(editor.entry ? '已生效' : '已添加');
+      setEditor({ open: false, entry: null });
+    },
+    onError: (error) => toast.error(errorText(error)),
+  });
 
-  const remove = async (handle: string) => {
-    setBusy(true);
-    try {
-      await removeAccount(handle);
-      await queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      showFlash('success', '草稿已移除');
-      if (editing === handle) clearEdit();
-    } catch (error) {
-      showFlash('error', errorText(error));
-    } finally {
-      setBusy(false);
+  const removeMutation = useMutation({
+    mutationFn: (handle: string) => removeAccount(handle),
+    onSuccess: async () => {
+      await invalidate();
+      toast.success('已移除');
       setRemoving(null);
-    }
-  };
+    },
+    onError: (error) => toast.error(errorText(error)),
+  });
 
-  const publish = async () => {
-    setBusy(true);
-    try {
-      const result = await publishAccounts();
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
-        queryClient.invalidateQueries({ queryKey: ['releases'] }),
-      ]);
-      showFlash('success', `名单已发布 ${result.snapshot_version}`);
-    } catch (error) {
-      showFlash('error', errorText(error));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const applySearch = () => {
-    const value = searchInput.current?.value.trim() ?? '';
-    navigate({ to: '/accounts', search: (prev) => ({ ...prev, q: value || undefined }) });
-  };
-  const clearSearch = () => {
-    if (searchInput.current) searchInput.current.value = '';
-    navigate({ to: '/accounts', search: (prev) => ({ ...prev, q: undefined }) });
-  };
+  const categories = accounts.data?.categories ?? ['scam_phishing'];
+  const needle = filter.trim().toLowerCase();
+  const entries = (accounts.data?.entries ?? []).filter(
+    (entry) =>
+      entry.active &&
+      (!needle || entry.handle.includes(needle) || entry.note.toLowerCase().includes(needle)),
+  );
 
   return (
-    <section className="page">
-      <PageHeader title="账号黑名单"><button type="button" onClick={publish} disabled={busy}>发布名单</button></PageHeader>
-      <FlashMessage flash={flash} />
-      <AccountEditor
-        key={editorKey}
-        entry={editingEntry}
-        categories={categories}
-        busy={busy}
-        onSave={save}
-        onCancel={clearEdit}
-      />
-      <div className="toolbar">
-        <input
-          ref={searchInput}
-          key={q}
-          defaultValue={q}
-          className="search-input"
-          placeholder="搜账号或备注"
-          onKeyDown={(event) => { if (event.key === 'Enter') applySearch(); }}
-        />
-        <button type="button" className="secondary" onClick={applySearch}>搜索</button>
-        {q ? <button type="button" className="secondary" onClick={clearSearch}>清除</button> : null}
+    <section>
+      <PageHeader title="账号黑名单">
+        <Button onClick={() => setEditor({ open: true, entry: null })}>新增</Button>
+      </PageHeader>
+      <div className="mt-5 flex flex-wrap items-center gap-2">
+        <div className="relative w-full max-w-xs">
+          <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={filter}
+            onChange={(event) => setFilter(event.target.value)}
+            placeholder="搜账号或备注"
+            className="pl-8"
+          />
+        </div>
       </div>
-      {!accounts.data ? <Loading error={accounts.error} /> : (
-        <div className="table-wrap"><table><thead><tr><th>账号</th><th>分类</th><th>备注</th><th>状态</th><th /></tr></thead><tbody>
-          {entries.map((entry) => <tr key={entry.handle}><td>@{entry.handle}</td><td>{entry.category}</td><td>{entry.note}</td><td>{entry.active ? '草稿' : '已移除'}</td><td className="row-actions">{entry.active ? <><button type="button" className="secondary" onClick={() => navigate({ to: '/accounts', search: (prev) => ({ ...prev, edit: entry.handle }) })}>编辑</button><button type="button" className="danger" onClick={() => setRemoving(entry)} disabled={busy}>移除</button></> : null}</td></tr>)}
-        </tbody></table></div>
+      {accounts.isPending ? (
+        <Loading />
+      ) : accounts.isError ? (
+        <LoadError error={accounts.error} onRetry={() => void accounts.refetch()} />
+      ) : entries.length === 0 ? (
+        <div className="mt-6 grid h-44 place-items-center rounded-lg border border-dashed text-sm text-muted-foreground">
+          {needle ? '无匹配' : '名单为空'}
+        </div>
+      ) : (
+        <div className="mt-4 overflow-hidden rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>账号</TableHead>
+                <TableHead>分类</TableHead>
+                <TableHead className="max-w-md">备注</TableHead>
+                <TableHead className="w-32 text-right">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {entries.map((entry) => (
+                <TableRow key={entry.handle}>
+                  <TableCell className="font-medium">@{entry.handle}</TableCell>
+                  <TableCell className="text-muted-foreground">{entry.category}</TableCell>
+                  <TableCell className="max-w-md truncate text-muted-foreground">
+                    {entry.note}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="inline-flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditor({ open: true, entry })}
+                      >
+                        编辑
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => setRemoving(entry)}
+                      >
+                        移除
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
-      <ConfirmDialog
-        open={removing !== null}
-        title={`移除 @${removing?.handle ?? ''}？`}
-        body="草稿标记为已移除；已发布的内容要再次发布名单后才会更新。"
-        confirmLabel="移除"
-        busy={busy}
-        onConfirm={() => removing && remove(removing.handle)}
-        onCancel={() => setRemoving(null)}
+      <AccountEditorDialog
+        key={editor.entry?.handle ?? 'new'}
+        entry={editor.entry}
+        categories={categories}
+        open={editor.open}
+        pending={saveMutation.isPending}
+        onOpenChange={(open) => setEditor((prev) => ({ ...prev, open }))}
+        onSubmit={(values) => saveMutation.mutate(values)}
+      />
+      <ConfirmRemoval
+        removal={removing}
+        pending={removeMutation.isPending}
+        onRemove={(handle) => removeMutation.mutate(handle)}
+        onClose={() => setRemoving(null)}
       />
     </section>
+  );
+}
+
+function ConfirmRemoval({
+  removal,
+  pending,
+  onRemove,
+  onClose,
+}: {
+  removal: AccountEntry | null;
+  pending: boolean;
+  onRemove: (handle: string) => void;
+  onClose: () => void;
+}) {
+  return (
+    <AlertDialog open={removal !== null} onOpenChange={(open) => !open && onClose()}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>移除 @{removal?.handle ?? ''}？</AlertDialogTitle>
+          <AlertDialogDescription>移除立即生效，公开名单同步更新。</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>取消</AlertDialogCancel>
+          <AlertDialogAction
+            className={buttonVariants({ variant: 'destructive' })}
+            disabled={pending}
+            onClick={() => removal && onRemove(removal.handle)}
+          >
+            移除
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

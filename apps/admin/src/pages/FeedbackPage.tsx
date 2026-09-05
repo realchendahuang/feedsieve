@@ -1,11 +1,88 @@
 import { useQuery } from '@tanstack/react-query';
-import { Loading, PageHeader } from '../components/layout';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { LoadError, Loading, PageHeader } from '../components/layout';
 import { getFeedback } from '../lib/api';
 
 export function FeedbackPage() {
   const feedback = useQuery({ queryKey: ['feedback'], queryFn: getFeedback });
-  return <section className="page"><PageHeader title="用户反馈" />{!feedback.data ? <Loading error={feedback.error} /> : <>
-    <div className="table-wrap"><table><thead><tr><th>来源</th><th>规则</th><th>数量</th></tr></thead><tbody>{feedback.data.summary.map((item) => <tr key={`${item.detection_source}-${item.rule_id}`}><td>{item.detection_source}</td><td>{item.rule_id}</td><td>{item.count}</td></tr>)}</tbody></table></div>
-    <div className="table-wrap spaced"><table><thead><tr><th>账号</th><th>规则</th><th>分类</th><th>时间</th></tr></thead><tbody>{feedback.data.feedback.map((item, index) => <tr key={`${item.handle}-${item.created_at}-${index}`}><td>@{item.handle}</td><td>{item.rule_id ?? '—'}</td><td>{item.category ?? '—'}</td><td>{new Date(item.created_at * 1000).toLocaleString('zh-CN')}</td></tr>)}</tbody></table></div>
-  </>}</section>;
+  return (
+    <section>
+      <PageHeader title="用户反馈" />
+      {feedback.isPending ? (
+        <Loading />
+      ) : feedback.isError ? (
+        <LoadError error={feedback.error} onRetry={() => void feedback.refetch()} />
+      ) : (
+        <>
+          <h2 className="mt-6 text-sm font-semibold text-muted-foreground">汇总</h2>
+          <div className="mt-2 overflow-hidden rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>来源</TableHead>
+                  <TableHead>规则</TableHead>
+                  <TableHead className="w-24 text-right">数量</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {feedback.data.summary.map((item) => (
+                  <TableRow key={`${item.detection_source}-${item.rule_id}`}>
+                    <TableCell className="font-medium">{item.detection_source}</TableCell>
+                    <TableCell className="text-muted-foreground">{item.rule_id}</TableCell>
+                    <TableCell className="text-right">{item.count}</TableCell>
+                  </TableRow>
+                ))}
+                {feedback.data.summary.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                      暂无反馈
+                    </TableCell>
+                  </TableRow>
+                ) : null}
+              </TableBody>
+            </Table>
+          </div>
+          <h2 className="mt-6 text-sm font-semibold text-muted-foreground">明细</h2>
+          <div className="mt-2 overflow-hidden rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>账号</TableHead>
+                  <TableHead>规则</TableHead>
+                  <TableHead>分类</TableHead>
+                  <TableHead>时间</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {feedback.data.feedback.map((item, index) => (
+                  <TableRow key={`${item.handle}-${item.created_at}-${index}`}>
+                    <TableCell className="font-medium">@{item.handle}</TableCell>
+                    <TableCell className="text-muted-foreground">{item.rule_id ?? '—'}</TableCell>
+                    <TableCell className="text-muted-foreground">{item.category ?? '—'}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {new Date(item.created_at * 1000).toLocaleString('zh-CN')}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {feedback.data.feedback.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                      暂无反馈
+                    </TableCell>
+                  </TableRow>
+                ) : null}
+              </TableBody>
+            </Table>
+          </div>
+        </>
+      )}
+    </section>
+  );
 }
