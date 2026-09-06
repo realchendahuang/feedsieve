@@ -10,6 +10,7 @@
  */
 
 import { readCsrfToken, X_WEB_BEARER } from './block';
+import { noteResolveTrace } from '../status';
 
 /** TBWL 实测可用的 queryId（对应 web 客户端 UserByScreenName 查询）。 */
 const USER_BY_SCREEN_NAME_QUERY_ID = '32pL5BWe9WKeSK1MoPvFQQ';
@@ -34,6 +35,7 @@ export async function resolveUserIdByHandle(
 ): Promise<string | null> {
   const csrf = readCsrfToken();
   if (!csrf) {
+    noteResolveTrace('no_csrf');
     return null;
   }
   const variables = encodeURIComponent(
@@ -54,6 +56,8 @@ export async function resolveUserIdByHandle(
       },
     });
     if (!response.ok) {
+      // 401/403 = 会话失效；其余 = 端点契约变化或服务端错误
+      noteResolveTrace(response.status === 401 || response.status === 403 ? 'no_csrf' : 'http');
       return null;
     }
     const body = (await response.json()) as {
@@ -61,10 +65,14 @@ export async function resolveUserIdByHandle(
     };
     const result = body.data?.user?.result;
     if (result?.__typename === 'UserUnavailable' || !result?.rest_id) {
+      // 查无此人 = 解析流程正常工作的确定结论（不算失败）
+      noteResolveTrace('unavailable');
       return null;
     }
+    noteResolveTrace('ok');
     return String(result.rest_id);
   } catch {
+    noteResolveTrace('network');
     return null;
   }
 }

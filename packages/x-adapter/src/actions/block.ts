@@ -12,6 +12,8 @@
  * 参考：docs/research/PURETWITTER_MECHANISM.md、third_party/tbwl/index.user.js
  */
 
+import { noteActionResult } from '../status';
+
 export const X_WEB_BEARER =
   'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA';
 
@@ -47,6 +49,7 @@ export function readCsrfToken(): string | null {
  * 拉黑 / 取消拉黑一个账号（按 x_user_id）。
  *
  * 结果必须如实：网络失败、认证过期、限流都返回结构化错误，绝不假装成功。
+ * 每次结果同时回填能力快照（status.ts），供 popup 判断是否降级。
  */
 export async function runNativeAction(
   type: NativeActionType,
@@ -55,11 +58,13 @@ export async function runNativeAction(
 ): Promise<NativeActionResult> {
   const csrf = readCsrfToken();
   if (!csrf) {
-    return {
+    const result: NativeActionResult = {
       ok: false,
       code: 'missing_csrf',
       message: 'ct0 cookie 不可读（未登录或页面上下文错误）',
     };
+    noteActionResult(type, { ok: false, code: 'missing_csrf' });
+    return result;
   }
 
   try {
@@ -76,21 +81,29 @@ export async function runNativeAction(
       body: `user_id=${encodeURIComponent(xUserId)}`,
     });
 
+    let result: NativeActionResult;
     if (response.ok) {
-      return { ok: true };
+      result = { ok: true };
+    } else if (response.status === 401 || response.status === 403) {
+      result = { ok: false, code: 'auth_required', message: `HTTP ${response.status}` };
+    } else if (response.status === 429) {
+      result = { ok: false, code: 'rate_limited', message: 'HTTP 429' };
+    } else {
+      result = { ok: false, code: 'http_error', message: `HTTP ${response.status}` };
     }
-    if (response.status === 401 || response.status === 403) {
-      return { ok: false, code: 'auth_required', message: `HTTP ${response.status}` };
-    }
-    if (response.status === 429) {
-      return { ok: false, code: 'rate_limited', message: 'HTTP 429' };
-    }
-    return { ok: false, code: 'http_error', message: `HTTP ${response.status}` };
+    noteActionResult(type, {
+      ok: result.ok,
+      code: result.ok ? undefined : result.code,
+      statusCode: response.status,
+    });
+    return result;
   } catch (error) {
-    return {
+    const result: NativeActionResult = {
       ok: false,
       code: 'network_error',
       message: error instanceof Error ? error.message : String(error),
     };
+    noteActionResult(type, { ok: false, code: 'network_error' });
+    return result;
   }
 }
