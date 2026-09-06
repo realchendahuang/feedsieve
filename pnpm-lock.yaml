@@ -132,6 +132,9 @@ importers:
 
   apps/community-api:
     dependencies:
+      '@feedsieve/community-lists':
+        specifier: workspace:*
+        version: link:../../packages/community-lists
       hono:
         specifier: ^4.13.5
         version: 4.13.5

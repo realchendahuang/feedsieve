@@ -1,5 +1,10 @@
 import { sha256Hex } from './lib/hash';
 import { computeScore } from './lib/score';
+import {
+  buildSigningMessage,
+  signManifestMessage,
+  type ManifestSignature,
+} from '@feedsieve/community-lists';
 import { listMaintainerEntries } from './maintainer-blocklist';
 import { publicPolicy } from './reports';
 import { POLICY } from './reports';
@@ -517,7 +522,27 @@ export async function generateSnapshot(
       sha256: file.sha256,
       entries: file.entries,
     })),
-  };
+  } as Record<string, unknown>;
+
+  // 发布者签名：manifest 一旦落库即签名，公开端点只在签名行存在时下发。
+  // 私钥来自部署配置（gitignored wrangler.local.jsonc / wrangler secret），
+  // 不进 R2；即使 R2/存储被整体替换，扩展也会因验签失败而拒绝。
+  let signatureJson: string | null = null;
+  if (env.SIGNING_PRIVATE_KEY && env.SIGNING_KEY_ID) {
+    const message = buildSigningMessage({
+      schemaVersion: SNAPSHOT_SCHEMA_VERSION,
+      version,
+      generatedAt,
+      files: [machineFile, yamlFile].map((file) => ({
+        path: file.path,
+        sha256: file.sha256,
+        count: file.entries,
+      })),
+    });
+    const sig = await signManifestMessage(message, env.SIGNING_PRIVATE_KEY, env.SIGNING_KEY_ID);
+    manifest.signature = sig;
+    signatureJson = JSON.stringify(sig satisfies ManifestSignature);
+  }
 
   // 内容无变化则复用最新版本（cron 每小时跑，避免空转刷版本号）。
   // 比较 entries 内容（body 里的 generated_at 每次不同，不能整串比较）。
@@ -539,12 +564,13 @@ export async function generateSnapshot(
   }
 
   const inserted = await env.DB.prepare(
-    `INSERT OR IGNORE INTO snapshots (version, manifest_json, files_json, created_at)
-     VALUES (?1, ?2, ?3, ?4)`,
+    `INSERT OR IGNORE INTO snapshots (version, manifest_json, signature_json, files_json, created_at)
+     VALUES (?1, ?2, ?3, ?4, ?5)`,
   )
     .bind(
       version,
       `${JSON.stringify(manifest, null, 2)}\n`,
+      signatureJson,
       JSON.stringify({
         [machineFile.path]: machineFile,
         [yamlFile.path]: yamlFile,
@@ -595,8 +621,10 @@ function entriesContentEqual(lastBody: string, currentEntries: unknown[]): boole
 }
 
 export async function getLatestSnapshot(env: Cloudflare.Env): Promise<{ manifest: string } | null> {
+  const requireSigned = env.REQUIRE_SIGNED_SNAPSHOTS === '1';
   const row = await env.DB.prepare(
     `SELECT manifest_json FROM snapshots
+     ${requireSigned ? 'WHERE signature_json IS NOT NULL' : ''}
      ORDER BY substr(version, 1, 10) DESC, CAST(substr(version, 12) AS INTEGER) DESC
      LIMIT 1`,
   ).first<{ manifest_json: string }>();
@@ -614,7 +642,11 @@ export async function getSnapshotFile(
   ) {
     return null;
   }
-  const row = await env.DB.prepare('SELECT files_json FROM snapshots WHERE version = ?1')
+  const requireSigned = env.REQUIRE_SIGNED_SNAPSHOTS === '1';
+  const row = await env.DB.prepare(
+    `SELECT files_json FROM snapshots WHERE version = ?1
+     ${requireSigned ? 'AND signature_json IS NOT NULL' : ''}`,
+  )
     .bind(version)
     .first<{ files_json: string }>();
   if (!row) return null;
@@ -626,8 +658,10 @@ export async function getLatestSnapshotFile(
   env: Cloudflare.Env,
   path: typeof SNAPSHOT_PACK | typeof PUBLIC_BLOCKLIST_PACK,
 ): Promise<string | null> {
+  const requireSigned = env.REQUIRE_SIGNED_SNAPSHOTS === '1';
   const row = await env.DB.prepare(
     `SELECT files_json FROM snapshots
+     ${requireSigned ? 'WHERE signature_json IS NOT NULL' : ''}
      ORDER BY substr(version, 1, 10) DESC, CAST(substr(version, 12) AS INTEGER) DESC
      LIMIT 1`,
   ).first<{ files_json: string }>();
@@ -647,8 +681,10 @@ export interface LatestSnapshotMeta {
 }
 
 export async function getLatestSnapshotMeta(env: Cloudflare.Env): Promise<LatestSnapshotMeta | null> {
+  const requireSigned = env.REQUIRE_SIGNED_SNAPSHOTS === '1';
   const row = await env.DB.prepare(
     `SELECT manifest_json, files_json, created_at FROM snapshots
+     ${requireSigned ? 'WHERE signature_json IS NOT NULL' : ''}
      ORDER BY substr(version, 1, 10) DESC, CAST(substr(version, 12) AS INTEGER) DESC
      LIMIT 1`,
   ).first<{ manifest_json: string; files_json: string; created_at: number }>();

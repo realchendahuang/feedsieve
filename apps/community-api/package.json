@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "hono": "^4.13.5",
-    "jose": "^6.1.3"
+    "jose": "^6.1.3",
+    "@feedsieve/community-lists": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "^1.1.0",

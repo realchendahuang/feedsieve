@@ -1,6 +1,11 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 import worker from '../src/index';
+import {
+  buildSigningMessage,
+  TRUSTED_KEYS,
+  verifyManifestSignature,
+} from '@feedsieve/community-lists';
 import { generateSnapshot, PUBLIC_BLOCKLIST_PACK, SNAPSHOT_PACK } from '../src/snapshot';
 
 const ORIGIN = 'https://api.example.com';
@@ -139,5 +144,70 @@ describe('snapshot pipeline', () => {
     const second = (await generateSnapshot(env)).manifest as unknown as Manifest;
     // v0.5 零人工：内容没变化就不产生新版本（cron 每小时跑，不刷版本号）
     expect(second.snapshot_version).toBe(first.snapshot_version);
+  });
+
+  it.skipIf(!env.SIGNING_PRIVATE_KEY)(
+    '配置了签名密钥时，manifest 自带发布者签名且扩展内置公钥可验签',
+    async () => {
+      const result = await generateSnapshot(env);
+      const manifest = result.manifest as unknown as Manifest & {
+        signature?: { key_id: string; alg: 'ed25519'; sig: string };
+      };
+      expect(manifest.signature).toBeDefined();
+      expect(manifest.signature?.key_id).toBe('release-1');
+
+      const check = await verifyManifestSignature(
+        buildSigningMessage({
+          schemaVersion: manifest.schema_version,
+          version: manifest.snapshot_version,
+          generatedAt: manifest.generated_at,
+          files: manifest.files.map((file) => ({
+            path: file.path,
+            sha256: file.sha256,
+            count: file.entries,
+          })),
+        }),
+        manifest.signature!,
+        TRUSTED_KEYS,
+      );
+      expect(check).toEqual({ ok: true });
+
+      // 公开端点下发的 manifest 与本地生成的一致（同样带签名）
+      const latest = (await (
+        await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), env)
+      ).json()) as Manifest & { signature?: unknown };
+      expect(latest.signature).toBeDefined();
+      expect(latest.snapshot_version).toBe(manifest.snapshot_version);
+    },
+  );
+
+  it.skipIf(env.REQUIRE_SIGNED_SNAPSHOTS !== '1')(
+    'REQUIRE_SIGNED_SNAPSHOTS 开启时，未签名的新行不会成为最新公开快照',
+    async () => {
+    const signed = (await generateSnapshot(env)).manifest as unknown as Manifest;
+    // 直接插入一条「更新但未签名」的行 —— 模拟存储侧注入
+    await env.DB.prepare(
+      `INSERT INTO snapshots (version, manifest_json, signature_json, files_json, created_at)
+       VALUES (?1, ?2, NULL, ?3, ?4)`,
+    )
+      .bind(
+        '2099.01.01.1',
+        JSON.stringify({
+          schema_version: 2,
+          snapshot_version: '2099.01.01.1',
+          generated_at: '2099-01-01T00:00:00Z',
+          files: [],
+        }),
+        '{}',
+        Math.floor(Date.now() / 1000),
+      )
+      .run();
+
+    const latest = (await (
+      await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), env)
+    ).json()) as Manifest;
+    // 门槛开启时跳过未签名行，仍返回已签名的最新版本
+    expect(latest.snapshot_version).toBe(signed.snapshot_version);
+    expect(latest.snapshot_version).not.toBe('2099.01.01.1');
   });
 });
