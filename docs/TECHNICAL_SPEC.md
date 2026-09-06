@@ -788,11 +788,11 @@ not-interested (future)
   ↓
 用户点「顺手拉黑」或「一键拉黑」
   ↓
-X Action Adapter 打开原生菜单并执行 Block
+X Action Adapter 调用 X 内部 Block 接口执行（页面同源 Web API）
   ↓
 验证页面成功反馈
   ↓
-误伤 -> 用户点「放回来」-> 原生 Unblock
+误伤 -> 用户点「放回来」-> X 内部 Unblock 接口
 ```
 
 Block 和 Unblock 是 v0.1 的同等一等公民。不成功不假装成功。

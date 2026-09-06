@@ -15,8 +15,8 @@ FeedSieve 的第一产品形态是浏览器扩展，真正的技术本体是独�
 - Detector 黄框标注垃圾账号，**永不隐藏内容**
 - 社区公开名单在本地查询，提供识别弹药
 - AI 只识别模糊案例
-- 拉黑全部通过用户已登录页面原生菜单完成，不把 X OAuth / Developer API 作为核心依赖
-- 每个 Block 由用户显式触发，误伤可撤销（原生 Unblock）
+- 拉黑全部通过用户已登录 X 会话的内部 Block 接口完成，不把 X OAuth / Developer API 作为核心依赖
+- 每个 Block 由用户显式触发，误伤可撤销（X 内部 Unblock 接口）
 
 ## 2. 总体架构
 
@@ -251,10 +251,9 @@ GET|POST|DELETE /api/admin/* (仅管理域 + Cloudflare Access)
 ```text
 黄框账号
 -> 顺手拉黑 / 一键批量拉黑
--> 打开 X 原生菜单
--> Block
+-> 调用 X 内部 Block 接口（页面同源 Web API，非 DOM 菜单）
 -> 等待页面成功反馈
--> 误伤 -> 原生 Unblock 一键放回
+-> 误伤 -> X 内部 Unblock 接口一键放回
 ```
 
 ## 12. Local Storage
@@ -292,7 +291,7 @@ X fixture HTML -> expected FeedItem
 
 ### Action Mock
 
-X 原生菜单使用 fixture 测试（Block / Unblock / 超时 / 语言回退），不在 CI 中真实 Block。
+X 内部 Block 接口使用 fixture 测试（Block / Unblock / 超时 / 语言回退），不在 CI 中真实 Block。
 
 ### E2E
 
