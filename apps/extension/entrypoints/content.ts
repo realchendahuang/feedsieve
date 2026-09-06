@@ -1,6 +1,7 @@
 import { contentFingerprint, detect, toHandleSet } from '@feedsieve/detector';
 import type { CommunityEntry } from '@feedsieve/community-lists';
 import { runQueuedBlocks } from '@feedsieve/block-queue';
+import { PageScanController, scanRevision } from '../src/lib/page-scan-controller';
 import {
   contextFromPath,
   extractFeedItem,
@@ -131,14 +132,20 @@ interface PageMarkedAccount {
 export default defineContentScript({
   matches: ['https://x.com/*'],
   main() {
-    // X virtualizes and reuses article nodes. Keep the last input revision per
-    // element so reused nodes are rescanned when their author/content changes.
-    let scanSnapshots = new WeakMap<Element, string>();
-    const dirtyArticles = new Set<Element>();
+    // 扫描调度 / 节点索引 / revision 快照 / MutationObserver 全部收敛到 PageScanController；
+    // 检测与标注通过 callbacks 注入（见下方 scanOne / flushPendingBadges）。
+    const controller = new PageScanController({
+      processOne: (article, context, pendingBadges) => {
+        scanOne(article, context, pendingBadges);
+      },
+      flushBadges: (pendingBadges) => {
+        flushPendingBadges(pendingBadges);
+      },
+      noteHealth: (ok, reason) => {
+        noteTimelineHealth(ok, reason);
+      },
+    });
     const dirtyHandles = new Set<string>();
-    // X 会复用 article；按 handle 建反向索引，bio 到达时只让受影响的卡片重检。
-    const articlesByHandle = new Map<string, Set<Element>>();
-    const articleHandles = new WeakMap<Element, string>();
     /** 当前页面所有黄框账号（剔除已拉黑回显：它们已经在黑名单里） */
     const pageMarked = new Map<string, PageMarkedAccount>();
     /** handle -> bio（XHR 桥提供，检测用；DOM 拿不到简介） */
@@ -162,9 +169,6 @@ export default defineContentScript({
     let keywordCatalog: KeywordPackCatalog = BUNDLED_KEYWORD_PACK_CATALOG;
     let runningFollowingSync: Promise<void> | null = null;
     let runningPersistentQueue: Promise<void> | null = null;
-    let scanTimer: number | undefined;
-    /** 分片扫描进行中；期间 scheduleScan 直接丢弃，由 runScan 的收尾补偿 */
-    let scanRunning = false;
 
     ensureStyles();
     refreshAllowCache();
@@ -346,16 +350,11 @@ export default defineContentScript({
           // pass. Only invalidate cards for the handles whose bio changed.
           if (dirtyHandles.size > 0) {
             for (const handle of dirtyHandles) {
-              const indexed = articlesByHandle.get(handle);
-              if (!indexed) continue;
-              for (const article of indexed) {
-                if (article.isConnected) dirtyArticles.add(article);
-                else indexed.delete(article);
-              }
+              controller.markDirtyForBio(handle);
             }
             dirtyHandles.clear();
           }
-          scheduleScan();
+          controller.schedule();
         } catch {
           // detail 非法 JSON：静默
         }
@@ -385,30 +384,12 @@ export default defineContentScript({
 
     /**
      * 索引优先地收集某账号当前页面的 cell：先查扫描维护的 handle 反向索引，
-     * 再补上尚未入索引的 dirty article；候选逐一用 extractFeedItem 复核，
-     * 正确性与全页扫描一致，代价从「全页提取」降到「只提取该账号的候选 article」。
+     * 再补上尚未入索引的 dirty article；候选逐一用 extractFeedItem 复核。
      * 批量拉黑队列每个 handle 都要取一次 cell，全页版会放大成 N 次整页扫描。
+     * 索引与脏集合都收敛在 PageScanController，这里只做端口。
      */
     function collectCellsForHandle(handle: string): Element[] {
-      const normalized = handle.trim().replace(/^@+/, '').toLowerCase();
-      if (!normalized) return [];
-      const context = contextFromPath(location.pathname);
-      const candidates = new Set<Element>();
-      for (const article of articlesByHandle.get(normalized) ?? []) {
-        candidates.add(article);
-      }
-      for (const article of dirtyArticles) {
-        candidates.add(article);
-      }
-      const cells = new Set<Element>();
-      for (const article of candidates) {
-        if (!article.isConnected) continue;
-        if (extractFeedItem(article, context)?.author.handle.toLowerCase() !== normalized) {
-          continue;
-        }
-        cells.add(article.closest(tweetSelectors.timelineCell) ?? article);
-      }
-      return [...cells];
+      return controller.cellsForHandle(handle);
     }
 
     function hideNewlyBlockedCells(handles: ReadonlySet<string>): void {
@@ -488,7 +469,7 @@ export default defineContentScript({
     async function refreshKeywordHeuristics(): Promise<void> {
       keywordCatalog = await getKeywordPackCatalog();
       keywordHeuristics = createKeywordHeuristics(await getKeywordRuleSettings(), keywordCatalog);
-      scheduleFullScan();
+      controller.fullRescan();
     }
 
     /**
@@ -497,15 +478,14 @@ export default defineContentScript({
      */
     function resetPageDecorations(): void {
       pageMarked.clear();
-      scanSnapshots = new WeakMap<Element, string>();
-      dirtyArticles.clear();
+      controller.reset();
       for (const cell of document.querySelectorAll(`[${MARK_ATTRIBUTE}]`)) {
         cell.removeAttribute(MARK_ATTRIBUTE);
       }
       for (const element of document.querySelectorAll('.fs-badge, .fs-manual-mark')) {
         element.remove();
       }
-      scheduleFullScan();
+      controller.fullRescan();
     }
 
     /** 只刷新状态变化账号，避免一次拉黑让整页黄框先塌再长回来。 */
@@ -529,7 +509,7 @@ export default defineContentScript({
         // 拉黑成功后的 650ms 成功反馈必须留在屏幕上；同账号其它 cell 也一并延后，
         // 否则仍会在点击瞬间造成局部高度变更。
         if (handlesWithPendingFeedback.has(match.handle)) continue;
-        scanSnapshots.delete(match.article);
+        controller.dropSnapshot(match.article);
         pageMarked.delete(match.handle);
         articles.push(match.article);
         cells.add(match.cell);
@@ -547,27 +527,13 @@ export default defineContentScript({
         }
       });
       // 只把受影响的 article 重新入队：不再依赖「脏集合为空 -> 全页扫描」的旧路径
-      for (const article of articles) dirtyArticles.add(article);
-      scheduleScan();
-    }
-
-    function articleRevision(
-      item: NonNullable<ReturnType<typeof extractFeedItem>>,
-      bio: string | undefined,
-    ): string {
-      return [
-        item.postId ?? '',
-        item.author.handle.toLowerCase(),
-        item.author.displayName ?? '',
-        item.text,
-        bio ?? '',
-        item.links.map((link) => `${link.href}|${link.hostname ?? ''}`).join(''),
-      ].join('');
+      for (const article of articles) controller.markDirty(article);
+      controller.schedule();
     }
 
     /**
      * 单个 article 的提取 + 检测 + 标注。
-     * 只处理传入的这一个节点；调度（脏集合、分片、防重入）由 scheduleScan/runScan 负责。
+     * 只处理传入的这一个节点；调度（脏集合、分片、防重入）由 PageScanController 负责。
      */
     function scanOne(
       rawArticle: Element,
@@ -578,37 +544,21 @@ export default defineContentScript({
       const element = rawArticle;
       // X 虚拟列表可能在扫描排队期间把节点回收掉
       if (!element.isConnected) {
-        scanSnapshots.delete(element);
-        const staleHandle = articleHandles.get(element);
-        if (staleHandle) {
-          const staleSet = articlesByHandle.get(staleHandle);
-          staleSet?.delete(element);
-          if (staleSet?.size === 0) articlesByHandle.delete(staleHandle);
-        }
+        controller.forget(element);
         return;
       }
       const item = extractFeedItem(element, context);
       if (!item) {
-        scanSnapshots.delete(element);
+        controller.dropSnapshot(element);
         return;
       }
       const handle = item.author.handle.toLowerCase();
-      const previousHandle = articleHandles.get(element);
-      if (previousHandle && previousHandle !== handle) {
-        const previousSet = articlesByHandle.get(previousHandle);
-        previousSet?.delete(element);
-        if (previousSet?.size === 0) articlesByHandle.delete(previousHandle);
-      }
-      articleHandles.set(element, handle);
-      const handleSet = articlesByHandle.get(handle) ?? new Set<Element>();
-      handleSet.add(element);
-      articlesByHandle.set(handle, handleSet);
-      const bio = bioCache.get(item.author.handle.toLowerCase());
-      const revision = articleRevision(item, bio);
-      if (scanSnapshots.get(element) === revision) {
+      controller.remember(element, handle);
+      const bio = bioCache.get(handle);
+      // revision 快照：虚拟列表复用同一 article 时跳过已标注过的输入
+      if (!controller.hasChanged(element, scanRevision(item, bio))) {
         return;
       }
-      scanSnapshots.set(element, revision);
 
       const input = {
         handle: item.author.handle,
@@ -753,68 +703,6 @@ export default defineContentScript({
       markCell(cell as HTMLElement, detection, category, evidence, pendingBadges);
     }
 
-    function scheduleScan(): void {
-      // 固定间隔去抖（不因后续 mutation 反复顺延）：配合分片执行，
-      // 滚动/打字期间的工作被摊薄到多个帧里，而不是在安静间隙一次性爆发。
-      if (scanRunning || scanTimer !== undefined) return;
-      scanTimer = window.setTimeout(runScan, SCAN_DEBOUNCE_MS);
-    }
-
-    /**
-     * 显式需要整页重新评估的场景才走全页扫描：启动、SPA 路由切换、
-     * 设置/名单/语言变化（resetPageDecorations）。日常增量走 scheduleScan。
-     */
-    function scheduleFullScan(): void {
-      for (const article of document.querySelectorAll(tweetSelectors.article)) {
-        dirtyArticles.add(article);
-      }
-      scheduleScan();
-    }
-
-    function runScan(): void {
-      scanTimer = undefined;
-      if (scanRunning) return;
-      scanRunning = true;
-      void processDirty()
-        .then(() => {
-          // 扫描正常 = 时间线解析契约健康（能力快照的 timelineParsing 输入）
-          noteTimelineHealth(true);
-        })
-        .catch(() => {
-          noteTimelineHealth(false, 'scan_failed');
-        })
-        .finally(() => {
-          scanRunning = false;
-          // 扫描期间 observer 又标了脏数据：立即续扫，不再等一个去抖周期
-          if (dirtyArticles.size > 0) scheduleScan();
-        });
-    }
-
-    async function processDirty(): Promise<void> {
-      while (dirtyArticles.size > 0) {
-        const batch = [...dirtyArticles];
-        dirtyArticles.clear();
-        const context = contextFromPath(location.pathname);
-        const pendingBadges: PendingBadge[] = [];
-        let chunkStartedAt = performance.now();
-        for (let index = 0; index < batch.length; index++) {
-          scanOne(batch[index]!, context, pendingBadges);
-          // 每片不超过单帧预算，之间让出主线程：长评论区的一次扫描
-          // 不再整块卡住滚动与输入（旧实现一次性同步处理全部脏节点）。
-          if (
-            performance.now() - chunkStartedAt >= SCAN_CHUNK_BUDGET_MS &&
-            index < batch.length - 1
-          ) {
-            await new Promise<void>((resolve) => {
-              window.setTimeout(resolve, 0);
-            });
-            chunkStartedAt = performance.now();
-          }
-        }
-        flushPendingBadges(pendingBadges);
-      }
-    }
-
     interface PendingBadge {
       cell: HTMLElement;
       badge: HTMLElement;
@@ -855,61 +743,15 @@ export default defineContentScript({
         ?.id;
     }
 
-    new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        const target =
-          mutation.target instanceof Element ? mutation.target : mutation.target.parentElement;
-        // 忽略插件自己的徽章/按钮变更，避免 appendChild -> observer -> scan 的反馈环。
-        if (target?.closest('.fs-badge, .fs-manual-mark')) continue;
-        // 本条 mutation 的节点全是插件自己的元素时，不当作页面变化
-        // （例如本插件向动作栏插入「标记」按钮的那一次 mutation）。
-        let touched = false;
-        for (const node of mutation.addedNodes) {
-          if (
-            node instanceof Element &&
-            (node.matches('.fs-badge, .fs-manual-mark') ||
-              node.closest('.fs-badge, .fs-manual-mark'))
-          ) {
-            continue;
-          }
-          touched = true;
-          if (!(node instanceof Element)) continue;
-          if (node.matches(tweetSelectors.article)) dirtyArticles.add(node);
-          for (const nested of node.querySelectorAll(tweetSelectors.article)) {
-            dirtyArticles.add(nested);
-          }
-        }
-        if (!touched) {
-          for (const node of mutation.removedNodes) {
-            if (
-              node instanceof Element &&
-              (node.matches('.fs-badge, .fs-manual-mark') ||
-                node.closest('.fs-badge, .fs-manual-mark'))
-            ) {
-              continue;
-            }
-            touched = true;
-            break;
-          }
-        }
-        if (!touched) continue;
-        const article = target?.closest(tweetSelectors.article);
-        if (article) dirtyArticles.add(article);
-      }
-      // 只有确实扫出了受影响的 article 才安排扫描。打字（编辑器不在 article 内）、
-      // 悬浮提示、菜单等无关 mutation 在这里被直接忽略——旧实现一律 scheduleScan，
-      // 而旧 scan() 在脏集合为空时会退化为全页重扫，是长评论区打字卡顿的主因。
-      if (dirtyArticles.size > 0) scheduleScan();
-    }).observe(document.body, {
-      childList: true,
-      subtree: true,
-    });
+    // 页面变化监听 + 扫描调度：收敛在 PageScanController（有脏才调度，反馈环由
+    // .fs-badge/.fs-manual-mark 过滤；无关 mutation 直接忽略）
+    controller.observe(document.body);
 
     // SPA 路由变化：X 不触发页面加载，靠 History API 探测以刷新 context
-    window.addEventListener('popstate', scheduleFullScan);
-    window.addEventListener('hashchange', scheduleFullScan);
+    window.addEventListener('popstate', () => controller.fullRescan());
+    window.addEventListener('hashchange', () => controller.fullRescan());
 
-    scheduleFullScan();
+    controller.fullRescan();
 
     // ---------- 标注 UI ----------
 
@@ -1572,10 +1414,6 @@ export default defineContentScript({
   },
 });
 
-/** mutation 停止后到扫描的固定间隔。 */
-const SCAN_DEBOUNCE_MS = 300;
-/** 单次分片的同步工作预算：略小于一帧，超了就让出主线程。 */
-const SCAN_CHUNK_BUDGET_MS = 8;
 /** bio 内存缓存上限（每页会话），防止超长会话无界增长。 */
 const BIO_CACHE_MAX = 2000;
 
