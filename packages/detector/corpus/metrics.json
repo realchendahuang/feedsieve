@@ -1,0 +1,13 @@
+{
+  "corpus_version": 1,
+  "generated_at": "2026-09-06T16:35:34.368Z",
+  "total": 26,
+  "tp": 13,
+  "fp": 0,
+  "fn": 0,
+  "tn": 13,
+  "known_limitation": 1,
+  "precision": 1,
+  "recall": 1,
+  "fpr": 0
+}

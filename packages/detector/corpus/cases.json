@@ -1,0 +1,163 @@
+{
+  "corpus_version": 1,
+  "description": "detector 内置启发式层金标样本（v1）。expected 为期望命中的 ruleId；null = 干净账号。known_limitation 标注当前已知漏报/局限，指标统计仍按期望计。",
+  "cases": [
+    {
+      "id": "zh-carry",
+      "note": "中文带单/内部群引流",
+      "input": { "handle": "carry_001", "displayName": "带单老师", "text": "加我微信进内部群，稳赚不赔，带单老师一对一" },
+      "expected": "templated-text"
+    },
+    {
+      "id": "dm-invest",
+      "note": "英文 DM 引流 + 变现关键词",
+      "input": { "handle": "dm_agent", "text": "dm me for the best crypto signals" },
+      "expected": "templated-text"
+    },
+    {
+      "id": "giveaway-usdt",
+      "note": "USDT 假抽奖模板",
+      "input": { "handle": "gv_001", "text": "500 USDT giveaway 🎉 follow and claim now" },
+      "expected": "templated-text"
+    },
+    {
+      "id": "giveaway-variant",
+      "note": "拼写变体（giweaway）",
+      "input": { "handle": "gv_002", "text": "giweaway 888 USDT claim" },
+      "expected": "templated-text"
+    },
+    {
+      "id": "follow-repost-win",
+      "note": "关注-转发抽奖引流",
+      "input": { "handle": "gv_003", "text": "follow @x and repost to win 1 BTC" },
+      "expected": "templated-text"
+    },
+    {
+      "id": "porn-bait-fu",
+      "note": "「福」隐语",
+      "input": { "handle": "fu_01", "text": "我福不黑，不信你看" },
+      "expected": "porn-bait-zh"
+    },
+    {
+      "id": "porn-bait-emoji-combo",
+      "note": "擦边 marker 组合（≥2 条）",
+      "input": { "handle": "ad_01", "text": "玩得开 好涩 🍑" },
+      "expected": "porn-bait-zh"
+    },
+    {
+      "id": "spam-link-hint",
+      "note": "垃圾推广域名特征词",
+      "input": { "handle": "lk_01", "links": [{ "href": "https://myfreecrypto.trade", "hostname": "myfreecrypto.trade" }] },
+      "expected": "spam-link-hint"
+    },
+    {
+      "id": "default-name-digits",
+      "note": "默认数字昵称 + 短前缀长数字 handle",
+      "input": { "handle": "ab12345678", "displayName": "用户12345678" },
+      "expected": "default-name-digits"
+    },
+    {
+      "id": "bio-buried-spam",
+      "note": "话术埋在简介且正文干净",
+      "input": { "handle": "bio_01", "bio": "免费领取 888 USDT 🎁 giveaway" },
+      "expected": "templated-text"
+    },
+    {
+      "id": "adversarial-fullwidth-space",
+      "note": "全角空格插在关键词之间仍命中（\\s 覆盖 U+3000）",
+      "input": { "handle": "fd_01", "text": "dm　me　for　crypto　signals" },
+      "expected": "templated-text"
+    },
+    {
+      "id": "username-only-hit",
+      "note": "仅用户名+昵称即可判定（无正文）",
+      "input": { "handle": "ab12345678", "displayName": "用户12345678" },
+      "expected": "default-name-digits"
+    },
+    {
+      "id": "domain-only-hit",
+      "note": "正文干净，仅外链域名命中",
+      "input": { "handle": "do_01", "text": "check this out", "links": [{ "href": "https://myfreecrypto.example", "hostname": "myfreecrypto.example" }] },
+      "expected": "spam-link-hint"
+    },
+    {
+      "id": "adversarial-zero-width",
+      "note": "零宽字符拆碎关键词：当前正则漏报（已知局限，规则层待修复）",
+      "input": { "handle": "zw_01", "text": "d\u200bm\u200b me for crypto si\u200bg\u200bnals" },
+      "expected": null,
+      "known_limitation": true
+    },
+    {
+      "id": "legit-crypto-discussion",
+      "note": "正常加密货币讨论",
+      "input": { "handle": "n1", "text": "比特币今天又涨了，ETH 质押收益还不错" },
+      "expected": null
+    },
+    {
+      "id": "legit-crypto-news",
+      "note": "正常英文加密新闻",
+      "input": { "handle": "n2", "text": "Bitcoin ETF inflows hit a record high" },
+      "expected": null
+    },
+    {
+      "id": "legit-giveaway-mention",
+      "note": "日常提到 giveaway，无币种数量，不应命中",
+      "input": { "handle": "n3", "text": "我朋友前几天参加了个 giveaway，领到几块钱" },
+      "expected": null
+    },
+    {
+      "id": "legit-dm",
+      "note": "日常「dm me」，无变现关键词",
+      "input": { "handle": "n4", "text": "dm me anytime about the project" },
+      "expected": null
+    },
+    {
+      "id": "adult-cha-single",
+      "note": "单擦边词（「涩」）正常语境",
+      "input": { "handle": "n5", "text": "这茶有点涩，回甘不错" },
+      "expected": null
+    },
+    {
+      "id": "adult-discussion-normal",
+      "note": "正常成人话题提及地名（涩谷）",
+      "input": { "handle": "n6", "text": "涩谷的猫很可爱" },
+      "expected": null
+    },
+    {
+      "id": "quoted-spam-outer",
+      "note": "引用垃圾帖的外部正常推文（脏内容在引用里，正文不读入）",
+      "input": { "handle": "n7", "text": "这个人又在骗人" },
+      "expected": null
+    },
+    {
+      "id": "normal-post",
+      "note": "普通用户日常内容",
+      "input": { "handle": "bob2012", "displayName": "Bob 2022", "text": "今天天气真好啊，晒晒午饭" },
+      "expected": null
+    },
+    {
+      "id": "legit-link",
+      "note": "正常域名（github）",
+      "input": { "handle": "n8", "links": [{ "href": "https://github.com", "hostname": "github.com" }] },
+      "expected": null
+    },
+    {
+      "id": "mixed-language-normal",
+      "note": "中英混排正常内容",
+      "input": { "handle": "n9", "text": "今天也要加油 work hard play hard" },
+      "expected": null
+    },
+    {
+      "id": "legit-bio",
+      "note": "正常简介",
+      "input": { "handle": "n10", "bio": "产品经理｜咖啡爱好者" },
+      "expected": null
+    },
+    {
+      "id": "username-benign",
+      "note": "普通昵称 + 正常用户名，无正文",
+      "input": { "handle": "music_lover2024", "displayName": "Music Lover" },
+      "expected": null
+    }
+  ]
+}
