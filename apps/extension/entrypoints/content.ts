@@ -1,5 +1,4 @@
-import { contentFingerprint, detect, toHandleSet } from '@feedsieve/detector';
-import type { CommunityEntry } from '@feedsieve/community-lists';
+import { toHandleSet, type Detection } from '@feedsieve/detector';
 import { runQueuedBlocks } from '@feedsieve/block-queue';
 import { PageScanController, scanRevision } from '../src/lib/page-scan-controller';
 import {
@@ -37,14 +36,12 @@ import {
   subscribeAllowlist,
 } from '../src/lib/allowlist';
 import {
-  categoryFromDetection,
-  collectLinkDomains,
   contributeBlocks,
   rescueHandle,
   syncLocalLabels,
 } from '../src/lib/contribute';
 import { getCommunitySettings } from '../src/lib/community-store';
-import { classifyDetection } from '../src/lib/detection-policy';
+import { runDetectionPipeline, type BlockEvidence } from '../src/lib/detection-pipeline';
 import {
   clearFollowingSyncDraft,
   getFollowingAllowlist,
@@ -66,9 +63,7 @@ import {
   type PersistentBlockQueueState,
 } from '../src/lib/block-queue-store';
 import {
-  categoryLabel,
   getUiLanguage,
-  localizedDetectionReason,
   subscribeUiLanguage,
   type UiLanguage,
 } from '../src/lib/i18n';
@@ -95,14 +90,6 @@ const BUILTIN_LIST = toHandleSet((builtinListJson as { entries: unknown }).entri
 
 const MARK_ATTRIBUTE = 'data-fs-marked';
 const STYLE_ELEMENT_ID = 'feedsieve-mark-styles';
-
-/** 标注时刻收集的内容证据（上报载荷，见 contribute.ts） */
-interface BlockEvidence {
-  contentFingerprint?: string;
-  linkDomains?: string[];
-  /** 判断来源；手动标记路径强制 manual，检测器命中带各自来源。 */
-  detectionSource?: string;
-}
 
 /** 页面内一个黄框账号待处理时的标记数据（一键拉黑 = 页面全部黄框）。 */
 interface PageMarkedAccount {
@@ -568,18 +555,6 @@ export default defineContentScript({
         links: item.links,
       };
 
-      // 内容证据只用于用户主动标记或高置信命中后的社区证据。
-      // 不再因「页面上三个账号出现相同文本」直接定罪。
-      const evidence: BlockEvidence = {};
-      const fp = contentFingerprint(input);
-      if (fp) {
-        evidence.contentFingerprint = fp;
-      }
-      const linkDomains = collectLinkDomains(item.links);
-      if (linkDomains) {
-        evidence.linkDomains = linkDomains;
-      }
-
       // 用户已经显式拉黑的账号高于检测开关/白名单保护：X 若又把它渲染出来，
       // 直接以非破坏性的方式折叠该 cell，而不是插入一个会再次改变高度的提示条。
       if (blockedCache.has(handle)) {
@@ -588,119 +563,32 @@ export default defineContentScript({
         hideCellsSoon([cell], 0);
         return;
       }
-      const isProtected = allowCache.has(handle) || followingCache.has(handle);
-      if (isProtected || !detectionEnabled) {
-        attachManualAction(article as HTMLElement, handle, evidence);
-        return;
-      }
 
-      // 识别顺序：社区快照名单 -> 内置名单兜底 -> 用户/官方可配置词库。
-      // 社区指纹/域名集合由 buildRuntimeCommunity 按强度档准备（大扫除档才有内容）
-      const evidenceOptions = {
-        ...(community?.fingerprintSet.size ? { fingerprints: community.fingerprintSet } : {}),
-        ...(community?.domainSet.size ? { domains: community.domainSet } : {}),
-      };
-      let detection = community
-        ? detect(input, {
-            list: community.handleSet,
-            listSource: 'community-list',
-            // v0.5 指纹即 SimHash：simhashes 集合与 fingerprints 集合同源，
-            // exact 命中优先，miss 后走汉明距离找「话术变体」
-            ...(community.fingerprintSet.size ? { simhashes: community.fingerprintSet } : {}),
-            ...evidenceOptions,
-            // 关键词/默认名称等单信号只保留在 Detector 评测层，
-            // 不再直接进入用户黄框。
-            heuristics: [],
-          })
-        : null;
-      if (!detection && BUILTIN_LIST.size > 0) {
-        detection = detect(input, {
-          list: BUILTIN_LIST,
-          listSource: 'builtin-list',
-          ...evidenceOptions,
-          heuristics: [],
-        });
-      }
-      if (!detection) {
-        detection = detect(input, {
-          ...evidenceOptions,
-          // 仅运行用户明确配置的字面短语和可逐条关闭的官方词库。
-          // 命中后给人工确认黄框；页面一键拉黑仍必须由用户显式点击。
-          heuristics: keywordHeuristics,
-        });
-      }
-
-      if (!detection) {
-        attachManualAction(article as HTMLElement, handle, evidence);
-        return;
-      }
-
-      // 社区名单命中：徽章带分类与票数，可解释性优先
-      let communityCategory: string | undefined;
-      let communityEntry: CommunityEntry | null = null;
-      if (detection.source === 'community-list' && community) {
-        const entry = community.index.lookup(item.author.handle);
-        if (entry) {
-          communityEntry = entry;
-          communityCategory = entry.category;
-          const label = categoryLabel(entry.category, uiLanguage);
-          const voteSummary =
-            entry.report_count > 1
-              ? uiLanguage === 'zh'
-                ? `${entry.report_count} 人标记`
-                : `${entry.report_count} community marks`
-              : uiLanguage === 'zh'
-                ? '社区名单'
-                : 'Community list';
-          detection = {
-            ...detection,
-            reason: uiLanguage === 'zh' ? `${voteSummary}为${label}` : `${voteSummary}: ${label}`,
-          };
-        }
-      }
-
-      // v0.5 Campaign：指纹命中（exact 或变体）时，
-      // 反查所在簇的规模，徽章显示「同模板 N 个账号」（网络感，不只单点）
-      if (detection.source === 'fingerprint' && community) {
-        const campaignHandle = detection.matchedFingerprint
-          ? community.campaignByFingerprint.get(detection.matchedFingerprint)
-          : undefined;
-        const campaign = campaignHandle ? community.campaignById.get(campaignHandle) : undefined;
-        if (campaign) {
-          detection = {
-            ...detection,
-            campaignEntryId: campaign.campaign_entry_id,
-            reason:
-              uiLanguage === 'zh'
-                ? `与 ${campaign.campaign_size} 个已确认垃圾账号发布的内容高度相似`
-                : `Highly similar to content from ${campaign.campaign_size} confirmed spam accounts`,
-          };
-        }
-      }
-
-      if (detection.source !== 'community-list') {
-        detection = {
-          ...detection,
-          reason: localizedDetectionReason(uiLanguage, detection),
-        };
-      }
-
-      const presentation = classifyDetection({
-        detection,
+      // 检测 / 增强 / 分层 / 分类推导统一走 detection-pipeline（可独立单测的单元）
+      const result = runDetectionPipeline({
+        input,
+        community,
+        builtinList: BUILTIN_LIST,
+        keywordHeuristics,
+        catalog: keywordCatalog,
         strength,
-        communityEntry,
+        uiLanguage,
       });
-      if (presentation === 'ignore') {
-        attachManualAction(article as HTMLElement, handle, evidence);
+      const isProtected = allowCache.has(handle) || followingCache.has(handle);
+      if (isProtected || !detectionEnabled || result.presentation === 'ignore') {
+        attachManualAction(article as HTMLElement, handle, result.evidence);
         return;
       }
 
       // 标注打在外层时间线格子上（PureTwitter 同款目标层）；找不到才退回 article
       const cell = article.closest(tweetSelectors.timelineCell) ?? article;
-      const category =
-        keywordCategoryFromCurrentCatalog(detection.ruleId) ??
-        categoryFromDetection(detection.source, detection.ruleId, communityCategory);
-      markCell(cell as HTMLElement, detection, category, evidence, pendingBadges);
+      markCell(
+        cell as HTMLElement,
+        result.detection!,
+        result.category ?? 'other',
+        result.evidence,
+        pendingBadges,
+      );
     }
 
     interface PendingBadge {
@@ -733,15 +621,6 @@ export default defineContentScript({
       });
     }
 
-    /** 远程词库可新增行业包；页面本地统计仍保留该包的真实分类，不降级成 other。 */
-    function keywordCategoryFromCurrentCatalog(
-      ruleId: string | null | undefined,
-    ): string | undefined {
-      if (!ruleId?.startsWith('keyword:official:')) return undefined;
-      const officialId = ruleId.slice('keyword:official:'.length);
-      return keywordCatalog.packs.find((pack) => pack.rules.some((rule) => rule.id === officialId))
-        ?.id;
-    }
 
     // 页面变化监听 + 扫描调度：收敛在 PageScanController（有脏才调度，反馈环由
     // .fs-badge/.fs-manual-mark 过滤；无关 mutation 直接忽略）
@@ -835,7 +714,7 @@ export default defineContentScript({
 
     function markCell(
       cell: HTMLElement,
-      detection: NonNullable<ReturnType<typeof detect>>,
+      detection: Detection,
       category: string,
       evidence: BlockEvidence,
       pendingBadges: PendingBadge[],
@@ -866,7 +745,7 @@ export default defineContentScript({
 
     function buildBadge(
       cell: HTMLElement,
-      detection: NonNullable<ReturnType<typeof detect>>,
+      detection: Detection,
       category: string,
       evidence: BlockEvidence,
     ): HTMLElement | null {
