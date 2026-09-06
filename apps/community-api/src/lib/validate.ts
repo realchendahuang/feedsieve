@@ -20,6 +20,8 @@ export interface ValidReport {
   contentFingerprint: string | null;
   /** 外链 hostname（v0.4）：去重后小写数组；无效项在客户端即被过滤，这里兜底再滤一次 */
   linkDomains: string[];
+  /** 检测来源（v0.7.6）：手动标记 = manual；检测器命中标记各自来源；旧客户端缺省为 null */
+  detectionSource: string | null;
 }
 
 const HANDLE_RE = /^@?([A-Za-z0-9_]{1,15})$/;
@@ -100,6 +102,16 @@ export function validateReport(raw: unknown): ReportValidation {
   if (!domains.ok) {
     return { ok: false, error: 'invalid_link_domains' };
   }
+  let detectionSource: string | null = null;
+  if (r.detection_source !== undefined && r.detection_source !== null) {
+    if (
+      typeof r.detection_source !== 'string' ||
+      !REPORT_DETECTION_SOURCES.includes(r.detection_source as (typeof REPORT_DETECTION_SOURCES)[number])
+    ) {
+      return { ok: false, error: 'invalid_detection_source' };
+    }
+    detectionSource = r.detection_source;
+  }
 
   return {
     ok: true,
@@ -110,6 +122,7 @@ export function validateReport(raw: unknown): ReportValidation {
       evidencePostId,
       contentFingerprint,
       linkDomains: domains.domains,
+      detectionSource,
     },
   };
 }
@@ -135,6 +148,8 @@ const DETECTION_SOURCES = [
   'ai',
   'blocked',
 ] as const;
+/** 举报侧额外允许「人工」来源：用户手动标记 ≠ 检测器命中，规则质量分析据此区分。 */
+const REPORT_DETECTION_SOURCES = [...DETECTION_SOURCES, 'manual'] as const;
 const RULE_ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const MAX_DETECTION_REASON_LENGTH = 240;
 

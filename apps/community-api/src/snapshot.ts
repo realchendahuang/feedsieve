@@ -635,3 +635,73 @@ export async function getLatestSnapshotFile(
   const files = JSON.parse(row.files_json) as Record<string, SnapshotFile>;
   return files[path]?.body ?? null;
 }
+
+/** 概览页所需的最新快照元信息（版本 / 生成时间 / 公开条目数 / 落后秒数）。 */
+export interface LatestSnapshotMeta {
+  version: string;
+  /** unix 秒 */
+  generated_at: number;
+  /** 公开名单条目数（machine file），与客户端实际下载量一致。 */
+  entries: number;
+  lag_seconds: number;
+}
+
+export async function getLatestSnapshotMeta(env: Cloudflare.Env): Promise<LatestSnapshotMeta | null> {
+  const row = await env.DB.prepare(
+    `SELECT manifest_json, files_json, created_at FROM snapshots
+     ORDER BY substr(version, 1, 10) DESC, CAST(substr(version, 12) AS INTEGER) DESC
+     LIMIT 1`,
+  ).first<{ manifest_json: string; files_json: string; created_at: number }>();
+  if (!row) return null;
+  try {
+    const manifest = JSON.parse(row.manifest_json) as { snapshot_version?: unknown };
+    const files = JSON.parse(row.files_json) as Record<string, SnapshotFile>;
+    return {
+      version: typeof manifest.snapshot_version === 'string' ? manifest.snapshot_version : '',
+      generated_at: row.created_at,
+      entries: files[SNAPSHOT_PACK]?.entries ?? 0,
+      lag_seconds: Math.max(0, Math.floor(Date.now() / 1000) - row.created_at),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** 只读最新版本号：异步化后上报路径立即返回当前有效版本，不等新快照生成。 */
+export async function getLatestSnapshotVersion(env: Cloudflare.Env): Promise<string | null> {
+  const latest = await getLatestSnapshot(env);
+  if (!latest) return null;
+  try {
+    const parsed = JSON.parse(latest.manifest) as { snapshot_version?: unknown };
+    return typeof parsed.snapshot_version === 'string' ? parsed.snapshot_version : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 脏标记轮询：最近一次快照之后是否又有数据变更。
+ * reports / rescues / accounts 三条写入路径的时间戳都新于快照时间即视为脏；
+ * 维护者发布路径仍同步生成快照，不经过这里。生成失败时数据仍新于快照，
+ * 下一个 cron 周期会自然重试，无需单独的状态位。
+ */
+export async function isSnapshotStale(env: Cloudflare.Env): Promise<boolean> {
+  const latest = await env.DB.prepare('SELECT MAX(created_at) AS at FROM snapshots').first<{
+    at: number | null;
+  }>();
+  if (latest?.at == null) {
+    return true;
+  }
+  const dirty = await env.DB.prepare(
+    `SELECT EXISTS(
+       SELECT 1 FROM reports WHERE created_at > ?1
+       UNION ALL
+       SELECT 1 FROM rescues WHERE created_at > ?1
+       UNION ALL
+       SELECT 1 FROM accounts WHERE updated_at > ?1
+     ) AS d`,
+  )
+    .bind(latest.at)
+    .first<{ d: number }>();
+  return (dirty?.d ?? 0) === 1;
+}

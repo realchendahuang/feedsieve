@@ -102,43 +102,90 @@ export async function processReportBatch(
     }
   }
 
+  // Invalid payloads should not create an installation record or consume any
+  // quota. The per-item rejection results are still returned to the caller.
+  if (valid.length === 0) {
+    return { ok: true, results };
+  }
+
   const identity = await installationHash(env, installationId);
   const installHash = identity.hash;
   const today = utcToday();
   const now = nowSeconds();
 
-  const installRow = await env.DB.prepare(
-    'SELECT reports_day, reports_today, trust FROM installations WHERE id = ?1',
+  // A client may retry an entire batch after a network timeout. Only handles
+  // that are not already active blocked labels consume a daily report unit;
+  // retries remain idempotent and do not turn a transient failure into a
+  // quota lockout. Handle aliases are canonicalized below as usual.
+  const uniqueHandles = [...new Set(valid.map(({ report }) => report.handle))];
+  const existingBlocked = await env.DB.prepare(
+    `SELECT handle FROM active_labels
+     WHERE installation_id = ?1
+       AND label = 'blocked'
+       AND handle IN (${uniqueHandles.map(() => '?').join(', ')})`,
   )
-    .bind(installHash)
-    .first<{ reports_day: string; reports_today: number; trust: number }>();
-  const trust = installRow?.trust ?? 1;
-  const usedToday = installRow && installRow.reports_day === today ? installRow.reports_today : 0;
-  if (usedToday + valid.length > effectiveDailyLimit(POLICY.dailyReportLimit, trust)) {
-    return { ok: false, httpStatus: 429, error: 'rate_limited' };
-  }
+    .bind(installHash, ...uniqueHandles)
+    .all<{ handle: string }>();
+  const existingBlockedHandles = new Set(existingBlocked.results.map((row) => row.handle));
+  const quotaUnits = uniqueHandles.filter((handle) => !existingBlockedHandles.has(handle)).length;
 
-  if (!installRow) {
-    await env.DB.prepare(
+  // Atomically reserve this batch's daily quota. The previous SELECT followed
+  // by UPDATE allowed two concurrent requests to observe the same usage and
+  // both pass the limit check. The conditional UPSERT makes the reservation
+  // itself the gate.
+  if (quotaUnits > 0) {
+    const reserved = await env.DB.prepare(
       `INSERT INTO installations (id, first_seen_at, last_seen_at, reports_day, reports_today)
-       VALUES (?1, ?2, ?2, ?3, ?4)`,
+       VALUES (?1, ?2, ?2, ?3, ?4)
+       ON CONFLICT(id) DO UPDATE SET
+         last_seen_at = excluded.last_seen_at,
+         reports_day = excluded.reports_day,
+         reports_today = CASE
+           WHEN installations.reports_day = excluded.reports_day
+             THEN installations.reports_today + excluded.reports_today
+           ELSE excluded.reports_today
+         END
+       WHERE (
+         CASE
+           WHEN installations.reports_day = excluded.reports_day THEN installations.reports_today
+           ELSE 0
+         END
+         + excluded.reports_today
+       ) <= MAX(?5, ROUND(?6 * installations.trust))`,
     )
-      .bind(installHash, now, today, valid.length)
+      .bind(
+        installHash,
+        now,
+        today,
+        quotaUnits,
+        POLICY.minDailyLimit,
+        POLICY.dailyReportLimit,
+      )
       .run();
-  } else {
-    await env.DB.prepare(
-      'UPDATE installations SET last_seen_at = ?2, reports_day = ?3, reports_today = ?4 WHERE id = ?1',
-    )
-      .bind(installHash, now, today, usedToday + valid.length)
-      .run();
-    // 爆发衰减：本轮越过爆发线（此前未越过）→ 信任降一档，后续限额随之收紧
-    const newUsed = usedToday + valid.length;
-    if (newUsed >= POLICY.trustBurstThreshold && usedToday < POLICY.trustBurstThreshold) {
-      await env.DB.prepare('UPDATE installations SET trust = MAX(?2, trust - ?3) WHERE id = ?1')
-        .bind(installHash, POLICY.trustFloor, POLICY.trustDecay)
-        .run();
+    if ((reserved.meta.changes ?? 0) === 0) {
+      return { ok: false, httpStatus: 429, error: 'rate_limited' };
     }
   }
+
+  // Burst decay is also conditional on crossing the threshold in this batch,
+  // so a retry or concurrent request cannot decay trust repeatedly.
+  await env.DB.prepare(
+    `UPDATE installations
+     SET trust = MAX(?2, trust - ?3)
+     WHERE id = ?1
+       AND reports_day = ?4
+       AND reports_today >= ?5
+       AND reports_today - ?6 < ?5`,
+  )
+    .bind(
+      installHash,
+      POLICY.trustFloor,
+      POLICY.trustDecay,
+      today,
+      POLICY.trustBurstThreshold,
+      quotaUnits,
+    )
+    .run();
 
   // 原始证据按 (installation_id, handle) 幂等更新；active_labels 单独决定是否新增计票。
   const touchedHandles = new Map<string, ValidReport>();
@@ -169,8 +216,8 @@ export async function processReportBatch(
     await env.DB.prepare(
       `INSERT INTO reports
          (handle, x_user_id, reason, evidence_post_id, installation_id, client_version, created_at,
-          content_fingerprint, link_domains)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+          content_fingerprint, link_domains, detection_source)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
        ON CONFLICT(installation_id, handle) DO UPDATE SET
          x_user_id = COALESCE(excluded.x_user_id, reports.x_user_id),
          reason = excluded.reason,
@@ -178,7 +225,8 @@ export async function processReportBatch(
          client_version = excluded.client_version,
          created_at = excluded.created_at,
          content_fingerprint = COALESCE(excluded.content_fingerprint, reports.content_fingerprint),
-         link_domains = COALESCE(excluded.link_domains, reports.link_domains)`,
+         link_domains = COALESCE(excluded.link_domains, reports.link_domains),
+         detection_source = COALESCE(excluded.detection_source, reports.detection_source)`,
     )
       .bind(
         canonical,
@@ -190,6 +238,7 @@ export async function processReportBatch(
         now,
         r.contentFingerprint,
         r.linkDomains.length > 0 ? JSON.stringify(r.linkDomains) : null,
+        r.detectionSource,
       )
       .run();
     const labelChanged = await setActiveLabel(env, installHash, canonical, 'blocked', now);

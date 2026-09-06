@@ -13,6 +13,8 @@ import {
 } from './admin-accounts';
 import { verifyAccess } from './lib/access';
 import { hashInstallationId } from './lib/hash';
+import { listCommunityCandidates } from './candidates';
+import { getDashboardMetrics } from './dashboard';
 import {
   disableAdminKeyword,
   importKeywordCatalog,
@@ -30,7 +32,9 @@ import {
   generateSnapshot,
   getLatestSnapshot,
   getLatestSnapshotFile,
+  getLatestSnapshotVersion,
   getSnapshotFile,
+  isSnapshotStale,
   PUBLIC_BLOCKLIST_PACK,
   SNAPSHOT_PACK,
 } from './snapshot';
@@ -81,7 +85,7 @@ export function createApp() {
     if (!result.ok) {
       return c.json({ error: result.error }, result.httpStatus);
     }
-    const published = await generateSnapshot(c.env);
+    // 快照异步化：只落库并返回当前有效版本，由 cron 每 5 分钟合并生成新快照。
     return c.json({
       policy: {
         formula: 'block_votes - false_positive_votes',
@@ -89,7 +93,7 @@ export function createApp() {
         daily_report_limit: POLICY.dailyReportLimit,
       },
       results: result.results,
-      snapshot_version: published.version,
+      snapshot_version: await getLatestSnapshotVersion(c.env),
     });
   });
 
@@ -104,19 +108,20 @@ export function createApp() {
 
   app.get('/api/admin/me', (c) => c.json({ email: c.get('maintainerEmail') }));
 
-  app.get('/api/admin/dashboard', async (c) => {
-    const [draftCount, votes, feedback, snapshot] = await Promise.all([
-      c.env.DB.prepare('SELECT COUNT(*) AS n FROM admin_account_drafts WHERE active = 1').first<{ n: number }>(),
-      c.env.DB.prepare('SELECT COUNT(*) AS n FROM accounts').first<{ n: number }>(),
-      c.env.DB.prepare('SELECT COUNT(*) AS n FROM rescues').first<{ n: number }>(),
-      getLatestSnapshot(c.env),
-    ]);
-    return c.json({
-      maintainer_entries: draftCount?.n ?? 0,
-      community_accounts: votes?.n ?? 0,
-      false_positive_feedback: feedback?.n ?? 0,
-      snapshot_version: snapshot ? JSON.parse(snapshot.manifest).snapshot_version ?? null : null,
-    });
+  app.get('/api/admin/dashboard', async (c) => c.json(await getDashboardMetrics(c.env)));
+
+  // 社区候选池（只读复核视图 + 分页），与维护者草稿页（admin_account_drafts）分开。
+  app.get('/api/admin/community-accounts', async (c) => {
+    const limit = Number(c.req.query('limit') ?? 50);
+    return c.json(
+      await listCommunityCandidates(c.env, {
+        net: c.req.query('net') ?? 'all',
+        q: c.req.query('q') ?? undefined,
+        category: c.req.query('category') ?? undefined,
+        cursor: c.req.query('cursor') ?? undefined,
+        limit: Number.isFinite(limit) ? Math.trunc(limit) : 50,
+      }),
+    );
   });
 
   app.get('/api/admin/accounts', async (c) =>
@@ -313,8 +318,7 @@ export function createApp() {
     if (!result.ok) {
       return c.json({ error: result.error }, result.httpStatus);
     }
-    const published = await generateSnapshot(c.env);
-    return c.json({ results: result.results, snapshot_version: published.version });
+    return c.json({ results: result.results, snapshot_version: await getLatestSnapshotVersion(c.env) });
   });
 
   app.post('/v1/labels/retract', async (c) => {
@@ -323,8 +327,7 @@ export function createApp() {
     if (!result.ok) {
       return c.json({ error: result.error }, result.httpStatus);
     }
-    const published = await generateSnapshot(c.env);
-    return c.json({ results: result.results, snapshot_version: published.version });
+    return c.json({ results: result.results, snapshot_version: await getLatestSnapshotVersion(c.env) });
   });
 
   // 公开政策：阈值不藏在后端黑箱里
@@ -397,19 +400,17 @@ export function createApp() {
   return app;
 }
 
-// 定时发布是兜底校验；正常投票和维护者修改已在请求完成前立即发布。
+// 定时发布是兜底：只有数据新于最近一次快照时才生成，空闲期不刷版本号。
 async function scheduledAutoPublish(env: Cloudflare.Env): Promise<void> {
   try {
-    const before = await env.DB.prepare('SELECT COUNT(*) AS n FROM snapshots').first<{
-      n: number;
-    }>();
+    if (!(await isSnapshotStale(env))) {
+      console.info('[community-api] cron publish: no pending changes, skip');
+      return;
+    }
     const published = await generateSnapshot(env);
-    const after = await env.DB.prepare('SELECT COUNT(*) AS n FROM snapshots').first<{
-      n: number;
-    }>();
-    const createdNew = (after?.n ?? 0) > (before?.n ?? 0);
-    console.info(`[community-api] cron publish: version=${published.version} new=${createdNew}`);
+    console.info(`[community-api] cron publish: version=${published.version}`);
   } catch (error) {
+    // 生成失败：数据仍新于快照，下一个周期自然重试，线上继续使用上一份有效快照。
     console.error('[community-api] cron publish failed:', error);
   }
 }
