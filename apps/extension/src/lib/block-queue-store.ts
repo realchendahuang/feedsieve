@@ -21,7 +21,18 @@ export interface PersistentBlockTask {
   /** Whether a successful local block should be contributed to the community. */
   communityVote?: boolean;
   status: PersistentBlockTaskStatus;
+  /** popup 展示用失败码（failed 任务）；retryable failed 会由 runner 保持 pending + lastErrorCode */
   failureCode?: string;
+  /** 自跑起累计执行次数（runner 失败分类用） */
+  attempts?: number;
+  /** 最近一次失败码（runner 写入；failed 时 normalized 到 failureCode 供 UI 展示） */
+  lastErrorCode?: string;
+  lastHttpStatus?: number;
+  lastLatencyMs?: number;
+  /** transient 重试的唤醒时刻（Unix ms）；resume 时清除立即重试 */
+  retryAt?: number;
+  /** 429 Retry-After（秒→毫秒），退避节奏尊重它 */
+  retryAfterMs?: number;
 }
 
 export interface PersistentBlockQueueState {
@@ -86,7 +97,18 @@ function normalizeQueue(value: unknown): PersistentBlockQueueState | null {
         : {}),
       ...(typeof task.communityVote === 'boolean' ? { communityVote: task.communityVote } : {}),
       ...(typeof task.xUserId === 'string' ? { xUserId: task.xUserId } : {}),
-      ...(typeof task.failureCode === 'string' ? { failureCode: task.failureCode } : {}),
+      // UI 继续读 failureCode；runner 写入 lastErrorCode，failed 任务归一化补一份
+      ...(task.status === 'failed' && typeof task.lastErrorCode === 'string'
+        ? { failureCode: task.lastErrorCode }
+        : typeof task.failureCode === 'string'
+          ? { failureCode: task.failureCode }
+          : {}),
+      ...(typeof task.attempts === 'number' ? { attempts: task.attempts } : {}),
+      ...(typeof task.lastErrorCode === 'string' ? { lastErrorCode: task.lastErrorCode } : {}),
+      ...(typeof task.lastHttpStatus === 'number' ? { lastHttpStatus: task.lastHttpStatus } : {}),
+      ...(typeof task.lastLatencyMs === 'number' ? { lastLatencyMs: task.lastLatencyMs } : {}),
+      ...(typeof task.retryAt === 'number' ? { retryAt: task.retryAt } : {}),
+      ...(typeof task.retryAfterMs === 'number' ? { retryAfterMs: task.retryAfterMs } : {}),
     });
   }
   return {

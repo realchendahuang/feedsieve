@@ -1,5 +1,6 @@
 import { contentFingerprint, detect, toHandleSet } from '@feedsieve/detector';
 import type { CommunityEntry } from '@feedsieve/community-lists';
+import { runQueuedBlocks } from '@feedsieve/block-queue';
 import {
   contextFromPath,
   extractFeedItem,
@@ -61,6 +62,7 @@ import {
   createPersistentBlockQueue,
   getPersistentBlockQueue,
   setPersistentBlockQueue,
+  type PersistentBlockQueueState,
 } from '../src/lib/block-queue-store';
 import {
   categoryLabel,
@@ -1155,7 +1157,10 @@ export default defineContentScript({
         batchId?: string;
         deferContribution?: boolean;
       } = {},
-    ): Promise<{ ok: true } | { ok: false; code: string }> {
+    ): Promise<
+      | { ok: true }
+      | { ok: false; code: string; httpStatus?: number; retryAfterMs?: number }
+    > {
       // 官方破坏性动作暂停开关（来自签名快照，验签后生效）：
       // 只关闭拉黑类动作，检测 / 标注 / 读取继续；单向开关，不可能远程开启自动拉黑。
       if (community?.killSwitch?.destructive_actions_disabled) {
@@ -1176,7 +1181,12 @@ export default defineContentScript({
 
       const result = await runNativeAction('block', xUserId);
       if (!result.ok) {
-        return { ok: false, code: result.code };
+        return {
+          ok: false,
+          code: result.code,
+          ...(result.statusCode !== undefined ? { httpStatus: result.statusCode } : {}),
+          ...(result.retryAfterMs !== undefined ? { retryAfterMs: result.retryAfterMs } : {}),
+        };
       }
       // 记账（撤销入口的数据源）+ 本地统计
       await markBlocked(item.handle, xUserId, {
@@ -1475,18 +1485,22 @@ export default defineContentScript({
       state.status = 'running';
       for (const task of state.tasks) {
         if (task.status === 'running') task.status = 'pending';
+        // 用户显式 resume：清掉退避计时，立即重试
+        if (task.status === 'pending') {
+          delete task.retryAt;
+          delete task.retryAfterMs;
+        }
+        // 旧版本遗留的 retryable failed 任务（升级前已判死）也放回 pending
         if (
           task.status === 'failed' &&
-          [
-            'rate_limited',
-            'auth_required',
-            'missing_csrf',
-            'network_error',
-            'kill_switch',
-          ].includes(task.failureCode ?? '')
+          ['rate_limited', 'auth_required', 'missing_csrf', 'network_error', 'kill_switch'].includes(
+            task.failureCode ?? '',
+          )
         ) {
           task.status = 'pending';
           delete task.failureCode;
+          delete task.retryAt;
+          delete task.retryAfterMs;
         }
       }
       await setPersistentBlockQueue(state);
@@ -1524,73 +1538,39 @@ export default defineContentScript({
     }
 
     async function executePersistentQueue(): Promise<void> {
-      let state = await getPersistentBlockQueue();
-      if (!state || state.status !== 'running') return;
-      for (;;) {
-        state = await getPersistentBlockQueue();
-        if (!state || state.status !== 'running') return;
-        const index = state.tasks.findIndex(
-          (task) => task.status === 'pending' || task.status === 'running',
-        );
-        if (index < 0) {
-          state.status = 'completed';
-          await setPersistentBlockQueue(state);
-          return;
-        }
-        const task = state.tasks[index]!;
-        task.status = 'running';
-        delete task.failureCode;
-        await setPersistentBlockQueue(state);
-
-        const outcome = await blockOne(
-          {
-            handle: task.handle,
-            ...(task.xUserId ? { xUserId: task.xUserId } : {}),
-            category: task.category,
-            reason: task.reason ?? '',
-            evidence: task.evidence ?? {},
-          },
-          {
-            origin: state.source,
-            communityVote: task.communityVote ?? state.source !== 'community-batch',
-            batchId: state.id,
-          },
-        );
-        state = (await getPersistentBlockQueue()) ?? state;
-        const currentTask = state.tasks.find((item) => item.handle === task.handle);
-        if (!currentTask) return;
-        if (outcome.ok) {
-          currentTask.status = 'success';
+      // 状态迁移、失败分类、自适应节奏全部收敛到 packages/block-queue 的唯一 runner；
+      // 本函数只注入「持久化适配器 + 真实 Block 动作」，不再维护第二套循环语义。
+      await runQueuedBlocks({
+        load: () => getPersistentBlockQueue(),
+        save: (session) => setPersistentBlockQueue(session as PersistentBlockQueueState),
+        perform: async (task) => {
+          // 恢复/换源后 source 可能变化：每次执行按当前队列状态取 origin 与贡献策略
+          const current = await getPersistentBlockQueue();
+          return blockOne(
+            {
+              handle: task.handle,
+              ...(task.xUserId ? { xUserId: task.xUserId } : {}),
+              category: task.category,
+              reason: task.reason ?? '',
+              evidence: task.evidence ?? {},
+            },
+            {
+              origin: current?.source ?? 'page-batch',
+              communityVote: task.communityVote ?? !(current?.source === 'community-batch'),
+              batchId: current?.id,
+            },
+          );
+        },
+        onSuccess: (task) => {
+          // 队列侧页面副作用：移除黄框并隐藏该账号推文（对齐 X 原生拉黑行为）
           blockedCache.add(task.handle);
           pageMarked.delete(task.handle);
           hideCellsSoon(collectCellsForHandle(task.handle));
-        } else {
-          currentTask.failureCode = outcome.code;
-if (
-          [
-            'rate_limited',
-            'auth_required',
-            'missing_csrf',
-            'network_error',
-            'kill_switch',
-          ].includes(outcome.code)
-        ) {
-            currentTask.status = 'pending';
-            state.status = 'paused';
-            await setPersistentBlockQueue(state);
-            return;
-          }
-          currentTask.status = 'failed';
-        }
-        await setPersistentBlockQueue(state);
-        await sleep(PACE_MS);
-      }
+        },
+      });
     }
   },
 });
-
-/** 相邻两次拉黑请求的间隔（毫秒），与批量执行一致。 */
-const PACE_MS = 400;
 
 /** mutation 停止后到扫描的固定间隔。 */
 const SCAN_DEBOUNCE_MS = 300;

@@ -100,4 +100,55 @@ describe('持久化拉黑队列', () => {
       ]),
     );
   });
+
+  it('runner 的重试/失败字段原样持久化，failed 任务补 failureCode 供 UI 展示', async () => {
+    storage.persistentBlockQueueV1 = {
+      id: 'retry-queue',
+      source: 'page-batch',
+      status: 'running',
+      createdAt: 1,
+      updatedAt: 2,
+      tasks: [
+        {
+          handle: 'retrying',
+          category: 'other',
+          status: 'pending',
+          attempts: 2,
+          lastErrorCode: 'rate_limited',
+          lastHttpStatus: 429,
+          lastLatencyMs: 800,
+          retryAt: 4000,
+          retryAfterMs: 1200,
+        },
+        {
+          handle: 'dead',
+          category: 'other',
+          status: 'failed',
+          lastErrorCode: 'no-id',
+          attempts: 1,
+        },
+      ],
+    };
+    const restored = await getPersistentBlockQueue();
+    expect(restored?.tasks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          handle: 'retrying',
+          status: 'pending',
+          attempts: 2,
+          lastErrorCode: 'rate_limited',
+          lastHttpStatus: 429,
+          lastLatencyMs: 800,
+          retryAt: 4000,
+          retryAfterMs: 1200,
+        }),
+        expect.objectContaining({
+          handle: 'dead',
+          status: 'failed',
+          lastErrorCode: 'no-id',
+          failureCode: 'no-id', // 归一化：UI 继续读 failureCode
+        }),
+      ]),
+    );
+  });
 });

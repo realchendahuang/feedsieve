@@ -26,7 +26,15 @@ export type NativeActionFailureCode =
 
 export type NativeActionResult =
   | { ok: true; handle?: string }
-  | { ok: false; code: NativeActionFailureCode; message?: string };
+  | {
+      ok: false;
+      code: NativeActionFailureCode;
+      message?: string;
+      /** HTTP 状态码（网络/缺 CSRF 类失败没有）——队列按它区分 5xx 重试与永久 4xx */
+      statusCode?: number;
+      /** 429 响应里的 Retry-After（秒→毫秒），队列自适应节奏尊重它 */
+      retryAfterMs?: number;
+    };
 
 export type NativeActionType = 'block' | 'unblock';
 
@@ -85,11 +93,20 @@ export async function runNativeAction(
     if (response.ok) {
       result = { ok: true };
     } else if (response.status === 401 || response.status === 403) {
-      result = { ok: false, code: 'auth_required', message: `HTTP ${response.status}` };
+      result = { ok: false, code: 'auth_required', message: `HTTP ${response.status}`, statusCode: response.status };
     } else if (response.status === 429) {
-      result = { ok: false, code: 'rate_limited', message: 'HTTP 429' };
+      const retryAfterSec = Number(response.headers?.get?.('retry-after'));
+      result = {
+        ok: false,
+        code: 'rate_limited',
+        message: 'HTTP 429',
+        statusCode: 429,
+        ...(Number.isFinite(retryAfterSec) && retryAfterSec > 0
+          ? { retryAfterMs: retryAfterSec * 1000 }
+          : {}),
+      };
     } else {
-      result = { ok: false, code: 'http_error', message: `HTTP ${response.status}` };
+      result = { ok: false, code: 'http_error', message: `HTTP ${response.status}`, statusCode: response.status };
     }
     noteActionResult(type, {
       ok: result.ok,
