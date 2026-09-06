@@ -1,6 +1,7 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 import worker from '../src/index';
+import { hashInstallationId } from '../src/lib/hash';
 
 const ORIGIN = 'https://api.example.com';
 
@@ -197,5 +198,42 @@ describe('POST /v1/rescues', () => {
       (await postRescues({ installation_id: 'ssssssss-7009-4009-8000-ssssssssss', rescues: many }))
         .status,
     ).toBe(413);
+  });
+});
+
+describe('rescues 配额（原子条件 UPSERT）', () => {
+  it('额度用满后新 handle 返回 429，已生效标签的重试不消耗额度', async () => {
+    const raw = 'rescue-quota-install-001';
+    const hash = await hashInstallationId(env.INSTALLATION_SALT, raw);
+    const today = new Date().toISOString().slice(0, 10);
+
+    // 先建立账号并投出第一张抢救票（消耗 1 单位）
+    await postRescues({
+      installation_id: raw,
+      rescues: [{ handle: 'quota_done' }],
+    });
+    // 直接把今日额度注满（limit 50）
+    await env.DB.prepare(
+      'UPDATE installations SET rescues_day = ?2, rescues_today = 50 WHERE id = ?1',
+    )
+      .bind(hash, today)
+      .run();
+
+    // 已生效的 allowed 标签重试：幂等，不占额度
+    const retry = await postRescues({
+      installation_id: raw,
+      rescues: [{ handle: '@quota_done' }],
+    });
+    expect(retry.status).toBe(200);
+    expect(((await retry.json()) as { results: { status: string }[] }).results[0].status).toBe(
+      'duplicate',
+    );
+
+    // 新 handle 需要新额度 → 429
+    const capped = await postRescues({
+      installation_id: raw,
+      rescues: [{ handle: 'quota_capped' }],
+    });
+    expect(capped.status).toBe(429);
   });
 });

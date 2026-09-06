@@ -1,5 +1,5 @@
 import { validateRescue } from './lib/validate';
-import { POLICY, effectiveDailyLimit } from './reports';
+import { POLICY } from './reports';
 import { installationHash, refreshAccountFromLabels, setActiveLabel } from './labels';
 
 interface ValidRescue {
@@ -85,35 +85,57 @@ export async function processRescueBatch(
     }
   }
 
+  // Invalid payloads should not create an installation record or consume any
+  // quota. The per-item rejection results are still returned to the caller.
+  if (valid.length === 0) {
+    return { ok: true, results };
+  }
+
   const identity = await installationHash(env, installationId);
   const installHash = identity.hash;
   const today = utcToday();
   const now = nowSeconds();
 
-  const installRow = await env.DB.prepare(
-    'SELECT rescues_day, rescues_today, trust FROM installations WHERE id = ?1',
+  // 客户端在网络超时后可能重试整个批次：只有还未生效当前 allowed 标签的 handle
+  // 才消耗每日抢救额度；重试保持幂等，不会把瞬时失败变成额度锁死。
+  const uniqueHandles = [...new Set(valid.map(({ rescue }) => rescue.handle))];
+  const existingAllowed = await env.DB.prepare(
+    `SELECT handle FROM active_labels
+     WHERE installation_id = ?1
+       AND label = 'allowed'
+       AND handle IN (${uniqueHandles.map(() => '?').join(', ')})`,
   )
-    .bind(installHash)
-    .first<{ rescues_day: string; rescues_today: number; trust: number }>();
-  const trust = installRow?.trust ?? 1;
-  const usedToday = installRow && installRow.rescues_day === today ? installRow.rescues_today : 0;
-  if (usedToday + valid.length > effectiveDailyLimit(POLICY.rescueDailyLimit, trust)) {
-    return { ok: false, httpStatus: 429, error: 'rate_limited' };
-  }
+    .bind(installHash, ...uniqueHandles)
+    .all<{ handle: string }>();
+  const existingAllowedHandles = new Set(existingAllowed.results.map((row) => row.handle));
+  const quotaUnits = uniqueHandles.filter((handle) => !existingAllowedHandles.has(handle)).length;
 
-  if (!installRow) {
-    await env.DB.prepare(
+  // 原子预留本批额度：条件 UPSERT 本身即门禁，杜绝并发请求同时通过限额检查。
+  if (quotaUnits > 0) {
+    const reserved = await env.DB.prepare(
       `INSERT INTO installations (id, first_seen_at, last_seen_at, rescues_day, rescues_today)
-       VALUES (?1, ?2, ?2, ?3, ?4)`,
+       VALUES (?1, ?2, ?2, ?3, ?4)
+       ON CONFLICT(id) DO UPDATE SET
+         last_seen_at = excluded.last_seen_at,
+         rescues_day = excluded.rescues_day,
+         rescues_today = CASE
+           WHEN installations.rescues_day = excluded.rescues_day
+             THEN installations.rescues_today + excluded.rescues_today
+           ELSE excluded.rescues_today
+         END
+       WHERE (
+         CASE
+           WHEN installations.rescues_day = excluded.rescues_day THEN installations.rescues_today
+           ELSE 0
+         END
+         + excluded.rescues_today
+       ) <= MAX(?5, ROUND(?6 * installations.trust))`,
     )
-      .bind(installHash, now, today, valid.length)
+      .bind(installHash, now, today, quotaUnits, POLICY.minDailyLimit, POLICY.rescueDailyLimit)
       .run();
-  } else {
-    await env.DB.prepare(
-      'UPDATE installations SET last_seen_at = ?2, rescues_day = ?3, rescues_today = ?4 WHERE id = ?1',
-    )
-      .bind(installHash, now, today, usedToday + valid.length)
-      .run();
+    if ((reserved.meta.changes ?? 0) === 0) {
+      return { ok: false, httpStatus: 429, error: 'rate_limited' };
+    }
   }
 
   for (const item of valid) {
