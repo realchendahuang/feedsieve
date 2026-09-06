@@ -21,7 +21,7 @@ export interface CustomKeywordRule {
   createdAt: number;
 }
 export interface KeywordRuleSettings {
-  subscriptionDefaultsVersion: 2;
+  subscriptionDefaultsVersion: 3;
   subscribedCategoryIds: KeywordCategory[];
   disabledOfficialRuleIds: string[];
   customRules: CustomKeywordRule[];
@@ -41,7 +41,9 @@ const MAX_PHRASE_LENGTH = 80;
 // 与远程关键词包的 ID 格式一致，避免后续新增带连字符或下划线的官方分类/规则
 // 在本地设置和备份迁移中被错误丢弃。
 const OFFICIAL_ID_RE = /^[a-z][a-z0-9_-]{1,95}$/;
-const SUBSCRIPTION_DEFAULTS_VERSION = 2 as const;
+const SUBSCRIPTION_DEFAULTS_VERSION = 3 as const;
+/** 产品只把黄推 / 成人引流设为默认清理对象；其余行业包一律由用户显式订阅。 */
+const DEFAULT_SUBSCRIBED_CATEGORY_IDS = ['adult_gray_traffic'] as const;
 
 function flattenOfficialRules(catalog: KeywordPackCatalog): OfficialKeywordRule[] {
   return catalog.packs.flatMap((pack) =>
@@ -100,8 +102,9 @@ function normalizeSettings(value: unknown): KeywordRuleSettings {
         (id): id is string => typeof id === 'string' && OFFICIAL_ID_RE.test(id),
       )
     : [];
-  // v0.7.4 首次安装和旧版升级都统一启用全部官方词库。迁移标记写入后，才把
-  // 订阅数组视为用户在新版里做出的明确选择，之后关闭全部也不会被重新打开。
+  // v0.7.4 曾把全部行业包设为默认订阅；v0.7.6 起默认只订阅黄推 / 成人引流。
+  // 迁移标记写入后，才把订阅数组视为用户在新版里做出的明确选择，之后关闭全部
+  // 也不会被重新打开。
   const hasCurrentSubscriptionDefaults =
     raw.subscriptionDefaultsVersion === SUBSCRIPTION_DEFAULTS_VERSION;
   const subscribedCategoryIds = hasCurrentSubscriptionDefaults
@@ -111,7 +114,9 @@ function normalizeSettings(value: unknown): KeywordRuleSettings {
             typeof category === 'string' && OFFICIAL_ID_RE.test(category),
         )
       : []
-    : BUNDLED_KEYWORD_PACK_CATALOG.packs.map((pack) => pack.id);
+    : DEFAULT_SUBSCRIBED_CATEGORY_IDS.filter((id) =>
+        BUNDLED_KEYWORD_PACK_CATALOG.packs.some((pack) => pack.id === id),
+      );
   const customRules = Array.isArray(raw.customRules)
     ? raw.customRules
         .flatMap((item): CustomKeywordRule[] => {

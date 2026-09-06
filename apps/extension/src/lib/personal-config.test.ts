@@ -14,7 +14,7 @@ import { BUNDLED_KEYWORD_PACK_CATALOG } from './keyword-packs';
 function context(overrides: Partial<PersonalConfigContext> = {}): PersonalConfigContext {
   return {
     keywordRules: {
-      subscriptionDefaultsVersion: 2,
+      subscriptionDefaultsVersion: 3,
       subscribedCategoryIds: BUNDLED_KEYWORD_PACK_CATALOG.packs.map((pack) => pack.id),
       disabledOfficialRuleIds: [],
       customRules: [],
@@ -47,7 +47,7 @@ describe('个人配置备份与迁移', () => {
     const value = createPersonalConfigDocument(
       context({
         keywordRules: {
-          subscriptionDefaultsVersion: 2,
+          subscriptionDefaultsVersion: 3,
           subscribedCategoryIds: ['adult_gray_traffic'],
           disabledOfficialRuleIds: ['adult-fu-not-black'],
           customRules: [
@@ -162,7 +162,7 @@ describe('个人配置备份与迁移', () => {
     });
     const current = context({
       keywordRules: {
-        subscriptionDefaultsVersion: 2,
+        subscriptionDefaultsVersion: 3,
         subscribedCategoryIds: BUNDLED_KEYWORD_PACK_CATALOG.packs.map((pack) => pack.id),
         disabledOfficialRuleIds: [],
         customRules: [{ id: 'kept', phrase: 'abc', createdAt: 10 }],
@@ -209,7 +209,7 @@ describe('个人配置备份与迁移', () => {
   it('合并超过 80 条时只给预览，替换仍可安全恢复备份', () => {
     const current = context({
       keywordRules: {
-        subscriptionDefaultsVersion: 2,
+        subscriptionDefaultsVersion: 3,
         subscribedCategoryIds: [],
         disabledOfficialRuleIds: [],
         customRules: Array.from({ length: 80 }, (_, index) => ({

@@ -10,7 +10,6 @@ import {
   setOfficialKeywordCategorySubscribed,
   setOfficialKeywordRuleEnabled,
 } from './keyword-rules';
-import { BUNDLED_KEYWORD_PACK_CATALOG } from './keyword-packs';
 
 let storage: Record<string, unknown>;
 
@@ -36,36 +35,39 @@ describe('本地关键词规则', () => {
     expect(
       rule?.check({ handle: 'bait', text: '应该没人比我玩的开了吧 🤚 😊 我福不黑不信你看' }),
     ).toContain('我福不黑');
-    expect(activeKeywordRules(settings)).toHaveLength(OFFICIAL_KEYWORD_RULES.length);
-  });
-
-  it('首次安装默认订阅全部官方词库，用户仍可按行业关闭', async () => {
-    let settings = await getKeywordRuleSettings();
-    expect(activeKeywordRules(settings)).toHaveLength(OFFICIAL_KEYWORD_RULES.length);
-    expect(isOfficialKeywordCategorySubscribed(settings, 'adult_gray_traffic')).toBe(true);
-
-    await setOfficialKeywordCategorySubscribed('scam_phishing', false);
-    settings = await getKeywordRuleSettings();
-    expect(isOfficialKeywordCategorySubscribed(settings, 'crypto_scam')).toBe(true);
-    expect(isOfficialKeywordCategorySubscribed(settings, 'scam_phishing')).toBe(false);
-    expect(activeKeywordRules(settings).some((rule) => rule.category === 'scam_phishing')).toBe(
-      false,
+    expect(activeKeywordRules(settings)).toHaveLength(
+      OFFICIAL_KEYWORD_RULES.filter((rule) => rule.category === 'adult_gray_traffic').length,
     );
   });
 
-  it('旧版订阅状态升级时统一迁移为全部开启', async () => {
+  it('首次安装默认只订阅黄推 / 成人引流，其余行业包按需开启', async () => {
+    let settings = await getKeywordRuleSettings();
+    expect(isOfficialKeywordCategorySubscribed(settings, 'adult_gray_traffic')).toBe(true);
+    expect(isOfficialKeywordCategorySubscribed(settings, 'crypto_scam')).toBe(false);
+    expect(activeKeywordRules(settings)).toHaveLength(
+      OFFICIAL_KEYWORD_RULES.filter((rule) => rule.category === 'adult_gray_traffic').length,
+    );
+
+    await setOfficialKeywordCategorySubscribed('scam_phishing', true);
+    settings = await getKeywordRuleSettings();
+    expect(activeKeywordRules(settings).some((rule) => rule.category === 'scam_phishing')).toBe(
+      true,
+    );
+  });
+
+  it('旧版订阅状态升级时迁移为仅黄推默认', async () => {
     storage.keywordRulesV1 = {
-      subscribedCategoryIds: ['adult_gray_traffic'],
+      subscribedCategoryIds: ['adult_gray_traffic', 'crypto_scam'],
       disabledOfficialRuleIds: [],
       customRules: [],
     };
     const settings = await getKeywordRuleSettings();
-    expect(settings.subscribedCategoryIds).toHaveLength(BUNDLED_KEYWORD_PACK_CATALOG.packs.length);
+    expect(settings.subscribedCategoryIds).toEqual(['adult_gray_traffic']);
   });
 
   it('新版用户明确关闭全部词库后，空订阅不会被重新打开', async () => {
     storage.keywordRulesV1 = {
-      subscriptionDefaultsVersion: 2,
+      subscriptionDefaultsVersion: 3,
       subscribedCategoryIds: [],
       disabledOfficialRuleIds: [],
       customRules: [],
