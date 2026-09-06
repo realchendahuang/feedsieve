@@ -16,14 +16,21 @@ const MAX_ENTRIES = 5000;
 
 export async function getUserIds(): Promise<Record<string, string>> {
   const result = await browser.storage.local.get(STORAGE_KEY);
-  return ((result[STORAGE_KEY] as StoredUserIds | undefined)?.ids) ?? {};
+  return (result[STORAGE_KEY] as StoredUserIds | undefined)?.ids ?? {};
 }
 
 export async function getUserId(handle: string): Promise<string | undefined> {
   return (await getUserIds())[normalize(handle)];
 }
 
-/** 批量写入并按容量上限裁剪最旧条目（Map 保序近似 LRU）。 */
+/**
+ * 批量写入并按容量上限裁剪最旧条目（Map 保序近似 LRU）。
+ *
+ * 重复出现的已知 id 不再为维持 LRU 顺序而重写整表：每个 GraphQL 响应都会带
+ * 大量已见过的账号，按 sighting 重排等于滚动期间持续全量写 storage（序列化
+ * 发生在渲染进程主线程）。代价是久见条目可能先于「最近看到」被裁剪——miss
+ * 时 blockOne 会走 UserByScreenName 当场回填，属于可接受的软降级。
+ */
 export async function saveUserIds(
   entries: Array<{ handle: string; xUserId: string }>,
 ): Promise<void> {
@@ -31,13 +38,22 @@ export async function saveUserIds(
     return;
   }
   const ids = await getUserIds();
+  let changed = false;
   for (const { handle, xUserId } of entries) {
     const normalized = normalize(handle);
-    if (normalized && xUserId) {
-      // 先删后插，保持「最近看到」在对象尾部
-      delete ids[normalized];
-      ids[normalized] = xUserId;
+    if (!normalized || !xUserId) {
+      continue;
     }
+    if (ids[normalized] === xUserId) {
+      continue;
+    }
+    // 先删后插，新/变化的条目排在对象尾部
+    delete ids[normalized];
+    ids[normalized] = xUserId;
+    changed = true;
+  }
+  if (!changed) {
+    return;
   }
   const all = Object.entries(ids);
   const trimmed =

@@ -453,17 +453,15 @@ export default function App() {
     force?: boolean;
     items?: Array<{ handle: string; xUserId?: string; category: string }>;
   }): Promise<unknown> {
-    const tabs = await browser.tabs.query({ url: 'https://x.com/*' });
-    const ordered = [...tabs].sort((a, b) => Number(b.active ?? false) - Number(a.active ?? false));
-    for (const tab of ordered) {
-      if (!tab.id) continue;
-      try {
-        return await browser.tabs.sendMessage(tab.id, message);
-      } catch {
-        // Try the next x.com tab; hot reload can leave stale content scripts behind.
-      }
-    }
-    throw new Error('no x.com receiver');
+    // Only target the active tab. Sending a destructive action to an arbitrary
+    // background X tab is surprising and can block the wrong account.
+    const activeTabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+    const tab = activeTabs.find((candidate) => {
+      const url = candidate.url ?? '';
+      return candidate.active === true && /^https:\/\/(www\.)?x\.com\//.test(url) && Boolean(candidate.id);
+    });
+    if (!tab?.id) throw new Error('no x.com receiver');
+    return browser.tabs.sendMessage(tab.id, { ...message, targetTabId: tab.id });
   }
 
   async function refreshPageMarked(): Promise<void> {
@@ -484,9 +482,9 @@ export default function App() {
     await setUiLanguage(next);
   }
 
-  async function setListUploads(enabled: boolean): Promise<void> {
-    await setCommunitySettings({ autoContribute: enabled });
-    if (enabled) {
+  async function setLocalOnly(localOnly: boolean): Promise<void> {
+    await setCommunitySettings({ autoContribute: !localOnly });
+    if (!localOnly) {
       await browser.runtime.sendMessage({ type: 'feedsieve:labels-sync' }).catch(() => undefined);
       setContribution(await getContributionStats());
     }
@@ -540,9 +538,21 @@ export default function App() {
     setBlockResult(null);
     setUnblockResult(null);
     try {
-      const result = (await sendToXPage(BLOCK_MESSAGE)) as PageBlockResult;
-      setBlockResult(result);
-      await refreshPageMarked();
+      const result = (await sendToXPage(BLOCK_MESSAGE)) as {
+        status?: string;
+        id?: string;
+        count?: number;
+      };
+      if (result?.status === 'started') {
+        setBlockResult(null);
+        setQueue(await getPersistentBlockQueue());
+        setNotice(t.queueStarted(result.count ?? 0));
+      } else if (Array.isArray((result as PageBlockResult)?.blocked)) {
+        setBlockResult(result as PageBlockResult);
+        await refreshPageMarked();
+      } else {
+        throw new Error('page_queue_not_started');
+      }
     } catch {
       setNotice(t.openXNotice);
     } finally {
@@ -838,6 +848,18 @@ export default function App() {
   const cloudExcluded = communityEntries.length - cloudEligible.length;
   const queueSummary = blockQueueProgress(queue);
   const queueDone = queueSummary.success + queueSummary.failed;
+  const queueActive =
+    queue &&
+    queueSummary.total > 0 &&
+    (queue.status === 'running' || queue.status === 'paused');
+  const queueStatusLabel = queue
+    ? {
+        running: t.queueRunning,
+        paused: t.queuePaused,
+        completed: t.queueCompleted,
+        cancelled: t.queueCancelled,
+      }[queue.status]
+    : '';
   const followingSyncActive =
     followingSync.status === 'running' || followingSync.status === 'waiting';
   const followingSyncStale = followingSyncActive && Date.now() - followingSync.updatedAt > 60_000;
@@ -983,7 +1005,7 @@ export default function App() {
               <div className="primary-actions">
                 <button
                   className="primary-action"
-                  disabled={!pageCount || running}
+                  disabled={!pageCount || running || Boolean(queueActive && queue?.source === 'page-batch')}
                   onClick={() => void runBatch()}
                 >
                   {running
@@ -1045,11 +1067,14 @@ export default function App() {
                 <p className="community-empty">{t.communityEmpty}</p>
               )}
 
-              {queue && queueSummary.total > 0 ? (
+              {queueActive ? (
                 <div className="queue-panel">
                   <div className="queue-line">
-                    <span>{t.queueProgress(queueDone, queueSummary.total)}</span>
-                    <strong>{queue.status}</strong>
+                    <span>
+                      {queue.source === 'page-batch' ? t.pageMarked : t.communityClean} ·{' '}
+                      {t.queueProgress(queueDone, queueSummary.total)}
+                    </span>
+                    <strong>{queueStatusLabel}</strong>
                   </div>
                   <div className="queue-track" aria-hidden="true">
                     <div
@@ -1748,13 +1773,15 @@ export default function App() {
 
                   <label className="setting-row">
                     <span className="setting-copy">
-                      <strong>{t.autoContribute}</strong>
+                      <strong>
+                        {t.localOnly} <HelpIcon text={t.localOnlyHint} />
+                      </strong>
                     </span>
                     <span className="toggle-switch">
                       <input
                         type="checkbox"
-                        checked={community.autoContribute}
-                        onChange={(event) => void setListUploads(event.target.checked)}
+                        checked={!community.autoContribute}
+                        onChange={(event) => void setLocalOnly(event.target.checked)}
                       />
                       <span aria-hidden="true" />
                     </span>

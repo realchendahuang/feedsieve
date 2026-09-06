@@ -19,6 +19,8 @@ export interface BlockedAccount {
   category?: string;
   contentFingerprint?: string;
   linkDomains?: string[];
+  /** 这次判断的来源；手动标记 = manual，与检测器命中区分开（规则质量分析用）。 */
+  detectionSource?: string;
 }
 
 export type BlockOrigin =
@@ -28,6 +30,7 @@ export interface BlockedAccountEvidence {
   category: string;
   contentFingerprint?: string;
   linkDomains?: string[];
+  detectionSource?: string;
   origin?: BlockOrigin;
   communityVote?: boolean;
   batchId?: string;
@@ -63,6 +66,7 @@ export async function markBlocked(
       existing.category = evidence.category;
       existing.contentFingerprint = evidence.contentFingerprint;
       existing.linkDomains = evidence.linkDomains;
+      existing.detectionSource = evidence.detectionSource ?? existing.detectionSource;
       existing.origin = evidence.origin ?? existing.origin;
       existing.communityVote = evidence.communityVote ?? existing.communityVote;
       existing.batchId = evidence.batchId ?? existing.batchId;

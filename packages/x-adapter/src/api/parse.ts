@@ -261,6 +261,25 @@ function parseAccountSettings(body: Json): ParsedApiData {
 }
 
 /**
+ * 网络桥的 URL 预过滤：与 parseXApiResponse 的分发特征保持一致。
+ * 未命中的响应（私信/通知轮询等大体积 JSON）不值得 clone 后整包 JSON.parse。
+ */
+const ENDPOINT_URL_KEYS = [
+  'TweetDetail',
+  'HomeTimeline',
+  'HomeLatestTimeline',
+  'ListLatestTweetsTimeline',
+  'SearchTimeline',
+  '/ListMembers',
+  '/Following',
+  '/account/settings.json',
+] as const;
+
+export function mayMatchEndpoint(url: string): boolean {
+  return ENDPOINT_URL_KEYS.some((key) => url.includes(key));
+}
+
+/**
  * 主入口：按 URL 特征分发（与 PureTwitter hijackXHR 相同的端点特征集）。
  * 未识别的 URL 返回 matchedEndpoints: [] 的空结果。
  */

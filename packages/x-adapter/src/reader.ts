@@ -23,14 +23,31 @@ function extractPostId(article: Element): string | undefined {
 /**
  * User-Name 区的文本形态是「DisplayName @handle」（中间可能有 · 认证标等）。
  * 剥掉 @handle 与残留分隔符，剩余部分即 displayName。
+ * 正则按 handle 缓存：同一 handle 在转发/回复串里会反复出现。
  */
+const displayNameStripPatterns = new Map<string, RegExp>();
+const DISPLAY_NAME_PATTERN_CACHE_MAX = 200;
+
+function displayNameStripPattern(handle: string): RegExp {
+  const cached = displayNameStripPatterns.get(handle);
+  if (cached) {
+    return cached;
+  }
+  const pattern = new RegExp(`@${escapeRegExp(handle)}\\b`, 'gi');
+  if (displayNameStripPatterns.size >= DISPLAY_NAME_PATTERN_CACHE_MAX) {
+    displayNameStripPatterns.clear();
+  }
+  displayNameStripPatterns.set(handle, pattern);
+  return pattern;
+}
+
 function extractDisplayName(area: Element | null, handle: string): string | undefined {
   if (!area) {
     return undefined;
   }
   const full = area.textContent ?? '';
   // X 的展示名不允许含 @，所以所有 @handle 出现都可以安全剥掉
-  const withoutHandle = full.replace(new RegExp(`@${escapeRegExp(handle)}\\b`, 'gi'), '');
+  const withoutHandle = full.replace(displayNameStripPattern(handle), '');
   const cleaned = withoutHandle
     .replace(/[\u00b7\u2022|]/g, ' ')
     .replace(/^[\s\-–—:·@]+|[\s\-–—:·@]+$/g, '');
@@ -74,9 +91,6 @@ function extractOwnText(article: Element, postId?: string): string {
 function extractExternalLinks(article: Element, postId?: string): FeedItem['links'] {
   const links = new Map<string, FeedItem['links'][number]>();
   for (const anchor of article.querySelectorAll('a[href]')) {
-    if (isInsideQuotedPost(anchor, article, postId)) {
-      continue;
-    }
     const href = anchor.getAttribute('href') ?? '';
     let url: URL;
     try {
@@ -87,8 +101,13 @@ function extractExternalLinks(article: Element, postId?: string): FeedItem['link
     if (url.protocol !== 'http:' && url.protocol !== 'https:') {
       continue;
     }
-    // 站内 UI 链接不是 FeedItem 感兴趣的对象；t.co 包装链接保留（Reader 阶段就是它）
+    // 站内 UI 链接不是 FeedItem 感兴趣的对象；t.co 包装链接保留（Reader 阶段就是它）。
+    // 必须排在引用卡判断之前：时间戳/提及/话题标签等站内链接占绝大多数，
+    // 无论是否在引用卡内都会被跳过，先跳过可省掉每个锚点一次的父链上溯。
     if (url.hostname === 'x.com' || url.hostname === 'twitter.com') {
+      continue;
+    }
+    if (isInsideQuotedPost(anchor, article, postId)) {
       continue;
     }
     if (!links.has(url.href)) {

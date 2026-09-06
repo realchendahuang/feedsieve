@@ -7,14 +7,16 @@ import {
 } from './following-allowlist';
 
 let storage: Record<string, unknown>;
+let setSpy: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   storage = {};
+  setSpy = vi.fn(async (patch: Record<string, unknown>) => Object.assign(storage, patch));
   vi.stubGlobal('browser', {
     storage: {
       local: {
         get: vi.fn(async (key: string) => ({ [key]: storage[key] })),
-        set: vi.fn(async (patch: Record<string, unknown>) => Object.assign(storage, patch)),
+        set: setSpy,
       },
       onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
     },
@@ -43,5 +45,20 @@ describe('关注保护名单', () => {
     await upsertFollowingAccounts([{ handle: 'keep_me' }, { handle: 'changed_mind' }]);
     await removeFollowingAccount('changed_mind');
     expect((await getFollowingAllowlist()).map((item) => item.handle)).toEqual(['keep_me']);
+  });
+
+  it('存量名单已完全覆盖时不重复写盘（时间线持续带回同一批关注作者）', async () => {
+    await upsertFollowingAccounts([
+      { handle: 'alice', xUserId: '101' },
+      { handle: 'bob', xUserId: '102' },
+    ]);
+    const writesAfterFirst = setSpy.mock.calls.length;
+    await upsertFollowingAccounts([{ handle: '@alice', xUserId: '101' }]);
+    await upsertFollowingAccounts([{ handle: 'bob' }]);
+    expect(setSpy.mock.calls.length).toBe(writesAfterFirst);
+    expect(await getFollowingAllowlist()).toMatchObject([
+      { handle: 'alice', xUserId: '101' },
+      { handle: 'bob', xUserId: '102' },
+    ]);
   });
 });

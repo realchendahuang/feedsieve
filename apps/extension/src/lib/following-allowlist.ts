@@ -63,12 +63,24 @@ export async function getFollowingAllowlist(): Promise<FollowingAllowlistItem[]>
   );
 }
 
-/** 时间线观察到 following=true 时增量保护；幂等、不删除其他记录。 */
+/**
+ * 时间线观察到 following=true 时增量保护；幂等、不删除其他记录。
+ *
+ * 高频入口（每个 GraphQL 响应都可能带 following 作者）：存量名单已完全覆盖
+ * 且 id 无变化时跳过重排序与写盘，避免滚动期间持续全量重写名单并触发
+ * storage.onChanged 级联重读。
+ */
 export async function upsertFollowingAccounts(
   items: ReadonlyArray<{ handle: string; xUserId?: string }>,
   source: FollowingAllowlistItem['source'] = 'observed',
 ): Promise<FollowingAllowlistItem[]> {
   if (items.length === 0) return getFollowingAllowlist();
+  const stored = await browser.storage.local.get(STORAGE_KEY);
+  const raw = stored[STORAGE_KEY];
+  // 名单由 normalizeItems 写入（已排序、形状完整），形状异常时走完整路径重建
+  if (Array.isArray(raw) && isFullyCovered(raw, items)) {
+    return raw as FollowingAllowlistItem[];
+  }
   const now = Date.now();
   const current = await getFollowingAllowlist();
   const next = normalizeItems([
@@ -77,6 +89,28 @@ export async function upsertFollowingAccounts(
   ]);
   await browser.storage.local.set({ [STORAGE_KEY]: next });
   return next;
+}
+
+/** 存量名单是否已包含全部请求项且 xUserId 一致；形状异常返回 false 走重建。 */
+function isFullyCovered(
+  raw: readonly unknown[],
+  items: ReadonlyArray<{ handle: string; xUserId?: string }>,
+): boolean {
+  const known = new Map<string, string | undefined>();
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') return false;
+    const handle = (item as { handle?: unknown }).handle;
+    if (typeof handle !== 'string' || !normalize(handle)) return false;
+    const xUserId = (item as { xUserId?: unknown }).xUserId;
+    known.set(normalize(handle), typeof xUserId === 'string' ? xUserId : undefined);
+  }
+  return items.every((item) => {
+    const handle = normalize(item.handle);
+    if (!handle || !known.has(handle)) return false;
+    const incoming = item.xUserId || undefined;
+    // 不带 id 的 sighting 只是「仍在关注」信号；upsert 本就不删字段，跳过即等价
+    return incoming === undefined || known.get(handle) === incoming;
+  });
 }
 
 /** 只在全量同步完整成功后调用，原子替换上一版关注保护。 */
@@ -201,5 +235,8 @@ export async function getSelfHandle(): Promise<string | null> {
 
 export async function setSelfHandle(handle: string): Promise<void> {
   const normalized = normalize(handle);
-  if (normalized) await browser.storage.local.set({ [SELF_HANDLE_KEY]: normalized });
+  if (!normalized) return;
+  // account/settings.json 在页面生命周期内会被反复拉取；值未变时不写盘
+  if ((await getSelfHandle()) === normalized) return;
+  await browser.storage.local.set({ [SELF_HANDLE_KEY]: normalized });
 }

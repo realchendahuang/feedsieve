@@ -13,6 +13,13 @@ export interface PersistentBlockTask {
   handle: string;
   xUserId?: string;
   category: string;
+  reason?: string;
+  evidence?: {
+    contentFingerprint?: string;
+    linkDomains?: string[];
+  };
+  /** Whether a successful local block should be contributed to the community. */
+  communityVote?: boolean;
   status: PersistentBlockTaskStatus;
   failureCode?: string;
 }
@@ -20,6 +27,8 @@ export interface PersistentBlockTask {
 export interface PersistentBlockQueueState {
   id: string;
   source: PersistentBlockQueueSource;
+  /** Tab selected when the queue was created; used for routing and recovery UI. */
+  targetTabId?: number;
   status: PersistentBlockQueueStatus;
   tasks: PersistentBlockTask[];
   createdAt: number;
@@ -58,6 +67,24 @@ function normalizeQueue(value: unknown): PersistentBlockQueueState | null {
       handle,
       category: task.category,
       status,
+      ...(typeof task.reason === 'string' ? { reason: task.reason } : {}),
+      ...(task.evidence && typeof task.evidence === 'object'
+        ? {
+            evidence: {
+              ...(typeof task.evidence.contentFingerprint === 'string'
+                ? { contentFingerprint: task.evidence.contentFingerprint }
+                : {}),
+              ...(Array.isArray(task.evidence.linkDomains)
+                ? {
+                    linkDomains: task.evidence.linkDomains.filter(
+                      (domain): domain is string => typeof domain === 'string',
+                    ),
+                  }
+                : {}),
+            },
+          }
+        : {}),
+      ...(typeof task.communityVote === 'boolean' ? { communityVote: task.communityVote } : {}),
       ...(typeof task.xUserId === 'string' ? { xUserId: task.xUserId } : {}),
       ...(typeof task.failureCode === 'string' ? { failureCode: task.failureCode } : {}),
     });
@@ -65,6 +92,7 @@ function normalizeQueue(value: unknown): PersistentBlockQueueState | null {
   return {
     id: raw.id,
     source: raw.source,
+    ...(typeof raw.targetTabId === 'number' ? { targetTabId: raw.targetTabId } : {}),
     status: raw.status as PersistentBlockQueueStatus,
     tasks,
     createdAt: Number(raw.createdAt) || Date.now(),
@@ -85,7 +113,15 @@ export async function setPersistentBlockQueue(state: PersistentBlockQueueState):
 
 export async function createPersistentBlockQueue(
   source: PersistentBlockQueueSource,
-  items: ReadonlyArray<{ handle: string; xUserId?: string; category: string }>,
+  items: ReadonlyArray<{
+    handle: string;
+    xUserId?: string;
+    category: string;
+    reason?: string;
+    evidence?: PersistentBlockTask['evidence'];
+    communityVote?: boolean;
+  }>,
+  options: { targetTabId?: number } = {},
 ): Promise<PersistentBlockQueueState> {
   const byHandle = new Map<string, PersistentBlockTask>();
   for (const item of items) {
@@ -95,6 +131,9 @@ export async function createPersistentBlockQueue(
       handle,
       ...(item.xUserId ? { xUserId: item.xUserId } : {}),
       category: item.category,
+      ...(item.reason ? { reason: item.reason } : {}),
+      ...(item.evidence ? { evidence: item.evidence } : {}),
+      ...(typeof item.communityVote === 'boolean' ? { communityVote: item.communityVote } : {}),
       status: 'pending',
     });
   }
@@ -102,6 +141,7 @@ export async function createPersistentBlockQueue(
   const state: PersistentBlockQueueState = {
     id: crypto.randomUUID(),
     source,
+    ...(typeof options.targetTabId === 'number' ? { targetTabId: options.targetTabId } : {}),
     status: 'running',
     tasks: [...byHandle.values()],
     createdAt: now,

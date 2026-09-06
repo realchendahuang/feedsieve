@@ -8,9 +8,11 @@ import App from './App';
 let storageSet: ReturnType<typeof vi.fn>;
 let runtimeSendMessage: ReturnType<typeof vi.fn>;
 let tabSendMessage: ReturnType<typeof vi.fn>;
+const mountedRoots: Array<{ unmount: () => void }> = [];
 
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  for (const root of mountedRoots.splice(0)) root.unmount();
   document.body.replaceChildren();
   storageSet = vi.fn().mockResolvedValue(undefined);
   runtimeSendMessage = vi.fn().mockResolvedValue({ status: 'up_to_date' });
@@ -27,7 +29,7 @@ beforeEach(() => {
       },
     },
     tabs: {
-      query: vi.fn().mockResolvedValue([{ id: 1 }]),
+      query: vi.fn().mockResolvedValue([{ id: 1, active: true, url: 'https://x.com/home' }]),
       sendMessage: tabSendMessage,
     },
     runtime: {
@@ -39,7 +41,9 @@ beforeEach(() => {
 function renderApp(): HTMLElement {
   const rootEl = document.createElement('div');
   document.body.append(rootEl);
-  ReactDOM.createRoot(rootEl).render(React.createElement(App));
+  const root = ReactDOM.createRoot(rootEl);
+  mountedRoots.push(root);
+  root.render(React.createElement(App));
   return rootEl;
 }
 
@@ -220,7 +224,7 @@ describe('popup App 渲染冒烟', () => {
         },
       },
       tabs: {
-        query: vi.fn().mockResolvedValue([{ id: 1 }]),
+        query: vi.fn().mockResolvedValue([{ id: 1, active: true, url: 'https://x.com/home' }]),
         // 页面黄框清单：内容脚本实时查询返回
         sendMessage: vi
           .fn()
@@ -255,7 +259,7 @@ describe('popup App 渲染冒烟', () => {
         onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
       },
       tabs: {
-        query: vi.fn().mockResolvedValue([{ id: 1 }]),
+        query: vi.fn().mockResolvedValue([{ id: 1, active: true, url: 'https://x.com/home' }]),
         sendMessage: tabSendMessage,
       },
       runtime: { sendMessage: runtimeSendMessage },
@@ -284,6 +288,54 @@ describe('popup App 渲染冒烟', () => {
         ],
       }),
     );
+  });
+
+  it('never sends cleanup actions to a background X tab', async () => {
+    vi.stubGlobal('browser', {
+      storage: {
+        local: {
+          get: vi.fn().mockResolvedValue({ uiLanguage: 'zh' }),
+          set: storageSet,
+        },
+        onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+      },
+      tabs: {
+        query: vi.fn().mockResolvedValue([
+          { id: 1, active: true, url: 'https://example.com/' },
+          { id: 2, active: false, url: 'https://x.com/home' },
+        ]),
+        sendMessage: tabSendMessage,
+      },
+      runtime: { sendMessage: runtimeSendMessage },
+    });
+
+    const rootEl = renderApp();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    await act(async () => {
+      rootEl.querySelector<HTMLButtonElement>('.community-clean-action')?.click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(tabSendMessage).not.toHaveBeenCalled();
+    expect(rootEl.textContent).toContain('请先打开或刷新 x.com');
+  });
+
+  it('starts with community uploads enabled and exposes local-only as an opt-out', async () => {
+    const rootEl = renderApp();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    await act(async () => buttonWithText(rootEl, '设置').click());
+    const row = [...rootEl.querySelectorAll<HTMLLabelElement>('label.setting-row')].find(
+      (candidate) => candidate.textContent?.includes('仅本地运行'),
+    );
+    const input = row?.querySelector<HTMLInputElement>('input[type="checkbox"]');
+    expect(input).toBeTruthy();
+    expect(input?.checked).toBe(false);
+    await act(async () => {
+      input?.click();
+      await Promise.resolve();
+    });
+    expect(storageSet).toHaveBeenCalledWith({
+      communitySettings: expect.objectContaining({ autoContribute: false }),
+    });
   });
 
   it('previews a personal config before applying only local preference storage', async () => {

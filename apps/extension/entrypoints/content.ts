@@ -16,7 +16,6 @@ import { bumpStat } from '../src/lib/local-stats';
 import { bumpDaily } from '../src/lib/daily-stats';
 import {
   HIDDEN_TWEET_CELL_ATTRIBUTE,
-  collectCellsByHandle,
   hideCellsSoon,
   mutateWithStableViewport,
 } from '../src/lib/remove-tweets';
@@ -101,6 +100,7 @@ interface BlockEvidence {
 /** 页面内一个黄框账号待处理时的标记数据（一键拉黑 = 页面全部黄框）。 */
 interface PageMarkedAccount {
   handle: string;
+  xUserId?: string;
   category: string;
   /** 标注理由（popup 页面黄框清单展示用） */
   reason: string;
@@ -125,7 +125,14 @@ interface PageMarkedAccount {
 export default defineContentScript({
   matches: ['https://x.com/*'],
   main() {
-    let seenArticles = new WeakSet<Element>();
+    // X virtualizes and reuses article nodes. Keep the last input revision per
+    // element so reused nodes are rescanned when their author/content changes.
+    let scanSnapshots = new WeakMap<Element, string>();
+    const dirtyArticles = new Set<Element>();
+    const dirtyHandles = new Set<string>();
+    // X 会复用 article；按 handle 建反向索引，bio 到达时只让受影响的卡片重检。
+    const articlesByHandle = new Map<string, Set<Element>>();
+    const articleHandles = new WeakMap<Element, string>();
     /** 当前页面所有黄框账号（剔除已拉黑回显：它们已经在黑名单里） */
     const pageMarked = new Map<string, PageMarkedAccount>();
     /** handle -> bio（XHR 桥提供，检测用；DOM 拿不到简介） */
@@ -150,6 +157,8 @@ export default defineContentScript({
     let runningFollowingSync: Promise<void> | null = null;
     let runningPersistentQueue: Promise<void> | null = null;
     let scanTimer: number | undefined;
+    /** 分片扫描进行中；期间 scheduleScan 直接丢弃，由 runScan 的收尾补偿 */
+    let scanRunning = false;
 
     ensureStyles();
     refreshAllowCache();
@@ -197,12 +206,23 @@ export default defineContentScript({
       const msg = message as {
         type?: string;
         handle?: string;
+        targetTabId?: number;
         items?: Array<{ handle: string; xUserId?: string; category: string }>;
       } | null;
       const type = msg?.type;
       // 一键拉黑 = 当前页面全部黄框账号（用户拍板的交互语义）
       if (type === 'feedsieve:run-page-block') {
-        return runPageBlockBatch();
+        return startPersistentQueue(
+          'page-batch',
+          [...pageMarked.values()].map((item) => ({
+            handle: item.handle,
+            category: item.category,
+            reason: item.reason,
+            evidence: item.evidence,
+            communityVote: true,
+          })),
+          msg?.targetTabId,
+        );
       }
       if (type === 'feedsieve:unblock') {
         return runUnblockBatch(msg?.handle).then((result) => {
@@ -217,7 +237,7 @@ export default defineContentScript({
         return startFollowingFullSync();
       }
       if (type === 'feedsieve:community-block-start' && Array.isArray(msg?.items)) {
-        return startPersistentQueue('community-batch', msg.items);
+        return startPersistentQueue('community-batch', msg.items, msg.targetTabId);
       }
       if (type === 'feedsieve:block-queue-resume') {
         return resumePersistentQueue();
@@ -270,7 +290,16 @@ export default defineContentScript({
               });
             }
             if (tweet.author.bio) {
-              bioCache.set(tweet.author.handle, tweet.author.bio);
+              const handle = tweet.author.handle.toLowerCase();
+              if (bioCache.get(handle) !== tweet.author.bio) {
+                bioCache.set(handle, tweet.author.bio);
+                if (bioCache.size > BIO_CACHE_MAX) {
+                  // 近似 LRU：Map 保插入序，挤掉最早入缓存的一条
+                  const oldest = bioCache.keys().next().value;
+                  if (oldest !== undefined) bioCache.delete(oldest);
+                }
+                dirtyHandles.add(handle);
+              }
             }
           }
           for (const member of parsed.listMembers ?? []) {
@@ -301,6 +330,20 @@ export default defineContentScript({
               // 存储失败不阻塞浏览；下次同账号出现会重试
             });
           }
+          // bio is authoritative data that often arrives after the first DOM
+          // pass. Only invalidate cards for the handles whose bio changed.
+          if (dirtyHandles.size > 0) {
+            for (const handle of dirtyHandles) {
+              const indexed = articlesByHandle.get(handle);
+              if (!indexed) continue;
+              for (const article of indexed) {
+                if (article.isConnected) dirtyArticles.add(article);
+                else indexed.delete(article);
+              }
+            }
+            dirtyHandles.clear();
+          }
+          scheduleScan();
         } catch {
           // detail 非法 JSON：静默
         }
@@ -328,9 +371,37 @@ export default defineContentScript({
       subscribeBlocked(apply);
     }
 
+    /**
+     * 索引优先地收集某账号当前页面的 cell：先查扫描维护的 handle 反向索引，
+     * 再补上尚未入索引的 dirty article；候选逐一用 extractFeedItem 复核，
+     * 正确性与全页扫描一致，代价从「全页提取」降到「只提取该账号的候选 article」。
+     * 批量拉黑队列每个 handle 都要取一次 cell，全页版会放大成 N 次整页扫描。
+     */
+    function collectCellsForHandle(handle: string): Element[] {
+      const normalized = handle.trim().replace(/^@+/, '').toLowerCase();
+      if (!normalized) return [];
+      const context = contextFromPath(location.pathname);
+      const candidates = new Set<Element>();
+      for (const article of articlesByHandle.get(normalized) ?? []) {
+        candidates.add(article);
+      }
+      for (const article of dirtyArticles) {
+        candidates.add(article);
+      }
+      const cells = new Set<Element>();
+      for (const article of candidates) {
+        if (!article.isConnected) continue;
+        if (extractFeedItem(article, context)?.author.handle.toLowerCase() !== normalized) {
+          continue;
+        }
+        cells.add(article.closest(tweetSelectors.timelineCell) ?? article);
+      }
+      return [...cells];
+    }
+
     function hideNewlyBlockedCells(handles: ReadonlySet<string>): void {
       for (const handle of handles) {
-        const cells = collectCellsByHandle(handle);
+        const cells = collectCellsForHandle(handle);
         // 当前 tab 正在给这个账号展示「拉黑中 / 已拉黑」反馈时，让调用方维持原有
         // 650ms 反馈窗口；其它 tab 或页面刷新后的同步则立即隐藏。
         if (cells.length === 0 || hasPendingBlockFeedback(cells)) continue;
@@ -405,7 +476,7 @@ export default defineContentScript({
     async function refreshKeywordHeuristics(): Promise<void> {
       keywordCatalog = await getKeywordPackCatalog();
       keywordHeuristics = createKeywordHeuristics(await getKeywordRuleSettings(), keywordCatalog);
-      scheduleScan();
+      scheduleFullScan();
     }
 
     /**
@@ -414,14 +485,15 @@ export default defineContentScript({
      */
     function resetPageDecorations(): void {
       pageMarked.clear();
-      seenArticles = new WeakSet<Element>();
+      scanSnapshots = new WeakMap<Element, string>();
+      dirtyArticles.clear();
       for (const cell of document.querySelectorAll(`[${MARK_ATTRIBUTE}]`)) {
         cell.removeAttribute(MARK_ATTRIBUTE);
       }
       for (const element of document.querySelectorAll('.fs-badge, .fs-manual-mark')) {
         element.remove();
       }
-      scheduleScan();
+      scheduleFullScan();
     }
 
     /** 只刷新状态变化账号，避免一次拉黑让整页黄框先塌再长回来。 */
@@ -445,7 +517,7 @@ export default defineContentScript({
         // 拉黑成功后的 650ms 成功反馈必须留在屏幕上；同账号其它 cell 也一并延后，
         // 否则仍会在点击瞬间造成局部高度变更。
         if (handlesWithPendingFeedback.has(match.handle)) continue;
-        seenArticles.delete(match.article);
+        scanSnapshots.delete(match.article);
         pageMarked.delete(match.handle);
         articles.push(match.article);
         cells.add(match.cell);
@@ -462,170 +534,295 @@ export default defineContentScript({
           for (const action of article.querySelectorAll('.fs-manual-mark')) action.remove();
         }
       });
+      // 只把受影响的 article 重新入队：不再依赖「脏集合为空 -> 全页扫描」的旧路径
+      for (const article of articles) dirtyArticles.add(article);
       scheduleScan();
     }
 
-    function scan(): void {
-      const context = contextFromPath(location.pathname);
-      for (const article of document.querySelectorAll(tweetSelectors.article)) {
-        if (seenArticles.has(article)) {
-          continue;
-        }
-        seenArticles.add(article);
+    function articleRevision(
+      item: NonNullable<ReturnType<typeof extractFeedItem>>,
+      bio: string | undefined,
+    ): string {
+      return [
+        item.postId ?? '',
+        item.author.handle.toLowerCase(),
+        item.author.displayName ?? '',
+        item.text,
+        bio ?? '',
+        item.links.map((link) => `${link.href}|${link.hostname ?? ''}`).join(''),
+      ].join('');
+    }
 
-        const item = extractFeedItem(article, context);
-        if (!item) {
-          continue;
+    /**
+     * 单个 article 的提取 + 检测 + 标注。
+     * 只处理传入的这一个节点；调度（脏集合、分片、防重入）由 scheduleScan/runScan 负责。
+     */
+    function scanOne(
+      rawArticle: Element,
+      context: ReturnType<typeof contextFromPath>,
+      pendingBadges: PendingBadge[],
+    ): void {
+      const article = rawArticle;
+      const element = rawArticle;
+      // X 虚拟列表可能在扫描排队期间把节点回收掉
+      if (!element.isConnected) {
+        scanSnapshots.delete(element);
+        const staleHandle = articleHandles.get(element);
+        if (staleHandle) {
+          const staleSet = articlesByHandle.get(staleHandle);
+          staleSet?.delete(element);
+          if (staleSet?.size === 0) articlesByHandle.delete(staleHandle);
         }
+        return;
+      }
+      const item = extractFeedItem(element, context);
+      if (!item) {
+        scanSnapshots.delete(element);
+        return;
+      }
+      const handle = item.author.handle.toLowerCase();
+      const previousHandle = articleHandles.get(element);
+      if (previousHandle && previousHandle !== handle) {
+        const previousSet = articlesByHandle.get(previousHandle);
+        previousSet?.delete(element);
+        if (previousSet?.size === 0) articlesByHandle.delete(previousHandle);
+      }
+      articleHandles.set(element, handle);
+      const handleSet = articlesByHandle.get(handle) ?? new Set<Element>();
+      handleSet.add(element);
+      articlesByHandle.set(handle, handleSet);
+      const bio = bioCache.get(item.author.handle.toLowerCase());
+      const revision = articleRevision(item, bio);
+      if (scanSnapshots.get(element) === revision) {
+        return;
+      }
+      scanSnapshots.set(element, revision);
 
-        const input = {
-          handle: item.author.handle,
-          displayName: item.author.displayName,
-          text: item.text,
-          bio: bioCache.get(item.author.handle),
-          links: item.links,
-        };
+      const input = {
+        handle: item.author.handle,
+        displayName: item.author.displayName,
+        text: item.text,
+        bio,
+        links: item.links,
+      };
 
-        // 内容证据只用于用户主动标记或高置信命中后的社区证据。
-        // 不再因「页面上三个账号出现相同文本」直接定罪。
-        const evidence: BlockEvidence = {};
-        const fp = contentFingerprint(input);
-        if (fp) {
-          evidence.contentFingerprint = fp;
-        }
-        const linkDomains = collectLinkDomains(item.links);
-        if (linkDomains) {
-          evidence.linkDomains = linkDomains;
-        }
+      // 内容证据只用于用户主动标记或高置信命中后的社区证据。
+      // 不再因「页面上三个账号出现相同文本」直接定罪。
+      const evidence: BlockEvidence = {};
+      const fp = contentFingerprint(input);
+      if (fp) {
+        evidence.contentFingerprint = fp;
+      }
+      const linkDomains = collectLinkDomains(item.links);
+      if (linkDomains) {
+        evidence.linkDomains = linkDomains;
+      }
 
-        const handle = item.author.handle.toLowerCase();
-        // 用户已经显式拉黑的账号高于检测开关/白名单保护：X 若又把它渲染出来，
-        // 直接以非破坏性的方式折叠该 cell，而不是插入一个会再次改变高度的提示条。
-        if (blockedCache.has(handle)) {
-          const cell = article.closest(tweetSelectors.timelineCell) ?? article;
-          pageMarked.delete(handle);
-          hideCellsSoon([cell], 0);
-          continue;
-        }
-        const isProtected = allowCache.has(handle) || followingCache.has(handle);
-        if (isProtected || !detectionEnabled) {
-          attachManualAction(article as HTMLElement, handle, evidence);
-          continue;
-        }
+      // 用户已经显式拉黑的账号高于检测开关/白名单保护：X 若又把它渲染出来，
+      // 直接以非破坏性的方式折叠该 cell，而不是插入一个会再次改变高度的提示条。
+      if (blockedCache.has(handle)) {
+        const cell = article.closest(tweetSelectors.timelineCell) ?? article;
+        pageMarked.delete(handle);
+        hideCellsSoon([cell], 0);
+        return;
+      }
+      const isProtected = allowCache.has(handle) || followingCache.has(handle);
+      if (isProtected || !detectionEnabled) {
+        attachManualAction(article as HTMLElement, handle, evidence);
+        return;
+      }
 
-        // 识别顺序：社区快照名单 -> 内置名单兜底 -> 用户/官方可配置词库。
-        // 社区指纹/域名集合由 buildRuntimeCommunity 按强度档准备（大扫除档才有内容）
-        const evidenceOptions = {
-          ...(community?.fingerprintSet.size ? { fingerprints: community.fingerprintSet } : {}),
-          ...(community?.domainSet.size ? { domains: community.domainSet } : {}),
-        };
-        let detection = community
-          ? detect(input, {
-              list: community.handleSet,
-              listSource: 'community-list',
-              // v0.5 指纹即 SimHash：simhashes 集合与 fingerprints 集合同源，
-              // exact 命中优先，miss 后走汉明距离找「话术变体」
-              ...(community.fingerprintSet.size ? { simhashes: community.fingerprintSet } : {}),
-              ...evidenceOptions,
-              // 关键词/默认名称等单信号只保留在 Detector 评测层，
-              // 不再直接进入用户黄框。
-              heuristics: [],
-            })
-          : null;
-        if (!detection && BUILTIN_LIST.size > 0) {
-          detection = detect(input, {
-            list: BUILTIN_LIST,
-            listSource: 'builtin-list',
+      // 识别顺序：社区快照名单 -> 内置名单兜底 -> 用户/官方可配置词库。
+      // 社区指纹/域名集合由 buildRuntimeCommunity 按强度档准备（大扫除档才有内容）
+      const evidenceOptions = {
+        ...(community?.fingerprintSet.size ? { fingerprints: community.fingerprintSet } : {}),
+        ...(community?.domainSet.size ? { domains: community.domainSet } : {}),
+      };
+      let detection = community
+        ? detect(input, {
+            list: community.handleSet,
+            listSource: 'community-list',
+            // v0.5 指纹即 SimHash：simhashes 集合与 fingerprints 集合同源，
+            // exact 命中优先，miss 后走汉明距离找「话术变体」
+            ...(community.fingerprintSet.size ? { simhashes: community.fingerprintSet } : {}),
             ...evidenceOptions,
+            // 关键词/默认名称等单信号只保留在 Detector 评测层，
+            // 不再直接进入用户黄框。
             heuristics: [],
-          });
-        }
-        if (!detection) {
-          detection = detect(input, {
-            ...evidenceOptions,
-            // 仅运行用户明确配置的字面短语和可逐条关闭的官方词库。
-            // 命中后给人工确认黄框；页面一键拉黑仍必须由用户显式点击。
-            heuristics: keywordHeuristics,
-          });
-        }
+          })
+        : null;
+      if (!detection && BUILTIN_LIST.size > 0) {
+        detection = detect(input, {
+          list: BUILTIN_LIST,
+          listSource: 'builtin-list',
+          ...evidenceOptions,
+          heuristics: [],
+        });
+      }
+      if (!detection) {
+        detection = detect(input, {
+          ...evidenceOptions,
+          // 仅运行用户明确配置的字面短语和可逐条关闭的官方词库。
+          // 命中后给人工确认黄框；页面一键拉黑仍必须由用户显式点击。
+          heuristics: keywordHeuristics,
+        });
+      }
 
-        if (!detection) {
-          attachManualAction(article as HTMLElement, handle, evidence);
-          continue;
-        }
+      if (!detection) {
+        attachManualAction(article as HTMLElement, handle, evidence);
+        return;
+      }
 
-        // 社区名单命中：徽章带分类与票数，可解释性优先
-        let communityCategory: string | undefined;
-        let communityEntry: CommunityEntry | null = null;
-        if (detection.source === 'community-list' && community) {
-          const entry = community.index.lookup(item.author.handle);
-          if (entry) {
-            communityEntry = entry;
-            communityCategory = entry.category;
-            const label = categoryLabel(entry.category, uiLanguage);
-            const voteSummary =
-              entry.report_count > 1
-                ? uiLanguage === 'zh'
-                  ? `${entry.report_count} 人标记`
-                  : `${entry.report_count} community marks`
-                : uiLanguage === 'zh'
-                  ? '社区名单'
-                  : 'Community list';
-            detection = {
-              ...detection,
-              reason: uiLanguage === 'zh' ? `${voteSummary}为${label}` : `${voteSummary}: ${label}`,
-            };
-          }
-        }
-
-        // v0.5 Campaign：指纹命中（exact 或变体）时，
-        // 反查所在簇的规模，徽章显示「同模板 N 个账号」（网络感，不只单点）
-        if (detection.source === 'fingerprint' && community) {
-          const campaignHandle = detection.matchedFingerprint
-            ? community.campaignByFingerprint.get(detection.matchedFingerprint)
-            : undefined;
-          const campaign = campaignHandle ? community.campaignById.get(campaignHandle) : undefined;
-          if (campaign) {
-            detection = {
-              ...detection,
-              campaignEntryId: campaign.campaign_entry_id,
-              reason:
-                uiLanguage === 'zh'
-                  ? `与 ${campaign.campaign_size} 个已确认垃圾账号发布的内容高度相似`
-                  : `Highly similar to content from ${campaign.campaign_size} confirmed spam accounts`,
-            };
-          }
-        }
-
-        if (detection.source !== 'community-list') {
+      // 社区名单命中：徽章带分类与票数，可解释性优先
+      let communityCategory: string | undefined;
+      let communityEntry: CommunityEntry | null = null;
+      if (detection.source === 'community-list' && community) {
+        const entry = community.index.lookup(item.author.handle);
+        if (entry) {
+          communityEntry = entry;
+          communityCategory = entry.category;
+          const label = categoryLabel(entry.category, uiLanguage);
+          const voteSummary =
+            entry.report_count > 1
+              ? uiLanguage === 'zh'
+                ? `${entry.report_count} 人标记`
+                : `${entry.report_count} community marks`
+              : uiLanguage === 'zh'
+                ? '社区名单'
+                : 'Community list';
           detection = {
             ...detection,
-            reason: localizedDetectionReason(uiLanguage, detection),
+            reason: uiLanguage === 'zh' ? `${voteSummary}为${label}` : `${voteSummary}: ${label}`,
           };
         }
-
-        const presentation = classifyDetection({
-          detection,
-          strength,
-          communityEntry,
-        });
-        if (presentation === 'ignore') {
-          attachManualAction(article as HTMLElement, handle, evidence);
-          continue;
-        }
-
-        // 标注打在外层时间线格子上（PureTwitter 同款目标层）；找不到才退回 article
-        const cell = article.closest(tweetSelectors.timelineCell) ?? article;
-        const category =
-          keywordCategoryFromCurrentCatalog(detection.ruleId) ??
-          categoryFromDetection(detection.source, detection.ruleId, communityCategory);
-        markCell(cell as HTMLElement, detection, category, evidence);
       }
+
+      // v0.5 Campaign：指纹命中（exact 或变体）时，
+      // 反查所在簇的规模，徽章显示「同模板 N 个账号」（网络感，不只单点）
+      if (detection.source === 'fingerprint' && community) {
+        const campaignHandle = detection.matchedFingerprint
+          ? community.campaignByFingerprint.get(detection.matchedFingerprint)
+          : undefined;
+        const campaign = campaignHandle ? community.campaignById.get(campaignHandle) : undefined;
+        if (campaign) {
+          detection = {
+            ...detection,
+            campaignEntryId: campaign.campaign_entry_id,
+            reason:
+              uiLanguage === 'zh'
+                ? `与 ${campaign.campaign_size} 个已确认垃圾账号发布的内容高度相似`
+                : `Highly similar to content from ${campaign.campaign_size} confirmed spam accounts`,
+          };
+        }
+      }
+
+      if (detection.source !== 'community-list') {
+        detection = {
+          ...detection,
+          reason: localizedDetectionReason(uiLanguage, detection),
+        };
+      }
+
+      const presentation = classifyDetection({
+        detection,
+        strength,
+        communityEntry,
+      });
+      if (presentation === 'ignore') {
+        attachManualAction(article as HTMLElement, handle, evidence);
+        return;
+      }
+
+      // 标注打在外层时间线格子上（PureTwitter 同款目标层）；找不到才退回 article
+      const cell = article.closest(tweetSelectors.timelineCell) ?? article;
+      const category =
+        keywordCategoryFromCurrentCatalog(detection.ruleId) ??
+        categoryFromDetection(detection.source, detection.ruleId, communityCategory);
+      markCell(cell as HTMLElement, detection, category, evidence, pendingBadges);
     }
 
     function scheduleScan(): void {
-      window.clearTimeout(scanTimer);
-      scanTimer = window.setTimeout(scan, 300);
+      // 固定间隔去抖（不因后续 mutation 反复顺延）：配合分片执行，
+      // 滚动/打字期间的工作被摊薄到多个帧里，而不是在安静间隙一次性爆发。
+      if (scanRunning || scanTimer !== undefined) return;
+      scanTimer = window.setTimeout(runScan, SCAN_DEBOUNCE_MS);
+    }
+
+    /**
+     * 显式需要整页重新评估的场景才走全页扫描：启动、SPA 路由切换、
+     * 设置/名单/语言变化（resetPageDecorations）。日常增量走 scheduleScan。
+     */
+    function scheduleFullScan(): void {
+      for (const article of document.querySelectorAll(tweetSelectors.article)) {
+        dirtyArticles.add(article);
+      }
+      scheduleScan();
+    }
+
+    function runScan(): void {
+      scanTimer = undefined;
+      if (scanRunning) return;
+      scanRunning = true;
+      void processDirty().finally(() => {
+        scanRunning = false;
+        // 扫描期间 observer 又标了脏数据：立即续扫，不再等一个去抖周期
+        if (dirtyArticles.size > 0) scheduleScan();
+      });
+    }
+
+    async function processDirty(): Promise<void> {
+      while (dirtyArticles.size > 0) {
+        const batch = [...dirtyArticles];
+        dirtyArticles.clear();
+        const context = contextFromPath(location.pathname);
+        const pendingBadges: PendingBadge[] = [];
+        let chunkStartedAt = performance.now();
+        for (let index = 0; index < batch.length; index++) {
+          scanOne(batch[index]!, context, pendingBadges);
+          // 每片不超过单帧预算，之间让出主线程：长评论区的一次扫描
+          // 不再整块卡住滚动与输入（旧实现一次性同步处理全部脏节点）。
+          if (
+            performance.now() - chunkStartedAt >= SCAN_CHUNK_BUDGET_MS &&
+            index < batch.length - 1
+          ) {
+            await new Promise<void>((resolve) => {
+              window.setTimeout(resolve, 0);
+            });
+            chunkStartedAt = performance.now();
+          }
+        }
+        flushPendingBadges(pendingBadges);
+      }
+    }
+
+    interface PendingBadge {
+      cell: HTMLElement;
+      badge: HTMLElement;
+    }
+
+    /**
+     * 徽章会改变 cell 高度；同一批标注集中一次挂载，并套用与隐藏推文同款的
+     * 滚动锚定保护。标注密集的评论区里，逐条挂载正是滚动抽动的来源之一。
+     */
+    function flushPendingBadges(pending: PendingBadge[]): void {
+      if (pending.length === 0) return;
+      const insertions: PendingBadge[] = [];
+      const cells = new Set<HTMLElement>();
+      for (const item of pending) {
+        // resetPageDecorations 可能在构建与挂载之间撤销了这枚标注
+        if (!item.cell.isConnected || !item.cell.hasAttribute(MARK_ATTRIBUTE)) continue;
+        if (item.cell.querySelector('.fs-badge')) continue;
+        if (cells.has(item.cell)) continue;
+        cells.add(item.cell);
+        insertions.push(item);
+      }
+      pending.length = 0;
+      if (insertions.length === 0) return;
+      mutateWithStableViewport(cells, () => {
+        for (const { cell, badge } of insertions) {
+          cell.appendChild(badge);
+        }
+      });
     }
 
     /** 远程词库可新增行业包；页面本地统计仍保留该包的真实分类，不降级成 other。 */
@@ -638,16 +835,61 @@ export default defineContentScript({
         ?.id;
     }
 
-    new MutationObserver(scheduleScan).observe(document.body, {
+    new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        const target =
+          mutation.target instanceof Element ? mutation.target : mutation.target.parentElement;
+        // 忽略插件自己的徽章/按钮变更，避免 appendChild -> observer -> scan 的反馈环。
+        if (target?.closest('.fs-badge, .fs-manual-mark')) continue;
+        // 本条 mutation 的节点全是插件自己的元素时，不当作页面变化
+        // （例如本插件向动作栏插入「标记」按钮的那一次 mutation）。
+        let touched = false;
+        for (const node of mutation.addedNodes) {
+          if (
+            node instanceof Element &&
+            (node.matches('.fs-badge, .fs-manual-mark') ||
+              node.closest('.fs-badge, .fs-manual-mark'))
+          ) {
+            continue;
+          }
+          touched = true;
+          if (!(node instanceof Element)) continue;
+          if (node.matches(tweetSelectors.article)) dirtyArticles.add(node);
+          for (const nested of node.querySelectorAll(tweetSelectors.article)) {
+            dirtyArticles.add(nested);
+          }
+        }
+        if (!touched) {
+          for (const node of mutation.removedNodes) {
+            if (
+              node instanceof Element &&
+              (node.matches('.fs-badge, .fs-manual-mark') ||
+                node.closest('.fs-badge, .fs-manual-mark'))
+            ) {
+              continue;
+            }
+            touched = true;
+            break;
+          }
+        }
+        if (!touched) continue;
+        const article = target?.closest(tweetSelectors.article);
+        if (article) dirtyArticles.add(article);
+      }
+      // 只有确实扫出了受影响的 article 才安排扫描。打字（编辑器不在 article 内）、
+      // 悬浮提示、菜单等无关 mutation 在这里被直接忽略——旧实现一律 scheduleScan，
+      // 而旧 scan() 在脏集合为空时会退化为全页重扫，是长评论区打字卡顿的主因。
+      if (dirtyArticles.size > 0) scheduleScan();
+    }).observe(document.body, {
       childList: true,
       subtree: true,
     });
 
     // SPA 路由变化：X 不触发页面加载，靠 History API 探测以刷新 context
-    window.addEventListener('popstate', scheduleScan);
-    window.addEventListener('hashchange', scheduleScan);
+    window.addEventListener('popstate', scheduleFullScan);
+    window.addEventListener('hashchange', scheduleFullScan);
 
-    scheduleScan();
+    scheduleFullScan();
 
     // ---------- 标注 UI ----------
 
@@ -665,7 +907,7 @@ export default defineContentScript({
       button.type = 'button';
       button.className = 'fs-manual-mark';
       button.setAttribute('data-fs-manual-action', 'true');
-      const idleLabel = uiLanguage === 'zh' ? '标记垃圾' : 'Mark spam';
+      const idleLabel = uiLanguage === 'zh' ? '标记' : 'Mark';
       button.textContent = idleLabel;
       button.title = uiLanguage === 'zh' ? '标记为垃圾账号并拉黑' : 'Mark as spam and block';
       button.setAttribute('aria-label', button.title);
@@ -676,7 +918,7 @@ export default defineContentScript({
           const outcome = await runManualSpamBlock(handle, evidence);
           if (outcome.ok) {
             button.textContent = uiLanguage === 'zh' ? '已拉黑 ✓' : 'Blocked ✓';
-            hideCellsSoon(collectCellsByHandle(handle));
+            hideCellsSoon(collectCellsForHandle(handle));
             return;
           }
           button.textContent = `${uiLanguage === 'zh' ? '失败' : 'Failed'} ${outcome.code}`;
@@ -700,7 +942,6 @@ export default defineContentScript({
         {
           origin: 'manual-spam',
           communityVote: true,
-          deferContribution: true,
         },
       );
       if (!outcome.ok) return outcome;
@@ -735,9 +976,13 @@ export default defineContentScript({
       detection: NonNullable<ReturnType<typeof detect>>,
       category: string,
       evidence: BlockEvidence,
+      pendingBadges: PendingBadge[],
     ): void {
       cell.setAttribute(MARK_ATTRIBUTE, detection.source);
-      attachBadge(cell, detection, category, evidence);
+      const badge = buildBadge(cell, detection, category, evidence);
+      // 徽章不立即挂载：同批标注集中到 flushPendingBadges 一次插入，
+      // 避免逐条改高度 + 逐条触发滚动锚定。
+      if (badge) pendingBadges.push({ cell, badge });
       // 页面上用户能看到的每一个黄框，都必须出现在 popup 的待处理清单里。
       // 安全边界是「必须由用户点击一键拉黑」，而不是再暗藏一层不可见的置信门槛。
       if (detection.source !== 'blocked') {
@@ -748,7 +993,7 @@ export default defineContentScript({
           evidence,
         });
       }
-      // 本地统计：每次新标注 +1（seenArticles 保证每个 cell 只标一次）；
+      // 本地统计：每次新标注 +1（扫描快照保证每个 cell 只标一次）；
       // 已拉黑回显不是新发现，不计数
       if (detection.source !== 'blocked') {
         void bumpStat('detected').catch(() => {
@@ -757,14 +1002,14 @@ export default defineContentScript({
       }
     }
 
-    function attachBadge(
+    function buildBadge(
       cell: HTMLElement,
       detection: NonNullable<ReturnType<typeof detect>>,
       category: string,
       evidence: BlockEvidence,
-    ): void {
+    ): HTMLElement | null {
       if (cell.querySelector('.fs-badge')) {
-        return;
+        return null;
       }
 
       const badge = document.createElement('div');
@@ -784,7 +1029,8 @@ export default defineContentScript({
       const blockBtn = document.createElement('button');
       blockBtn.className = 'fs-block-now';
       blockBtn.type = 'button';
-      blockBtn.textContent = uiLanguage === 'zh' ? '标记垃圾并拉黑' : 'Mark spam & block';
+      blockBtn.textContent = uiLanguage === 'zh' ? '拉黑' : 'Block';
+      blockBtn.title = uiLanguage === 'zh' ? '标记垃圾账号并拉黑' : 'Mark as spam and block';
       blockBtn.addEventListener('click', () => {
         // 本地关键词是个人偏好；用户拉黑后不反向影响社区名单。
         const communityVote = !detection.ruleId?.startsWith('keyword:');
@@ -871,37 +1117,8 @@ export default defineContentScript({
       badge.append(label, primaryGroup, secondaryGroup);
       // cellInnerDiv 是普通块容器：徽章作为新块级子元素排在推文下方，
       // 处于文档流内但不进入 article 的 grid，不覆盖、不挤压任何 X 内容。
-      cell.appendChild(badge);
-    }
-
-    /**
-     * 一键拉黑（popup 入口）：当前页面全部黄框账号批量拉黑。
-     * 逐个执行，成功即从 pageMarked 移除并把推文隐藏；失败如实保留，
-     * 汇总回报 popup（与「顺手拉黑」共用 blockOne 原生产链路）。
-     */
-    async function runPageBlockBatch(): Promise<{
-      blocked: string[];
-      failed: Array<{ handle: string; code: string }>;
-    }> {
-      const targets = [...pageMarked.values()];
-      const blocked: string[] = [];
-      const failed: Array<{ handle: string; code: string }> = [];
-      for (const item of targets) {
-        const outcome = await blockOne(item, {
-          origin: 'page-batch',
-          communityVote: false,
-        });
-        if (outcome.ok) {
-          blocked.push(item.handle);
-          pageMarked.delete(item.handle);
-          // 对齐 X 原生拉黑行为：该账号页面上可见的推文一并隐藏。
-          hideCellsSoon(collectCellsByHandle(item.handle));
-        } else {
-          failed.push({ handle: item.handle, code: outcome.code });
-        }
-        await sleep(PACE_MS);
-      }
-      return { blocked, failed };
+      // 挂载时机由 flushPendingBadges 批量决定（见 markCell）。
+      return badge;
     }
 
     /**
@@ -918,7 +1135,7 @@ export default defineContentScript({
         deferContribution?: boolean;
       } = {},
     ): Promise<{ ok: true } | { ok: false; code: string }> {
-      let xUserId: string | undefined | null = await getUserId(item.handle);
+      let xUserId: string | undefined | null = item.xUserId ?? (await getUserId(item.handle));
       if (!xUserId) {
         xUserId = await resolveUserIdByHandle(item.handle);
         if (xUserId) {
@@ -989,7 +1206,7 @@ export default defineContentScript({
         if (outcome.ok) {
           button.textContent = '已拉黑 ✓';
           pageMarked.delete(handle);
-          hideCellsSoon(collectCellsByHandle(handle));
+          hideCellsSoon(collectCellsForHandle(handle));
         } else {
           // 如实反馈失败原因（auth_required / rate_limited / network_error…）
           button.textContent = `失败 ${outcome.code}`;
@@ -1185,14 +1402,22 @@ export default defineContentScript({
     }
 
     async function startPersistentQueue(
-      source: 'community-batch',
-      items: Array<{ handle: string; xUserId?: string; category: string }>,
+      source: 'page-batch' | 'community-batch',
+      items: Array<{
+        handle: string;
+        xUserId?: string;
+        category: string;
+        reason?: string;
+        evidence?: BlockEvidence;
+        communityVote?: boolean;
+      }>,
+      targetTabId?: number,
     ): Promise<{ status: 'started'; id: string; count: number }> {
       const filtered = items.filter((item) => {
         const handle = item.handle.toLowerCase();
         return !allowCache.has(handle) && !followingCache.has(handle) && !blockedCache.has(handle);
       });
-      const state = await createPersistentBlockQueue(source, filtered);
+      const state = await createPersistentBlockQueue(source, filtered, { targetTabId });
       void runPersistentQueue();
       return { status: 'started', id: state.id, count: state.tasks.length };
     }
@@ -1283,13 +1508,14 @@ export default defineContentScript({
         const outcome = await blockOne(
           {
             handle: task.handle,
+            ...(task.xUserId ? { xUserId: task.xUserId } : {}),
             category: task.category,
-            reason: '',
-            evidence: {},
+            reason: task.reason ?? '',
+            evidence: task.evidence ?? {},
           },
           {
-            origin: 'community-batch',
-            communityVote: false,
+            origin: state.source,
+            communityVote: task.communityVote ?? state.source !== 'community-batch',
             batchId: state.id,
           },
         );
@@ -1299,6 +1525,8 @@ export default defineContentScript({
         if (outcome.ok) {
           currentTask.status = 'success';
           blockedCache.add(task.handle);
+          pageMarked.delete(task.handle);
+          hideCellsSoon(collectCellsForHandle(task.handle));
         } else {
           currentTask.failureCode = outcome.code;
           if (
@@ -1322,6 +1550,13 @@ export default defineContentScript({
 
 /** 相邻两次拉黑请求的间隔（毫秒），与批量执行一致。 */
 const PACE_MS = 400;
+
+/** mutation 停止后到扫描的固定间隔。 */
+const SCAN_DEBOUNCE_MS = 300;
+/** 单次分片的同步工作预算：略小于一帧，超了就让出主线程。 */
+const SCAN_CHUNK_BUDGET_MS = 8;
+/** bio 内存缓存上限（每页会话），防止超长会话无界增长。 */
+const BIO_CACHE_MAX = 2000;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -1363,14 +1598,15 @@ function ensureStyles(): void {
       line-height: 1.5;
     }
     .fs-reason { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    /* 主操作组：勾选 + 顺手拉黑（高频，视觉突出） */
+    /* 主操作组：保持短标签，避免挤压 X 自带操作。 */
     .fs-actions { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
     /* 次操作组：抢救 / 误标？（低频治理，弱化） */
     .fs-actions-soft { gap: 4px; }
     .fs-pick { display: flex; align-items: center; gap: 4px; white-space: nowrap; cursor: pointer; user-select: none; }
     .fs-pick input { accent-color: #d4a900; cursor: pointer; }
     .fs-block-now {
-      padding: 2px 10px;
+      min-width: 34px;
+      padding: 2px 7px;
       border: 1px solid #d4a900;
       border-radius: 999px;
       background: #f2c94c;
@@ -1395,14 +1631,15 @@ function ensureStyles(): void {
     .fs-allow:hover { border-color: #b3b3b3; color: #666; }
     .fs-manual-mark {
       margin-left: auto;
-      padding: 0 8px;
-      min-height: 28px;
+      min-width: 32px;
+      padding: 0 6px;
+      min-height: 26px;
       border: 0;
       border-radius: 999px;
       background: transparent;
       color: rgb(113, 118, 123);
       font: inherit;
-      font-size: 12px;
+      font-size: 11px;
       cursor: pointer;
       white-space: nowrap;
     }

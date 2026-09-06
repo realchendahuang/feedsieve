@@ -1,4 +1,4 @@
-import { parseXApiResponse } from '@feedsieve/x-adapter';
+import { mayMatchEndpoint, parseXApiResponse } from '@feedsieve/x-adapter';
 
 /**
  * 网络桥（MAIN world）—— 机制来自 PureTwitter（docs/research/PURETWITTER_MECHANISM.md）。
@@ -57,12 +57,15 @@ export default defineContentScript({
           url.includes('api.x.com') ||
           url.includes('api.twitter.com')
         ) {
-          // clone 后异步读 body，不消费原响应（页面照常拿到数据）
-          void response
-            .clone()
-            .json()
-            .then((body) => inspect(url, body))
-            .catch(() => {});
+          // 先按 URL 特征过滤：只 clone+解析已知端点，私信/通知等大响应不做二次 JSON.parse
+          if (mayMatchEndpoint(url)) {
+            // clone 后异步读 body，不消费原响应（页面照常拿到数据）
+            void response
+              .clone()
+              .json()
+              .then((body) => inspect(url, body))
+              .catch(() => {});
+          }
         }
       } catch {
         // 检查自身异常不影响请求返回
@@ -93,6 +96,9 @@ export default defineContentScript({
       this.addEventListener('load', () => {
         try {
           if (this.responseType === 'blob') {
+            return;
+          }
+          if (!mayMatchEndpoint(this.responseURL)) {
             return;
           }
           const body =
