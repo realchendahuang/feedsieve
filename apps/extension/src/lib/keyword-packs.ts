@@ -1,4 +1,12 @@
 import bundledCatalogJson from '../../../../community/keyword-packs/official.json';
+import {
+  buildSigningMessage,
+  compareManifestVersions,
+  verifyManifestSignature,
+  TRUSTED_KEYS,
+  type ManifestSignature,
+  type TrustedKey,
+} from '@feedsieve/community-lists';
 
 export interface KeywordPackRule {
   id: string;
@@ -24,7 +32,9 @@ export interface KeywordPackCatalog {
 interface KeywordPackManifest {
   schema_version: 1;
   pack_version: string;
+  generated_at: string;
   files: Array<{ path: 'official.json'; sha256: string; packs: number; rules: number }>;
+  signature?: ManifestSignature;
 }
 interface StoredKeywordPackCatalog {
   pack_version: string;
@@ -152,6 +162,7 @@ function parseManifest(value: unknown): KeywordPackManifest | null {
     raw.schema_version !== 1 ||
     typeof raw.pack_version !== 'string' ||
     !VERSION_RE.test(raw.pack_version) ||
+    typeof raw.generated_at !== 'string' ||
     !Array.isArray(raw.files)
   )
     return null;
@@ -169,9 +180,12 @@ function parseManifest(value: unknown): KeywordPackManifest | null {
     typeof file.rules !== 'number'
   )
     return null;
+  const signature = parseSignature(raw.signature);
+  if (raw.signature !== undefined && signature === null) return null;
   return {
     schema_version: 1,
     pack_version: raw.pack_version,
+    generated_at: raw.generated_at,
     files: [
       {
         path: 'official.json',
@@ -180,7 +194,24 @@ function parseManifest(value: unknown): KeywordPackManifest | null {
         rules: file.rules,
       },
     ],
+    ...(signature ? { signature } : {}),
   };
+}
+const SIGNATURE_B64_RE = /^[A-Za-z0-9+/]{84,96}={0,2}$/;
+function parseSignature(raw: unknown): ManifestSignature | null {
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw !== 'object') return null;
+  const s = raw as Record<string, unknown>;
+  if (
+    typeof s.key_id !== 'string' ||
+    s.key_id.length < 1 ||
+    s.key_id.length > 64 ||
+    s.alg !== 'ed25519' ||
+    typeof s.sig !== 'string' ||
+    !SIGNATURE_B64_RE.test(s.sig)
+  )
+    return null;
+  return { key_id: s.key_id, alg: 'ed25519', sig: s.sig };
 }
 function parseStored(value: unknown): StoredKeywordPackCatalog | null {
   if (!value || typeof value !== 'object') return null;
@@ -212,9 +243,15 @@ export type KeywordPackSyncOutcome =
 
 /** 从 Worker/R2 取得版本化词库；任何校验失败都保留 last-known-good 缓存。 */
 export async function syncKeywordPackCatalog(
-  options: { force?: boolean; fetchImpl?: typeof fetch } = {},
+  options: {
+    force?: boolean;
+    fetchImpl?: typeof fetch;
+    /** 校验 manifest 签名的可信公钥；缺省用扩展内置 TRUSTED_KEYS */
+    trustedKeys?: readonly TrustedKey[];
+  } = {},
 ): Promise<KeywordPackSyncOutcome> {
   const fetchImpl = options.fetchImpl ?? fetch;
+  const trustedKeys = options.trustedKeys ?? TRUSTED_KEYS;
   const stored = parseStored((await browser.storage.local.get(STORAGE_KEY))[STORAGE_KEY]);
   if (!options.force && stored && Date.now() - stored.synced_at < KEYWORD_PACK_SYNC_MAX_AGE_MS)
     return { status: 'up_to_date', version: stored.pack_version };
@@ -228,6 +265,25 @@ export async function syncKeywordPackCatalog(
     return { status: 'error', error: `manifest_http_${manifestResponse.status}` };
   const manifest = parseManifest(await manifestResponse.json().catch(() => null));
   if (!manifest) return { status: 'error', error: 'invalid_manifest' };
+
+  // 发布者签名：SHA-256 只证明文件与 manifest 匹配，签名才证明发布者身份。
+  // R2 是公开存储，即使 manifest 与内容被同时替换，验签也会失败。
+  if (!manifest.signature) return { status: 'error', error: 'signature_missing' };
+  const signatureCheck = await verifyManifestSignature(
+    buildSigningMessage({
+      schemaVersion: manifest.schema_version,
+      version: manifest.pack_version,
+      generatedAt: manifest.generated_at,
+      files: manifest.files.map((f) => ({ path: f.path, sha256: f.sha256, count: f.rules })),
+    }),
+    manifest.signature,
+    trustedKeys,
+  );
+  if (!signatureCheck.ok) return { status: 'error', error: signatureCheck.error };
+
+  // 防回滚：远程版本必须不早于已接受的版本
+  if (stored && compareManifestVersions(manifest.pack_version, stored.pack_version) < 0)
+    return { status: 'error', error: 'rollback_rejected' };
   if (stored?.pack_version === manifest.pack_version)
     return { status: 'up_to_date', version: manifest.pack_version };
   let bodyResponse: Response;
