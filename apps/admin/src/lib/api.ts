@@ -1,8 +1,41 @@
 export interface Dashboard {
+  /** 社区净票达标数（进入公开名单的来源之一） */
+  community_listed: number;
+  /** 未达标的社区候选账号 */
+  community_candidates: number;
   maintainer_entries: number;
-  community_accounts: number;
+  /** 客户端实际下载的最终名单条目数（快照 manifest） */
+  public_entries: number;
   false_positive_feedback: number;
+  /** 按安装×账号去重后的近期活跃举报关系数 */
+  reports_last_24h: number;
+  active_installations_last_24h: number;
   snapshot_version: string | null;
+  snapshot_generated_at: number | null;
+  snapshot_lag_seconds: number | null;
+}
+
+export interface CommunityCandidate {
+  handle: string;
+  x_user_id: string | null;
+  category: string;
+  status: string;
+  report_count: number;
+  rescue_count: number;
+  net_votes: number;
+  blocked_installs: number;
+  allowed_installs: number;
+  fingerprints: number;
+  domains: number;
+  sources: string[];
+  first_report_at: number;
+  updated_at: number;
+}
+
+export interface CommunityCandidatesResponse {
+  entries: CommunityCandidate[];
+  next_cursor: string | null;
+  categories: string[];
 }
 
 export interface AccountEntry {
@@ -90,16 +123,44 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     headers,
     credentials: 'same-origin',
   });
-  if (!response.ok) {
-    const body = await response.json().catch(() => null) as { error?: unknown } | null;
-    const code = typeof body?.error === 'string' ? body.error : `http_${response.status}`;
-    throw new Error(code === 'access_required' ? 'Access 身份未授权' : code);
+  // Access and local SPA fallbacks may return HTML for both error and success
+  // responses. Decode once and keep parser/proxy details out of the UI.
+  const raw = await response.text().catch(() => '');
+  let body: Record<string, unknown> | null = null;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (parsed && typeof parsed === 'object') body = parsed as Record<string, unknown>;
+  } catch {
+    // HTML, an empty body, or a proxy error page.
   }
-  return response.json() as Promise<T>;
+  if (!response.ok) {
+    const code = typeof body?.error === 'string' ? body.error : `http_${response.status}`;
+    throw new Error(code);
+  }
+  if (!body) {
+    throw new Error('invalid_response');
+  }
+  return body as T;
 }
 
 export const getDashboard = () => request<Dashboard>('/dashboard');
 export const getAccounts = () => request<AccountsResponse>('/accounts');
+export const getCommunityCandidates = (params: {
+  net?: string;
+  q?: string;
+  category?: string;
+  cursor?: string;
+  limit?: number;
+}) => {
+  const search = new URLSearchParams();
+  if (params.net) search.set('net', params.net);
+  if (params.q) search.set('q', params.q);
+  if (params.category) search.set('category', params.category);
+  if (params.cursor) search.set('cursor', params.cursor);
+  if (params.limit) search.set('limit', String(params.limit));
+  const query = search.toString();
+  return request<CommunityCandidatesResponse>(`/community-accounts${query ? `?${query}` : ''}`);
+};
 export const getKeywords = () => request<KeywordsResponse>('/keywords');
 export const getFeedback = () => request<FeedbackResponse>('/feedback');
 export const getReleases = async () => (await request<{ releases: Release[] }>('/releases')).releases;

@@ -2,6 +2,7 @@ import React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm, Controller } from 'react-hook-form';
+import { useSearch } from '@tanstack/react-router';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { Search } from 'lucide-react';
@@ -85,6 +86,7 @@ function AccountEditorDialog({
   categories,
   open,
   pending,
+  defaults,
   onOpenChange,
   onSubmit,
 }: {
@@ -92,12 +94,14 @@ function AccountEditorDialog({
   categories: readonly string[];
   open: boolean;
   pending: boolean;
+  /** 社区候选「转维护」跳转带来的预填；entry 为空时生效。 */
+  defaults?: Partial<AccountFormValues>;
   onOpenChange: (open: boolean) => void;
   onSubmit: (values: AccountFormValues) => void;
 }) {
   const form = useForm<AccountFormValues, unknown, AccountFormValues>({
     resolver: zodResolver(accountSchema),
-    defaultValues: entry ? toFormValues(entry) : blankAccount(),
+    defaultValues: entry ? toFormValues(entry) : { ...blankAccount(), ...defaults },
   });
   const errors = form.formState.errors;
   return (
@@ -167,15 +171,39 @@ export function AccountsPage() {
   const queryClient = useQueryClient();
   const accounts = useQuery({ queryKey: ['accounts'], queryFn: getAccounts });
   const [filter, setFilter] = React.useState('');
-  const [editor, setEditor] = React.useState<{ open: boolean; entry: AccountEntry | null }>({
+  const [editor, setEditor] = React.useState<{
+    open: boolean;
+    entry: AccountEntry | null;
+    defaults?: Partial<AccountFormValues>;
+  }>({
     open: false,
     entry: null,
   });
   const [removing, setRemoving] = React.useState<AccountEntry | null>(null);
 
+  // 社区候选「转维护」：带 draft/category 跳转过来时自动打开预填的新增对话框。
+  const search = useSearch({ strict: false }) as { draft?: string | null; category?: string | null };
+  const draft = typeof search.draft === 'string' ? search.draft.replace(/^@+/, '').toLowerCase() : null;
+  const handledDraft = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!draft || !/^[a-z0-9_]{1,15}$/.test(draft) || handledDraft.current === draft) {
+      return;
+    }
+    handledDraft.current = draft;
+    setEditor({
+      open: true,
+      entry: null,
+      defaults: {
+        handle: draft,
+        category: typeof search.category === 'string' ? search.category : undefined,
+      },
+    });
+  }, [draft, search.category]);
+
   const invalidate = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['accounts'] }),
+      queryClient.invalidateQueries({ queryKey: ['community-accounts'] }),
       queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
     ]);
   };
@@ -189,10 +217,10 @@ export function AccountsPage() {
         evidence_post_id: values.evidence_post_id.trim() || null,
         note: values.note.trim(),
       }),
-    onSuccess: async () => {
+    onSuccess: async (data) => {
       await invalidate();
-      toast.success(editor.entry ? '已生效' : '已添加');
-      setEditor({ open: false, entry: null });
+      toast.success(data.action === 'add' ? '已添加' : '已生效');
+      setEditor({ open: false, entry: null, defaults: undefined });
     },
     onError: (error) => toast.error(errorText(error)),
   });
@@ -284,11 +312,12 @@ export function AccountsPage() {
         </div>
       )}
       <AccountEditorDialog
-        key={editor.entry?.handle ?? 'new'}
+        key={editor.entry?.handle ?? `new-${editor.defaults?.handle ?? ''}`}
         entry={editor.entry}
         categories={categories}
         open={editor.open}
         pending={saveMutation.isPending}
+        defaults={editor.defaults}
         onOpenChange={(open) => setEditor((prev) => ({ ...prev, open }))}
         onSubmit={(values) => saveMutation.mutate(values)}
       />
