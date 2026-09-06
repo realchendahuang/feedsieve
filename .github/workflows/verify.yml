@@ -1,0 +1,47 @@
+name: verify
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# 只做仓库级验证门禁：lint / typecheck / 测试 / 构建 / 产物与依赖检查。
+# 发布打包（pack-store.sh）与签名私钥都在开发机，不进 CI。
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.11.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Keyword pack artifacts (strip-signature compare + built-in key verify)
+        run: pnpm keyword-packs:check
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests (vitest)
+        run: pnpm test
+
+      - name: Community API tests (workerd)
+        run: pnpm --filter @feedsieve/community-api test
+
+      - name: Build extension (wxt)
+        run: pnpm build:extension
+
+      - name: Dependency audit
+        run: pnpm audit --audit-level high
