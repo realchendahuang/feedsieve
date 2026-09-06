@@ -155,4 +155,56 @@ describe('本地黑白名单同步', () => {
     });
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it('社区名单命中的确认拉黑（communityVote: false）不产生上报，也不补传', async () => {
+    // 徽章「拉黑」/ 一键拉黑路径处理社区名单命中的账号时报 communityVote: false；
+    // syncLocalLabels 必须把它当「采用既有结论」跳过 —— 升级补传 / 后台重试都不会回灌。
+    storage.blockedAccounts = [
+      {
+        handle: 'in_list_user',
+        blockedAt: 100,
+        category: 'bot_spam',
+        detectionSource: 'community-list',
+        communityVote: false,
+      },
+    ];
+
+    await expect(syncLocalLabels()).resolves.toEqual({
+      blocked: 0,
+      allowed: 0,
+      retracted: 0,
+      pending: 0,
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('检测命中（manual + communityVote 缺省 true）正常上报并携带 detection_source', async () => {
+    storage.blockedAccounts = [
+      {
+        handle: 'manual_confirm',
+        blockedAt: 100,
+        category: 'other',
+        detectionSource: 'manual',
+      },
+    ];
+    fetchMock.mockResolvedValueOnce(
+      resultResponse([{ handle: 'manual_confirm', status: 'recorded' }]),
+    );
+
+    await expect(syncLocalLabels()).resolves.toEqual({
+      blocked: 1,
+      allowed: 0,
+      retracted: 0,
+      pending: 0,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0]![0])).toContain('/v1/reports');
+    const reportBody = JSON.parse(
+      (fetchMock.mock.calls[0]![1] as RequestInit).body as string,
+    ) as { reports: { handle: string; detection_source: string }[] };
+    expect(reportBody.reports[0]).toMatchObject({
+      handle: 'manual_confirm',
+      detection_source: 'manual',
+    });
+  });
 });

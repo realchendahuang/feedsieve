@@ -221,7 +221,9 @@ export default defineContentScript({
             category: item.category,
             reason: item.reason,
             evidence: item.evidence,
-            communityVote: true,
+            // 防自我放大：社区名单命中（采用既有结论）不上报，其余独立发现保持计票。
+            // evidence.detectionSource 已在 markCell 写入 detection.source。
+            communityVote: item.evidence.detectionSource !== 'community-list',
           })),
           msg?.targetTabId,
         );
@@ -1034,8 +1036,11 @@ export default defineContentScript({
       blockBtn.textContent = uiLanguage === 'zh' ? '拉黑' : 'Block';
       blockBtn.title = uiLanguage === 'zh' ? '标记垃圾账号并拉黑' : 'Mark as spam and block';
       blockBtn.addEventListener('click', () => {
-        // 本地关键词是个人偏好；用户拉黑后不反向影响社区名单。
-        const communityVote = !detection.ruleId?.startsWith('keyword:');
+        // 「采用既有结论」与「独立发现」分开：本地自定义关键词是个人偏好，
+        // 社区名单命中的账号已在公开名单内 —— 两者都不应反向加票。
+        // 其余检测来源（官方词库 / 指纹 / 域名）是独立发现，正常计票。
+        const communityVote =
+          detection.source !== 'community-list' && !detection.ruleId?.startsWith('keyword:');
         void runBlockNow(
           detection.handle,
           blockBtn,
