@@ -53,27 +53,33 @@
   显示「拉黑接口暂不可用（X 变更或会话失效）；检测与标注不受影响」；队列对 `kill_switch` 暂停待恢复。
 - 破坏性动作专属 kill switch：运营在部署配置设 `DESTRUCTIVE_KILL_SWITCH`（值为公开理由）即随
   已签名快照 body 下发——只能关闭拉黑，不能开启任何自动动作；开关翻转强制产生新版本，绝不复用旧 body。
-- 待办（依赖阶段三 detection 管线抽取）：golden corpus 分层指标升级为「review 层 vs 批拉层」。
+- 分层指标已随阶段三落地（见阶段三「分层指标」节）。
 
-## 阶段三：队列统一 + 运行可靠性
+## 阶段三（已完成）：队列统一 + 运行可靠性 + content 拆分
 
-- `packages/block-queue` 成为唯一状态机（失败分类：`auth_required / missing_csrf / rate_limited / network_error /
-  http_5xx / unsupported / permanent_4xx / 不确定结果先 reconcile`），扩展侧注入持久化适配器
-  （browser.storage），消除与 `block-queue-store.ts` 的两套并行模型。
-- 自适应节奏替代固定 400ms：依据 429 / 近期延迟 / 连续失败 / 批大小退避（尊重 `Retry-After`，指数退避 + jitter）。
-- `auth_required / missing_csrf` 暂停整个 job 并提示重新登录；`unsupported` 停止并提示版本兼容问题；
-  网络不确定结果先查账号当前状态再决定是否重试（防破坏性动作重复发送）。
-- `content.ts` 渐进拆分：ArticleReader / ScanScheduler / DecorationController / ActionController，
-  接口与回归测试先行，避免破坏 X 虚拟列表行为。
+- `packages/block-queue` 成为唯一执行状态机：`failure.ts`（transient / pause / permanent / unsupported
+  分类 + 指数退避 + Retry-After + 抖动）+ `runner.ts`（每次迭代重载状态、短 sleep 分片让 pause/cancel
+  ≤250ms 生效）。扩展持久队列只注入「存储适配器 + 真实 Block 动作」，删除第二套循环语义。
+  行为变化：429/网络/5xx 按任务退避重试，不再暂停整个队列；认证失效/缺 CSRF/官方暂停才暂停。
+- `PageScanController`：脏集合 / revision 快照 / handle 倒排索引 / 去抖调度 / 分片执行 /
+  MutationObserver / 健康心跳收敛为独立模块（content.ts 注入检测与装饰）；逐行对齐旧行为。
+- `detection-pipeline.ts`：三阶段 detect + 社区条目/Campaign 增强 + 本地化理由 + classifyDetection
+  分层 + 分类推导，content 的 scanOne 只做簿记与装饰落点。
+- **分层指标落地**：`detection-layer-corpus.test.ts` 8 例金标 —— 社区/内置=block-candidate（可批量）、
+  关键词=review（只进人工确认）、指纹/域名标准档=ignore / 大扫除档=review、干净账号=ignore。
 
 ## 阶段四：规模化 + 切换
 
-- 异步快照（工作区已落地脏标记 + cron）：接口返回 `accepted / queued / last_published`；如规模再涨，
-  换 D1 任务表 + lease + Cron，或 Cloudflare Queues。
-- 基于真实数据对比 v1 / v2（管理端已透出 `status_v2 / consensus_v2`），积累足够样本后切换 consensus v2
-  并同步公开 policy；切换是未来某次发布的代码变更，不需要运营介入。
-- 真实历史误报样本（匿名化）补充进 golden corpus。
-- 发布机器变更后的恢复：密钥丢失时 `keygen.mjs` 重发 → 新公钥随扩展版本发布（多 key 并存窗口）→ 切换签名。
+- 异步快照（已落地：脏标记 + 5 分钟 cron 合并发布）。
+- **consensus v2 切换（数据闸门）**：影子模式已记录 `accounts.status_v2 / consensus_v2`，切换前必须用
+  真实票数历史对比 v1/v2 产出差异（这正是影子模式的设计对价，不能跳过）。数据积累到位后，切换是一次
+  只改三处的普通发布：
+  1. `rating.ts deriveStatus`：入榜条件改为「status_v2 === 'strong'」口径（或直接以 status_v2 为准）；
+  2. `snapshot.ts` 选区 SQL：`WHERE status_v2 = 'strong'`（替换 `report_count - rescue_count >= ?1`）；
+  3. `reports.ts publicPolicy()`：把 `consensus_v2.status` 从 `'shadow'` 改为 `'live'` 并同步
+     `community/policy/v3.yaml` 与 CHANGELOG。
+  切换不改变部署机制（同一次发版），运营零动作。
+- 真实历史误报样本（匿名化）补充进 golden corpus（阶段三后 corpus 已有分层维度）。
 
 ## 验证边界
 
