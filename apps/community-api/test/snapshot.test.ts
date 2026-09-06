@@ -6,7 +6,7 @@ import {
   TRUSTED_KEYS,
   verifyManifestSignature,
 } from '@feedsieve/community-lists';
-import { generateSnapshot, PUBLIC_BLOCKLIST_PACK, SNAPSHOT_PACK } from '../src/snapshot';
+import { generateSnapshot, buildKillSwitch, PUBLIC_BLOCKLIST_PACK, SNAPSHOT_PACK } from '../src/snapshot';
 
 const ORIGIN = 'https://api.example.com';
 
@@ -40,6 +40,18 @@ async function sha256HexOf(input: string): Promise<string> {
 }
 
 describe('snapshot pipeline', () => {
+  it('kill_switch 载荷构造：有理由才下发，空白视为未设置', () => {
+    const since = '2026-09-07T00:00:00Z';
+    expect(buildKillSwitch(undefined, since)).toBeUndefined();
+    expect(buildKillSwitch('', since)).toBeUndefined();
+    expect(buildKillSwitch('   ', since)).toBeUndefined();
+    expect(buildKillSwitch(' 接口排查中 ', since)).toEqual({
+      destructive_actions_disabled: true,
+      reason: '接口排查中',
+      disabled_since: since,
+    });
+  });
+
   it('retires the raw bearer-token publish endpoint', async () => {
     const response = await worker.fetch(
       new Request(`${ORIGIN}/admin/publish`, {

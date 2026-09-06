@@ -18,6 +18,8 @@ declare namespace Cloudflare {
     SIGNING_KEY_ID?: string;
     /** "1" = 公开快照端点只服务已签名行；缺省 = 兼容旧部署（不设门槛） */
     REQUIRE_SIGNED_SNAPSHOTS?: string;
+    /** 设置后随签名快照下发「破坏性动作暂停」开关（值为公开理由）；清除即恢复 */
+    DESTRUCTIVE_KILL_SWITCH?: string;
     TEST_MIGRATIONS: import('cloudflare:test').D1Migration[];
   }
 }

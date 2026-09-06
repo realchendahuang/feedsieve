@@ -248,6 +248,18 @@ export function serializePublicBlocklistYaml(input: {
   return `${lines.join('\n')}\n`;
 }
 
+/** kill_switch 载荷构造（纯函数，便于单测；reason 为空串/空白视为未设置）。 */
+export function buildKillSwitch(
+  reason: string | undefined,
+  disabledSince: string,
+): { destructive_actions_disabled: true; reason: string; disabled_since: string } | undefined {
+  const trimmed = reason?.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  return { destructive_actions_disabled: true, reason: trimmed, disabled_since: disabledSince };
+}
+
 async function collectEvidence(env: Cloudflare.Env, handle: string): Promise<string[]> {
   const res = await env.DB.prepare(
     `SELECT DISTINCT r.evidence_post_id
@@ -485,6 +497,9 @@ export async function generateSnapshot(
   entries.sort((a, b) => a.handle.localeCompare(b.handle));
 
   const generatedAt = now.toISOString();
+  // 官方破坏性动作暂停开关：部署配置里设置了 DESTRUCTIVE_KILL_SWITCH（理由）即下发；
+  // 随签名快照分发，扩展验签后执行 —— 只能关闭拉黑，不能开启任何自动动作。
+  const killSwitch = buildKillSwitch(env.DESTRUCTIVE_KILL_SWITCH, generatedAt);
   const body = `${JSON.stringify(
     {
       schema_version: SNAPSHOT_SCHEMA_VERSION,
@@ -492,6 +507,7 @@ export async function generateSnapshot(
       snapshot_version: version,
       generated_at: generatedAt,
       entries,
+      ...(killSwitch ? { kill_switch: killSwitch } : {}),
     },
     null,
     2,
@@ -546,9 +562,10 @@ export async function generateSnapshot(
 
   // 内容无变化则复用最新版本（cron 每小时跑，避免空转刷版本号）。
   // 比较 entries 内容（body 里的 generated_at 每次不同，不能整串比较）。
+  // kill_switch 也参与比较：开关翻转（开/关/理由变更）必须产生新版本，不能复用旧 body。
   const lastVersion = latest?.version ?? null;
   const lastBody = lastVersion ? await getSnapshotFile(env, lastVersion, SNAPSHOT_PACK) : null;
-  if (lastBody && entriesContentEqual(lastBody, entries)) {
+  if (lastBody && entriesContentEqual(lastBody, entries, killSwitch)) {
     const lastRow = await env.DB.prepare(
       'SELECT manifest_json, files_json FROM snapshots WHERE version = ?1',
     )
@@ -598,14 +615,24 @@ export async function generateSnapshot(
   };
 }
 
-/** 两次快照的 entries 内容是否相同（忽略 generated_at / 版本号等元信息）。 */
-function entriesContentEqual(lastBody: string, currentEntries: unknown[]): boolean {
-  let last: { schema_version?: number; policy_version?: number; entries?: unknown[] };
+/** 两次快照的 entries 与 kill_switch 是否相同（忽略 generated_at / 版本号等元信息）。 */
+function entriesContentEqual(
+  lastBody: string,
+  currentEntries: unknown[],
+  currentKillSwitch?: { destructive_actions_disabled: true; reason?: string; disabled_since?: string },
+): boolean {
+  let last: {
+    schema_version?: number;
+    policy_version?: number;
+    entries?: unknown[];
+    kill_switch?: unknown;
+  };
   try {
     last = JSON.parse(lastBody) as {
       schema_version?: number;
       policy_version?: number;
       entries?: unknown[];
+      kill_switch?: unknown;
     };
   } catch {
     return false;
@@ -617,6 +644,8 @@ function entriesContentEqual(lastBody: string, currentEntries: unknown[]): boole
   ) {
     return false;
   }
+  if (last.kill_switch === undefined && currentKillSwitch !== undefined) return false;
+  if (JSON.stringify(last.kill_switch) !== JSON.stringify(currentKillSwitch)) return false;
   return JSON.stringify(last.entries) === JSON.stringify(currentEntries);
 }
 
