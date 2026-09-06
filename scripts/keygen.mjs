@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global process, URL, console */
 /**
  * 一次性生成发布者签名密钥（Ed25519）。
  *

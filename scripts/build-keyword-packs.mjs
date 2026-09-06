@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* global URL, process, console, structuredClone */
+/* global URL, process, console, structuredClone, Buffer */
 import {
   createHash,
   createPrivateKey,

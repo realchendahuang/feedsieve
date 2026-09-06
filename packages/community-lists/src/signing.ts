@@ -10,8 +10,7 @@
  * 保证签名消息字节完全一致。
  */
 
-/** 64 字节 Ed25519 签名的 base64 固定长度（88 字符，含 padding） */
-const SIG_BASE64_LENGTH = 88;
+/** 64 字节 Ed25519 签名 = base64 88 字符（含 padding），见 validate.ts 的正则 */
 const BASE64_RE = /^[A-Za-z0-9+/]+={0,2}$/;
 
 export interface ManifestSignature {

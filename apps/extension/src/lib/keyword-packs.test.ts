@@ -71,7 +71,6 @@ describe('远程关键词包契约', () => {
   });
 });
 
-const API = 'https://feedsieve-api.chendahuang.com';
 const VERSION = '2026.09.02.5';
 
 async function testKey(keyId = 'test-key-1'): Promise<{
