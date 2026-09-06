@@ -40,6 +40,11 @@ export function publicPolicy() {
       burst_threshold: POLICY.trustBurstThreshold,
       burst_decay: POLICY.trustDecay,
     },
+    // 影子公式：已计算但不参与入榜，公开声明避免误解
+    consensus_v2: {
+      status: 'shadow',
+      formula: 'trust × installation maturity weighted net votes + temporal/evidence independence',
+    },
   };
 }
 

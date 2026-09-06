@@ -8,6 +8,7 @@
  */
 
 import { POLICY } from './reports';
+import { computeConsensusV2ForAccount } from './lib/consensus-v2';
 
 /** 账号评级所需的行（accounts 表 + 票数聚合后的形状） */
 export interface RateableAccount {
@@ -43,6 +44,11 @@ export async function autoRateAccounts(env: Cloudflare.Env): Promise<{ changed: 
         .run();
       changed++;
     }
+    // consensus v2 影子：全表重算，与入榜逻辑无关
+    const v2 = await computeConsensusV2ForAccount(env, row.handle);
+    await env.DB.prepare('UPDATE accounts SET status_v2 = ?2, consensus_v2 = ?3 WHERE handle = ?1')
+      .bind(row.handle, v2.status, v2.score)
+      .run();
   }
   return { changed };
 }

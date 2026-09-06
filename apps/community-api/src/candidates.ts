@@ -13,6 +13,9 @@ export interface CommunityCandidate {
   report_count: number;
   rescue_count: number;
   net_votes: number;
+  /** consensus v2 影子（不参与入榜，只作对比展示） */
+  status_v2: string;
+  consensus_v2: number | null;
   /** 独立安装实例投出的当前拉黑票数（active_labels） */
   blocked_installs: number;
   /** 独立安装实例投出的当前抢救票数（active_labels） */
@@ -97,6 +100,7 @@ export async function listCommunityCandidates(
   const limit = Math.min(Math.max(Math.trunc(options.limit) || 50, 1), 100);
   const rows = await env.DB.prepare(
     `SELECT a.handle, a.x_user_id, a.category, a.status,
+            a.status_v2, a.consensus_v2,
             a.report_count, a.rescue_count, a.first_report_at, a.updated_at,
             (SELECT COUNT(*) FROM active_labels l
               WHERE l.handle = a.handle AND l.label = 'blocked') AS blocked_installs,

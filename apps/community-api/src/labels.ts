@@ -1,5 +1,6 @@
 import { hashInstallationId } from './lib/hash';
 import { deriveStatus } from './rating';
+import { computeConsensusV2ForAccount } from './lib/consensus-v2';
 import { validateRescue } from './lib/validate';
 
 const MAX_LABEL_BATCH = 50;
@@ -104,6 +105,8 @@ export async function refreshAccountFromLabels(
     report_count: reportCount,
     rescue_count: rescueCount,
   });
+  // consensus v2 影子：与入榜无关，只为影子对比积累数据
+  const v2 = await computeConsensusV2ForAccount(env, handle);
 
   await env.DB.prepare(
     `UPDATE accounts SET
@@ -112,6 +115,8 @@ export async function refreshAccountFromLabels(
        owner_votes = ?4,
        status = ?5,
        category = COALESCE(?6, category),
+       status_v2 = ?8,
+       consensus_v2 = ?9,
        updated_at = ?7
      WHERE handle = ?1`,
   )
@@ -123,6 +128,8 @@ export async function refreshAccountFromLabels(
       status,
       category?.reason ?? null,
       Math.floor(Date.now() / 1000),
+      v2.status,
+      v2.score,
     )
     .run();
   return true;
