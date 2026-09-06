@@ -13,7 +13,7 @@
 |---|---|
 | `installation_id` 可被 Sybil 伪造、trust 不参与权重 | 阶段一已建 consensus v2 影子，待真实数据积累后切换 |
 | SHA-256 不能证明发布者身份 | 阶段一已加 Ed25519 manifest 签名 + anti-rollback |
-| X adapter 需要能力边界 | 阶段二 |
+| X adapter 需要能力边界 | 阶段二已落地能力快照 + popup 降级态 + 签名 kill switch |
 | 队列固定 400ms、失败分类不细 | 阶段三 |
 | 云端 CI（此前否决） | 折中落实：PR 验证 CI，发布仍本机 |
 | `content.ts` 职责过载（~1488 行） | 阶段三 |
@@ -43,15 +43,17 @@
 阶段一采用 Worker 侧自动签名（密钥在 gitignored 部署配置），阻断「存储/CDN 被替换」这一评审描述的主攻击。
 若将来发布权与运营权分离，升级到离线签名服务（见阶段二 kill switch 一节，签名位可复用）。
 
-## 阶段二：X adapter 能力边界 + 降级
+## 阶段二（已完成）：X adapter 能力边界 + 降级
 
-- `packages/x-adapter` 增加能力快照：`session usable / csrf available / userIdResolution / block / unblock /
-  timelineParsing`，状态 `unknown | working | failed | unsupported`。能力只来自非破坏性观测
-  （能否读到 ct0、已有 GraphQL/XHR 是否可解析、实际用户操作的结果、返回体是否未知 schema、最近错误类型），
-  不预先执行破坏性动作探测。
-- 降级行为：block 失败时检测 / 黄框 / 阅读解析继续，批量 Block 暂停，popup 显示「检测正常但 Block 暂不可用」。
-- 破坏性动作专属 kill switch：配置本身必须签名（复用 trusted-keys）；只能关闭破坏性动作，不能远程开启自动 Block。
-- detection 管线从 content.ts 抽出后，把 golden corpus 的分层指标升级为「review 层 vs 批拉层」。
+- `packages/x-adapter/src/status.ts` 能力快照：`sessionUsable / csrfAvailable / block / unblock /
+  userIdResolution / timelineParsing`，状态 `unknown | working | degraded | failed | unsupported`。
+  能力只来自非破坏性观测（ct0 可读性、最近真实操作的结构化结果 15 分钟窗口、扫描心跳），
+  不预先执行破坏性动作探测；429/网络=degraded，认证类=failed，404/405/410=unsupported。
+- 降级行为：检测 / 黄框 / 读取继续；`shouldPauseDestructive()` 判定时 popup 禁用全部拉黑入口，
+  显示「拉黑接口暂不可用（X 变更或会话失效）；检测与标注不受影响」；队列对 `kill_switch` 暂停待恢复。
+- 破坏性动作专属 kill switch：运营在部署配置设 `DESTRUCTIVE_KILL_SWITCH`（值为公开理由）即随
+  已签名快照 body 下发——只能关闭拉黑，不能开启任何自动动作；开关翻转强制产生新版本，绝不复用旧 body。
+- 待办（依赖阶段三 detection 管线抽取）：golden corpus 分层指标升级为「review 层 vs 批拉层」。
 
 ## 阶段三：队列统一 + 运行可靠性
 
