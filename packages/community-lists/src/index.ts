@@ -4,3 +4,5 @@ export * from './validate';
 export * from './index-core';
 export * from './sync';
 export * from './hash';
+export * from './signing';
+export * from './trusted-keys';

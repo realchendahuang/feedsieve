@@ -1,4 +1,5 @@
 import type { CommunitySource, SnapshotBody, SnapshotManifest } from './types';
+import type { ManifestSignature } from './signing';
 
 const SOURCES: readonly CommunitySource[] = ['community', 'maintainer'];
 const CATEGORIES = new Set([
@@ -16,6 +17,8 @@ const USER_ID_RE = /^\d{1,20}$/;
 const POST_ID_RE = /^\d{1,25}$/;
 const VERSION_RE = /^\d{4}\.\d{2}\.\d{2}\.\d{1,4}$/;
 const SHA256_RE = /^[0-9a-f]{64}$/;
+/** 64 字节 Ed25519 签名的 base64（88 字符，含 padding）；留少量容差防手抄错误 */
+const SIGNATURE_B64_RE = /^[A-Za-z0-9+/]{84,96}={0,2}$/;
 /** 内容指纹（v0.4）：16 位小写十六进制，与 detector 的 fingerprintText 输出对应 */
 const FINGERPRINT_RE = /^[0-9a-f]{16}$/;
 const HOSTNAME_RE = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
@@ -38,6 +41,27 @@ function validEvidenceList(value: unknown, itemCheck: (item: string) => boolean)
     return null;
   }
   return value as string[];
+}
+
+function parseSignature(raw: unknown): ManifestSignature | null {
+  if (raw === undefined || raw === null) {
+    return null;
+  }
+  if (typeof raw !== 'object' || raw === undefined) {
+    return null;
+  }
+  const s = raw as Record<string, unknown>;
+  if (
+    typeof s.key_id !== 'string' ||
+    s.key_id.length < 1 ||
+    s.key_id.length > 64 ||
+    s.alg !== 'ed25519' ||
+    typeof s.sig !== 'string' ||
+    !SIGNATURE_B64_RE.test(s.sig)
+  ) {
+    return null;
+  }
+  return { key_id: s.key_id, alg: 'ed25519', sig: s.sig };
 }
 
 export type ParseResult<T> = { ok: true; value: T } | { ok: false; error: string };
@@ -81,6 +105,11 @@ export function parseManifest(raw: unknown): ParseResult<SnapshotManifest> {
       entries: file.entries,
     });
   }
+  // 发布者签名（可选字段）：存在则必须格式合法，非法签名导致整份 manifest 失败
+  const signature = parseSignature(m.signature);
+  if (m.signature !== undefined && signature === null) {
+    return { ok: false, error: 'invalid_manifest_signature' };
+  }
   return {
     ok: true,
     value: {
@@ -88,6 +117,7 @@ export function parseManifest(raw: unknown): ParseResult<SnapshotManifest> {
       snapshot_version: m.snapshot_version,
       generated_at: m.generated_at,
       files,
+      ...(signature ? { signature } : {}),
     },
   };
 }

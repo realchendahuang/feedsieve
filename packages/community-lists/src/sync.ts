@@ -1,5 +1,12 @@
 import { sha256Hex } from './hash';
 import { parseManifest, parseSnapshotBody } from './validate';
+import {
+  buildSigningMessage,
+  compareManifestVersions,
+  verifyManifestSignature,
+  type TrustedKey,
+} from './signing';
+import { TRUSTED_KEYS } from './trusted-keys';
 import type { StoredSnapshot } from './types';
 
 export const SYNC_INTERVAL_MS = 6 * 60 * 60 * 1000;
@@ -40,6 +47,8 @@ export interface SyncOptions {
   now?: () => number;
   /** 跳过 6h 节流（onInstalled / 用户手动刷新时用） */
   force?: boolean;
+  /** 校验 manifest 签名的可信公钥；缺省用扩展内置 TRUSTED_KEYS */
+  trustedKeys?: readonly TrustedKey[];
 }
 
 /**
@@ -83,6 +92,38 @@ async function syncFromSource(source: SyncSource, options: SyncOptions): Promise
     const manifest = parseManifest(await manifestRes.json());
     if (!manifest.ok) {
       return { status: 'error', error: manifest.error };
+    }
+
+    // 发布者签名：SHA-256 只能证明文件与 manifest 匹配，无法证明 manifest 是谁签发的。
+    // 验签失败（即使 manifest 和文件被同时替换）也保持 last-known-good 不动。
+    if (!manifest.value.signature) {
+      return { status: 'error', error: 'signature_missing' };
+    }
+    const signatureCheck = await verifyManifestSignature(
+      buildSigningMessage({
+        schemaVersion: manifest.value.schema_version,
+        version: manifest.value.snapshot_version,
+        generatedAt: manifest.value.generated_at,
+        files: manifest.value.files.map((f) => ({
+          path: f.path,
+          sha256: f.sha256,
+          count: f.entries,
+        })),
+      }),
+      manifest.value.signature,
+      options.trustedKeys ?? TRUSTED_KEYS,
+    );
+    if (!signatureCheck.ok) {
+      return { status: 'error', error: signatureCheck.error };
+    }
+
+    // 防回滚：远程版本必须不早于已接受的版本。发布侧回滚通过「旧内容套新版本号」表达，
+    // 因此严格单调比较是安全的 —— 被签名证明是官方的旧版本也不能覆盖本地较新的缓存。
+    if (
+      current &&
+      compareManifestVersions(manifest.value.snapshot_version, current.snapshot_version) < 0
+    ) {
+      return { status: 'error', error: 'rollback_rejected' };
     }
 
     if (current && manifest.value.snapshot_version === current.snapshot_version) {

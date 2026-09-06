@@ -1,5 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { sha256Hex } from './hash';
+import {
+  buildSigningMessage,
+  bytesToBase64,
+  type ManifestSignature,
+  type TrustedKey,
+} from './signing';
 import { syncCommunitySnapshot, workerSource, type SnapshotStore, type SyncSource } from './sync';
 import { parseSnapshotBody } from './validate';
 import type { StoredSnapshot } from './types';
@@ -7,6 +13,43 @@ import type { StoredSnapshot } from './types';
 const API = 'https://api.example.com';
 const VERSION = '2026.08.28.1';
 const SHA = 'b'.repeat(64);
+
+/** 测试专用 ephemeral 密钥：manifest 需由调用方用可信公钥验签，缺省用内置 TRUSTED_KEYS。 */
+interface TestKey {
+  keyId: string;
+  trustedKeys: TrustedKey[];
+  sign: (message: string) => Promise<ManifestSignature>;
+}
+
+/** 用 WebCrypto 生成 —— 与 Worker 侧 signManifestMessage 走同一套实现。 */
+async function testKey(keyId = 'test-1'): Promise<TestKey> {
+  const { publicKey, privateKey } = await crypto.subtle.generateKey(
+    { name: 'Ed25519' },
+    true,
+    ['sign', 'verify'],
+  );
+  const pubRaw = new Uint8Array(await crypto.subtle.exportKey('raw', publicKey));
+  return {
+    keyId,
+    trustedKeys: [{ key_id: keyId, publicKeyBase64: bytesToBase64(pubRaw) }],
+    sign: async (message: string) => {
+      const sig = new Uint8Array(
+        await crypto.subtle.sign(
+          { name: 'Ed25519' },
+          privateKey,
+          new TextEncoder().encode(message),
+        ),
+      );
+      return { key_id: keyId, alg: 'ed25519', sig: bytesToBase64(sig) };
+    },
+  };
+}
+
+let TEST_KEY: TestKey;
+
+beforeAll(async () => {
+  TEST_KEY = await testKey();
+});
 
 function jsonResponse(payload: unknown, status = 200): Response {
   return new Response(JSON.stringify(payload), {
@@ -24,17 +67,38 @@ function snapshotBodyText(version = VERSION, entries: unknown[] = []): string {
   });
 }
 
-function manifest(overrides: Record<string, unknown> = {}) {
-  return {
-    schema_version: 2,
-    snapshot_version: VERSION,
-    generated_at: '2026-08-28T00:00:00Z',
-    files: [
-      { path: 'blocklist.yaml', sha256: 'a'.repeat(64), entries: 0 },
-      { path: 'official.json', sha256: SHA, entries: 0 },
-    ],
-    ...overrides,
-  };
+async function signManifestPayload(
+  payload: {
+    schema_version: number;
+    snapshot_version: string;
+    generated_at: string;
+    files: Array<{ path: string; sha256: string; entries: number }>;
+  },
+  key: TestKey = TEST_KEY,
+): Promise<Record<string, unknown>> {
+  const message = buildSigningMessage({
+    schemaVersion: payload.schema_version,
+    version: payload.snapshot_version,
+    generatedAt: payload.generated_at,
+    files: payload.files.map((f) => ({ path: f.path, sha256: f.sha256, count: f.entries })),
+  });
+  return { ...payload, signature: await key.sign(message) };
+}
+
+function manifest(overrides: Record<string, unknown> = {}, key: TestKey = TEST_KEY) {
+  return signManifestPayload(
+    {
+      schema_version: 2,
+      snapshot_version: VERSION,
+      generated_at: '2026-08-28T00:00:00Z',
+      files: [
+        { path: 'blocklist.yaml', sha256: 'a'.repeat(64), entries: 0 },
+        { path: 'official.json', sha256: SHA, entries: 0 },
+      ],
+      ...overrides,
+    },
+    key,
+  );
 }
 
 function memoryStore(initial: StoredSnapshot | null = null): SnapshotStore & {
@@ -52,7 +116,7 @@ function memoryStore(initial: StoredSnapshot | null = null): SnapshotStore & {
   };
 }
 
-function okFetch(bodyText: string, manifestPayload = manifest()) {
+function okFetch(bodyText: string, manifestPayload: unknown) {
   return vi.fn(async (url: string) => {
     if (url.endsWith('/v1/snapshots/latest')) {
       return jsonResponse(manifestPayload);
@@ -71,7 +135,7 @@ describe('syncCommunitySnapshot', () => {
     const store = memoryStore();
     const fetchImpl = okFetch(
       body,
-      manifest({ files: [{ path: 'official.json', sha256: await realSha(body), entries: 0 }] }),
+      await manifest({ files: [{ path: 'official.json', sha256: await realSha(body), entries: 0 }] }),
     );
 
     const outcome = await syncCommunitySnapshot({
@@ -79,6 +143,7 @@ describe('syncCommunitySnapshot', () => {
       fetchImpl,
       store,
       force: true,
+      trustedKeys: TEST_KEY.trustedKeys,
     });
 
     expect(outcome).toEqual({ status: 'updated', version: VERSION });
@@ -91,7 +156,7 @@ describe('syncCommunitySnapshot', () => {
     const store = memoryStore();
     const fetchImpl = okFetch(
       body,
-      manifest({
+      await manifest({
         files: [
           { path: 'blocklist.yaml', sha256: 'a'.repeat(64), entries: 0 },
           { path: 'official.json', sha256: await realSha(body), entries: 0 },
@@ -105,20 +170,106 @@ describe('syncCommunitySnapshot', () => {
         fetchImpl,
         store,
         force: true,
+        trustedKeys: TEST_KEY.trustedKeys,
       }),
     ).toEqual({ status: 'updated', version: VERSION });
     expect(store.data?.body).toBe(body);
   });
 
-  it('rejects a snapshot whose checksum does not match the manifest', async () => {
+  it('rejects an unsigned manifest', async () => {
     const store = memoryStore();
-    const fetchImpl = okFetch(snapshotBodyText(), manifest());
+    const unsigned = await manifest();
+    delete unsigned.signature;
+    const fetchImpl = okFetch(snapshotBodyText(), unsigned);
 
     const outcome = await syncCommunitySnapshot({
       sources: [workerSource(API)],
       fetchImpl,
       store,
       force: true,
+      trustedKeys: TEST_KEY.trustedKeys,
+    });
+
+    expect(outcome).toEqual({ status: 'error', error: 'signature_missing' });
+    expect(store.data).toBeNull();
+  });
+
+  it('rejects a manifest signed with an unknown key', async () => {
+    const store = memoryStore();
+    const otherKey = await testKey('other-1');
+    const fetchImpl = okFetch(
+      snapshotBodyText(),
+      await manifest({}, otherKey),
+    );
+
+    const outcome = await syncCommunitySnapshot({
+      sources: [workerSource(API)],
+      fetchImpl,
+      store,
+      force: true,
+      trustedKeys: TEST_KEY.trustedKeys,
+    });
+
+    expect(outcome).toEqual({ status: 'error', error: 'unknown_key' });
+    expect(store.data).toBeNull();
+  });
+
+  it('rejects a signature that does not match the manifest (tampered version)', async () => {
+    const store = memoryStore();
+    // 先按 VERSION 签名，再把版本字段换成另一个 —— 模拟「同时替换 manifest 与内容」
+    const tampered = await signManifestPayload({
+      schema_version: 2,
+      snapshot_version: VERSION,
+      generated_at: '2026-08-28T00:00:00Z',
+      files: [{ path: 'official.json', sha256: SHA, entries: 0 }],
+    });
+    tampered.snapshot_version = '2026.08.28.2';
+    const fetchImpl = okFetch(snapshotBodyText('2026.08.28.2'), tampered);
+
+    const outcome = await syncCommunitySnapshot({
+      sources: [workerSource(API)],
+      fetchImpl,
+      store,
+      force: true,
+      trustedKeys: TEST_KEY.trustedKeys,
+    });
+
+    expect(outcome).toEqual({ status: 'error', error: 'signature_invalid' });
+    expect(store.data).toBeNull();
+  });
+
+  it('rejects a signed rollback to an older snapshot version', async () => {
+    const store = memoryStore({
+      snapshot_version: '2026.08.29.1',
+      body: snapshotBodyText('2026.08.29.1'),
+      synced_at: 1,
+    });
+    // 旧版本由同一发布者正确签名 —— 签名只能证明「官方签过」，不能让它覆盖较新的缓存
+    const older = await manifest({ snapshot_version: '2026.08.28.1' });
+    const fetchImpl = okFetch(snapshotBodyText('2026.08.28.1'), older);
+
+    const outcome = await syncCommunitySnapshot({
+      sources: [workerSource(API)],
+      fetchImpl,
+      store,
+      force: true,
+      trustedKeys: TEST_KEY.trustedKeys,
+    });
+
+    expect(outcome).toEqual({ status: 'error', error: 'rollback_rejected' });
+    expect(store.data?.snapshot_version).toBe('2026.08.29.1');
+  });
+
+  it('rejects a snapshot whose checksum does not match the manifest', async () => {
+    const store = memoryStore();
+    const fetchImpl = okFetch(snapshotBodyText(), await manifest());
+
+    const outcome = await syncCommunitySnapshot({
+      sources: [workerSource(API)],
+      fetchImpl,
+      store,
+      force: true,
+      trustedKeys: TEST_KEY.trustedKeys,
     });
 
     expect(outcome).toEqual({ status: 'error', error: 'checksum_mismatch' });
@@ -141,6 +292,7 @@ describe('syncCommunitySnapshot', () => {
       fetchImpl,
       store,
       force: true,
+      trustedKeys: TEST_KEY.trustedKeys,
     });
 
     expect(outcome).toEqual({ status: 'error', error: 'manifest_http_500' });
@@ -160,7 +312,7 @@ describe('syncCommunitySnapshot', () => {
       }
       if (url === mirror.manifestUrl) {
         return jsonResponse(
-          manifest({ files: [{ path: 'official.json', sha256: await realSha(body), entries: 0 }] }),
+          await manifest({ files: [{ path: 'official.json', sha256: await realSha(body), entries: 0 }] }),
         );
       }
       return new Response(body, { status: 200 });
@@ -171,6 +323,7 @@ describe('syncCommunitySnapshot', () => {
       fetchImpl,
       store,
       force: true,
+      trustedKeys: TEST_KEY.trustedKeys,
     });
 
     expect(outcome).toEqual({ status: 'updated', version: VERSION });
@@ -202,7 +355,7 @@ describe('syncCommunitySnapshot', () => {
     });
     const fetchImpl = okFetch(
       body,
-      manifest({ files: [{ path: 'official.json', sha256: await realSha(body), entries: 0 }] }),
+      await manifest({ files: [{ path: 'official.json', sha256: await realSha(body), entries: 0 }] }),
     );
 
     const outcome = await syncCommunitySnapshot({
@@ -211,6 +364,7 @@ describe('syncCommunitySnapshot', () => {
       store,
       force: true,
       now: () => 5555,
+      trustedKeys: TEST_KEY.trustedKeys,
     });
 
     expect(outcome).toEqual({ status: 'unchanged' });
@@ -222,9 +376,10 @@ describe('syncCommunitySnapshot', () => {
     const store = memoryStore();
     const badManifest = await syncCommunitySnapshot({
       sources: [workerSource(API)],
-      fetchImpl: okFetch('{}', manifest({ snapshot_version: 'not-a-version' })),
+      fetchImpl: okFetch('{}', await manifest({ snapshot_version: 'not-a-version' })),
       store,
       force: true,
+      trustedKeys: TEST_KEY.trustedKeys,
     });
     expect(badManifest).toMatchObject({ status: 'error' });
 
@@ -233,12 +388,13 @@ describe('syncCommunitySnapshot', () => {
       sources: [workerSource(API)],
       fetchImpl: okFetch(
         badBody,
-        manifest({
+        await manifest({
           files: [{ path: 'official.json', sha256: await realSha(badBody), entries: 1 }],
         }),
       ),
       store,
       force: true,
+      trustedKeys: TEST_KEY.trustedKeys,
     });
     expect(badEntries).toEqual({ status: 'error', error: 'invalid_snapshot_entry' });
     expect(await store.get()).toBeNull();

@@ -14,6 +14,8 @@ export interface SnapshotManifest {
   snapshot_version: string;
   generated_at: string;
   files: SnapshotManifestFile[];
+  /** 发布者签名（v1.1 起必填；旧版扩展忽略此字段继续可用） */
+  signature?: import('./signing').ManifestSignature;
 }
 
 export type CommunitySource = 'community' | 'maintainer';
