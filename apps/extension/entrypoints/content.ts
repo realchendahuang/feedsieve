@@ -95,6 +95,8 @@ const STYLE_ELEMENT_ID = 'feedsieve-mark-styles';
 interface BlockEvidence {
   contentFingerprint?: string;
   linkDomains?: string[];
+  /** 判断来源；手动标记路径强制 manual，检测器命中带各自来源。 */
+  detectionSource?: string;
 }
 
 /** 页面内一个黄框账号待处理时的标记数据（一键拉黑 = 页面全部黄框）。 */
@@ -938,7 +940,7 @@ export default defineContentScript({
       const handle = normalizeManualHandle(rawHandle);
       if (!handle) return { ok: false, code: 'invalid-handle' };
       const outcome = await blockOne(
-        { handle, category: 'other', reason: '', evidence },
+        { handle, category: 'other', reason: '', evidence: { ...evidence, detectionSource: 'manual' } },
         {
           origin: 'manual-spam',
           communityVote: true,
@@ -990,7 +992,7 @@ export default defineContentScript({
           handle: detection.handle,
           category,
           reason: detection.reason,
-          evidence,
+          evidence: { ...evidence, detectionSource: detection.source },
         });
       }
       // 本地统计：每次新标注 +1（扫描快照保证每个 cell 只标一次）；

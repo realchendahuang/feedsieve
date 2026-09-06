@@ -20,6 +20,8 @@ export interface ContributionItem {
   contentFingerprint?: string;
   /** 外链 hostname（v0.4）：已去自家域名并去重 */
   linkDomains?: string[];
+  /** 判断来源（v0.7.6）：手动标记 = manual，检测器命中 = 对应来源 */
+  detectionSource?: string;
 }
 
 /** X 自家/媒体域名：无垃圾识别价值，不进指纹库也不随上报发送 */
@@ -64,6 +66,7 @@ type LocalLabel =
       category: string;
       contentFingerprint?: string;
       linkDomains?: string[];
+      detectionSource?: string;
     }
   | {
       label: 'allowed';
@@ -317,6 +320,7 @@ async function runLocalLabelSync(): Promise<LabelSyncSummary> {
             category: label.category,
             contentFingerprint: label.contentFingerprint,
             linkDomains: label.linkDomains,
+            detectionSource: label.detectionSource,
           }),
         ),
       },
@@ -401,6 +405,7 @@ async function collectLocalLabels(): Promise<Map<string, LocalLabel>> {
       category: item.category ?? 'other',
       ...(item.contentFingerprint ? { contentFingerprint: item.contentFingerprint } : {}),
       ...(item.linkDomains?.length ? { linkDomains: item.linkDomains } : {}),
+      ...(item.detectionSource ? { detectionSource: item.detectionSource } : {}),
     });
   }
   for (const item of allowed) {
@@ -430,6 +435,7 @@ function labelSignature(label: LocalLabel): string {
           label.category,
           label.contentFingerprint ?? '',
           [...(label.linkDomains ?? [])].sort(),
+          label.detectionSource ?? '',
         ]
       : [
           label.label,
@@ -478,6 +484,7 @@ function reportPayload(item: ContributionItem): Record<string, unknown> {
     reason: item.category,
     ...(item.contentFingerprint ? { content_fingerprint: item.contentFingerprint } : {}),
     ...(item.linkDomains?.length ? { link_domains: item.linkDomains } : {}),
+    ...(item.detectionSource ? { detection_source: item.detectionSource } : {}),
   };
 }
 

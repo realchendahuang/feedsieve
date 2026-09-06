@@ -29,13 +29,15 @@ import { processRetractionBatch } from './labels';
 import { POLICY, processReportBatch, publicPolicy } from './reports';
 import { processRescueBatch } from './rescues';
 import {
+  clearSnapshotDirty,
   generateSnapshot,
   getLatestSnapshot,
   getLatestSnapshotFile,
   getLatestSnapshotVersion,
   getSnapshotFile,
-  isSnapshotStale,
+  markSnapshotDirty,
   PUBLIC_BLOCKLIST_PACK,
+  readSnapshotDirty,
   SNAPSHOT_PACK,
 } from './snapshot';
 
@@ -85,7 +87,8 @@ export function createApp() {
     if (!result.ok) {
       return c.json({ error: result.error }, result.httpStatus);
     }
-    // 快照异步化：只落库并返回当前有效版本，由 cron 每 5 分钟合并生成新快照。
+    // 快照异步化：只落库并置脏，由 cron 每 5 分钟合并生成；响应返回当前有效版本。
+    await markSnapshotDirty(c.env);
     return c.json({
       policy: {
         formula: 'block_votes - false_positive_votes',
@@ -318,6 +321,7 @@ export function createApp() {
     if (!result.ok) {
       return c.json({ error: result.error }, result.httpStatus);
     }
+    await markSnapshotDirty(c.env);
     return c.json({ results: result.results, snapshot_version: await getLatestSnapshotVersion(c.env) });
   });
 
@@ -327,6 +331,7 @@ export function createApp() {
     if (!result.ok) {
       return c.json({ error: result.error }, result.httpStatus);
     }
+    await markSnapshotDirty(c.env);
     return c.json({ results: result.results, snapshot_version: await getLatestSnapshotVersion(c.env) });
   });
 
@@ -400,17 +405,19 @@ export function createApp() {
   return app;
 }
 
-// 定时发布是兜底：只有数据新于最近一次快照时才生成，空闲期不刷版本号。
+// 定时发布是异步化的消费端：有脏标记才生成；内容未变时复用版本并清除标记。
+// 生成失败不清标记 → 下一周期自然重试；生成期间到达的新变更（值已变）也保留。
 async function scheduledAutoPublish(env: Cloudflare.Env): Promise<void> {
   try {
-    if (!(await isSnapshotStale(env))) {
+    const dirty = await readSnapshotDirty(env);
+    if (dirty == null) {
       console.info('[community-api] cron publish: no pending changes, skip');
       return;
     }
     const published = await generateSnapshot(env);
+    await clearSnapshotDirty(env, dirty);
     console.info(`[community-api] cron publish: version=${published.version}`);
   } catch (error) {
-    // 生成失败：数据仍新于快照，下一个周期自然重试，线上继续使用上一份有效快照。
     console.error('[community-api] cron publish failed:', error);
   }
 }

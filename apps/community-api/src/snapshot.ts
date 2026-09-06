@@ -680,28 +680,34 @@ export async function getLatestSnapshotVersion(env: Cloudflare.Env): Promise<str
 }
 
 /**
- * 脏标记轮询：最近一次快照之后是否又有数据变更。
- * reports / rescues / accounts 三条写入路径的时间戳都新于快照时间即视为脏；
- * 维护者发布路径仍同步生成快照，不经过这里。生成失败时数据仍新于快照，
- * 下一个 cron 周期会自然重试，无需单独的状态位。
+ * 快照脏标记（异步发布协调）。
+ *
+ * 上报/抢救/撤回落库后置脏；cron 读标记 → 生成快照 → 值比对清除。
+ * 不用时间戳反推：低票变更不改变名单内容时 generateSnapshot 会复用版本、
+ * 不产生新快照行，「数据比快照新」会永远为真导致每周期空转全量扫描。
+ * value 存置脏时刻（毫秒）；清除带值比对，生成期间到达的新变更会保留标记。
  */
-export async function isSnapshotStale(env: Cloudflare.Env): Promise<boolean> {
-  const latest = await env.DB.prepare('SELECT MAX(created_at) AS at FROM snapshots').first<{
-    at: number | null;
-  }>();
-  if (latest?.at == null) {
-    return true;
-  }
-  const dirty = await env.DB.prepare(
-    `SELECT EXISTS(
-       SELECT 1 FROM reports WHERE created_at > ?1
-       UNION ALL
-       SELECT 1 FROM rescues WHERE created_at > ?1
-       UNION ALL
-       SELECT 1 FROM accounts WHERE updated_at > ?1
-     ) AS d`,
+const SNAPSHOT_DIRTY_KEY = 'snapshot_dirty';
+
+export async function markSnapshotDirty(env: Cloudflare.Env): Promise<void> {
+  await env.DB.prepare(
+    `INSERT INTO meta (key, value) VALUES (?1, ?2)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
   )
-    .bind(latest.at)
-    .first<{ d: number }>();
-  return (dirty?.d ?? 0) === 1;
+    .bind(SNAPSHOT_DIRTY_KEY, String(Date.now()))
+    .run();
+}
+
+export async function readSnapshotDirty(env: Cloudflare.Env): Promise<string | null> {
+  const row = await env.DB.prepare('SELECT value FROM meta WHERE key = ?1')
+    .bind(SNAPSHOT_DIRTY_KEY)
+    .first<{ value: string }>();
+  return row?.value ?? null;
+}
+
+/** 生成成功后清除；期间有新变更（value 已变）则保留，由下一周期再合并。 */
+export async function clearSnapshotDirty(env: Cloudflare.Env, value: string): Promise<void> {
+  await env.DB.prepare('DELETE FROM meta WHERE key = ?1 AND value = ?2')
+    .bind(SNAPSHOT_DIRTY_KEY, value)
+    .run();
 }

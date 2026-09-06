@@ -83,6 +83,7 @@ export async function markBlocked(
     ...(evidence?.category ? { category: evidence.category } : {}),
     ...(evidence?.contentFingerprint ? { contentFingerprint: evidence.contentFingerprint } : {}),
     ...(evidence?.linkDomains?.length ? { linkDomains: evidence.linkDomains } : {}),
+    ...(evidence?.detectionSource ? { detectionSource: evidence.detectionSource } : {}),
     ...(evidence?.origin ? { origin: evidence.origin } : {}),
     ...(typeof evidence?.communityVote === 'boolean'
       ? { communityVote: evidence.communityVote }

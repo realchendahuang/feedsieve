@@ -100,6 +100,32 @@ describe('POST /v1/reports', () => {
     expect(body.results[3].error).toBe('invalid_x_user_id');
   });
 
+  it('stores detection_source and rejects unknown sources', async () => {
+    const res = await post({
+      installation_id: 'iiiiiiii-9999-4999-8999-iiiiiiiiiiii',
+      reports: [
+        report('src_manual', { detection_source: 'manual' }),
+        report('src_keyword', { detection_source: 'heuristic' }),
+        report('src_bad', { detection_source: 'telepathy' }),
+      ],
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { results: { status: string; error?: string }[] };
+    expect(body.results[0].status).toBe('recorded');
+    expect(body.results[1].status).toBe('recorded');
+    expect(body.results[2].status).toBe('rejected');
+    expect(body.results[2].error).toBe('invalid_detection_source');
+
+    const stored = await env.DB.prepare('SELECT detection_source FROM reports WHERE handle = ?1')
+      .bind('src_manual')
+      .first<{ detection_source: string }>();
+    expect(stored?.detection_source).toBe('manual');
+    const absent = await env.DB.prepare('SELECT 1 AS present FROM reports WHERE handle = ?1')
+      .bind('src_bad')
+      .first();
+    expect(absent).toBeNull();
+  });
+
   it('envelopes: bad body / empty array / oversized batch', async () => {
     expect((await post({ reports: [] })).status).toBe(400);
     expect((await post({ installation_id: 'short', reports: [report('x')] })).status).toBe(400);

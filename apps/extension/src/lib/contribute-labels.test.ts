@@ -41,6 +41,7 @@ describe('本地黑白名单同步', () => {
         category: 'copy_paste',
         contentFingerprint: '0123456789abcdef',
         linkDomains: ['spam.example'],
+        detectionSource: 'manual',
       },
     ];
     storage.allowlist = [
@@ -82,6 +83,7 @@ describe('本地黑白名单同步', () => {
           reason: 'copy_paste',
           content_fingerprint: '0123456789abcdef',
           link_domains: ['spam.example'],
+          detection_source: 'manual',
         },
       ],
     });
