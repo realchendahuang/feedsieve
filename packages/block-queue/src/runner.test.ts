@@ -21,7 +21,7 @@ function makeHarness(initialTasks: FakeTask[], initialStatus: QueueSession<FakeT
   let session: QueueSession<FakeTask> = { status: initialStatus, tasks: [...initialTasks] };
   let saves = 0;
   let clock = 1_000_000;
-  const perform = vi.fn(async (task: FakeTask) => {
+  const perform = vi.fn(async () => {
     return { ok: true } as const;
   });
   const onSuccess = vi.fn(async () => undefined);
@@ -34,7 +34,7 @@ function makeHarness(initialTasks: FakeTask[], initialStatus: QueueSession<FakeT
     perform,
     onSuccess,
     now: () => clock,
-    sleep: async (_ms: number) => {
+    sleep: async () => {
       // 测试里瞬时推进时钟，避免真实等待
       clock += 250;
     },

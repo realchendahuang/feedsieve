@@ -55,8 +55,6 @@ function defaultSleep(ms: number): Promise<void> {
 /** 调度分片：每次等待至多这么长，便于期间收到 pause/cancel 立即生效。 */
 const SLEEP_SLICE_MS = 250;
 
-/* global setTimeout — 包是纯逻辑库，不依赖 DOM/node 类型；运行时宿主（浏览器 SW / Node 测试）都提供该全局 */
-
 export async function runQueuedBlocks<T extends TaskRunRecord>(
   options: QueueRunnerOptions<T>,
 ): Promise<void> {
