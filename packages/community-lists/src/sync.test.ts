@@ -459,3 +459,55 @@ describe('parseSnapshotBody: content evidence (v0.4)', () => {
     expect(entries[0]?.domains).toBeUndefined();
   });
 });
+
+describe('parseSnapshotBody: kill_switch（官方暂停开关）', () => {
+  function bodyWithKillSwitch(killSwitch: unknown): string {
+    return JSON.stringify({
+      schema_version: 2,
+      snapshot_version: VERSION,
+      generated_at: '2026-08-28T00:00:00Z',
+      entries: [],
+      ...(killSwitch !== undefined ? { kill_switch: killSwitch } : {}),
+    });
+  }
+
+  it('接受合法 kill_switch 并透出 reason', () => {
+    const result = parseSnapshotBody(
+      bodyWithKillSwitch({
+        destructive_actions_disabled: true,
+        reason: '接口排查中',
+        disabled_since: '2026-09-07T00:00:00Z',
+      }),
+    );
+    expect(result.ok).toBe(true);
+    expect(result.ok ? result.value.kill_switch : null).toEqual({
+      destructive_actions_disabled: true,
+      reason: '接口排查中',
+      disabled_since: '2026-09-07T00:00:00Z',
+    });
+  });
+
+  it('无 kill_switch 字段时保持缺省（旧快照兼容）', () => {
+    const result = parseSnapshotBody(bodyWithKillSwitch(undefined));
+    expect(result.ok).toBe(true);
+    expect(result.ok ? result.value.kill_switch : undefined).toBeUndefined();
+  });
+
+  it('畸形 kill_switch 使整份快照失败（保持 last-known-good）', () => {
+    expect(parseSnapshotBody(bodyWithKillSwitch({ destructive_actions_disabled: false }))).toEqual(
+      { ok: false, error: 'invalid_kill_switch' },
+    );
+    expect(parseSnapshotBody(bodyWithKillSwitch('yes'))).toEqual({
+      ok: false,
+      error: 'invalid_kill_switch',
+    });
+    expect(
+      parseSnapshotBody(bodyWithKillSwitch({ destructive_actions_disabled: true, reason: '' })),
+    ).toEqual({ ok: false, error: 'invalid_kill_switch' });
+    expect(
+      parseSnapshotBody(
+        bodyWithKillSwitch({ destructive_actions_disabled: true, reason: 'x'.repeat(201) }),
+      ),
+    ).toEqual({ ok: false, error: 'invalid_kill_switch' });
+  });
+});

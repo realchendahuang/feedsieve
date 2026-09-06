@@ -62,6 +62,18 @@ export interface SnapshotBody {
   snapshot_version: string;
   generated_at: string;
   entries: CommunityEntry[];
+  /**
+   * 官方破坏性动作暂停开关（可选）：随签名快照下发，防伪造 ——
+   * 只能关闭批量/单条拉黑等破坏性动作，绝不能远程开启任何自动拉黑。
+   * 检测 / 标注 / 读取不受影响。
+   */
+  kill_switch?: {
+    destructive_actions_disabled: true;
+    /** 运营者填写的公开理由（展示给用户，不用形容词） */
+    reason?: string;
+    /** 开关生效时间（ISO） */
+    disabled_since?: string;
+  };
 }
 
 /** 本地缓存的快照（last-known-good：只在全部校验通过后整体写入） */

@@ -123,6 +123,34 @@ export function parseManifest(raw: unknown): ParseResult<SnapshotManifest> {
 }
 
 /** 严格逐条校验；任一坏条目都会使整份快照失败，避免部分脏数据替换 last-known-good。 */
+function parseKillSwitch(raw: unknown): SnapshotBody['kill_switch'] {
+  if (raw === undefined || raw === null) {
+    return undefined;
+  }
+  if (typeof raw !== 'object') {
+    return undefined;
+  }
+  const k = raw as Record<string, unknown>;
+  if (k.destructive_actions_disabled !== true) {
+    return undefined;
+  }
+  let reason: string | undefined;
+  if (k.reason !== undefined) {
+    if (typeof k.reason !== 'string' || k.reason.trim().length === 0 || k.reason.length > 200) {
+      return undefined;
+    }
+    reason = k.reason.trim();
+  }
+  let disabled_since: string | undefined;
+  if (k.disabled_since !== undefined) {
+    if (typeof k.disabled_since !== 'string' || !Number.isFinite(Date.parse(k.disabled_since))) {
+      return undefined;
+    }
+    disabled_since = k.disabled_since;
+  }
+  return { destructive_actions_disabled: true, ...(reason ? { reason } : {}), ...(disabled_since ? { disabled_since } : {}) };
+}
+
 export function parseSnapshotBody(text: string): ParseResult<SnapshotBody> {
   let raw: unknown;
   try {
@@ -147,6 +175,12 @@ export function parseSnapshotBody(text: string): ParseResult<SnapshotBody> {
     return { ok: false, error: 'entries_not_array' };
   }
 
+  // kill_switch 字段存在但畸形 → 整份快照失败（宁可保持 last-known-good 也不吞掉）
+  const kill_switch = parseKillSwitch(s.kill_switch);
+  if (s.kill_switch !== undefined && kill_switch === undefined) {
+    return { ok: false, error: 'invalid_kill_switch' };
+  }
+
   const entries = [];
   const handles = new Set<string>();
   for (const item of s.entries) {
@@ -163,6 +197,7 @@ export function parseSnapshotBody(text: string): ParseResult<SnapshotBody> {
       snapshot_version: s.snapshot_version,
       generated_at: s.generated_at,
       entries,
+      ...(kill_switch ? { kill_switch } : {}),
     },
   };
 }
