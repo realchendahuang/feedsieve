@@ -10,3 +10,6 @@ dist/
 coverage/
 *.tsbuildinfo
 *.log
+
+# 发布者签名私钥（scripts/keygen.mjs 生成，永远不提交）
+/.secrets/
