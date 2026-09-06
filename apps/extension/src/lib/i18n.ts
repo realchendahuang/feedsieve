@@ -141,6 +141,9 @@ export const UI_COPY = {
     allowlistEmpty: '在黄框中点“误标”后会显示在这里',
     removeAllowlist: '移出白名单并恢复标注',
     openXNotice: '请先打开或刷新 x.com',
+    blockUnavailable: '拉黑接口暂不可用（X 变更或会话失效）；检测与标注不受影响',
+    killSwitchActive: (reason?: string) =>
+      reason ? `官方暂停了拉黑操作：${reason}` : '官方暂停了社区拉黑操作',
     copiedId: '已复制安装 ID',
     copyFailed: '复制失败',
     synced: (version?: string) => (version ? `已更新至 v${version}` : '已更新'),
@@ -311,6 +314,9 @@ export const UI_COPY = {
     allowlistEmpty: 'Accounts marked as false positives appear here',
     removeAllowlist: 'Remove from allowlist and resume marking',
     openXNotice: 'Open or refresh x.com first',
+    blockUnavailable: 'Block endpoint unavailable (X changed or session expired); detection unaffected',
+    killSwitchActive: (reason?: string) =>
+      reason ? `Blocking paused by maintainers: ${reason}` : 'Blocking paused by maintainers',
     copiedId: 'Installation ID copied',
     copyFailed: 'Could not copy',
     synced: (version?: string) => (version ? `Updated to v${version}` : 'Updated'),

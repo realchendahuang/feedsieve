@@ -76,7 +76,10 @@ function personalConfigFile(customPhrase = '迁移关键词'): File {
   );
 }
 
-function communitySnapshot(handles: Array<{ handle: string; maintainer?: boolean }>) {
+function communitySnapshot(
+  handles: Array<{ handle: string; maintainer?: boolean }>,
+  options: { killSwitch?: unknown } = {},
+) {
   return {
     snapshot_version: '2026.09.02.7',
     synced_at: Date.now(),
@@ -99,6 +102,7 @@ function communitySnapshot(handles: Array<{ handle: string; maintainer?: boolean
         updated_at: '2026-09-02T00:00:00.000Z',
         evidence_post_ids: [],
       })),
+      ...(options.killSwitch !== undefined ? { kill_switch: options.killSwitch } : {}),
     }),
   };
 }
@@ -424,5 +428,100 @@ describe('popup App 渲染冒烟', () => {
     expect(rootEl.textContent).toContain('Backup & migration');
     expect(rootEl.textContent).toContain('Export personal config');
     expect(rootEl.textContent).toContain('Import personal config');
+  });
+
+  it('官方暂停开关生效时禁用拉黑入口并显示理由', async () => {
+    const snapshot = communitySnapshot([{ handle: 'three_votes' }], {
+      killSwitch: {
+        destructive_actions_disabled: true,
+        reason: '接口排查中',
+        disabled_since: '2026-09-07T00:00:00Z',
+      },
+    });
+    vi.stubGlobal('browser', {
+      storage: {
+        local: {
+          get: vi.fn().mockResolvedValue({ uiLanguage: 'zh', communitySnapshot: snapshot }),
+          set: vi.fn().mockResolvedValue(undefined),
+        },
+        onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+      },
+      tabs: {
+        query: vi.fn().mockResolvedValue([{ id: 1, active: true, url: 'https://x.com/home' }]),
+        sendMessage: tabSendMessage,
+      },
+      runtime: { sendMessage: runtimeSendMessage },
+    });
+
+    const rootEl = renderApp();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    expect(rootEl.textContent).toContain('官方暂停了拉黑操作：接口排查中');
+    // 社区批量入口本来可用（有合格条目），降级后必须禁用
+    const cleanBtn = rootEl.querySelector<HTMLButtonElement>('.community-clean-action');
+    expect(cleanBtn?.disabled).toBe(true);
+  });
+
+  it('Block 接口能力失败时禁用拉黑入口并显示降级提示', async () => {
+    const caps = {
+      sessionUsable: true,
+      csrfAvailable: true,
+      block: 'failed',
+      unblock: 'unknown',
+      userIdResolution: 'unknown',
+      timelineParsing: 'unknown',
+      updatedAt: 0,
+    };
+    vi.stubGlobal('browser', {
+      storage: {
+        local: {
+          get: vi.fn().mockResolvedValue({ uiLanguage: 'zh' }),
+          set: vi.fn().mockResolvedValue(undefined),
+        },
+        onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+      },
+      tabs: {
+        query: vi.fn().mockResolvedValue([{ id: 1, active: true, url: 'https://x.com/home' }]),
+        sendMessage: vi.fn().mockResolvedValue(caps),
+      },
+      runtime: { sendMessage: runtimeSendMessage },
+    });
+
+    const rootEl = renderApp();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    expect(rootEl.textContent).toContain('拉黑接口暂不可用');
+    const manualBtn = rootEl.querySelector<HTMLButtonElement>('.secondary-inline');
+    expect(manualBtn?.disabled).toBe(true);
+  });
+
+  it('能力快照正常时（working）不显示降级提示', async () => {
+    vi.stubGlobal('browser', {
+      storage: {
+        local: {
+          get: vi.fn().mockResolvedValue({ uiLanguage: 'zh' }),
+          set: vi.fn().mockResolvedValue(undefined),
+        },
+        onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+      },
+      tabs: {
+        query: vi.fn().mockResolvedValue([{ id: 1, active: true, url: 'https://x.com/home' }]),
+        sendMessage: vi.fn().mockResolvedValue({
+          sessionUsable: true,
+          csrfAvailable: true,
+          block: 'working',
+          unblock: 'working',
+          userIdResolution: 'working',
+          timelineParsing: 'working',
+          updatedAt: 0,
+        }),
+      },
+      runtime: { sendMessage: runtimeSendMessage },
+    });
+
+    const rootEl = renderApp();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    expect(rootEl.textContent).not.toContain('拉黑接口暂不可用');
   });
 });

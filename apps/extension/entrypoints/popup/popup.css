@@ -1609,3 +1609,15 @@ input:focus-visible + span {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* 破坏性操作降级提示（官方暂停 / Block 接口不可用） */
+.controls-warning {
+  grid-column: 1 / -1;
+  margin: 0 0 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(255, 184, 0, 0.12);
+  color: var(--text-secondary, #536471);
+  font-size: 12px;
+  line-height: 1.4;
+}

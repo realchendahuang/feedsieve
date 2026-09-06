@@ -78,6 +78,16 @@ export async function setCommunitySnapshot(value: StoredSnapshot): Promise<void>
   await browser.storage.local.set({ [SNAPSHOT_KEY]: value });
 }
 
+/** popup 用：读当前已验签快照里的官方暂停开关（无快照/未设置则为 undefined）。 */
+export async function getCommunityKillSwitch(): Promise<
+  { destructive_actions_disabled: true; reason?: string; disabled_since?: string } | undefined
+> {
+  const stored = await getStoredCommunitySnapshot();
+  if (!stored) return undefined;
+  const parsed = parseSnapshotBody(stored.body);
+  return parsed.ok ? parsed.value.kill_switch : undefined;
+}
+
 /** 传给 community-lists 同步器的存储适配器 */
 export const snapshotStore = {
   // 同步节流只能看真正写入 storage 的远端快照，不能把打包兜底误当成刚同步。
@@ -141,6 +151,8 @@ export interface RuntimeCommunity {
    */
   campaignByFingerprint: ReadonlyMap<string, string>;
   version: string;
+  /** 官方破坏性动作暂停开关（来自签名快照，随验签后的快照生效） */
+  killSwitch?: { destructive_actions_disabled: true; reason?: string; disabled_since?: string };
 }
 
 /** 内容脚本用：快照 + 设置 -> 可用索引；关闭或无快照返回 null */
@@ -188,5 +200,6 @@ export async function buildRuntimeCommunity(): Promise<RuntimeCommunity | null> 
     campaignById,
     campaignByFingerprint,
     version: index.version,
+    ...(parsed.value.kill_switch ? { killSwitch: parsed.value.kill_switch } : {}),
   };
 }

@@ -3,7 +3,9 @@ import type { CommunityEntry } from '@feedsieve/community-lists';
 import {
   contextFromPath,
   extractFeedItem,
+  noteTimelineHealth,
   parseXApiResponse,
+  readCapabilities,
   readCsrfToken,
   resolveUserIdByHandle,
   runNativeAction,
@@ -242,6 +244,10 @@ export default defineContentScript({
       }
       if (type === 'feedsieve:community-block-start' && Array.isArray(msg?.items)) {
         return startPersistentQueue('community-batch', msg.items, msg.targetTabId);
+      }
+      if (type === 'feedsieve:capabilities') {
+        // popup 用：当前 X 会话 / Block 接口 / 解析 / 扫描的能力快照（非破坏性观测）
+        return Promise.resolve(readCapabilities());
       }
       if (type === 'feedsieve:block-queue-resume') {
         return resumePersistentQueue();
@@ -767,11 +773,19 @@ export default defineContentScript({
       scanTimer = undefined;
       if (scanRunning) return;
       scanRunning = true;
-      void processDirty().finally(() => {
-        scanRunning = false;
-        // 扫描期间 observer 又标了脏数据：立即续扫，不再等一个去抖周期
-        if (dirtyArticles.size > 0) scheduleScan();
-      });
+      void processDirty()
+        .then(() => {
+          // 扫描正常 = 时间线解析契约健康（能力快照的 timelineParsing 输入）
+          noteTimelineHealth(true);
+        })
+        .catch(() => {
+          noteTimelineHealth(false, 'scan_failed');
+        })
+        .finally(() => {
+          scanRunning = false;
+          // 扫描期间 observer 又标了脏数据：立即续扫，不再等一个去抖周期
+          if (dirtyArticles.size > 0) scheduleScan();
+        });
     }
 
     async function processDirty(): Promise<void> {
@@ -1142,6 +1156,11 @@ export default defineContentScript({
         deferContribution?: boolean;
       } = {},
     ): Promise<{ ok: true } | { ok: false; code: string }> {
+      // 官方破坏性动作暂停开关（来自签名快照，验签后生效）：
+      // 只关闭拉黑类动作，检测 / 标注 / 读取继续；单向开关，不可能远程开启自动拉黑。
+      if (community?.killSwitch?.destructive_actions_disabled) {
+        return { ok: false, code: 'kill_switch' };
+      }
       let xUserId: string | undefined | null = item.xUserId ?? (await getUserId(item.handle));
       if (!xUserId) {
         xUserId = await resolveUserIdByHandle(item.handle);
@@ -1419,7 +1438,14 @@ export default defineContentScript({
         communityVote?: boolean;
       }>,
       targetTabId?: number,
-    ): Promise<{ status: 'started'; id: string; count: number }> {
+    ): Promise<
+      | { status: 'started'; id: string; count: number }
+      | { status: 'error'; error: string; id: string; count: number }
+    > {
+      // 官方暂停开关生效时拒绝新建破坏性队列（popup 也会先检查并禁用入口）
+      if (community?.killSwitch?.destructive_actions_disabled) {
+        return { status: 'error', error: 'kill_switch', id: '', count: 0 };
+      }
       const filtered = items.filter((item) => {
         const handle = item.handle.toLowerCase();
         return !allowCache.has(handle) && !followingCache.has(handle) && !blockedCache.has(handle);
@@ -1451,9 +1477,13 @@ export default defineContentScript({
         if (task.status === 'running') task.status = 'pending';
         if (
           task.status === 'failed' &&
-          ['rate_limited', 'auth_required', 'missing_csrf', 'network_error'].includes(
-            task.failureCode ?? '',
-          )
+          [
+            'rate_limited',
+            'auth_required',
+            'missing_csrf',
+            'network_error',
+            'kill_switch',
+          ].includes(task.failureCode ?? '')
         ) {
           task.status = 'pending';
           delete task.failureCode;
@@ -1536,11 +1566,15 @@ export default defineContentScript({
           hideCellsSoon(collectCellsForHandle(task.handle));
         } else {
           currentTask.failureCode = outcome.code;
-          if (
-            ['rate_limited', 'auth_required', 'missing_csrf', 'network_error'].includes(
-              outcome.code,
-            )
-          ) {
+if (
+          [
+            'rate_limited',
+            'auth_required',
+            'missing_csrf',
+            'network_error',
+            'kill_switch',
+          ].includes(outcome.code)
+        ) {
             currentTask.status = 'pending';
             state.status = 'paused';
             await setPersistentBlockQueue(state);

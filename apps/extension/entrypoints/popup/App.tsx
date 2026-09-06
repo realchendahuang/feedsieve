@@ -25,6 +25,7 @@ import {
   getCommunitySettings,
   setCommunitySettings,
   getCommunitySnapshot,
+  getCommunityKillSwitch,
   subscribeCommunity,
   type CommunitySettings,
 } from '../../src/lib/community-store';
@@ -85,6 +86,10 @@ import {
   type CommunityEntry,
   type MarkStrength,
 } from '@feedsieve/community-lists';
+import {
+  shouldPauseDestructive,
+  type XAdapterCapabilities,
+} from '@feedsieve/x-adapter';
 import type { UnblockBatchResult } from '../../src/lib/run-unblock-batch';
 
 interface PageBlockResult {
@@ -336,6 +341,10 @@ export default function App() {
   const [blockResult, setBlockResult] = useState<PageBlockResult | null>(null);
   const [unblockResult, setUnblockResult] = useState<UnblockBatchResult | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [killSwitch, setKillSwitch] = useState<
+    { destructive_actions_disabled: true; reason?: string; disabled_since?: string } | null
+  >(null);
+  const [capabilities, setCapabilities] = useState<XAdapterCapabilities | null>(null);
   const [community, setCommunity] = useState<CommunitySettings | null>(null);
   const [communityMeta, setCommunityMeta] = useState<{
     version: string;
@@ -418,6 +427,26 @@ export default function App() {
       .then((result) => setPageMarked(asPageMarkedList(result)))
       .catch(() => setPageMarked([]));
     void getCommunitySnapshot().then(applyCommunitySnapshotState);
+    // 降级态：官方暂停开关（本地快照）+ X 能力快照（活动 x.com tab 实探）
+    void getCommunityKillSwitch()
+      .then((sw) => setKillSwitch(sw ?? null))
+      .catch(() => setKillSwitch(null));
+    void sendToXPage({ type: 'feedsieve:capabilities' })
+      .then((result) => {
+        const caps = result as XAdapterCapabilities | null;
+        // 形状校验：旧版 content script / 其他消息回复不会误触发降级
+        if (
+          caps &&
+          typeof caps === 'object' &&
+          typeof caps.block === 'string' &&
+          typeof caps.csrfAvailable === 'boolean'
+        ) {
+          setCapabilities(caps);
+        } else {
+          setCapabilities(null);
+        }
+      })
+      .catch(() => setCapabilities(null));
     const unsubs = [
       subscribeBlocked(setBlocked),
       subscribeDaily(setDaily),
@@ -426,6 +455,7 @@ export default function App() {
       subscribeCommunity(() => {
         void getCommunitySettings().then(setCommunity);
         void getCommunitySnapshot().then(applyCommunitySnapshotState);
+        void getCommunityKillSwitch().then((sw) => setKillSwitch(sw ?? null)).catch(() => setKillSwitch(null));
       }),
       subscribeUiLanguage(setLanguage),
       subscribeKeywordRules(setKeywordRules),
@@ -472,6 +502,11 @@ export default function App() {
       setPageMarked([]);
     }
   }
+
+  // 破坏性操作降级：官方暂停开关优先，其次 X 能力快照（会话/Block 接口异常）
+  const killSwitchActive = Boolean(killSwitch?.destructive_actions_disabled);
+  const pauseDestructive =
+    killSwitchActive || (capabilities ? shouldPauseDestructive(capabilities) : false);
 
   async function selectLanguage(next: UiLanguage): Promise<void> {
     if (next === language) return;
@@ -542,8 +577,11 @@ export default function App() {
         status?: string;
         id?: string;
         count?: number;
+        error?: string;
       };
-      if (result?.status === 'started') {
+      if (result?.status === 'error' && result.error === 'kill_switch') {
+        setNotice(t.killSwitchActive(killSwitch?.reason));
+      } else if (result?.status === 'started') {
         setBlockResult(null);
         setQueue(await getPersistentBlockQueue());
         setNotice(t.queueStarted(result.count ?? 0));
@@ -992,20 +1030,32 @@ export default function App() {
                     spellCheck={false}
                     onChange={(event) => setManualHandle(event.target.value)}
                   />
-                  <button
-                    type="submit"
-                    className="secondary-inline"
-                    disabled={manualRunning || manualHandle.trim().length === 0}
-                  >
-                    {manualRunning ? t.processing : t.markSpamAndBlock}
-                  </button>
+<button
+                  type="submit"
+                  className="secondary-inline"
+                  disabled={manualRunning || manualHandle.trim().length === 0 || pauseDestructive}
+                >
+                  {manualRunning ? t.processing : t.markSpamAndBlock}
+                </button>
                 </div>
               </form>
 
               <div className="primary-actions">
+                {pauseDestructive ? (
+                  <p className="controls-warning" role="status">
+                    {killSwitchActive
+                      ? t.killSwitchActive(killSwitch?.reason)
+                      : t.blockUnavailable}
+                  </p>
+                ) : null}
                 <button
                   className="primary-action"
-                  disabled={!pageCount || running || Boolean(queueActive && queue?.source === 'page-batch')}
+                  disabled={
+                    !pageCount ||
+                    running ||
+                    Boolean(queueActive && queue?.source === 'page-batch') ||
+                    pauseDestructive
+                  }
                   onClick={() => void runBatch()}
                 >
                   {running
@@ -1113,7 +1163,7 @@ export default function App() {
               ) : (
                 <button
                   className="secondary-action community-clean-action"
-                  disabled={running || cloudEligible.length === 0}
+                  disabled={running || cloudEligible.length === 0 || pauseDestructive}
                   onClick={() => void startCommunityQueue()}
                 >
                   {t.startCommunityClean(cloudEligible.length)}
