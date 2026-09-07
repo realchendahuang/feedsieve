@@ -3,7 +3,7 @@
 # Key：$FEEDSIEVE_AGENT_KEY 优先，其次 ~/.config/feedsieve/agent.key（0600，不入库）。
 # 用法见 SKILL.md；子命令：
 #   status | assets [prefix] | audit [n] | releases
-#   list | put <handle> <category> <note> | remove <handle>
+#   list | find <handle> | put <handle> <category> <note> [evidence_post_id] | remove <handle>
 #   klist | kpack <id> <name_zh> <desc_zh> | krule <id> <pack_id> <phrase> [terms...] | kdel <pack|rule> <id> | kpub | kimport
 set -e
 
@@ -29,10 +29,40 @@ case "$CMD" in
   snapshot) curl -fsSL "$BASE/v1/snapshots/latest" ;;
 
   list)    curl -fsSL "${AUTH[@]}" "$BASE/api/agent/entries" ;;
-  put)     handle="$1"; category="${2:-bot_spam}"; note="${3:-Agent 维护条目}"
+  put)     handle="$1"; category="${2:-bot_spam}"; note="${3:-Agent 维护条目}"; evidence="$4"
+           body="{\"handle\":\"$handle\",\"category\":\"$category\",\"note\":\"$note\""
+           if [ -n "$evidence" ]; then body="$body,\"evidence_post_id\":\"$evidence\""; fi
+           body="$body}"
            curl -fsSL -X PUT "${AUTH[@]}" -H 'content-type: application/json' \
-             -d "{\"handle\":\"$handle\",\"category\":\"$category\",\"note\":\"$note\"}" \
-             "$BASE/api/agent/entries/$handle" ;;
+             -d "$body" "$BASE/api/agent/entries/$handle" ;;
+  find)    handle=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed 's/^@//')
+           json=$(curl -fsSL "$BASE/v1/snapshots/latest")
+           ver=$(printf '%s' "$json" | python3 -c 'import json,sys;print(json.load(sys.stdin)["snapshot_version"])')
+           echo "snapshot: $ver"
+           curl -fsSL "$BASE/v1/snapshots/$ver/official.json" | python3 -c "
+import json, sys
+handle = '$handle'
+data = json.load(sys.stdin)
+hit = [e for e in data.get('entries', []) if e.get('handle') == handle]
+if hit:
+    e = hit[0]
+    print('public: IN LIST  category=%s sources=%s net_votes=%s' % (
+        e.get('category'), ','.join(e.get('sources', [])), e.get('net_votes')))
+    if e.get('maintainer_note'):
+        print('  note:', e['maintainer_note'])
+else:
+    print('public: not in list')
+"
+           curl -fsSL "${AUTH[@]}" "$BASE/api/agent/entries" | python3 -c "
+import json, sys
+handle = '$handle'
+data = json.load(sys.stdin)
+hit = [e for e in data.get('entries', []) if e.get('handle') == handle]
+if hit:
+    print('maintainer draft:', json.dumps(hit[0], ensure_ascii=False))
+else:
+    print('maintainer draft: none')
+" ;;
   remove)  curl -fsSL -X DELETE "${AUTH[@]}" "$BASE/api/agent/entries/$1" ;;
 
   klist)   curl -fsSL "${AUTH[@]}" "$BASE/api/agent/keywords" ;;
@@ -49,7 +79,7 @@ case "$CMD" in
   kimport) curl -fsSL -X POST "${AUTH[@]}" "$BASE/api/agent/keywords/import" ;;
 
   *)
-    echo "usage: $0 status|assets|audit|releases|list|put|remove|klist|kpack|krule|kdel|kpub|kimport" >&2
+    echo "usage: $0 status|assets|audit|releases|list|find|put|remove|klist|kpack|krule|kdel|kpub|kimport" >&2
     exit 1
     ;;
 esac

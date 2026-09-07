@@ -32,7 +32,7 @@
 ## 操作流（先看后改，改后验证）
 
 1. **巡检**：`m.sh status` 一次拿快照/词库/开关状态；有异常再 `m.sh assets`、`m.sh audit` 定位。
-2. **改名单**：`m.sh list` 确认 → `m.sh put <handle> <category> <note>` / `m.sh remove <handle>`。
+2. **改名单**：`m.sh find <handle>` 查重 → `m.sh put <handle> <category> <note> [evidence_post_id]` / `m.sh remove <handle>`（拿到举报链接时把 `status/<id>` 的数字作为 evidence 传入，公开快照会带上实锤）。
 3. **改词库**：`m.sh klist` → `m.sh kpack <id> <name> <desc>` / `m.sh krule <id> <pack_id> <phrase>` → **`m.sh kpub` 发布**（改词库必须显式发布才生效）。
 4. **验证**：`m.sh status`（新版本号）或拉取公开产物 `/v1/snapshots/latest`、`/v1/keyword-packs/latest`。
 5. **留档**：名单/词库发布后跑 `scripts/mirror-community-lists.sh` 并提交（GitHub 每日自动镜像兜底）。
