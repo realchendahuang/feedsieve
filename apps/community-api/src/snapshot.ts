@@ -4,6 +4,7 @@ import {
   buildSigningMessage,
   signManifestMessage,
   type ManifestSignature,
+  type VerifiedEntry,
 } from '@feedsieve/community-lists';
 import { listMaintainerEntries } from './maintainer-blocklist';
 import { publicPolicy } from './reports';
@@ -342,6 +343,34 @@ export async function generateSnapshot(
     .bind(POLICY.communityNetThreshold)
     .all<AccountRow>();
 
+  // 社区白名单（verified）：入榜公式与黑名单严格镜像——抢救净票 >= 同一阈值。
+  // rescue_count/report_count 由 refreshAccountsFromLabels 收敛（active_labels 计票），
+  // 与黑名单入榜 SQL 同源，无独立安装/跨天二次筛选（COMMUNITY_FILTERING 口径一致）。
+  const verifiedRows = await env.DB.prepare(
+    `SELECT handle, x_user_id, report_count, rescue_count, first_report_at, updated_at
+     FROM accounts
+     WHERE rescue_count - report_count >= ?1
+     ORDER BY handle ASC`,
+  )
+    .bind(POLICY.communityNetThreshold)
+    .all<{
+      handle: string;
+      x_user_id: string | null;
+      report_count: number;
+      rescue_count: number;
+      first_report_at: number;
+      updated_at: number;
+    }>();
+  const verified: VerifiedEntry[] = verifiedRows.results.map((row) => ({
+    handle: row.handle,
+    x_user_id: row.x_user_id,
+    rescue_count: row.rescue_count,
+    report_count: row.report_count,
+    net_votes: row.rescue_count - row.report_count,
+    first_seen_at: new Date(row.first_report_at * 1000).toISOString(),
+    updated_at: new Date(row.updated_at * 1000).toISOString(),
+  }));
+
   const entries: SnapshotEntry[] = [];
   const daysByHandle = aggregates.daysByHandle;
   const allAccountRows = await env.DB.prepare(
@@ -458,6 +487,7 @@ export async function generateSnapshot(
       snapshot_version: version,
       generated_at: generatedAt,
       entries,
+      ...(verified.length > 0 ? { verified } : {}),
       ...(killSwitch ? { kill_switch: killSwitch } : {}),
     },
     null,
@@ -522,7 +552,7 @@ export async function generateSnapshot(
           .first<{ manifest_json: string; files_json: string }>()
       : Promise.resolve(null);
   const lastBody = lastVersion ? await getSnapshotFile(env, lastVersion, SNAPSHOT_PACK) : null;
-  if (lastBody && entriesContentEqual(lastBody, entries, killSwitch)) {
+  if (lastBody && entriesContentEqual(lastBody, entries, verified, killSwitch)) {
     const lastRow = await loadLatestRow();
     if (lastRow) {
       return {
@@ -590,16 +620,18 @@ export async function generateSnapshot(
   };
 }
 
-/** 两次快照的 entries 与 kill_switch 是否相同（忽略 generated_at / 版本号等元信息）。 */
+/** 两次快照的 entries、verified 与 kill_switch 是否相同（忽略 generated_at / 版本号等元信息）。 */
 function entriesContentEqual(
   lastBody: string,
   currentEntries: unknown[],
+  currentVerified: unknown[],
   currentKillSwitch?: { destructive_actions_disabled: true; reason?: string; disabled_since?: string },
 ): boolean {
   let last: {
     schema_version?: number;
     policy_version?: number;
     entries?: unknown[];
+    verified?: unknown[];
     kill_switch?: unknown;
   };
   try {
@@ -607,6 +639,7 @@ function entriesContentEqual(
       schema_version?: number;
       policy_version?: number;
       entries?: unknown[];
+      verified?: unknown[];
       kill_switch?: unknown;
     };
   } catch {
@@ -621,7 +654,9 @@ function entriesContentEqual(
   }
   if (last.kill_switch === undefined && currentKillSwitch !== undefined) return false;
   if (JSON.stringify(last.kill_switch) !== JSON.stringify(currentKillSwitch)) return false;
-  return JSON.stringify(last.entries) === JSON.stringify(currentEntries);
+  if (JSON.stringify(last.entries) !== JSON.stringify(currentEntries)) return false;
+  // 白名单也参与内容复用判断：verified 变化必须产生新版本，不能复用旧 body
+  return JSON.stringify(last.verified ?? []) === JSON.stringify(currentVerified);
 }
 
 /**

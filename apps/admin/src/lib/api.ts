@@ -115,6 +115,20 @@ export interface Release {
   created_at: number;
 }
 
+export interface VerifiedResponse {
+  entries: Array<{
+    handle: string;
+    x_user_id: string | null;
+    report_count: number;
+    rescue_count: number;
+    net_votes: number;
+    updated_at: number;
+  }>;
+}
+
+export const getVerified = (params: { q?: string } = {}) =>
+  request<VerifiedResponse>(`/verified${params.q ? `?q=${encodeURIComponent(params.q)}` : ''}`);
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   if (init.body) headers.set('content-type', 'application/json');

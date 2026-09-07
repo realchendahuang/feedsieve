@@ -7,6 +7,7 @@ import {
   MessageSquareWarning,
   CircleAlert,
   Settings,
+  ShieldCheck,
   UserRoundX,
   UserSearch,
 } from 'lucide-react';
@@ -19,6 +20,7 @@ const navigation = [
   { to: '/', label: '概览', icon: LayoutDashboard },
   { to: '/accounts', label: '账号', icon: UserRoundX },
   { to: '/community', label: '候选', icon: UserSearch },
+  { to: '/verified', label: '验证正常', icon: ShieldCheck },
   { to: '/keywords', label: '词库', icon: MessageSquareWarning },
   { to: '/feedback', label: '反馈', icon: Inbox },
   { to: '/releases', label: '发布', icon: History },

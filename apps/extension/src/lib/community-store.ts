@@ -16,8 +16,9 @@ import {
   type SyncSource,
 } from '@feedsieve/community-lists';
 import bundledSnapshotJson from '../../../../community/lists/official.json';
+import { API_BASE } from './api-base';
 
-export const COMMUNITY_API_BASE = 'https://feedsieve-api.chendahuang.com';
+export const COMMUNITY_API_BASE = API_BASE;
 
 /**
  * 快照来源：官方 Worker 单源（最小 host 权限：x.com + 官方 API）。
@@ -159,6 +160,12 @@ export interface RuntimeCommunity {
   /** 服务端最终黑名单的 handle 集合（detect 的 list 入参用） */
   handleSet: Set<string>;
   /**
+   * 社区白名单（verified）：被社区验证为「误标正常」的账号。
+   * 入榜公式与黑名单镜像（rescue - report >= 3）；任何检测来源都不得标注它们
+   * （与黑名单 entries 数学互斥，此集合主要用于防御性先查）。
+   */
+  verifiedSet: ReadonlySet<string>;
+  /**
    * 已知垃圾模板指纹集合（v0.4）。间接证据：仅「大扫除」档聚合下发，
    * 其余强度档为空集合 —— 门槛收口在这里，调用方无需重复判断。
    * v0.5 起指纹即 SimHash 位向量：detect 按汉明距离做「话术变体」匹配。
@@ -193,6 +200,9 @@ export async function buildRuntimeCommunity(): Promise<RuntimeCommunity | null> 
   }
   const index = buildIndex(parsed.value);
   const handleSet = new Set(parsed.value.entries.map((entry) => entry.handle));
+  // 社区白名单：与黑名单条目数学互斥（±3 净票无交集），仍独立成集合
+  // 供检测管线在一切识别之前豁免（防御性先查，防服务端异常双发）。
+  const verifiedSet = new Set((parsed.value.verified ?? []).map((entry) => entry.handle));
   // 指纹/域名是比名单弱的间接证据（换号复用话术、垃圾域名），
   // 按用户拍板只在「大扫除」档启用；最终账号名单不受启发式强度筛选。
   const deepClean = settings.strength === 'deep_clean';
@@ -221,6 +231,7 @@ export async function buildRuntimeCommunity(): Promise<RuntimeCommunity | null> 
   return {
     index,
     handleSet,
+    verifiedSet,
     fingerprintSet,
     domainSet,
     campaignById,

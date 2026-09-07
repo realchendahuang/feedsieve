@@ -68,6 +68,21 @@ export function runDetectionPipeline(input: DetectionPipelineInput): DetectionPi
   const { input: source, community, builtinList, keywordHeuristics, catalog, strength, uiLanguage } =
     input;
 
+  // 社区白名单（verified）一票豁免：被验证为「误标正常」的账号在任何识别
+  // （社区名单 / 指纹 / 域名 / 词包）之前直接放行。与黑名单数学互斥，
+  // 此先查是防御性兜底——即便服务端异常双发，也以「验证正常」为准。
+  const verifiedHandle = source.handle.trim().replace(/^@+/, '').toLowerCase();
+  if (community?.verifiedSet.has(verifiedHandle)) {
+    return {
+      detection: null,
+      evidence: {},
+      communityEntry: null,
+      communityCategory: undefined,
+      category: undefined,
+      presentation: 'ignore',
+    };
+  }
+
   // 内容证据只用于用户主动标记或高置信命中后的社区证据。
   // v0.8 起产 v1 指纹（NFKC + 停用字 + 更低门槛）：新拉黑账号随上报
   // 自然积累 v1 模板；本地旧记录的 v0 指纹值继续原样上报，两者在服务端并存。

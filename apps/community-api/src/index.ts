@@ -14,6 +14,7 @@ import {
 import { verifyAccess } from './lib/access';
 import { hashInstallationId } from './lib/hash';
 import { listCommunityCandidates } from './candidates';
+import { listVerifiedAccounts } from './verified';
 import { getDashboardMetrics } from './dashboard';
 import {
   disableAdminKeyword,
@@ -162,6 +163,17 @@ export function createApp() {
       categories: MAINTAINER_CATEGORIES,
     }),
   );
+
+  // 社区白名单（verified，只读复核视图）：被验证为「误标正常」的账号。
+  app.get('/api/admin/verified', async (c) => {
+    const limit = Number(c.req.query('limit') ?? 500);
+    return c.json(
+      await listVerifiedAccounts(c.env, {
+        q: c.req.query('q') ?? undefined,
+        limit: Number.isFinite(limit) ? Math.trunc(limit) : 500,
+      }),
+    );
+  });
   app.post('/api/admin/accounts', async (c) => {
     const result = await saveAdminAccountDraft(c.env, await c.req.json().catch(() => undefined));
     if (!result.ok) return c.json({ error: result.error }, 400);

@@ -31,6 +31,21 @@ async function report(installationId: string, handle: string, extra: Record<stri
   expect(res.status).toBe(200);
 }
 
+async function rescue(installationId: string, handle: string) {
+  const res = await worker.fetch(
+    new Request(`${ORIGIN}/v1/rescues`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        installation_id: installationId,
+        rescues: [{ handle }],
+      }),
+    }),
+    env,
+  );
+  expect(res.status).toBe(200);
+}
+
 interface Manifest {
   schema_version: number;
   snapshot_version: string;
@@ -158,6 +173,95 @@ describe('snapshot pipeline', () => {
     const yamlFile = latest.files.find((file) => file.path === PUBLIC_BLOCKLIST_PACK);
     expect(yamlFile).toBeDefined();
     expect(await sha256HexOf(yaml)).toBe(yamlFile?.sha256);
+  });
+
+  it('verified（社区白名单）与黑名单镜像入榜且互斥，争议账号两边都不进', async () => {
+    // verified_user：5 个独立安装，第 1 个先拉黑后抢救（同安装改判 -> 只剩 allowed 票），
+    // 其余 4 个只抢救 → 抢救净票 5 -> 进 verified（report_count 为 0 是改判语义，非自由票流失）
+    const installs = [
+      'vvvvvvvv-3001-4001-8000-vvvvvvvvvvvv',
+      'vvvvvvvv-3002-4002-8000-vvvvvvvvvvvv',
+      'vvvvvvvv-3003-4003-8000-vvvvvvvvvvvv',
+      'vvvvvvvv-3004-4004-8000-vvvvvvvvvvvv',
+      'vvvvvvvv-3005-4005-8000-vvvvvvvvvvvv',
+    ];
+    await report(installs[0], 'verified_user');
+    for (const id of installs) await rescue(id, 'verified_user');
+
+    // blocked_user：3 个独立安装拉黑 -> 净票 3 -> 黑名单 entries
+    for (const id of installs.slice(0, 3)) await report(id, 'blocked_user_2');
+
+    // contending_user：1 拉黑 + 2 抢救 -> 净票 -1，|净票| < 3 -> 两边都不进
+    await report(installs[3], 'contending_user');
+    await rescue(installs[0], 'contending_user');
+    await rescue(installs[1], 'contending_user');
+
+    await generateSnapshot(env, 0, { bypassDailyOnce: true });
+    const res = await worker.fetch(
+      new Request(
+        `${ORIGIN}/v1/snapshots/${
+          (
+            (await (
+              await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), env)
+            ).json()) as Manifest
+          ).snapshot_version
+        }/${SNAPSHOT_PACK}`,
+      ),
+      env,
+    );
+    expect(res.status).toBe(200);
+    const body = JSON.parse(await res.text()) as {
+      entries: { handle: string }[];
+      verified?: {
+        handle: string;
+        x_user_id: string | null;
+        rescue_count: number;
+        report_count: number;
+        net_votes: number;
+      }[];
+    };
+
+    expect(body.verified).toHaveLength(1);
+    expect(body.verified?.[0]).toMatchObject({
+      handle: 'verified_user',
+      x_user_id: null,
+      rescue_count: 5,
+      report_count: 0,
+      net_votes: 5,
+    });
+    // 互斥：verified 账号不进黑名单 entries
+    expect(body.entries.map((entry) => entry.handle)).not.toContain('verified_user');
+    expect(body.entries.map((entry) => entry.handle)).toContain('blocked_user_2');
+    // 争议账号（黑票压过白票或白票未达阈值）两边都不进
+    expect(body.entries.map((entry) => entry.handle)).not.toContain('contending_user');
+    expect(body.verified?.map((entry) => entry.handle)).not.toContain('contending_user');
+  });
+
+  it('verified 变化（抢救票产生白名单条目）会 mint 新版本而不是复用旧 body', async () => {
+    const first = (await generateSnapshot(env, 0, { bypassDailyOnce: true })).manifest as unknown as Manifest;
+    // 制造一个 rescue - report = 4 的新白名单条目（rescue_user 11 字符，合法 handle）
+    const ids = [
+      'wwwwwwww-4001-4001-8000-wwwwwwwwwwww',
+      'wwwwwwww-4002-4002-8000-wwwwwwwwwwww',
+      'wwwwwwww-4003-4003-8000-wwwwwwwwwwww',
+      'wwwwwwww-4004-4004-8000-wwwwwwwwwwww',
+    ];
+    await report(ids[0], 'rescue_user');
+    for (const id of ids) await rescue(id, 'rescue_user');
+
+    const second = (await generateSnapshot(env, 0, { bypassDailyOnce: true })).manifest as unknown as Manifest;
+    expect(second.snapshot_version).not.toBe(first.snapshot_version);
+    const body = JSON.parse(
+      await (
+        await worker.fetch(
+          new Request(
+            `${ORIGIN}/v1/snapshots/${second.snapshot_version}/${SNAPSHOT_PACK}`,
+          ),
+          env,
+        )
+      ).text(),
+    ) as { verified?: { handle: string }[] };
+    expect(body.verified?.map((entry) => entry.handle)).toContain('rescue_user');
   });
 
   it('republishing unchanged content reuses the same version (no churn)', async () => {

@@ -63,6 +63,13 @@ export interface SnapshotBody {
   generated_at: string;
   entries: CommunityEntry[];
   /**
+   * 社区白名单（verified，可选）：被社区验证为「误标正常」的账号。
+   * 入榜公式与黑名单严格镜像：rescue_count - report_count >= communityNetThreshold(3)。
+   * 客户端据此一票豁免标注；与 entries 数学互斥（±3 净票无交集），verified 优先为防御兜底。
+   * 旧版客户端忽略此字段（手写校验不拒绝未知顶层字段）。
+   */
+  verified?: VerifiedEntry[];
+  /**
    * 官方破坏性动作暂停开关（可选）：随签名快照下发，防伪造 ——
    * 只能关闭批量/单条拉黑等破坏性动作，绝不能远程开启任何自动拉黑。
    * 检测 / 标注 / 读取不受影响。
@@ -74,6 +81,23 @@ export interface SnapshotBody {
     /** 开关生效时间（ISO） */
     disabled_since?: string;
   };
+}
+
+/**
+ * 社区白名单条目（verified）：结构镜像黑名单条目的票数语义，
+ * 不带犯罪证据（指纹/域名/证据帖）——它不是指控对象，只是「被误标过且被验证」。
+ */
+export interface VerifiedEntry {
+  handle: string;
+  x_user_id: string | null;
+  /** 独立抢救票（allowed 标签计数） */
+  rescue_count: number;
+  /** 独立拉黑票（blocked 标签计数） */
+  report_count: number;
+  /** rescue_count - report_count；invariant 与黑名单条目同构（>= 3） */
+  net_votes: number;
+  first_seen_at: string;
+  updated_at: string;
 }
 
 /** 本地缓存的快照（last-known-good：只在全部校验通过后整体写入） */

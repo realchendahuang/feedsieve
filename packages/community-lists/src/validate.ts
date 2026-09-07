@@ -1,4 +1,4 @@
-import type { CommunitySource, SnapshotBody, SnapshotManifest } from './types';
+import type { CommunitySource, SnapshotBody, SnapshotManifest, VerifiedEntry } from './types';
 import type { ManifestSignature } from './signing';
 
 const SOURCES: readonly CommunitySource[] = ['community', 'maintainer'];
@@ -151,6 +151,75 @@ function parseKillSwitch(raw: unknown): SnapshotBody['kill_switch'] {
   return { destructive_actions_disabled: true, ...(reason ? { reason } : {}), ...(disabled_since ? { disabled_since } : {}) };
 }
 
+/**
+ * 社区白名单条目（verified）：镜像黑名单条目的票数 invariant
+ * （net_votes === rescue_count - report_count），且要求净票 >= 3 的门槛
+ * —— 豁免 = 撤销检测，对数据的防呆比黑名单更敏感，门槛在此校验。
+ */
+function validateVerifiedEntry(item: unknown): VerifiedEntry | null {
+  if (typeof item !== 'object' || item === null) {
+    return null;
+  }
+  const v = item as Record<string, unknown>;
+  if (
+    typeof v.handle !== 'string' ||
+    !HANDLE_RE.test(v.handle) ||
+    typeof v.rescue_count !== 'number' ||
+    !Number.isInteger(v.rescue_count) ||
+    v.rescue_count < 0 ||
+    typeof v.report_count !== 'number' ||
+    !Number.isInteger(v.report_count) ||
+    v.report_count < 0 ||
+    typeof v.net_votes !== 'number' ||
+    !Number.isInteger(v.net_votes) ||
+    v.net_votes !== v.rescue_count - v.report_count ||
+    v.net_votes < 3 ||
+    !isIsoDate(v.first_seen_at) ||
+    !isIsoDate(v.updated_at)
+  ) {
+    return null;
+  }
+  if (
+    v.x_user_id !== null &&
+    v.x_user_id !== undefined &&
+    (typeof v.x_user_id !== 'string' || !USER_ID_RE.test(v.x_user_id))
+  ) {
+    return null;
+  }
+  return {
+    handle: (v.handle as string).toLowerCase(),
+    x_user_id: typeof v.x_user_id === 'string' ? v.x_user_id : null,
+    rescue_count: v.rescue_count as number,
+    report_count: v.report_count as number,
+    net_votes: v.net_votes as number,
+    first_seen_at: v.first_seen_at as string,
+    updated_at: v.updated_at as string,
+  };
+}
+
+function parseVerifiedList(raw: unknown): VerifiedEntry[] | null {
+  if (raw === undefined || raw === null) {
+    return null;
+  }
+  if (!Array.isArray(raw)) {
+    return null;
+  }
+  const verified: VerifiedEntry[] = [];
+  const handles = new Set<string>();
+  for (const item of raw) {
+    const entry = validateVerifiedEntry(item);
+    if (!entry) {
+      return null;
+    }
+    if (handles.has(entry.handle)) {
+      return null;
+    }
+    handles.add(entry.handle);
+    verified.push(entry);
+  }
+  return verified;
+}
+
 export function parseSnapshotBody(text: string): ParseResult<SnapshotBody> {
   let raw: unknown;
   try {
@@ -190,6 +259,19 @@ export function parseSnapshotBody(text: string): ParseResult<SnapshotBody> {
     handles.add(entry.handle);
     entries.push(entry);
   }
+
+  // 社区白名单（可选字段，kill_switch 先例）：畸形整份拒绝保持 last-known-good。
+  // handle 不得与黑名单 entries 重复（公式上互斥，此处为防御性兜底）。
+  const verified = parseVerifiedList(s.verified);
+  if (s.verified !== undefined && verified === null) {
+    return { ok: false, error: 'invalid_verified_list' };
+  }
+  if (verified) {
+    for (const entry of verified) {
+      if (handles.has(entry.handle)) return { ok: false, error: 'duplicate_snapshot_handle' };
+    }
+  }
+
   return {
     ok: true,
     value: {
@@ -197,6 +279,7 @@ export function parseSnapshotBody(text: string): ParseResult<SnapshotBody> {
       snapshot_version: s.snapshot_version,
       generated_at: s.generated_at,
       entries,
+      ...(verified ? { verified } : {}),
       ...(kill_switch ? { kill_switch } : {}),
     },
   };

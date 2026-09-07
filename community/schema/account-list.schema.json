@@ -104,6 +104,39 @@
         ],
         "additionalProperties": false
       }
+    },
+    "verified": {
+      "type": "array",
+      "description": "社区白名单（verified）：被验证为误标正常的账号，入榜公式与黑名单镜像（rescue - report >= 3）。可选字段，旧客户端忽略。",
+      "items": {
+        "type": "object",
+        "required": [
+          "handle",
+          "x_user_id",
+          "rescue_count",
+          "report_count",
+          "net_votes",
+          "first_seen_at",
+          "updated_at"
+        ],
+        "properties": {
+          "handle": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_]{1,15}$"
+          },
+          "x_user_id": {
+            "type": ["string", "null"],
+            "pattern": "^[0-9]+$"
+          },
+          "rescue_count": { "type": "integer", "minimum": 0 },
+          "report_count": { "type": "integer", "minimum": 0 },
+          "net_votes": { "type": "integer", "minimum": 3 },
+          "first_seen_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        },
+        "additionalProperties": false
+      },
+      "uniqueItems": true
     }
   },
   "additionalProperties": false

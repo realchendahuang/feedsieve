@@ -7,6 +7,7 @@ import { FeedbackPage } from './pages/FeedbackPage';
 import { KeywordsPage } from './pages/KeywordsPage';
 import { ReleasesPage } from './pages/ReleasesPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { VerifiedPage } from './pages/VerifiedPage';
 
 // 编辑/新增状态都在 Dialog 本地组件态里，不再写进 URL；路由只负责页面切换。
 const rootRoute = createRootRoute({ component: Layout });
@@ -26,6 +27,11 @@ const communityRoute = createRoute({
   path: 'community',
   component: CommunityAccountsPage,
 });
+const verifiedRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'verified',
+  component: VerifiedPage,
+});
 const keywordsRoute = createRoute({ getParentRoute: () => rootRoute, path: 'keywords', component: KeywordsPage });
 const feedbackRoute = createRoute({ getParentRoute: () => rootRoute, path: 'feedback', component: FeedbackPage });
 const releasesRoute = createRoute({ getParentRoute: () => rootRoute, path: 'releases', component: ReleasesPage });
@@ -35,6 +41,7 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   accountsRoute,
   communityRoute,
+  verifiedRoute,
   keywordsRoute,
   feedbackRoute,
   releasesRoute,

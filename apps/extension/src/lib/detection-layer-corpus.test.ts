@@ -36,6 +36,7 @@ function fakeCommunity(overrides: Partial<RuntimeCommunity> = {}): RuntimeCommun
       size: 1,
     },
     handleSet: new Set(['inlist_user']),
+    verifiedSet: new Set<string>(),
     fingerprintSet: new Set<string>(),
     domainSet: new Set<string>(),
     campaignById: new Map(),
@@ -58,6 +59,19 @@ const keywordRule = {
 };
 
 const cases: LayerCase[] = [
+  {
+    id: '社区白名单（verified）→ ignore（一票豁免，先于一切识别；深度档也不标）',
+    input: {
+      input: { handle: 'verified_handle', text: 'dm me for crypto signals 福利在主页' },
+      community: fakeCommunity({ verifiedSet: new Set(['verified_handle']) }),
+      builtinList: new Set(['verified_handle']),
+      keywordHeuristics: [keywordRule],
+      catalog: BUNDLED_KEYWORD_PACK_CATALOG,
+      strength: 'deep_clean',
+      uiLanguage: 'zh',
+    },
+    expected: { presentation: 'ignore' },
+  },
   {
     id: 'community-list → block-candidate（可批量）',
     input: {

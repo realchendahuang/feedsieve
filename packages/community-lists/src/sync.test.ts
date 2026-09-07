@@ -511,3 +511,88 @@ describe('parseSnapshotBody: kill_switch（官方暂停开关）', () => {
     ).toEqual({ ok: false, error: 'invalid_kill_switch' });
   });
 });
+
+describe('parseSnapshotBody: verified（社区白名单）', () => {
+  function bodyWithVerified(verified: unknown, entries: unknown[] = []): string {
+    return JSON.stringify({
+      schema_version: 2,
+      snapshot_version: VERSION,
+      generated_at: '2026-08-28T00:00:00Z',
+      entries,
+      ...(verified !== undefined ? { verified } : {}),
+    });
+  }
+
+  const validEntry = {
+    handle: 'verified_user',
+    x_user_id: null,
+    rescue_count: 5,
+    report_count: 1,
+    net_votes: 4,
+    first_seen_at: '2026-08-28T00:00:00Z',
+    updated_at: '2026-08-28T00:00:00Z',
+  };
+
+  it('接受合法 verified 列表并透出条目', () => {
+    const result = parseSnapshotBody(bodyWithVerified([validEntry]));
+    expect(result.ok).toBe(true);
+    expect(result.ok ? result.value.verified : null).toEqual([validEntry]);
+  });
+
+  it('无 verified 字段时保持缺省（旧快照兼容）', () => {
+    const result = parseSnapshotBody(bodyWithVerified(undefined));
+    expect(result.ok).toBe(true);
+    expect(result.ok ? result.value.verified : undefined).toBeUndefined();
+  });
+
+  it('net_votes invariant 不符（rescue - report）整份拒绝', () => {
+    const result = parseSnapshotBody(
+      bodyWithVerified([{ ...validEntry, net_votes: 9 }]),
+    );
+    expect(result).toEqual({ ok: false, error: 'invalid_verified_list' });
+  });
+
+  it('净票 < 3 的条目整份拒绝（豁免门槛防呆）', () => {
+    const result = parseSnapshotBody(
+      bodyWithVerified([{ ...validEntry, rescue_count: 2, report_count: 1, net_votes: 1 }]),
+    );
+    expect(result).toEqual({ ok: false, error: 'invalid_verified_list' });
+  });
+
+  it('verified 内部重复 handle 整份拒绝', () => {
+    const result = parseSnapshotBody(bodyWithVerified([validEntry, validEntry]));
+    expect(result).toEqual({ ok: false, error: 'invalid_verified_list' });
+  });
+
+  it('verified 与黑名单 entries handle 重复整份拒绝（防御双发）', () => {
+    const entry = {
+      handle: 'dupe_user',
+      x_user_id: null,
+      aliases: [],
+      category: 'bot_spam',
+      sources: ['community'],
+      community_score: 0.8,
+      report_count: 5,
+      rescue_count: 0,
+      net_votes: 5,
+      first_seen_at: '2026-08-28T00:00:00Z',
+      updated_at: '2026-08-28T00:00:00Z',
+      evidence_post_ids: [],
+    };
+    const result = parseSnapshotBody(
+      bodyWithVerified([{ ...validEntry, handle: 'dupe_user' }], [entry]),
+    );
+    expect(result).toEqual({ ok: false, error: 'duplicate_snapshot_handle' });
+  });
+
+  it('畸形 verified（非数组 / 坏条目）整份拒绝（保持 last-known-good）', () => {
+    expect(parseSnapshotBody(bodyWithVerified('yes'))).toEqual({
+      ok: false,
+      error: 'invalid_verified_list',
+    });
+    expect(parseSnapshotBody(bodyWithVerified([{ ...validEntry, handle: 'TOO_LONG_HANDLE!!!!' }]))).toEqual({
+      ok: false,
+      error: 'invalid_verified_list',
+    });
+  });
+});
