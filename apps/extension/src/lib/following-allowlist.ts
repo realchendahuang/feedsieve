@@ -240,3 +240,19 @@ export async function setSelfHandle(handle: string): Promise<void> {
   if ((await getSelfHandle()) === normalized) return;
   await browser.storage.local.set({ [SELF_HANDLE_KEY]: normalized });
 }
+
+/** 订阅 selfHandle 变化：切换账号后其它已打开的 tab 能同步豁免对象。 */
+export function subscribeSelfHandle(onChange: (handle: string | null) => void): () => void {
+  const listener = (changes: Record<string, unknown>, areaName: string) => {
+    if (areaName === 'local' && changes[SELF_HANDLE_KEY]) {
+      void getSelfHandle().then(onChange);
+    }
+  };
+  browser.storage.onChanged.addListener(
+    listener as Parameters<typeof browser.storage.onChanged.addListener>[0],
+  );
+  return () =>
+    browser.storage.onChanged.removeListener(
+      listener as Parameters<typeof browser.storage.onChanged.addListener>[0],
+    );
+}

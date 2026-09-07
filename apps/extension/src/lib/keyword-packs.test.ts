@@ -23,6 +23,9 @@ beforeEach(() => {
       local: {
         get: vi.fn(async (key: string) => ({ [key]: storage[key] })),
         set: vi.fn(async (patch: Record<string, unknown>) => Object.assign(storage, patch)),
+        remove: vi.fn(async (key: string) => {
+          delete storage[key];
+        }),
       },
       onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
     },
@@ -239,7 +242,7 @@ describe('关键字词库同步与发布者签名', () => {
     const key = await testKey();
     // 先存一个较新的缓存
     const newer = `2026.09.03.1`;
-    storage['keywordPacksSnapshotV1'] = {
+    storage['keywordPacksSnapshotV2'] = {
       pack_version: newer,
       body: catalogBody(newer),
       synced_at: 0,

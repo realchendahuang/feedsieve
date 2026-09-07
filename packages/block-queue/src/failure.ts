@@ -60,12 +60,17 @@ export function maxAttemptsForClass(failureClass: FailureClass): number {
 
 /**
  * 自适应退避：连续失败次数指数递增（400→800→1600…封顶 15s），
- * 尊重服务端 Retry-After，并注入 ±20% 抖动防 thundering herd。
+ * 尊重服务端 Retry-After（同样封顶 15s —— X 若返回数小时的 Retry-After，
+ * 无上限会让 sleepSliced 每 250ms 读一次 storage，一小时上万次读），并注入
+ * ±20% 抖动防 thundering herd。超长 Retry-After 靠到期后的下一轮失败继续等待。
  */
 export function nextBackoffMs(consecutiveFailures: number, retryAfterMs?: number): number {
   const exponential = PACE_FLOOR_MS * 2 ** Math.min(Math.max(consecutiveFailures - 1, 0), 6);
   const base = Math.min(exponential, MAX_BACKOFF_MS);
-  const delay = retryAfterMs !== undefined ? Math.max(retryAfterMs, PACE_FLOOR_MS) : base;
+  const delay =
+    retryAfterMs !== undefined
+      ? Math.min(Math.max(retryAfterMs, PACE_FLOOR_MS), MAX_BACKOFF_MS)
+      : base;
   const jitter = delay * JITTER_RATIO * Math.random();
   return Math.round(delay + jitter);
 }

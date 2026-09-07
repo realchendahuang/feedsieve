@@ -20,12 +20,12 @@ beforeEach(() => {
   tabSendMessage = vi.fn().mockResolvedValue({ blocked: [], failed: [] });
   vi.stubGlobal('browser', {
     storage: {
-      local: {
+      local: { remove: vi.fn(),
         // 提供空社区快照：真实环境下无快照时 lib 会用内置名单兜底（99+ 条），
         // 会让名单 tab 徽章常驻 99、按钮文本带数字，干扰本套冒烟断言。
         get: vi
           .fn()
-          .mockResolvedValue({ uiLanguage: 'zh', communitySnapshot: communitySnapshot([]) }),
+          .mockResolvedValue({ uiLanguage: 'zh', communitySnapshotV2: communitySnapshot([]) }),
         set: storageSet,
       },
       onChanged: {
@@ -223,7 +223,7 @@ describe('popup App 渲染冒烟', () => {
   it('renders page-marked accounts after querying the active x.com tab', async () => {
     vi.stubGlobal('browser', {
       storage: {
-        local: {
+        local: { remove: vi.fn(),
           get: vi.fn().mockResolvedValue({ uiLanguage: 'zh' }),
           set: vi.fn().mockResolvedValue(undefined),
         },
@@ -261,8 +261,8 @@ describe('popup App 渲染冒烟', () => {
     ]);
     vi.stubGlobal('browser', {
       storage: {
-        local: {
-          get: vi.fn().mockResolvedValue({ uiLanguage: 'zh', communitySnapshot: snapshot }),
+        local: { remove: vi.fn(),
+          get: vi.fn().mockResolvedValue({ uiLanguage: 'zh', communitySnapshotV2: snapshot }),
           set: vi.fn().mockResolvedValue(undefined),
         },
         onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
@@ -304,8 +304,8 @@ describe('popup App 渲染冒烟', () => {
     const snapshot = communitySnapshot([{ handle: 'three_votes' }]);
     vi.stubGlobal('browser', {
       storage: {
-        local: {
-          get: vi.fn().mockResolvedValue({ uiLanguage: 'zh', communitySnapshot: snapshot }),
+        local: { remove: vi.fn(),
+          get: vi.fn().mockResolvedValue({ uiLanguage: 'zh', communitySnapshotV2: snapshot }),
           set: storageSet,
         },
         onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
@@ -448,8 +448,8 @@ describe('popup App 渲染冒烟', () => {
     });
     vi.stubGlobal('browser', {
       storage: {
-        local: {
-          get: vi.fn().mockResolvedValue({ uiLanguage: 'zh', communitySnapshot: snapshot }),
+        local: { remove: vi.fn(),
+          get: vi.fn().mockResolvedValue({ uiLanguage: 'zh', communitySnapshotV2: snapshot }),
           set: vi.fn().mockResolvedValue(undefined),
         },
         onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
@@ -484,7 +484,7 @@ describe('popup App 渲染冒烟', () => {
     };
     vi.stubGlobal('browser', {
       storage: {
-        local: {
+        local: { remove: vi.fn(),
           get: vi.fn().mockResolvedValue({ uiLanguage: 'zh' }),
           set: vi.fn().mockResolvedValue(undefined),
         },
@@ -508,7 +508,7 @@ describe('popup App 渲染冒烟', () => {
   it('能力快照正常时（working）不显示降级提示', async () => {
     vi.stubGlobal('browser', {
       storage: {
-        local: {
+        local: { remove: vi.fn(),
           get: vi.fn().mockResolvedValue({ uiLanguage: 'zh' }),
           set: vi.fn().mockResolvedValue(undefined),
         },
@@ -546,9 +546,9 @@ describe('popup App 渲染冒烟', () => {
     let storedQueue: PersistentBlockQueueState | null = null;
     vi.stubGlobal('browser', {
       storage: {
-        local: {
+        local: { remove: vi.fn(),
           get: vi.fn(() => {
-            const base: Record<string, unknown> = { uiLanguage: 'zh', communitySnapshot: snapshot };
+            const base: Record<string, unknown> = { uiLanguage: 'zh', communitySnapshotV2: snapshot };
             if (storedQueue) base.persistentBlockQueueV1 = storedQueue;
             return Promise.resolve(base);
           }),
@@ -627,10 +627,10 @@ describe('popup App 渲染冒烟', () => {
     };
     vi.stubGlobal('browser', {
       storage: {
-        local: {
+        local: { remove: vi.fn(),
           get: vi.fn().mockResolvedValue({
             uiLanguage: 'zh',
-            communitySnapshot: snapshot,
+            communitySnapshotV2: snapshot,
             persistentBlockQueueV1: failedQueue,
           }),
           set: vi.fn().mockResolvedValue(undefined),
@@ -682,7 +682,7 @@ describe('popup App 渲染冒烟', () => {
     };
     vi.stubGlobal('browser', {
       storage: {
-        local: {
+        local: { remove: vi.fn(),
           get: vi.fn().mockResolvedValue({
             uiLanguage: 'zh',
             persistentBlockQueueV1: failedQueue,

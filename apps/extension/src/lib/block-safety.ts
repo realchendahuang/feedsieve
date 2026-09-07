@@ -237,6 +237,20 @@ async function writeStore(next: SafetyLedgerStore): Promise<void> {
 }
 
 /**
+ * 账本写互斥：读-改-写不是原子操作，单条拉黑与队列执行可并发进入，
+ * 两个调用同时读到同一 events 数组会丢掉其中一笔成功写记录（额度少计）。
+ * 模块级 Promise 链把整段读改写串行化；某次失败不影响后续排队写入。
+ */
+let ledgerWriteQueue: Promise<unknown> = Promise.resolve();
+function enqueueLedgerWrite<T>(operation: () => Promise<T>): Promise<T> {
+  const next = ledgerWriteQueue.then(operation, operation);
+  ledgerWriteQueue = next.catch(() => {
+    // 吞掉让后续写不受前次失败影响；调用方自己拿原始 rejection
+  });
+  return next;
+}
+
+/**
  * 读取账本（含惰性跨日回补）。accountKey 给定时读该账号自己的账（缺则新建并落盘，
  * 作为「当前账号」），回补变化持久化；accountKey 为空（popup 场景）只读最近活跃
  * 账号的账，回补仅用于展示、不落盘（下次 content 动作时落盘）。
@@ -277,16 +291,18 @@ export async function recordSafetyEvent(
   accountKey: string | null,
   now: number = Date.now(),
 ): Promise<SafetyLedger> {
-  const key = accountKey ?? FALLBACK_ACCOUNT_KEY;
-  const ledger = await loadSafetyLedger(key);
-  const events = [...trimEvents(ledger.events, now), now].slice(-ledger.dailyLimit);
-  const next: SafetyLedger = { ...ledger, events, updatedAt: now };
-  const store = (await readStore()) ?? {
-    activeAccountKey: key,
-    ledgers: { [key]: next },
-  };
-  await writeStore({ ...store, ledgers: { ...store.ledgers, [key]: next } });
-  return next;
+  return enqueueLedgerWrite(async () => {
+    const key = accountKey ?? FALLBACK_ACCOUNT_KEY;
+    const ledger = await loadSafetyLedger(key);
+    const events = [...trimEvents(ledger.events, now), now].slice(-ledger.dailyLimit);
+    const next: SafetyLedger = { ...ledger, events, updatedAt: now };
+    const store = (await readStore()) ?? {
+      activeAccountKey: key,
+      ledgers: { [key]: next },
+    };
+    await writeStore({ ...store, ledgers: { ...store.ledgers, [key]: next } });
+    return next;
+  });
 }
 
 /** 风控信号落账：收缩预算 + cleanStreak 归零（host 在 429 风暴 / 认证失效时调用）。 */
@@ -295,15 +311,17 @@ export async function persistSignal(
   signal: SafetySignal,
   now: number = Date.now(),
 ): Promise<SafetyLedger> {
-  const key = accountKey ?? FALLBACK_ACCOUNT_KEY;
-  const ledger = await loadSafetyLedger(key);
-  const next = rolloverBudget(applySignal(ledger, signal, now), now);
-  const store = (await readStore()) ?? {
-    activeAccountKey: key,
-    ledgers: { [key]: next },
-  };
-  await writeStore({ ...store, ledgers: { ...store.ledgers, [key]: next } });
-  return next;
+  return enqueueLedgerWrite(async () => {
+    const key = accountKey ?? FALLBACK_ACCOUNT_KEY;
+    const ledger = await loadSafetyLedger(key);
+    const next = rolloverBudget(applySignal(ledger, signal, now), now);
+    const store = (await readStore()) ?? {
+      activeAccountKey: key,
+      ledgers: { [key]: next },
+    };
+    await writeStore({ ...store, ledgers: { ...store.ledgers, [key]: next } });
+    return next;
+  });
 }
 
 /** 订阅账本变化（popup 额度条实时刷新）。返回解绑函数。 */

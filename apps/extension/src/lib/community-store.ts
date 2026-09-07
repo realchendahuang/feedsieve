@@ -27,8 +27,21 @@ export const COMMUNITY_API_BASE = API_BASE;
  */
 export const COMMUNITY_SYNC_SOURCES: SyncSource[] = [workerSource(COMMUNITY_API_BASE)];
 
-const SNAPSHOT_KEY = 'communitySnapshot';
+/**
+ * v0.8 起 bump 键名：旧键里的 body 是无签名时代下载的存量，同版本短路不会
+ * 复核它；换新键强制所有用户重走一次「验签 + checksum」全量同步，旧键顺手清理。
+ */
+const SNAPSHOT_KEY = 'communitySnapshotV2';
+const LEGACY_SNAPSHOT_KEY = 'communitySnapshot';
 const SETTINGS_KEY = 'communitySettings';
+let legacySnapshotCleaned = false;
+function cleanupLegacySnapshot(): void {
+  if (legacySnapshotCleaned) return;
+  legacySnapshotCleaned = true;
+  void Promise.resolve(browser.storage.local.remove(LEGACY_SNAPSHOT_KEY)).catch(() => {
+    // 清理失败不影响功能
+  });
+}
 const BUNDLED_SNAPSHOT_BODY = `${JSON.stringify(bundledSnapshotJson, null, 2)}\n`;
 const BUNDLED_SNAPSHOT: StoredSnapshot = {
   snapshot_version: bundledSnapshotJson.snapshot_version,
@@ -57,6 +70,7 @@ export const DEFAULT_COMMUNITY_SETTINGS: CommunitySettings = {
 };
 
 async function getStoredCommunitySnapshot(): Promise<StoredSnapshot | null> {
+  cleanupLegacySnapshot();
   const result = await browser.storage.local.get(SNAPSHOT_KEY);
   const value = result[SNAPSHOT_KEY] as StoredSnapshot | undefined;
   if (value && typeof value.snapshot_version === 'string' && typeof value.body === 'string') {

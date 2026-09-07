@@ -346,13 +346,20 @@ async function runLocalLabelSync(): Promise<LabelSyncSummary> {
       {
         installation_id: installationId,
         client_version: version,
-        rescues: batch.map((label) => ({
-          handle: label.handle,
-          ...(label.xUserId ? { x_user_id: label.xUserId } : {}),
-          ...(label.detectionSource ? { detection_source: label.detectionSource } : {}),
-          ...(label.ruleId ? { rule_id: label.ruleId } : {}),
-          ...(label.detectionReason ? { detection_reason: label.detectionReason } : {}),
-        })),
+        rescues: batch.map((label) => {
+          // 本地自定义关键词的命中理由含用户输入的短语（可能是人名、手机号等
+          // 私密文本），上传侧只报「命中了自定义关键词」这个事实，不带短语。
+          const isCustomKeyword = label.ruleId?.startsWith('keyword:custom:') ?? false;
+          const detectionReason =
+            label.detectionReason && isCustomKeyword ? '命中自定义关键词' : label.detectionReason;
+          return {
+            handle: label.handle,
+            ...(label.xUserId ? { x_user_id: label.xUserId } : {}),
+            ...(label.detectionSource ? { detection_source: label.detectionSource } : {}),
+            ...(label.ruleId ? { rule_id: label.ruleId } : {}),
+            ...(detectionReason ? { detection_reason: detectionReason } : {}),
+          };
+        }),
       },
       new Set(['recorded', 'duplicate', 'unknown']),
     );

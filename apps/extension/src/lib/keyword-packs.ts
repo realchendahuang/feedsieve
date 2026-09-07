@@ -45,11 +45,24 @@ interface StoredKeywordPackCatalog {
 }
 
 export const KEYWORD_PACK_API_BASE = API_BASE;
-const STORAGE_KEY = 'keywordPacksSnapshotV1';
+/**
+ * v0.8 起 bump 键名：旧键里的 body 是无签名时代下载的存量，同版本短路不会
+ * 复核它；换新键强制所有用户重走一次「验签 + checksum」全量下载，旧键顺手清理。
+ */
+const STORAGE_KEY = 'keywordPacksSnapshotV2';
+const LEGACY_STORAGE_KEY = 'keywordPacksSnapshotV1';
 /** X 页面活跃时每 15 分钟最多检查一次远程 manifest。 */
 export const KEYWORD_PACK_SYNC_MAX_AGE_MS = 15 * 60 * 1000;
 const VERSION_RE = /^\d{4}\.\d{2}\.\d{2}\.\d{1,4}$/;
 const ID_RE = /^[a-z][a-z0-9_-]{1,95}$/;
+let legacyStorageCleaned = false;
+async function cleanupLegacyStorage(): Promise<void> {
+  if (legacyStorageCleaned) return;
+  legacyStorageCleaned = true;
+  void Promise.resolve(browser.storage.local.remove(LEGACY_STORAGE_KEY)).catch(() => {
+    // 清理失败不影响功能，残留会被下次清理兜住
+  });
+}
 function localized(value: unknown): value is { zh: string; en: string } {
   return (
     !!value &&
@@ -225,6 +238,7 @@ function parseStored(value: unknown): StoredKeywordPackCatalog | null {
     : null;
 }
 export async function getKeywordPackCatalog(): Promise<KeywordPackCatalog> {
+  void cleanupLegacyStorage();
   const stored = parseStored((await browser.storage.local.get(STORAGE_KEY))[STORAGE_KEY]);
   if (!stored) return BUNDLED_KEYWORD_PACK_CATALOG;
   try {
@@ -254,6 +268,7 @@ export async function syncKeywordPackCatalog(
 ): Promise<KeywordPackSyncOutcome> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const trustedKeys = options.trustedKeys ?? TRUSTED_KEYS;
+  void cleanupLegacyStorage();
   const stored = parseStored((await browser.storage.local.get(STORAGE_KEY))[STORAGE_KEY]);
   if (!options.force && stored && Date.now() - stored.synced_at < KEYWORD_PACK_SYNC_MAX_AGE_MS)
     return { status: 'up_to_date', version: stored.pack_version };

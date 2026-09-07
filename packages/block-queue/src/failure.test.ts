@@ -67,6 +67,16 @@ describe('nextBackoffMs（自适应节奏）', () => {
     }
   });
 
+  it('Retry-After 同样封顶 15s（超长 Retry-After 不造成切片读风暴）', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    try {
+      expect(nextBackoffMs(1, 3_600_000)).toBe(15_000);
+      expect(nextBackoffMs(1, 7200_000)).toBe(15_000);
+    } finally {
+      vi.restoreAllMocks();
+    }
+  });
+
   it('抖动区间在 [0, 20%] 内', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     expect(nextBackoffMs(1)).toBe(400);

@@ -16,9 +16,10 @@ export interface DetectionPolicyInput {
 
 /**
  * 服务器最终账号名单可进入页面「全部拉黑」。
- * 指纹/域名是间接证据，即使在大扫除档黄框提示，也不预选批量动作。
- * 任意内置算法的单关键词启发式不直接进入用户层；用户自己的关键词和
- * 可逐条关闭的官方词库例外，它们只作为人工确认提示，永远不进批量拉黑。
+ * 指纹/域名是间接证据，只有大扫除档给黄框复核提示（review），其余档不出现在页面上。
+ * 关键词（本地自定义 + 官方词库）永远是人工确认提示（review），不预选任何自动动作；
+ * 页面上的黄框统一进入弹窗待处理清单，批量拉黑只由用户显式一键触发（拍板语义），
+ * 且两类关键词命中都不回灌社区票（计票口径见 content.ts 的 communityVoteForDetection）。
  */
 export function classifyDetection(input: DetectionPolicyInput): DetectionPresentation {
   const { detection, communityEntry } = input;

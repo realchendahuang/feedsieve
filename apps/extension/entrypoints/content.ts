@@ -55,6 +55,7 @@ import {
   setFollowingSyncState,
   setSelfHandle,
   subscribeFollowingAllowlist,
+  subscribeSelfHandle,
   upsertFollowingAccounts,
 } from '../src/lib/following-allowlist';
 import {
@@ -110,8 +111,21 @@ interface PageMarkedAccount {
   category: string;
   /** 标注理由（popup 页面黄框清单展示用） */
   reason: string;
+  /** 检测规则 ID：批量拉黑计票口径需要（communityVoteForDetection） */
+  ruleId?: string;
   evidence: BlockEvidence;
 }
+
+/**
+ * 「是否给社区加票」的唯一口径，单条拉黑与一键批量拉黑共用。
+ * 防自我放大：社区名单命中是既有结论；keyword:*（本地自定义 + 官方词库）
+ * 是短语偏好层、只做人工确认提示 —— 两者都不反向加票。
+ * builtin-list / fingerprint / domain 是独立发现，正常计票。
+ */
+function communityVoteForDetection(detectionSource: string | undefined, ruleId?: string): boolean {
+  return detectionSource !== 'community-list' && !ruleId?.startsWith('keyword:');
+}
+
 
 /**
  * Phase 1 content script：黄框标注（带理由）。一键拉黑 = 当前页面全部黄框账号。
@@ -208,7 +222,7 @@ export default defineContentScript({
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') requestKeywordPackSync();
     });
-    void pauseOrphanedPersistentQueue();
+    void pauseOrphanedPersistentQueue(true);
 
     /**
      * popup「一键拉黑 / 一键撤销」入口：这里执行需要页面会话的原生操作，
@@ -231,9 +245,11 @@ export default defineContentScript({
             category: item.category,
             reason: item.reason,
             evidence: item.evidence,
-            // 防自我放大：社区名单命中（采用既有结论）不上报，其余独立发现保持计票。
-            // evidence.detectionSource 已在 markCell 写入 detection.source。
-            communityVote: item.evidence.detectionSource !== 'community-list',
+            // 防自我放大的计票口径与单条拉黑路径完全一致（communityVoteForDetection）
+            communityVote: communityVoteForDetection(
+              item.evidence.detectionSource,
+              item.ruleId,
+            ),
           })),
           msg?.targetTabId,
         );
@@ -403,6 +419,8 @@ export default defineContentScript({
         .catch(() => {
           // storage 异常保持旧缓存（未知 = 不跳过，防御性）
         });
+      // 切换账号发生在别的 tab 时，本 tab 靠 storage 订阅同步，不能只靠启动读一次
+      subscribeSelfHandle(apply);
     }
 
     /**
@@ -774,6 +792,7 @@ export default defineContentScript({
           handle: detection.handle,
           category,
           reason: detection.reason,
+          ruleId: detection.ruleId,
           evidence: { ...evidence, detectionSource: detection.source },
         });
       }
@@ -816,11 +835,8 @@ export default defineContentScript({
       blockBtn.textContent = uiLanguage === 'zh' ? '拉黑' : 'Block';
       blockBtn.title = uiLanguage === 'zh' ? '标记垃圾账号并拉黑' : 'Mark as spam and block';
       blockBtn.addEventListener('click', () => {
-        // 「采用既有结论」与「独立发现」分开：本地自定义关键词是个人偏好，
-        // 社区名单命中的账号已在公开名单内 —— 两者都不应反向加票。
-        // 其余检测来源（官方词库 / 指纹 / 域名）是独立发现，正常计票。
-        const communityVote =
-          detection.source !== 'community-list' && !detection.ruleId?.startsWith('keyword:');
+        // 计票口径与批量路径唯一共享：见 communityVoteForDetection
+        const communityVote = communityVoteForDetection(detection.source, detection.ruleId);
         void runBlockNow(
           detection.handle,
           blockBtn,
@@ -1254,11 +1270,31 @@ export default defineContentScript({
 
     /**
      * 队列执行在 content script 内；页面刷新会中断正在发出的请求。
-     * 新页面把这种孤儿 running 状态降为 paused，避免 popup 误报「仍在运行」。
+     * 只有确认 owner tab 已消失（心跳停摆）才把孤儿 running 状态降为 paused，
+     * 避免误伤其它 tab 正在执行的队列、也避免 popup 误报「仍在运行」。
      */
-    async function pauseOrphanedPersistentQueue(): Promise<void> {
+    /**
+     * 队列执行在 content script 内；页面刷新会中断正在发出的请求。
+     * 只有确认 owner tab 已消失（心跳停摆）才把孤儿 running 状态降为 paused，
+     * 避免误伤其它 tab 正在执行的队列、也避免 popup 误报「仍在运行」。
+     *
+     * allowReschedule 仅启动调用为真：owner 恰好在心跳窗口内刷新时，靠
+     * 「新页面启动必然重新走本函数」覆盖，定时复查本身不再自续，避免常驻轮询。
+     */
+    async function pauseOrphanedPersistentQueue(allowReschedule = false): Promise<void> {
       const state = await getPersistentBlockQueue();
       if (!state || state.status !== 'running') return;
+      const heartbeat = (await browser.storage.local.get(QUEUE_HEARTBEAT_KEY))[QUEUE_HEARTBEAT_KEY];
+      if (typeof heartbeat === 'number' && Date.now() - heartbeat < QUEUE_HEARTBEAT_TTL_MS) {
+        // 心跳新鲜 = owner 大概率活着（比如我只是新开的 tab）。但 owner 也可能
+        // 恰好此刻刷新/关闭（心跳还没过期）：启动路径延迟到过期后再复查一次。
+        if (allowReschedule) {
+          window.setTimeout(() => {
+            void pauseOrphanedPersistentQueue(false);
+          }, QUEUE_HEARTBEAT_TTL_MS + 1_000);
+        }
+        return;
+      }
       state.status = 'paused';
       for (const task of state.tasks) {
         if (task.status === 'running') task.status = 'pending';
@@ -1320,7 +1356,19 @@ export default defineContentScript({
 
     async function runPersistentQueue(): Promise<void> {
       if (runningPersistentQueue) return runningPersistentQueue;
+      // 心跳：owner tab 每 3s 写一次。其它 tab 启动时凭「心跳是否新鲜」区分
+      // 真孤儿（owner 已刷新/关闭）与「我只是新开了一个 tab」（见 pauseOrphanedPersistentQueue）。
+      const beat = (): void => {
+        void browser.storage.local
+          .set({ [QUEUE_HEARTBEAT_KEY]: Date.now() })
+          .catch(() => {
+            // 心跳写失败不打断队列
+          });
+      };
+      beat();
+      const heartbeat = window.setInterval(beat, 3000);
       runningPersistentQueue = executePersistentQueue().finally(() => {
+        window.clearInterval(heartbeat);
         runningPersistentQueue = null;
       });
       return runningPersistentQueue;
@@ -1391,6 +1439,10 @@ export default defineContentScript({
 
 /** bio 内存缓存上限（每页会话），防止超长会话无界增长。 */
 const BIO_CACHE_MAX = 2000;
+
+/** 队列 owner 心跳键与新鲜度阈值：运行中每 3s 写一次，超时视为 owner 已消失。 */
+const QUEUE_HEARTBEAT_KEY = 'blockQueueHeartbeatAt';
+const QUEUE_HEARTBEAT_TTL_MS = 15_000;
 
 /** 安全档位缓存：每次账本读取时刷新，供 successPaceMs 同步注入（runner 的 pace 是同步函数）。 */
 let safetyPresetCache: SafetyPreset = DEFAULT_PRESET;

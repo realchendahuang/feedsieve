@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getDailyStats, subscribeDaily, type DailyStats } from '../../../src/lib/daily-stats';
+import {
+  getDailyStats,
+  subscribeDaily,
+  todayKey,
+  type DailyStats,
+} from '../../../src/lib/daily-stats';
 import { buildReportText, shareUrl } from '../../../src/lib/share-card';
 import { estimateTimeSaved } from '../../../src/lib/time-saved';
 import { drawReportCard } from '../../../src/lib/share-card-image';
@@ -226,7 +231,9 @@ export default function CleanView({
           .join(' · ')
       : null;
 
-  const today = daily.days[new Date().toISOString().slice(0, 10)] ?? {
+  // 日期键与写入侧（daily-stats.todayKey 的本地日期）同源；用 UTC 的 ISO 日期
+  // 会让东八区用户在本地 0-8 点读到前一天的数。
+  const today = daily.days[todayKey()] ?? {
     blocked: 0,
     detected: 0,
     unblocked: 0,
