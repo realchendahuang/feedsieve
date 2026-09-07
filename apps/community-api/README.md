@@ -2,7 +2,7 @@
 
 FeedSieve 社区名单与公开关键词后端：Cloudflare Worker + Hono + D1 + R2。D1 收上报、攒名单；R2 分发版本化的公开关键词包。
 
-官方实例：`https://feedsieve-api.chendahuang.com`（由项目维护者运营）。
+官方实例由项目维护者部署运营（API 地址不在仓库内硬编码；扩展内嵌地址见 `apps/extension/wxt.config.ts` 与 `src/lib/community-store.ts` 的运行必需常量，脚本与 skill 走 `FEEDSIEVE_API` 环境变量或本地 `~/.config/feedsieve/api-base`）。
 **代码完全开源，任何人都可以部署自己的实例。**
 
 ## 公私分明

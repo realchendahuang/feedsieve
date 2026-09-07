@@ -218,7 +218,7 @@ v0.2 目标：**一个人拉黑，所有人的时间线自动黄框。**
 
 ### 能力清单
 
-- **社区名单后端**（`apps/community-api`，Cloudflare Worker + D1，开源可自部署）：匿名上报、聚合、版本化快照（manifest + sha256）、人工审核闸门、管理 CLI。官方实例 `feedsieve-api.chendahuang.com`。
+- **社区名单后端**（`apps/community-api`，Cloudflare Worker + D1，开源可自部署）：匿名上报、聚合、版本化快照（manifest + sha256）、人工审核闸门、管理 CLI。官方实例由维护者部署（地址见部署配置，不在仓库硬编码）。
 - **扩展消费端**：快照同步（manifest 版本比对、sha256 校验、last-known-good 离线缓存、jsDelivr 镜像兜底、6h 节流）；本地索引查询，滚动时间线零请求。
 - **标注强度三档**：清爽（仅 strong）/ 标准（+recommended）/ 大扫除（+candidate），popup 即时切换。
 - **零摩擦自动贡献**：拉黑成功即匿名上报（账号 + 分类），无逐条弹窗；全局开关默认开，关一次永远安静；失败进本地积压，下次启动补交。

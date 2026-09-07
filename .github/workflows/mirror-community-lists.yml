@@ -20,6 +20,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Mirror latest community snapshot
+        # API 地址走仓库 secret（Settings → Secrets → Actions → FEEDSIEVE_API），不进仓库
+        env:
+          FEEDSIEVE_API: ${{ secrets.FEEDSIEVE_API }}
         run: ./scripts/mirror-community-lists.sh
 
       - name: Commit and push when changed

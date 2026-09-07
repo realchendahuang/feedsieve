@@ -9,11 +9,18 @@
 # 发版前 / 名单大变化后也可手动在本地运行一次并提交。
 #
 # 用法: scripts/mirror-community-lists.sh   （发版前 / 名单变化后运行并提交）
-# 环境变量: FEEDSIEVE_API（默认官方实例）
+# API 地址: FEEDSIEVE_API 环境变量，或本地 ~/.config/feedsieve/api-base（0600）
 set -e
 cd "$(dirname "$0")/.."
 
-API="${FEEDSIEVE_API:-https://feedsieve-api.chendahuang.com}"
+API="${FEEDSIEVE_API:-}"
+if [ -z "$API" ] && [ -f "$HOME/.config/feedsieve/api-base" ]; then
+  API="$(cat "$HOME/.config/feedsieve/api-base" 2>/dev/null || true)"
+fi
+if [ -z "$API" ]; then
+  echo "error: 未设置 FEEDSIEVE_API（或写 ~/.config/feedsieve/api-base）" >&2
+  exit 1
+fi
 DIR="community/lists"
 
 curl -fsSL "$API/v1/snapshots/latest" -o "$DIR/manifest.json"
