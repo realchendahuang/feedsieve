@@ -491,6 +491,30 @@ v0.4 落地形态：
   （含子域）；≥2 个独立安装上报才随快照条目下发（单条目 ≤5 个）
 - 扩展侧命中标注 `community-domain`，仅「大扫除」档生效
 
+### 6.5 Community Verified（社区白名单，2026-09-07）
+
+「抢救票」不只是一张负样本票，它聚合出与黑名单对称的**验证正常名单**：
+
+- **入榜公式（与黑名单严格镜像）**：`rescue_count - report_count >= communityNetThreshold(3)`
+  ——黑名单是 `report - rescue >= 3`，同一阈值、同一 policy 常量；数学上互斥
+  （±3 区间无交集），争议账号（黑票压过白票）自然进不了白名单。
+- **快照形态**：`official.json` 顶层可选 `verified` 数组（kill_switch 先例，
+  schema_version 不 bump）。条目：`handle / x_user_id / rescue_count / report_count /
+  net_votes / first_seen_at / updated_at`。客户端校验 invariant
+  `net_votes === rescue_count - report_count` 且 `>= 3`；畸形整份拒绝
+  （保持 last-known-good）。旧版客户端忽略该字段（手写校验不拒绝未知顶层字段）。
+- **同一签名链**：verified 在 official.json 内，同步链（manifest 验签 / 防回滚 /
+  sha256 / last-known-good / 打包兜底）零改动；内容复用判断（entriesContentEqual）
+  纳入 verified——白名单变化必须 mint 新版本。
+- **客户端豁免**：`RuntimeCommunity.verifiedSet`；检测管线在最前面一票豁免
+  （先于社区名单 / 指纹 / 域名 / 词包），任何强度档都不标注、不进批量清理。
+  与个人白名单 / 关注保护同语义层级；双名单竞态（数学上不会发生）以 verified 为准。
+- **后台**：`GET /api/admin/verified` 只读复核视图（「验证正常」页）。
+- **没有新增刷票面**：本来 4 票 rescue 就能把黑名单净票拖下阈值，verified 不扩大攻击面。
+- **权限周期**：不是永久免死金牌——新黑票显著增长时净票回落到 <3 自动退出名单。
+- **consensus v2 切换**（TRUST_HARDENING_PLAN 阶段四）：入榜公式引用同一
+  `communityNetThreshold` 常量，公式切换时 verified 同步换（同一处 policy）。
+
 ---
 
 ## 7. Community Reputation

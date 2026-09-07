@@ -80,6 +80,8 @@
   只改三处的普通发布：
   1. `rating.ts deriveStatus`：入榜条件改为「status_v2 === 'strong'」口径（或直接以 status_v2 为准）；
   2. `snapshot.ts` 选区 SQL：`WHERE status_v2 = 'strong'`（替换 `report_count - rescue_count >= ?1`）；
+     **社区白名单 verified 同步换**（2026-09-07 已上线，镜像公式 `rescue_count - report_count >= ?1`
+     引用同一 `communityNetThreshold` 常量；切换时 verified 选区改用 same 方向的白名单 v2 口径）；
   3. `reports.ts publicPolicy()`：把 `consensus_v2.status` 从 `'shadow'` 改为 `'live'` 并同步
      `community/policy/v3.yaml` 与 CHANGELOG。
   切换不改变部署机制（同一次发版），运营零动作。
