@@ -125,7 +125,7 @@ describe('popup App 渲染冒烟', () => {
         await vi.advanceTimersByTimeAsync(150);
       });
 
-      await act(async () => buttonWithText(rootEl, '设置').click());
+      await act(async () => buttonWithText(rootEl, '检测').click());
       const syncButton = rootEl.querySelector<HTMLButtonElement>('button[aria-label="同步词库"]');
       if (!syncButton) throw new Error('keyword-pack sync button not found');
       await act(async () => {
@@ -157,14 +157,16 @@ describe('popup App 渲染冒烟', () => {
     expect(rootEl.textContent).toContain('一键开始清理');
     expect(rootEl.textContent).toContain('今日概览');
     expect(rootEl.textContent).toContain('清理');
-    expect(rootEl.textContent).toContain('概览');
+    expect(rootEl.textContent).toContain('名单');
+    expect(rootEl.textContent).toContain('检测');
     expect(rootEl.textContent).toContain('设置');
 
-    await act(async () => buttonWithText(rootEl, '概览').click());
+    await act(async () => buttonWithText(rootEl, '名单').click());
     expect(rootEl.textContent).toContain('拉黑记录');
     expect(rootEl.textContent).toContain('误标白名单');
+    expect(rootEl.textContent).toContain('关注');
 
-    await act(async () => buttonWithText(rootEl, '设置').click());
+    await act(async () => buttonWithText(rootEl, '检测').click());
     expect(rootEl.textContent).toContain('检测强度');
     expect(rootEl.textContent).toContain('关键词规则');
     expect(rootEl.textContent).not.toContain('黄推 / 成人引流');
@@ -190,8 +192,10 @@ describe('popup App 渲染冒烟', () => {
     await act(async () => adultTitle?.click());
     expect(rootEl.textContent).toContain('同城上门约炮');
 
+    await act(async () => buttonWithText(rootEl, '设置').click());
     await act(async () => buttonWithText(rootEl, 'EN').click());
     expect(rootEl.textContent).toContain('FeedSieve');
+    await act(async () => buttonWithText(rootEl, 'Detection').click());
     expect(rootEl.textContent).toContain('Detection level');
   });
 
