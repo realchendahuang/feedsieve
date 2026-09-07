@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 import worker from '../src/index';
-import { refreshAccountFromLabels } from '../src/labels';
+import { refreshAccountsFromLabels } from '../src/labels';
 import { hashInstallationId } from '../src/lib/hash';
 import { computeConsensusV2, voteWeight, CONSENSUS_V2_POLICY } from '../src/lib/consensus-v2';
 
@@ -145,7 +145,7 @@ describe('consensus v2 影子接入（集成）', () => {
       .bind(firstHash, tenDaysAgo)
       .run();
     // 手工改时间后重算（正常路径下 refresh 在各次投票时自动执行）
-    await refreshAccountFromLabels(env, 'established');
+    await refreshAccountsFromLabels(env, ['established']);
 
     const row = await account('established');
     expect(row).toMatchObject({ status: 'strong', status_v2: 'strong', report_count: 3 });

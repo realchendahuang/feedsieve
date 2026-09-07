@@ -9,18 +9,64 @@ import { listMaintainerEntries } from './maintainer-blocklist';
 import { publicPolicy } from './reports';
 import { POLICY } from './reports';
 import { autoRateAccounts } from './rating';
+import { loadCommunityAggregates } from './lib/consensus-v2';
 
 export const SNAPSHOT_SCHEMA_VERSION = 2;
 export const SNAPSHOT_PACK = 'official.json';
 export const PUBLIC_BLOCKLIST_PACK = 'blocklist.yaml';
 
-/** 单账号下发的指纹/域名证据上限，防快照膨胀 */
-const MAX_EVIDENCE_PER_ENTRY = 5;
-/** 证据门槛：一条指纹/域名至少要 2 个独立安装上报（reports 唯一索引保证一行 = 一个独立安装） */
-const MIN_INSTALLS_FOR_EVIDENCE = 2;
 /** 指纹簇（Campaign）：汉明距离 <= 此值视为同一话术的变体，归同一簇；< 2 个账号的簇不产生 campaign */
 const SIMHASH_HAMMING_THRESHOLD = 2;
 const MIN_CAMPAIGN_ACCOUNTS = 2;
+
+/**
+ * 快照 R2 分发前缀（与词库 keyword-packs/ 同桶分域）。
+ * 快照文件是 write-once 发布物：版本化文件不可变缓存 + latest 指针文件。
+ * 读路径优先 R2（零 D1 行读），D1 files_json 保留为归档回退；latest 指针
+ * 存 meta 表供 O(1) 点读，取代每次轮询的全表排序扫。
+ */
+const SNAPSHOT_R2_PREFIX = 'snapshots';
+const SNAPSHOT_LATEST_KEY = 'latest_snapshot_version';
+
+async function r2Text(env: Cloudflare.Env, key: string): Promise<string | null> {
+  const object = await env.KEYWORD_PACKS?.get(key);
+  if (!object) return null;
+  return object.text();
+}
+
+/** 快照文件分发到 R2（对齐词库发布模式）。 */
+async function publishSnapshotToR2(
+  env: Cloudflare.Env,
+  version: string,
+  machineFile: SnapshotFile,
+  yamlFile: SnapshotFile,
+  manifest: Record<string, unknown>,
+): Promise<void> {
+  if (!env.KEYWORD_PACKS) return;
+  await Promise.all([
+    env.KEYWORD_PACKS.put(`${SNAPSHOT_R2_PREFIX}/${version}/${SNAPSHOT_PACK}`, machineFile.body),
+    env.KEYWORD_PACKS.put(
+      `${SNAPSHOT_R2_PREFIX}/${version}/${PUBLIC_BLOCKLIST_PACK}`,
+      yamlFile.body,
+    ),
+    env.KEYWORD_PACKS.put(`${SNAPSHOT_R2_PREFIX}/latest.json`, machineFile.body),
+    env.KEYWORD_PACKS.put(`${SNAPSHOT_R2_PREFIX}/latest.yaml`, yamlFile.body),
+    env.KEYWORD_PACKS.put(
+      `${SNAPSHOT_R2_PREFIX}/latest-manifest.json`,
+      `${JSON.stringify(manifest, null, 2)}\n`,
+    ),
+  ]);
+}
+
+/** 记录最新版本指针（meta 表，O(1) 点读）。 */
+async function setLatestSnapshotPointer(env: Cloudflare.Env, version: string): Promise<void> {
+  await env.DB.prepare(
+    `INSERT INTO meta (key, value) VALUES (?1, ?2)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+  )
+    .bind(SNAPSHOT_LATEST_KEY, version)
+    .run();
+}
 
 export interface SnapshotEntry {
   handle: string;
@@ -262,99 +308,6 @@ export function buildKillSwitch(
   return { destructive_actions_disabled: true, reason: trimmed, disabled_since: disabledSince };
 }
 
-async function collectEvidence(env: Cloudflare.Env, handle: string): Promise<string[]> {
-  const res = await env.DB.prepare(
-    `SELECT DISTINCT r.evidence_post_id
-     FROM reports r
-     JOIN active_labels l
-       ON l.installation_id = r.installation_id
-      AND l.handle = r.handle
-      AND l.label = 'blocked'
-     WHERE r.handle = ?1 AND r.evidence_post_id IS NOT NULL LIMIT 5`,
-  )
-    .bind(handle)
-    .all<{ evidence_post_id: string }>();
-  return res.results.map((r) => r.evidence_post_id);
-}
-
-/**
- * 内容证据聚合（v0.4）：指纹/域名只在「≥2 个独立安装上报」时随条目下发。
- * 门槛的意义：单人重复上报制造不出指纹/域名证据，误拉黑也污染不了名单。
- * 每账号取安装数最高的前 5 条，最终按字典序排序保证确定性 JSON。
- */
-async function collectContentEvidence(env: Cloudflare.Env): Promise<{
-  fingerprintsByHandle: Map<string, string[]>;
-  domainsByHandle: Map<string, string[]>;
-}> {
-  const fpRows = await env.DB.prepare(
-    `SELECT r.handle, r.content_fingerprint AS fp
-     FROM reports r
-     JOIN active_labels l
-       ON l.installation_id = r.installation_id
-      AND l.handle = r.handle
-      AND l.label = 'blocked'
-     WHERE r.content_fingerprint IS NOT NULL
-     GROUP BY r.handle, r.content_fingerprint
-     HAVING COUNT(*) >= ?1
-     ORDER BY r.handle ASC, COUNT(*) DESC, r.content_fingerprint ASC`,
-  )
-    .bind(MIN_INSTALLS_FOR_EVIDENCE)
-    .all<{ handle: string; fp: string }>();
-  const fingerprintsByHandle = new Map<string, string[]>();
-  for (const row of fpRows.results) {
-    const list = fingerprintsByHandle.get(row.handle) ?? [];
-    if (list.length < MAX_EVIDENCE_PER_ENTRY) {
-      list.push(row.fp);
-      fingerprintsByHandle.set(row.handle, list);
-    }
-  }
-  for (const list of fingerprintsByHandle.values()) {
-    list.sort();
-  }
-
-  const domainRows = await env.DB.prepare(
-    `SELECT r.handle, r.link_domains
-     FROM reports r
-     JOIN active_labels l
-       ON l.installation_id = r.installation_id
-      AND l.handle = r.handle
-      AND l.label = 'blocked'
-     WHERE r.link_domains IS NOT NULL`,
-  ).all<{ handle: string; link_domains: string }>();
-  const domainCounts = new Map<string, Map<string, number>>();
-  for (const row of domainRows.results) {
-    try {
-      const parsed = JSON.parse(row.link_domains) as unknown;
-      if (!Array.isArray(parsed)) {
-        continue;
-      }
-      const byDomain = domainCounts.get(row.handle) ?? new Map<string, number>();
-      for (const d of parsed) {
-        if (typeof d === 'string' && d) {
-          byDomain.set(d, (byDomain.get(d) ?? 0) + 1);
-        }
-      }
-      domainCounts.set(row.handle, byDomain);
-    } catch {
-      // 单行 link_domains 损坏不阻塞快照
-    }
-  }
-  const domainsByHandle = new Map<string, string[]>();
-  for (const [handle, byDomain] of domainCounts) {
-    const top = [...byDomain.entries()]
-      .filter(([, installs]) => installs >= MIN_INSTALLS_FOR_EVIDENCE)
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-      .slice(0, MAX_EVIDENCE_PER_ENTRY)
-      .map(([domain]) => domain)
-      .sort();
-    if (top.length > 0) {
-      domainsByHandle.set(handle, top);
-    }
-  }
-
-  return { fingerprintsByHandle, domainsByHandle };
-}
-
 export async function generateSnapshot(
   env: Cloudflare.Env,
   publishAttempt = 0,
@@ -363,8 +316,11 @@ export async function generateSnapshot(
   const now = new Date();
   const dateStamp = now.toISOString().slice(0, 10).replaceAll('-', '.');
 
+  // 社区聚合一次跑完（day/fp/domain/evidence + v2 影子输入），供本函数与
+  // autoRateAccounts 共用：同一趟 cron 内每类聚合只扫一遍 reports/active_labels。
+  const aggregates = await loadCommunityAggregates(env);
   // 出快照前按唯一净票公式收敛历史状态字段。
-  await autoRateAccounts(env);
+  await autoRateAccounts(env, aggregates);
 
   const latest = await env.DB.prepare(
     `SELECT version FROM snapshots
@@ -387,16 +343,7 @@ export async function generateSnapshot(
     .all<AccountRow>();
 
   const entries: SnapshotEntry[] = [];
-  const dayRows = await env.DB.prepare(
-    `SELECT r.handle, COUNT(DISTINCT date(r.created_at, 'unixepoch')) AS days
-     FROM reports r
-     JOIN active_labels l
-       ON l.installation_id = r.installation_id
-      AND l.handle = r.handle
-      AND l.label = 'blocked'
-     GROUP BY r.handle`,
-  ).all<{ handle: string; days: number }>();
-  const daysByHandle = new Map(dayRows.results.map((r) => [r.handle, r.days] as const));
+  const daysByHandle = aggregates.daysByHandle;
   const allAccountRows = await env.DB.prepare(
     `SELECT handle, x_user_id, aliases, category, status, report_count, rescue_count,
             first_report_at, updated_at
@@ -406,7 +353,7 @@ export async function generateSnapshot(
   const reportCounts = new Map(
     allAccountRows.results.map((row) => [row.handle, row.report_count] as const),
   );
-  const { fingerprintsByHandle, domainsByHandle } = await collectContentEvidence(env);
+  const { fingerprintsByHandle, domainsByHandle } = aggregates;
   // 指纹簇（Campaign）：每个指纹的账号（已达标），汉明距离归簇
   const evidenceFpAccounts = new Map<string, string[]>();
   for (const [handle, fps] of fingerprintsByHandle) {
@@ -417,8 +364,9 @@ export async function generateSnapshot(
     }
   }
   const campaigns = clusterCampaigns(evidenceFpAccounts, reportCounts);
+  const evidenceByHandle = aggregates.evidenceByHandle;
   for (const row of accounts.results) {
-    const evidence = await collectEvidence(env, row.handle);
+    const evidence = evidenceByHandle.get(row.handle) ?? [];
     const campaign = campaigns.get(row.handle);
     entries.push(
       buildEntry(
@@ -457,7 +405,7 @@ export async function generateSnapshot(
     const entry: SnapshotEntry = belowThresholdAccount
       ? buildEntry(
           belowThresholdAccount,
-          await collectEvidence(env, maintained.handle),
+          evidenceByHandle.get(maintained.handle) ?? [],
           daysByHandle.get(maintained.handle) ?? 1,
           fingerprintsByHandle.get(maintained.handle) ?? [],
           domainsByHandle.get(maintained.handle) ?? [],
@@ -625,6 +573,13 @@ export async function generateSnapshot(
     return generateSnapshot(env, publishAttempt + 1, options);
   }
 
+  // 最新版本指针：latest 轮询从全表排序扫降为 O(1) 点读（写入失败无妨，读端回退排序扫）
+  await setLatestSnapshotPointer(env, version);
+  // R2 分发：失败不阻断发布（D1 仍权威，读端自动回退 files_json）
+  await publishSnapshotToR2(env, version, machineFile, yamlFile, manifest).catch((error) => {
+    console.error('[community-api] snapshot R2 publish failed:', error);
+  });
+
   return {
     version,
     manifest,
@@ -669,14 +624,47 @@ function entriesContentEqual(
   return JSON.stringify(last.entries) === JSON.stringify(currentEntries);
 }
 
-export async function getLatestSnapshot(env: Cloudflare.Env): Promise<{ manifest: string } | null> {
+/**
+ * 读取最新快照行：优先 meta 指针点读（O(1)），无指针时回退排序扫
+ * （数据迁移期 / 指针缺失兜底）。requireSigned 时只取已签名行。
+ */
+async function latestSnapshotRow(env: Cloudflare.Env): Promise<{
+  version: string;
+  manifest_json: string;
+  files_json: string;
+  created_at: number;
+} | null> {
   const requireSigned = env.REQUIRE_SIGNED_SNAPSHOTS === '1';
-  const row = await env.DB.prepare(
-    `SELECT manifest_json FROM snapshots
+  const signedWhere = requireSigned ? ' AND signature_json IS NOT NULL' : '';
+  const pointer = await env.DB.prepare('SELECT value FROM meta WHERE key = ?1')
+    .bind(SNAPSHOT_LATEST_KEY)
+    .first<{ value: string }>();
+  if (pointer) {
+    const row = await env.DB.prepare(
+      `SELECT version, manifest_json, files_json, created_at FROM snapshots
+       WHERE version = ?1${signedWhere}`,
+    )
+      .bind(pointer.value)
+      .first<{ version: string; manifest_json: string; files_json: string; created_at: number }>();
+    if (row) return row;
+  }
+  return env.DB.prepare(
+    `SELECT version, manifest_json, files_json, created_at FROM snapshots
      ${requireSigned ? 'WHERE signature_json IS NOT NULL' : ''}
      ORDER BY substr(version, 1, 10) DESC, CAST(substr(version, 12) AS INTEGER) DESC
      LIMIT 1`,
-  ).first<{ manifest_json: string }>();
+  ).first<{ version: string; manifest_json: string; files_json: string; created_at: number }>();
+}
+
+export async function getLatestSnapshot(env: Cloudflare.Env): Promise<{ manifest: string } | null> {
+  // 快路径：R2 latest-manifest（发布时写入，命中即零 D1 读取）
+  if (env.REQUIRE_SIGNED_SNAPSHOTS !== '1') {
+    const r2Manifest = await r2Text(env, `${SNAPSHOT_R2_PREFIX}/latest-manifest.json`);
+    if (r2Manifest !== null) {
+      return { manifest: r2Manifest };
+    }
+  }
+  const row = await latestSnapshotRow(env);
   return row ? { manifest: row.manifest_json } : null;
 }
 
@@ -690,6 +678,14 @@ export async function getSnapshotFile(
     ![SNAPSHOT_PACK, PUBLIC_BLOCKLIST_PACK].includes(path)
   ) {
     return null;
+  }
+  // 快路径：R2 版本化文件（不可变缓存）。requireSigned 时文件本身不携带签名信息，
+  // 校验语义在 manifest（latestSnapshotRow 已按 signature 过滤），这里仍走 D1 点读。
+  if (env.REQUIRE_SIGNED_SNAPSHOTS !== '1') {
+    const r2Body = await r2Text(env, `${SNAPSHOT_R2_PREFIX}/${version}/${path}`);
+    if (r2Body !== null) {
+      return r2Body;
+    }
   }
   const requireSigned = env.REQUIRE_SIGNED_SNAPSHOTS === '1';
   const row = await env.DB.prepare(
@@ -707,13 +703,18 @@ export async function getLatestSnapshotFile(
   env: Cloudflare.Env,
   path: typeof SNAPSHOT_PACK | typeof PUBLIC_BLOCKLIST_PACK,
 ): Promise<string | null> {
-  const requireSigned = env.REQUIRE_SIGNED_SNAPSHOTS === '1';
-  const row = await env.DB.prepare(
-    `SELECT files_json FROM snapshots
-     ${requireSigned ? 'WHERE signature_json IS NOT NULL' : ''}
-     ORDER BY substr(version, 1, 10) DESC, CAST(substr(version, 12) AS INTEGER) DESC
-     LIMIT 1`,
-  ).first<{ files_json: string }>();
+  // 快路径：R2 latest 指针文件（blocklist/latest.json|.yaml = 最新文件体）
+  if (env.REQUIRE_SIGNED_SNAPSHOTS !== '1') {
+    const latestKey =
+      path === PUBLIC_BLOCKLIST_PACK
+        ? `${SNAPSHOT_R2_PREFIX}/latest.yaml`
+        : `${SNAPSHOT_R2_PREFIX}/latest.json`;
+    const r2Body = await r2Text(env, latestKey);
+    if (r2Body !== null) {
+      return r2Body;
+    }
+  }
+  const row = await latestSnapshotRow(env);
   if (!row) return null;
   const files = JSON.parse(row.files_json) as Record<string, SnapshotFile>;
   return files[path]?.body ?? null;
@@ -730,13 +731,7 @@ export interface LatestSnapshotMeta {
 }
 
 export async function getLatestSnapshotMeta(env: Cloudflare.Env): Promise<LatestSnapshotMeta | null> {
-  const requireSigned = env.REQUIRE_SIGNED_SNAPSHOTS === '1';
-  const row = await env.DB.prepare(
-    `SELECT manifest_json, files_json, created_at FROM snapshots
-     ${requireSigned ? 'WHERE signature_json IS NOT NULL' : ''}
-     ORDER BY substr(version, 1, 10) DESC, CAST(substr(version, 12) AS INTEGER) DESC
-     LIMIT 1`,
-  ).first<{ manifest_json: string; files_json: string; created_at: number }>();
+  const row = await latestSnapshotRow(env);
   if (!row) return null;
   try {
     const manifest = JSON.parse(row.manifest_json) as { snapshot_version?: unknown };
@@ -754,6 +749,13 @@ export async function getLatestSnapshotMeta(env: Cloudflare.Env): Promise<Latest
 
 /** 只读最新版本号：异步化后上报路径立即返回当前有效版本，不等新快照生成。 */
 export async function getLatestSnapshotVersion(env: Cloudflare.Env): Promise<string | null> {
+  // O(1) 点读 meta 指针（POST 路径每批调用一次，不再全表排序扫 snapshots）
+  const pointer = await env.DB.prepare('SELECT value FROM meta WHERE key = ?1')
+    .bind(SNAPSHOT_LATEST_KEY)
+    .first<{ value: string }>();
+  if (pointer) {
+    return pointer.value;
+  }
   const latest = await getLatestSnapshot(env);
   if (!latest) return null;
   try {

@@ -1,5 +1,5 @@
 import { validateReport, type ValidReport } from './lib/validate';
-import { installationHash, refreshAccountFromLabels, setActiveLabel } from './labels';
+import { installationHash, refreshAccountsFromLabels, setActiveLabel } from './labels';
 
 // Phase D 会把阈值搬进 policy 文件/端点；先集中放这里
 export const POLICY = {
@@ -253,6 +253,7 @@ export async function processReportBatch(
 
   // 先保证账号存在，再从 active_labels 全量重算当前正票、负票与分类。
   // 这样“正 -> 负 -> 正”的改判和同标签证据更新都不会让聚合计数漂移。
+  // 批量收敛一次完成：逐账号刷新会把 D1 调用放大 N×10 倍。
   for (const [handle, report] of touchedHandles) {
     await env.DB.prepare(
       `INSERT INTO accounts
@@ -264,8 +265,8 @@ export async function processReportBatch(
     )
       .bind(handle, report.xUserId, report.reason, now)
       .run();
-    await refreshAccountFromLabels(env, handle);
   }
+  await refreshAccountsFromLabels(env, [...touchedHandles.keys()]);
 
   return { ok: true, results };
 }

@@ -92,13 +92,22 @@ export function createApp() {
   // 扩展 content script 会跨域 POST，必须放行预检
   app.use('*', cors());
 
-  app.get('/healthz', (c) =>
-    c.json({
+  // 管理 / Agent 接口的身份头（Cf-Access-Jwt-Assertion / X-Agent-Key）不属于标准
+  // Authorization，Workers Cache 不会自动绕过——显式 no-store，防止管理/审计响应
+  // 被共享缓存命中后泄露给其它请求（开启 cache.enabled 后的安全配套）。
+  app.use('/api/*', async (c, next) => {
+    await next();
+    c.header('Cache-Control', 'no-store');
+  });
+
+  app.get('/healthz', (c) => {
+    c.header('Cache-Control', 'no-store');
+    return c.json({
       ok: true,
       service: 'feedsieve-community-api',
       time: new Date().toISOString(),
-    }),
-  );
+    });
+  });
 
   app.post('/v1/reports', async (c) => {
     const body = await c.req.json().catch(() => undefined);
@@ -106,7 +115,8 @@ export function createApp() {
     if (!result.ok) {
       return c.json({ error: result.error }, result.httpStatus);
     }
-    // 快照异步化：只落库并置脏，由 cron 每 5 分钟合并生成；响应返回当前有效版本。
+    // 快照异步化：只落库并置脏，由 cron 每小时合并生成（当日一版守卫，见 snapshot.ts day-once）；
+    // 响应返回当前有效版本。
     await markSnapshotDirty(c.env);
     return c.json({
       policy: {
@@ -497,7 +507,10 @@ export function createApp() {
   });
 
   // 公开政策：阈值不藏在后端黑箱里
-  app.get('/v1/policy', (c) => c.json(publicPolicy()));
+  app.get('/v1/policy', (c) => {
+    c.header('Cache-Control', 'no-store');
+    return c.json(publicPolicy());
+  });
 
   // 我的贡献统计（v0.6）：按安装哈希查累计上报 / 被采纳 / 抢救数。
   // 隐私：POST body 接收安装 ID（不进 URL，不落边缘访问日志），服务端只存

@@ -1,9 +1,11 @@
 import { hashInstallationId } from './lib/hash';
 import { deriveStatus } from './rating';
-import { computeConsensusV2ForAccount } from './lib/consensus-v2';
+import { computeConsensusV2, EMPTY_CONSENSUS_V2_INPUT, loadConsensusV2InputsByHandles } from './lib/consensus-v2';
 import { validateRescue } from './lib/validate';
 
 const MAX_LABEL_BATCH = 50;
+// D1 batch 单次调用与单条查询的绑定参数上限一致，按 100 分片。
+const D1_CHUNK = 100;
 
 export type AccountLabel = 'blocked' | 'allowed';
 
@@ -49,90 +51,109 @@ export async function setActiveLabel(
   return true;
 }
 
-/** 当前标签是唯一计票源；每次变更只重算单个账号，避免增减计数漂移。 */
-export async function refreshAccountFromLabels(
+/**
+ * 当前标签是唯一计票源；批量请求（上报 / 抢救 / 撤回）改动一组账号后收敛计数。
+ *
+ * 单账号版（refreshAccountFromLabels，N×~10 次 D1 请求）在批量路由里会撞
+ * 单次 invocation 的请求上限；这里用 5 条 IN 聚合 SQL + 1 次 batch 写回收敛
+ * 任意数量账号，改动单个账号的语义（全量重算防计数漂移）保持不变。
+ * 返回存在于 accounts 的 handle 集合（调用方据此区分「名单外账号」）。
+ */
+export async function refreshAccountsFromLabels(
   env: Cloudflare.Env,
-  handle: string,
-): Promise<boolean> {
-  const account = await env.DB.prepare(
-    `SELECT handle, status, report_count, rescue_count
-     FROM accounts WHERE handle = ?1`,
-  )
-    .bind(handle)
-    .first<{
-      handle: string;
-      status: string;
-      report_count: number;
-      rescue_count: number;
-    }>();
-  if (!account) {
-    return false;
+  handles: string[],
+): Promise<Set<string>> {
+  const unique = [...new Set(handles)];
+  if (unique.length === 0) {
+    return new Set();
   }
+  const inClause = unique.map((_, index) => `?${index + 1}`).join(', ');
 
-  const [blocked, allowed, category] = await Promise.all([
+  const [accountRows, blockedRows, allowedRows, categoryRows, v2Inputs] = await Promise.all([
+    env.DB.prepare(`SELECT handle FROM accounts WHERE handle IN (${inClause})`)
+      .bind(...unique)
+      .all<{ handle: string }>(),
     env.DB.prepare(
-      `SELECT COUNT(*) AS n FROM active_labels
-       WHERE handle = ?1 AND label = 'blocked'`,
+      `SELECT handle, COUNT(*) AS n FROM active_labels
+       WHERE handle IN (${inClause}) AND label = 'blocked' GROUP BY handle`,
     )
-      .bind(handle)
-      .first<{ n: number }>(),
+      .bind(...unique)
+      .all<{ handle: string; n: number }>(),
     env.DB.prepare(
-      `SELECT COUNT(*) AS n FROM active_labels
-       WHERE handle = ?1 AND label = 'allowed'`,
+      `SELECT handle, COUNT(*) AS n FROM active_labels
+       WHERE handle IN (${inClause}) AND label = 'allowed' GROUP BY handle`,
     )
-      .bind(handle)
-      .first<{ n: number }>(),
+      .bind(...unique)
+      .all<{ handle: string; n: number }>(),
     env.DB.prepare(
-      `SELECT r.reason
-       FROM active_labels l
-       JOIN reports r
-         ON r.installation_id = l.installation_id
-        AND r.handle = l.handle
-       WHERE l.handle = ?1 AND l.label = 'blocked'
-       GROUP BY r.reason
-       ORDER BY COUNT(*) DESC, MAX(r.created_at) DESC, r.reason ASC
-       LIMIT 1`,
+      `SELECT handle, reason FROM (
+         SELECT l.handle, r.reason,
+                ROW_NUMBER() OVER (
+                  PARTITION BY l.handle
+                  ORDER BY COUNT(*) DESC, MAX(r.created_at) DESC, r.reason ASC
+                ) AS rn
+         FROM active_labels l
+         JOIN reports r
+           ON r.installation_id = l.installation_id
+          AND r.handle = l.handle
+         WHERE l.handle IN (${inClause}) AND l.label = 'blocked'
+         GROUP BY l.handle, r.reason
+       ) WHERE rn = 1`,
     )
-      .bind(handle)
-      .first<{ reason: string }>(),
+      .bind(...unique)
+      .all<{ handle: string; reason: string }>(),
+    loadConsensusV2InputsByHandles(env, unique),
   ]);
 
-  const reportCount = blocked?.n ?? 0;
-  const rescueCount = allowed?.n ?? 0;
-  const status = deriveStatus({
-    handle,
-    status: account.status,
-    report_count: reportCount,
-    rescue_count: rescueCount,
-  });
-  // consensus v2 影子：与入榜无关，只为影子对比积累数据
-  const v2 = await computeConsensusV2ForAccount(env, handle);
+  const existingHandles = new Set(accountRows.results.map((row) => row.handle));
+  const blockedCount = new Map(blockedRows.results.map((row) => [row.handle, row.n] as const));
+  const allowedCount = new Map(allowedRows.results.map((row) => [row.handle, row.n] as const));
+  const categoryByHandle = new Map(
+    categoryRows.results.map((row) => [row.handle, row.reason] as const),
+  );
 
-  await env.DB.prepare(
-    `UPDATE accounts SET
-       report_count = ?2,
-       rescue_count = ?3,
-       owner_votes = ?4,
-       status = ?5,
-       category = COALESCE(?6, category),
-       status_v2 = ?8,
-       consensus_v2 = ?9,
-       updated_at = ?7
-     WHERE handle = ?1`,
-  )
-    .bind(
+  const now = Math.floor(Date.now() / 1000);
+  const statements: D1PreparedStatement[] = [];
+  for (const handle of existingHandles) {
+    const reportCount = blockedCount.get(handle) ?? 0;
+    const rescueCount = allowedCount.get(handle) ?? 0;
+    const status = deriveStatus({
       handle,
-      reportCount,
-      rescueCount,
-      0,
-      status,
-      category?.reason ?? null,
-      Math.floor(Date.now() / 1000),
-      v2.status,
-      v2.score,
-    )
-    .run();
-  return true;
+      status: 'new',
+      report_count: reportCount,
+      rescue_count: rescueCount,
+    });
+    // consensus v2 影子：与入榜无关，只为影子对比积累数据
+    const v2 = computeConsensusV2(v2Inputs.get(handle) ?? EMPTY_CONSENSUS_V2_INPUT);
+    statements.push(
+      env.DB.prepare(
+        `UPDATE accounts SET
+           report_count = ?2,
+           rescue_count = ?3,
+           owner_votes = ?4,
+           status = ?5,
+           category = COALESCE(?6, category),
+           status_v2 = ?8,
+           consensus_v2 = ?9,
+           updated_at = ?7
+         WHERE handle = ?1`,
+      ).bind(
+        handle,
+        reportCount,
+        rescueCount,
+        0,
+        status,
+        categoryByHandle.get(handle) ?? null,
+        now,
+        v2.status,
+        v2.score,
+      ),
+    );
+  }
+  for (let index = 0; index < statements.length; index += D1_CHUNK) {
+    await env.DB.batch(statements.slice(index, index + D1_CHUNK));
+  }
+  return existingHandles;
 }
 
 export interface RetractResult {
@@ -170,6 +191,7 @@ export async function processRetractionBatch(
 
   const identity = await installationHash(env, installationId);
   const results: RetractResult[] = [];
+  const refreshingHandles: string[] = [];
   for (const raw of b.handles) {
     const validated = validateRescue({ handle: raw });
     if (!validated.ok) {
@@ -201,11 +223,10 @@ export async function processRetractionBatch(
       results.push({ handle: validated.handle, status: 'absent' });
       continue;
     }
-    await refreshAccountFromLabels(env, canonical);
-    if (canonical !== validated.handle) {
-      await refreshAccountFromLabels(env, validated.handle);
-    }
+    refreshingHandles.push(canonical, validated.handle);
     results.push({ handle: validated.handle, status: 'retracted' });
   }
+  // 批量收敛计数：单账号逐次刷新在批量撤回时会把 D1 调用放大几十倍
+  await refreshAccountsFromLabels(env, refreshingHandles);
   return { ok: true, results };
 }

@@ -12,6 +12,7 @@ import {
   computeConsensusV2,
   EMPTY_CONSENSUS_V2_INPUT,
   loadAllConsensusV2Inputs,
+  type CommunityAggregates,
 } from './lib/consensus-v2';
 
 // D1 batch 与单条查询的绑定参数上限一致，按 100 分片。
@@ -39,13 +40,18 @@ export function deriveStatus(account: RateableAccount): string {
  *
  * v2 影子用 loadAllConsensusV2Inputs 一次取回输入 + DB.batch 写回，
  * 避免逐账号查询（N×6 次 D1 请求）在账号多时撞单次 invocation 请求上限。
+ * 快照发布路径已先 loadCommunityAggregates，传入 aggregates 可跳过重复聚合。
  */
-export async function autoRateAccounts(env: Cloudflare.Env): Promise<{ changed: number }> {
+export async function autoRateAccounts(
+  env: Cloudflare.Env,
+  aggregates?: CommunityAggregates,
+): Promise<{ changed: number }> {
   const rows = await env.DB.prepare(
     `SELECT handle, status, report_count, rescue_count
      FROM accounts`,
   ).all<RateableAccount>();
-  const v2Inputs = await loadAllConsensusV2Inputs(env);
+  const v2Inputs =
+    aggregates?.v2Inputs ?? (await loadAllConsensusV2Inputs(env));
 
   const statements: D1PreparedStatement[] = [];
   let changed = 0;

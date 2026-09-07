@@ -1,6 +1,6 @@
 import { validateRescue } from './lib/validate';
 import { POLICY } from './reports';
-import { installationHash, refreshAccountFromLabels, setActiveLabel } from './labels';
+import { installationHash, refreshAccountsFromLabels, setActiveLabel } from './labels';
 
 interface ValidRescue {
   handle: string;
@@ -138,6 +138,9 @@ export async function processRescueBatch(
     }
   }
 
+  // 先记下需要刷新计数的账号，批量收敛（逐账号刷新会把 D1 调用放大 N×10 倍）。
+  const refreshingHandles: string[] = [];
+  const existsCheckIndexes = new Map<number, string>();
   for (const item of valid) {
     const r = item.rescue;
     let canonical = r.handle;
@@ -191,10 +194,15 @@ export async function processRescueBatch(
       results[item.resultIndex].status = 'duplicate';
       continue;
     }
-    const exists = await refreshAccountFromLabels(env, canonical);
-    if (!exists) {
+    refreshingHandles.push(canonical);
+    existsCheckIndexes.set(item.resultIndex, canonical);
+  }
+
+  const existingHandles = await refreshAccountsFromLabels(env, refreshingHandles);
+  for (const [resultIndex, canonical] of existsCheckIndexes) {
+    if (!existingHandles.has(canonical)) {
       // 名单里没有这个账号：负标签仍保存在 active_labels，后续一旦有正票建档便立即生效。
-      results[item.resultIndex].status = 'unknown';
+      results[resultIndex].status = 'unknown';
     }
   }
 

@@ -6,7 +6,13 @@ import {
   TRUSTED_KEYS,
   verifyManifestSignature,
 } from '@feedsieve/community-lists';
-import { generateSnapshot, buildKillSwitch, PUBLIC_BLOCKLIST_PACK, SNAPSHOT_PACK } from '../src/snapshot';
+import {
+  generateSnapshot,
+  buildKillSwitch,
+  getLatestSnapshotVersion,
+  PUBLIC_BLOCKLIST_PACK,
+  SNAPSHOT_PACK,
+} from '../src/snapshot';
 
 const ORIGIN = 'https://api.example.com';
 
@@ -224,5 +230,36 @@ describe('snapshot pipeline', () => {
     // 门槛开启时跳过未签名行，仍返回已签名的最新版本
     expect(latest.snapshot_version).toBe(signed.snapshot_version);
     expect(latest.snapshot_version).not.toBe('2099.01.01.1');
+  });
+
+  it('快照发布写 R2（版本化 + latest 指针），latest 端点读 R2，meta 指针 O(1) 点读版本号', async () => {
+    if (!env.KEYWORD_PACKS) return;
+    const result = await generateSnapshot(env, 0, { bypassDailyOnce: true });
+    const { snapshot_version } = result.manifest as unknown as Manifest;
+
+    // R2 发布产物齐全：版本化文件（不可变缓存）+ latest 指针文件
+    const [versioned, latestJson, latestYaml, latestManifest] = await Promise.all([
+      env.KEYWORD_PACKS.get(`snapshots/${snapshot_version}/official.json`),
+      env.KEYWORD_PACKS.get('snapshots/latest.json'),
+      env.KEYWORD_PACKS.get('snapshots/latest.yaml'),
+      env.KEYWORD_PACKS.get('snapshots/latest-manifest.json'),
+    ]);
+    expect(versioned).not.toBeNull();
+    expect(latestJson).not.toBeNull();
+    expect(latestYaml).not.toBeNull();
+    expect(latestManifest).not.toBeNull();
+
+    // meta 指针：getLatestSnapshotVersion 走 O(1) 点读返回最新版本
+    expect(await getLatestSnapshotVersion(env)).toBe(snapshot_version);
+
+    // blocklist/latest.json 从 R2 返回最新文件体，与发布版本一致
+    const latestBody = await worker.fetch(
+      new Request(`${ORIGIN}/v1/blocklist/latest.json`),
+      env,
+    );
+    expect(latestBody.status).toBe(200);
+    expect((await latestBody.json()) as { snapshot_version?: string }).toMatchObject({
+      snapshot_version,
+    });
   });
 });
