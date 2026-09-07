@@ -12,6 +12,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   Table,
   TableBody,
@@ -52,11 +53,11 @@ export function ReleasesPage() {
       ) : releases.isError ? (
         <LoadError error={releases.error} onRetry={() => void releases.refetch()} />
       ) : releases.data.length === 0 ? (
-        <div className="mt-6 grid h-44 place-items-center rounded-lg border border-dashed text-sm text-muted-foreground">
+        <div className="mt-6 flex h-44 flex-col items-center justify-center gap-2 rounded-xl border border-dashed bg-muted/20 text-sm text-muted-foreground">
           暂无记录
         </div>
       ) : (
-        <div className="mt-5 overflow-hidden rounded-lg border">
+        <div className="mt-5 overflow-hidden rounded-xl border bg-card shadow-xs">
           <Table>
             <TableHeader>
               <TableRow>
@@ -70,10 +71,14 @@ export function ReleasesPage() {
             <TableBody>
               {releases.data.map((release) => (
                 <TableRow key={release.id}>
-                  <TableCell className="font-medium">{release.kind === 'accounts' ? '名单' : '词库'}</TableCell>
-                  <TableCell className="text-muted-foreground">{release.version}</TableCell>
+                  <TableCell>
+                    <Badge variant={release.kind === 'accounts' ? 'default' : 'secondary'} className="text-xs">
+                      {release.kind === 'accounts' ? '名单' : '词库'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="font-semibold text-foreground font-mono text-xs">{release.version}</TableCell>
                   <TableCell className="text-muted-foreground">{release.actor_email}</TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-xs text-muted-foreground">
                     {new Date(release.created_at * 1000).toLocaleString('zh-CN')}
                   </TableCell>
                   <TableCell className="text-right">

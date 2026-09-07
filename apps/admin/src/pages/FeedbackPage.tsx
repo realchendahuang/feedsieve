@@ -22,7 +22,7 @@ export function FeedbackPage() {
       ) : (
         <>
           <h2 className="mt-6 text-sm font-semibold text-muted-foreground">汇总</h2>
-          <div className="mt-2 overflow-hidden rounded-lg border">
+          <div className="mt-2 overflow-hidden rounded-xl border bg-card shadow-xs">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -34,9 +34,9 @@ export function FeedbackPage() {
               <TableBody>
                 {feedback.data.summary.map((item) => (
                   <TableRow key={`${item.detection_source}-${item.rule_id}`}>
-                    <TableCell className="font-medium">{item.detection_source}</TableCell>
+                    <TableCell className="font-semibold text-foreground">{item.detection_source}</TableCell>
                     <TableCell className="text-muted-foreground">{item.rule_id}</TableCell>
-                    <TableCell className="text-right">{item.count}</TableCell>
+                    <TableCell className="text-right font-semibold tabular-nums">{item.count}</TableCell>
                   </TableRow>
                 ))}
                 {feedback.data.summary.length === 0 ? (
@@ -50,7 +50,7 @@ export function FeedbackPage() {
             </Table>
           </div>
           <h2 className="mt-6 text-sm font-semibold text-muted-foreground">明细</h2>
-          <div className="mt-2 overflow-hidden rounded-lg border">
+          <div className="mt-2 overflow-hidden rounded-xl border bg-card shadow-xs">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -63,10 +63,10 @@ export function FeedbackPage() {
               <TableBody>
                 {feedback.data.feedback.map((item, index) => (
                   <TableRow key={`${item.handle}-${item.created_at}-${index}`}>
-                    <TableCell className="font-medium">@{item.handle}</TableCell>
+                    <TableCell className="font-semibold text-foreground">@{item.handle}</TableCell>
                     <TableCell className="text-muted-foreground">{item.rule_id ?? '—'}</TableCell>
                     <TableCell className="text-muted-foreground">{item.category ?? '—'}</TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="text-xs text-muted-foreground">
                       {new Date(item.created_at * 1000).toLocaleString('zh-CN')}
                     </TableCell>
                   </TableRow>

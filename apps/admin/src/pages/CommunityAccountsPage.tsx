@@ -135,12 +135,12 @@ export function CommunityAccountsPage() {
       ) : response.isError ? (
         <LoadError error={response.error} onRetry={() => void response.refetch()} />
       ) : entries.length === 0 ? (
-        <div className="mt-6 grid h-44 place-items-center rounded-lg border border-dashed text-sm text-muted-foreground">
+        <div className="mt-6 flex h-44 flex-col items-center justify-center gap-2 rounded-xl border border-dashed bg-muted/20 text-sm text-muted-foreground">
           {needle ? '无匹配' : '暂无社区候选'}
         </div>
       ) : (
         <>
-          <div className="mt-4 overflow-hidden rounded-lg border">
+          <div className="mt-4 overflow-hidden rounded-xl border bg-card shadow-xs">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -158,7 +158,7 @@ export function CommunityAccountsPage() {
               <TableBody>
                 {entries.map((entry) => (
                   <TableRow key={entry.handle}>
-                    <TableCell className="font-medium">@{entry.handle}</TableCell>
+                    <TableCell className="font-semibold text-foreground">@{entry.handle}</TableCell>
                     <TableCell className="text-muted-foreground">{entry.category}</TableCell>
                     <TableCell className="text-right">
                       <span

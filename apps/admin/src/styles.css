@@ -3,41 +3,41 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* 暖纸底 + 黑主按钮 + 黄强调，延续既有品牌观感 */
+/* 现代精致琥珀暖金风：纯净微温画布 + 琥珀金高亮 + 清晰层级 */
 :root {
-  --radius: 0.65rem;
-  --background: oklch(0.972 0.006 95);
-  --foreground: oklch(0.245 0.012 90);
-  --card: oklch(0.995 0.003 95);
-  --card-foreground: oklch(0.245 0.012 90);
-  --popover: oklch(0.995 0.003 95);
-  --popover-foreground: oklch(0.245 0.012 90);
-  --primary: oklch(0.26 0.014 90);
-  --primary-foreground: oklch(0.985 0.004 95);
-  --secondary: oklch(0.962 0.008 95);
-  --secondary-foreground: oklch(0.42 0.016 90);
-  --muted: oklch(0.955 0.009 95);
-  --muted-foreground: oklch(0.52 0.014 90);
-  --accent: oklch(0.955 0.052 95);
-  --accent-foreground: oklch(0.38 0.07 85);
-  --destructive: oklch(0.55 0.19 27);
+  --radius: 0.75rem;
+  --background: oklch(0.985 0.003 95);
+  --foreground: oklch(0.18 0.015 85);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.015 85);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.015 85);
+  --primary: oklch(0.20 0.015 85);
+  --primary-foreground: oklch(0.99 0.002 95);
+  --secondary: oklch(0.965 0.006 95);
+  --secondary-foreground: oklch(0.35 0.02 85);
+  --muted: oklch(0.96 0.006 95);
+  --muted-foreground: oklch(0.48 0.015 85);
+  --accent: oklch(0.96 0.04 85);
+  --accent-foreground: oklch(0.35 0.08 75);
+  --destructive: oklch(0.55 0.20 27);
   --destructive-foreground: oklch(0.985 0.004 95);
-  --border: oklch(0.9 0.012 95);
-  --input: oklch(0.88 0.014 95);
-  --ring: oklch(0.72 0.09 90);
-  --chart-1: oklch(0.65 0.15 85);
+  --border: oklch(0.92 0.008 90);
+  --input: oklch(0.90 0.01 90);
+  --ring: oklch(0.75 0.16 75);
+  --chart-1: oklch(0.72 0.16 75);
   --chart-2: oklch(0.6 0.12 180);
   --chart-3: oklch(0.55 0.15 300);
   --chart-4: oklch(0.7 0.14 140);
   --chart-5: oklch(0.6 0.18 30);
-  --sidebar: oklch(0.99 0.004 95);
-  --sidebar-foreground: oklch(0.245 0.012 90);
-  --sidebar-primary: oklch(0.26 0.014 90);
-  --sidebar-primary-foreground: oklch(0.985 0.004 95);
-  --sidebar-accent: oklch(0.955 0.052 95);
-  --sidebar-accent-foreground: oklch(0.38 0.07 85);
-  --sidebar-border: oklch(0.9 0.012 95);
-  --sidebar-ring: oklch(0.72 0.09 90);
+  --sidebar: oklch(0.99 0.003 95);
+  --sidebar-foreground: oklch(0.22 0.015 85);
+  --sidebar-primary: oklch(0.22 0.015 85);
+  --sidebar-primary-foreground: oklch(0.99 0.002 95);
+  --sidebar-accent: oklch(0.96 0.035 85);
+  --sidebar-accent-foreground: oklch(0.32 0.08 75);
+  --sidebar-border: oklch(0.92 0.008 90);
+  --sidebar-ring: oklch(0.75 0.16 75);
 }
 
 @theme inline {
@@ -85,6 +85,16 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+    font-family:
+      Inter,
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      "PingFang SC",
+      "Hiragino Sans GB",
+      "Microsoft YaHei",
+      sans-serif;
   }
 }

@@ -5,7 +5,8 @@ import { useForm, Controller } from 'react-hook-form';
 import { useSearch } from '@tanstack/react-router';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { Search } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -246,7 +247,10 @@ export function AccountsPage() {
   return (
     <section>
       <PageHeader title="账号黑名单">
-        <Button onClick={() => setEditor({ open: true, entry: null })}>新增</Button>
+        <Button onClick={() => setEditor({ open: true, entry: null })} className="gap-1.5">
+          <Plus className="size-4" />
+          新增
+        </Button>
       </PageHeader>
       <div className="mt-5 flex flex-wrap items-center gap-2">
         <div className="relative w-full max-w-xs">
@@ -264,11 +268,11 @@ export function AccountsPage() {
       ) : accounts.isError ? (
         <LoadError error={accounts.error} onRetry={() => void accounts.refetch()} />
       ) : entries.length === 0 ? (
-        <div className="mt-6 grid h-44 place-items-center rounded-lg border border-dashed text-sm text-muted-foreground">
+        <div className="mt-6 flex h-44 flex-col items-center justify-center gap-2 rounded-xl border border-dashed bg-muted/20 text-sm text-muted-foreground">
           {needle ? '无匹配' : '名单为空'}
         </div>
       ) : (
-        <div className="mt-4 overflow-hidden rounded-lg border">
+        <div className="mt-4 overflow-hidden rounded-xl border bg-card shadow-xs">
           <Table>
             <TableHeader>
               <TableRow>
@@ -281,8 +285,12 @@ export function AccountsPage() {
             <TableBody>
               {entries.map((entry) => (
                 <TableRow key={entry.handle}>
-                  <TableCell className="font-medium">@{entry.handle}</TableCell>
-                  <TableCell className="text-muted-foreground">{entry.category}</TableCell>
+                  <TableCell className="font-semibold text-foreground">@{entry.handle}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className="font-normal text-xs">
+                      {entry.category}
+                    </Badge>
+                  </TableCell>
                   <TableCell className="max-w-md truncate text-muted-foreground">
                     {entry.note}
                   </TableCell>
