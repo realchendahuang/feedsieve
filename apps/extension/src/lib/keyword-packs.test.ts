@@ -34,7 +34,7 @@ beforeEach(() => {
 
 describe('远程关键词包契约', () => {
   it('构建时词库包含八个可订阅行业包、成人高召回规则和分词组合', () => {
-    expect(BUNDLED_KEYWORD_PACK_CATALOG.pack_version).toBe('2026.09.02.5');
+    expect(BUNDLED_KEYWORD_PACK_CATALOG.pack_version).toBe('2026.09.07.1');
     expect(BUNDLED_KEYWORD_PACK_CATALOG.packs).toHaveLength(8);
     expect(
       BUNDLED_KEYWORD_PACK_CATALOG.packs.reduce((count, pack) => count + pack.rules.length, 0),
