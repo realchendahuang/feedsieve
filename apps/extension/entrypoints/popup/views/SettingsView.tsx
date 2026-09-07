@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
-import type { MarkStrength } from '@feedsieve/community-lists';
+import { MARK_STRENGTHS, type MarkStrength } from '@feedsieve/community-lists';
 import { getContributionStats, getInstallationId, type ContributionStats } from '../../../src/lib/contribute';
 import {
   getKeywordRuleSettings,
@@ -25,13 +25,7 @@ import {
   type PersonalConfigParseError,
 } from '../../../src/lib/personal-config';
 import { setUiLanguage, UI_COPY, type UiLanguage } from '../../../src/lib/i18n';
-import {
-  AppIcon,
-  formatAgo,
-  HelpIcon,
-  STRENGTH_LABELS,
-  type CommunityMeta,
-} from './shared';
+import { HelpIcon, STRENGTH_LABELS, STRENGTH_HINTS } from './shared';
 
 interface PersonalConfigPreviewState {
   merge: PersonalConfigImportResult;
@@ -42,7 +36,6 @@ interface SettingsViewProps {
   language: UiLanguage;
   notify: (message: string | null) => void;
   community: CommunitySettings | null;
-  communityMeta: CommunityMeta | null;
   onUpdateCommunity: (patch: {
     enabled?: boolean;
     autoContribute?: boolean;
@@ -55,13 +48,10 @@ export default function SettingsView({
   language,
   notify,
   community,
-  communityMeta,
   onUpdateCommunity,
   onLanguageChange,
 }: SettingsViewProps) {
   const t = UI_COPY[language];
-  const [syncing, setSyncing] = useState(false);
-  const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [contribution, setContribution] = useState<ContributionStats | null>(null);
   const [keywordRules, setKeywordRules] = useState<KeywordRuleSettings | null>(null);
   const [keywordCatalog, setKeywordCatalog] = useState<KeywordPackCatalog>(
@@ -84,7 +74,6 @@ export default function SettingsView({
 
   async function selectLanguage(next: UiLanguage): Promise<void> {
     if (next === language) return;
-    setSyncMsg(null);
     notify(null);
     onLanguageChange(next);
     await setUiLanguage(next);
@@ -95,31 +84,6 @@ export default function SettingsView({
     if (!localOnly) {
       await browser.runtime.sendMessage({ type: 'feedsieve:labels-sync' }).catch(() => undefined);
       setContribution(await getContributionStats());
-    }
-  }
-
-  async function syncCommunityNow(): Promise<void> {
-    setSyncing(true);
-    setSyncMsg(null);
-    try {
-      const res = (await browser.runtime.sendMessage({
-        type: 'feedsieve:community-sync',
-        force: true,
-      })) as { outcome?: { status: string; version?: string; error?: string } };
-      const outcome = res?.outcome;
-      if (outcome?.status === 'updated') {
-        setSyncMsg(t.synced(outcome.version));
-      } else if (outcome?.status === 'unchanged') {
-        setSyncMsg(t.upToDate);
-      } else if (outcome?.status === 'error') {
-        setSyncMsg(outcome.error ? `${t.syncFailed}: ${outcome.error}` : t.syncFailed);
-      } else {
-        setSyncMsg(t.unavailable);
-      }
-    } catch {
-      setSyncMsg(t.backgroundUnavailable);
-    } finally {
-      setSyncing(false);
     }
   }
 
@@ -237,10 +201,10 @@ export default function SettingsView({
   }
 
   const keywordCategoryNames = new Map(
-    (keywordCatalog?.packs ?? []).map((pack) => [pack.id, pack.name[language]]),
+    keywordCatalog.packs.map((pack) => [pack.id, pack.name[language]]),
   );
   const officialKeywordRuleNames = new Map(
-    (keywordCatalog?.packs ?? [])
+    keywordCatalog.packs
       .flatMap((pack) => pack.rules.map((rule) => ({ ...rule, category: pack.id })))
       .map((rule) => [rule.id, rule.name[language]]),
   );
@@ -272,32 +236,8 @@ export default function SettingsView({
     <div className="view-stack settings-view">
       <section className="settings-card">
         <div className="settings-card-head">
-          <h2>{t.communityList}</h2>
-          <div className="settings-head-actions">
-            <span
-              className={`community-meta${communityMeta ? ' is-ready' : ''}`}
-              title={
-                communityMeta
-                  ? `v${communityMeta.version} · ${formatAgo(communityMeta.syncedAt, language)}`
-                  : t.listLoading
-              }
-            >
-              {communityMeta ? `${communityMeta.count} · v${communityMeta.version}` : '…'}
-            </span>
-            <button
-              type="button"
-              className={`square-action small${syncing ? ' is-spinning' : ''}`}
-              aria-label={t.syncNow}
-              title={t.syncNow}
-              disabled={syncing}
-              onClick={() => void syncCommunityNow()}
-            >
-              <AppIcon name="refresh" size={18} />
-            </button>
-          </div>
+          <h2>{t.autoMarking}</h2>
         </div>
-        {syncMsg ? <p className="inline-notice">{syncMsg}</p> : null}
-
         {community ? (
           <div className="settings-fields">
             <label className="setting-row">
@@ -314,6 +254,40 @@ export default function SettingsView({
               </span>
             </label>
 
+            <div className="setting-block">
+              <div className="setting-copy">
+                <strong>{t.strength}</strong>
+              </div>
+              <div className="strength-control" role="group" aria-label={t.strength}>
+                {MARK_STRENGTHS.map((strength: MarkStrength) => (
+                  <button
+                    key={strength}
+                    type="button"
+                    className={community.strength === strength ? 'is-selected' : ''}
+                    onClick={() => void onUpdateCommunity({ strength })}
+                  >
+                    <span>{STRENGTH_LABELS[language][strength]}</span>
+                    <HelpIcon text={STRENGTH_HINTS[language][strength]} />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="loading-list settings-loading" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+        )}
+      </section>
+
+      <section className="settings-card">
+        <div className="settings-card-head">
+          <h2>{t.privacy}</h2>
+        </div>
+        {community ? (
+          <div className="settings-fields">
             <label className="setting-row">
               <span className="setting-copy">
                 <strong>
@@ -431,9 +405,7 @@ export default function SettingsView({
                     ))}
                     {personalConfigMergePreview.categoryChanges.length > 3 ? (
                       <li>
-                        {t.personalConfigMore(
-                          personalConfigMergePreview.categoryChanges.length - 3,
-                        )}
+                        {t.personalConfigMore(personalConfigMergePreview.categoryChanges.length - 3)}
                       </li>
                     ) : null}
                   </ul>

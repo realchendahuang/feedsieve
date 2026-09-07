@@ -155,13 +155,13 @@ export const STRENGTH_LABELS: Record<UiLanguage, Record<MarkStrength, string>> =
 
 export const STRENGTH_HINTS: Record<UiLanguage, Record<MarkStrength, string>> = {
   zh: {
-    refresh: '最终黑名单始终生效；尽量减少间接证据提示',
-    standard: '最终黑名单与已启用词库正常生效',
-    deep_clean: '最终黑名单之外，也提示相似话术和可疑域名',
+    refresh: '社区黑名单始终生效；尽量减少间接证据提示',
+    standard: '社区黑名单与已启用词库正常生效',
+    deep_clean: '社区黑名单之外，也提示相似话术和可疑域名',
   },
   en: {
-    refresh: 'The final blocklist stays on; minimize indirect-evidence prompts',
-    standard: 'Use the final blocklist and enabled keyword rules',
+    refresh: 'The community blocklist stays on; minimize indirect-evidence prompts',
+    standard: 'Use the community blocklist and enabled keyword rules',
     deep_clean: 'Also show similar wording and suspicious-domain prompts',
   },
 };

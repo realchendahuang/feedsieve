@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { parseSnapshotBody, type CommunityEntry } from '@feedsieve/community-lists';
 import { shouldPauseDestructive, type XAdapterCapabilities } from '@feedsieve/x-adapter';
+import { getBlockedAccounts, subscribeBlocked } from '../../src/lib/blocked-accounts';
+import { getAllowlist, subscribeAllowlist } from '../../src/lib/allowlist';
+import { getFollowingAllowlist, subscribeFollowingAllowlist } from '../../src/lib/following-allowlist';
 import {
   getCommunityKillSwitch,
   getCommunitySettings,
@@ -19,11 +22,11 @@ import {
 } from '../../src/lib/i18n';
 import CleanView from './views/CleanView';
 import ListsView from './views/ListsView';
-import DetectionView from './views/DetectionView';
+import KeywordsView from './views/KeywordsView';
 import SettingsView from './views/SettingsView';
 import { AppIcon, asPageMarkedList, type CommunityMeta, type PageMarkedItem } from './views/shared';
 
-type PopupView = 'clean' | 'lists' | 'detection' | 'settings';
+type PopupView = 'clean' | 'lists' | 'keywords' | 'settings';
 
 const PAGE_MARKED_MESSAGE = { type: 'feedsieve:page-marked-list' } as const;
 
@@ -33,8 +36,9 @@ function initialPopupView(): PopupView {
     case 'lists':
     case 'overview':
       return 'lists';
+    case 'keywords':
     case 'detection':
-      return 'detection';
+      return 'keywords';
     case 'settings':
       return 'settings';
     default:
@@ -54,6 +58,10 @@ export default function App() {
   const [community, setCommunity] = useState<CommunitySettings | null>(null);
   const [communityMeta, setCommunityMeta] = useState<CommunityMeta | null>(null);
   const [communityEntries, setCommunityEntries] = useState<CommunityEntry[]>([]);
+  // 名单 tab 徽章需要计算「社区候选中未被保护」的数量，轻量订阅三份名单。
+  const [blocked, setBlocked] = useState<Array<{ handle: string }>>([]);
+  const [allowlist, setAllowlist] = useState<Array<{ handle: string }>>([]);
+  const [following, setFollowing] = useState<Array<{ handle: string }>>([]);
 
   const t = UI_COPY[language];
 
@@ -115,6 +123,10 @@ export default function App() {
     }
   }, [sendToXPage]);
 
+  const refreshCommunitySnapshot = useCallback(async (): Promise<void> => {
+    await getCommunitySnapshot().then(applyCommunitySnapshotState);
+  }, [applyCommunitySnapshotState]);
+
   const updateCommunity = useCallback(
     async (patch: Parameters<typeof setCommunitySettings>[0]): Promise<unknown> => {
       const next = await setCommunitySettings(patch);
@@ -128,6 +140,9 @@ export default function App() {
     void getUiLanguage().then(setLanguage);
     void getCommunitySettings().then(setCommunity);
     void getCommunitySnapshot().then(applyCommunitySnapshotState);
+    void getBlockedAccounts().then(setBlocked);
+    void getAllowlist().then(setAllowlist);
+    void getFollowingAllowlist().then(setFollowing);
     // 降级态：官方暂停开关（本地快照）+ X 能力快照（活动 x.com tab 实探）
     void getCommunityKillSwitch()
       .then((sw) => setKillSwitch(sw ?? null))
@@ -157,6 +172,9 @@ export default function App() {
       .catch(() => setPageMarked([]));
     const unsubs = [
       subscribeUiLanguage(setLanguage),
+      subscribeBlocked(setBlocked),
+      subscribeAllowlist(setAllowlist),
+      subscribeFollowingAllowlist(setFollowing),
       subscribeCommunity(() => {
         void getCommunitySettings().then(setCommunity);
         void getCommunitySnapshot().then(applyCommunitySnapshotState);
@@ -187,6 +205,14 @@ export default function App() {
   const pauseDestructive =
     killSwitchActive || (capabilities ? shouldPauseDestructive(capabilities) : false);
   const pageCount = pageMarked?.length ?? null;
+  const protectedHandles = new Set([
+    ...allowlist.map((item) => item.handle),
+    ...following.map((item) => item.handle),
+    ...blocked.map((item) => item.handle),
+  ]);
+  const communityTodo = communityEntries.filter(
+    (entry) => !protectedHandles.has(entry.handle.toLowerCase()),
+  ).length;
   const communityStatus = communityMeta ? t.listReady(communityMeta.count) : t.listLoading;
 
   return (
@@ -215,7 +241,6 @@ export default function App() {
             pauseDestructive={pauseDestructive}
             killSwitchActive={killSwitchActive}
             killSwitchReason={killSwitch?.reason}
-            communityEntries={communityEntries}
           />
         ) : null}
         {view === 'lists' ? (
@@ -224,22 +249,20 @@ export default function App() {
             notify={notify}
             sendToXPage={sendToXPage}
             refreshPageMarked={refreshPageMarked}
+            pauseDestructive={pauseDestructive}
+            communityEntries={communityEntries}
+            communityMeta={communityMeta}
+            onRefreshCommunitySnapshot={refreshCommunitySnapshot}
           />
         ) : null}
-        {view === 'detection' ? (
-          <DetectionView
-            language={language}
-            notify={notify}
-            community={community}
-            onUpdateCommunity={updateCommunity}
-          />
+        {view === 'keywords' ? (
+          <KeywordsView language={language} notify={notify} />
         ) : null}
         {view === 'settings' ? (
           <SettingsView
             language={language}
             notify={notify}
             community={community}
-            communityMeta={communityMeta}
             onUpdateCommunity={updateCommunity}
             onLanguageChange={setLanguage}
           />
@@ -273,19 +296,22 @@ export default function App() {
         >
           <span className="nav-icon-wrap">
             <AppIcon name="lists" />
+            {communityTodo ? (
+              <span className="nav-badge">{Math.min(communityTodo, 99)}</span>
+            ) : null}
           </span>
           <span>{t.lists}</span>
         </button>
         <button
           type="button"
-          className={view === 'detection' ? 'is-active' : ''}
-          aria-current={view === 'detection' ? 'page' : undefined}
-          onClick={() => setView('detection')}
+          className={view === 'keywords' ? 'is-active' : ''}
+          aria-current={view === 'keywords' ? 'page' : undefined}
+          onClick={() => setView('keywords')}
         >
           <span className="nav-icon-wrap">
             <AppIcon name="detect" />
           </span>
-          <span>{t.detection}</span>
+          <span>{t.keywords}</span>
         </button>
         <button
           type="button"

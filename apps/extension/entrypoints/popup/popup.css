@@ -1079,7 +1079,7 @@ input:focus-visible + span {
 
 .list-tabs {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 4px;
   padding: 4px;
   border: 1px solid var(--fs-line-strong);
@@ -1093,7 +1093,7 @@ input:focus-visible + span {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: 6px;
   border-radius: 10px;
   background: transparent;
   color: var(--fs-muted);
@@ -1791,4 +1791,12 @@ input:focus-visible + span {
   color: #92400e;
   font-size: 12px;
   line-height: 1.4;
+}
+
+/* 社区名单完整列表：被关注/白名单/已拉黑保护的条目弱化展示 */
+.manage-item.is-excluded .account-handle,
+.manage-item.is-excluded .account-meta,
+.manage-item.is-excluded .account-reason {
+  color: var(--fs-muted);
+  opacity: 0.75;
 }

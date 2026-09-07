@@ -21,7 +21,11 @@ beforeEach(() => {
   vi.stubGlobal('browser', {
     storage: {
       local: {
-        get: vi.fn().mockResolvedValue({ uiLanguage: 'zh' }),
+        // 提供空社区快照：真实环境下无快照时 lib 会用内置名单兜底（99+ 条），
+        // 会让名单 tab 徽章常驻 99、按钮文本带数字，干扰本套冒烟断言。
+        get: vi
+          .fn()
+          .mockResolvedValue({ uiLanguage: 'zh', communitySnapshot: communitySnapshot([]) }),
         set: storageSet,
       },
       onChanged: {
@@ -49,9 +53,12 @@ function renderApp(): HTMLElement {
 }
 
 function buttonWithText(root: HTMLElement, label: string): HTMLButtonElement {
-  const button = [...root.querySelectorAll('button')].find(
-    (candidate) => candidate.textContent?.trim() === label,
-  );
+  const button = [...root.querySelectorAll('button')].find((candidate) => {
+    const clone = candidate.cloneNode(true) as HTMLElement;
+    // nav 徽章（如「2名单」）不进文本匹配，避免计数干扰按钮定位
+    clone.querySelectorAll('.nav-badge').forEach((badge) => badge.remove());
+    return clone.textContent?.trim() === label;
+  });
   if (!button) throw new Error(`button not found: ${label}`);
   return button;
 }
@@ -125,7 +132,7 @@ describe('popup App 渲染冒烟', () => {
         await vi.advanceTimersByTimeAsync(150);
       });
 
-      await act(async () => buttonWithText(rootEl, '检测').click());
+      await act(async () => buttonWithText(rootEl, '关键词').click());
       const syncButton = rootEl.querySelector<HTMLButtonElement>('button[aria-label="同步词库"]');
       if (!syncButton) throw new Error('keyword-pack sync button not found');
       await act(async () => {
@@ -153,31 +160,23 @@ describe('popup App 渲染冒烟', () => {
     expect(rootEl.textContent).toContain('当前页面');
     expect(rootEl.textContent).toContain('当前页面没有待处理账号');
     expect(rootEl.textContent).toContain('一键拉黑全部');
-    expect(rootEl.textContent).toContain('社区黑名单');
-    expect(rootEl.textContent).toContain('一键开始清理');
     expect(rootEl.textContent).toContain('今日概览');
     expect(rootEl.textContent).toContain('清理');
     expect(rootEl.textContent).toContain('名单');
-    expect(rootEl.textContent).toContain('检测');
+    expect(rootEl.textContent).toContain('关键词');
     expect(rootEl.textContent).toContain('设置');
 
     await act(async () => buttonWithText(rootEl, '名单').click());
-    expect(rootEl.textContent).toContain('拉黑记录');
-    expect(rootEl.textContent).toContain('误标白名单');
+    expect(rootEl.textContent).toContain('社区');
+    expect(rootEl.textContent).toContain('拉黑');
+    expect(rootEl.textContent).toContain('白名单');
     expect(rootEl.textContent).toContain('关注');
 
-    await act(async () => buttonWithText(rootEl, '检测').click());
-    expect(rootEl.textContent).toContain('检测强度');
-    expect(rootEl.textContent).toContain('关键词规则');
-    expect(rootEl.textContent).not.toContain('黄推 / 成人引流');
-    await act(async () => buttonWithText(rootEl, '详情').click());
+    await act(async () => buttonWithText(rootEl, '关键词').click());
+    expect(rootEl.textContent).toContain('我的关键词');
+    expect(rootEl.textContent).toContain('官方预置词库');
     expect(rootEl.textContent).toContain('黄推 / 成人引流');
-    expect(rootEl.textContent).not.toContain('官方预置词库');
     expect(rootEl.textContent).not.toContain('未订阅');
-    expect(rootEl.textContent).not.toContain('福利隐语、成人内容和主页导流的完整话术');
-    expect(rootEl.textContent).not.toContain('误标较多时');
-    expect(rootEl.textContent).not.toContain('标注不隐藏内容');
-    expect(rootEl.textContent).not.toContain('X 页面清理');
 
     const adultToggle = rootEl.querySelector(
       'button[role="switch"][aria-label^="黄推 / 成人引流"]',
@@ -193,9 +192,10 @@ describe('popup App 渲染冒烟', () => {
     expect(rootEl.textContent).toContain('同城上门约炮');
 
     await act(async () => buttonWithText(rootEl, '设置').click());
+    expect(rootEl.textContent).toContain('自动标注');
+    expect(rootEl.textContent).toContain('页面标黄');
     await act(async () => buttonWithText(rootEl, 'EN').click());
     expect(rootEl.textContent).toContain('FeedSieve');
-    await act(async () => buttonWithText(rootEl, 'Detection').click());
     expect(rootEl.textContent).toContain('Detection level');
   });
 
@@ -203,15 +203,16 @@ describe('popup App 渲染冒烟', () => {
     const rootEl = renderApp();
     await new Promise((r) => setTimeout(r, 150));
 
+    await act(async () => buttonWithText(rootEl, '名单').click());
     const helpIcon = rootEl.querySelector<HTMLElement>(
-      '[aria-label="显示服务器发布的最终名单；拉黑仍由你一键确认，并自动保护关注、白名单和已拉黑账号。"]',
+      '[aria-label="社区确认的垃圾账号名单；拉黑仍由你一键确认，并自动保护关注、白名单和已拉黑账号。"]',
     );
     if (!helpIcon) throw new Error('community help icon not found');
 
     await act(async () => {
       helpIcon.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
     });
-    expect(document.body.querySelector('[role="tooltip"]')?.textContent).toContain('服务器发布的最终名单');
+    expect(document.body.querySelector('[role="tooltip"]')?.textContent).toContain('社区确认的垃圾账号名单');
 
     await act(async () => {
       helpIcon.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
@@ -275,8 +276,9 @@ describe('popup App 渲染冒烟', () => {
 
     const rootEl = renderApp();
     await new Promise((resolve) => setTimeout(resolve, 150));
+    await act(async () => buttonWithText(rootEl, '名单').click());
 
-    expect(rootEl.textContent).toContain('社区黑名单');
+    expect(rootEl.textContent).toContain('社区');
     expect(rootEl.textContent).toContain('@three_votes');
     expect(rootEl.textContent).toContain('社区净票 3');
     expect(rootEl.textContent).toContain('@maintained');
@@ -299,10 +301,11 @@ describe('popup App 渲染冒烟', () => {
   });
 
   it('never sends cleanup actions to a background X tab', async () => {
+    const snapshot = communitySnapshot([{ handle: 'three_votes' }]);
     vi.stubGlobal('browser', {
       storage: {
         local: {
-          get: vi.fn().mockResolvedValue({ uiLanguage: 'zh' }),
+          get: vi.fn().mockResolvedValue({ uiLanguage: 'zh', communitySnapshot: snapshot }),
           set: storageSet,
         },
         onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
@@ -319,6 +322,7 @@ describe('popup App 渲染冒烟', () => {
 
     const rootEl = renderApp();
     await new Promise((resolve) => setTimeout(resolve, 150));
+    await act(async () => buttonWithText(rootEl, '名单').click());
     await act(async () => {
       rootEl.querySelector<HTMLButtonElement>('.community-clean-action')?.click();
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -460,7 +464,9 @@ describe('popup App 渲染冒烟', () => {
     const rootEl = renderApp();
     await new Promise((resolve) => setTimeout(resolve, 150));
 
+    // 理由文案展示在清理页（页面批量按钮旁）
     expect(rootEl.textContent).toContain('官方暂停了拉黑操作：接口排查中');
+    await act(async () => buttonWithText(rootEl, '名单').click());
     // 社区批量入口本来可用（有合格条目），降级后必须禁用
     const cleanBtn = rootEl.querySelector<HTMLButtonElement>('.community-clean-action');
     expect(cleanBtn?.disabled).toBe(true);
@@ -640,6 +646,7 @@ describe('popup App 渲染冒烟', () => {
 
     const rootEl = renderApp();
     await new Promise((resolve) => setTimeout(resolve, 150));
+    await act(async () => buttonWithText(rootEl, '名单').click());
 
     // 失败条目与原因如实展示，避免「怎么都清不掉」的无声死循环
     expect(rootEl.textContent).toContain('@cndon91');

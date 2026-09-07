@@ -1,16 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { CommunityEntry } from '@feedsieve/community-lists';
-import { getBlockedAccounts, subscribeBlocked, type BlockedAccount } from '../../../src/lib/blocked-accounts';
 import { getDailyStats, subscribeDaily, type DailyStats } from '../../../src/lib/daily-stats';
 import { buildReportText, shareUrl } from '../../../src/lib/share-card';
 import { estimateTimeSaved } from '../../../src/lib/time-saved';
 import { drawReportCard } from '../../../src/lib/share-card-image';
-import { getAllowlist, subscribeAllowlist, type AllowlistItem } from '../../../src/lib/allowlist';
-import {
-  getFollowingAllowlist,
-  subscribeFollowingAllowlist,
-  type FollowingAllowlistItem,
-} from '../../../src/lib/following-allowlist';
 import {
   blockQueueProgress,
   getPersistentBlockQueue,
@@ -26,13 +18,8 @@ import {
   type SafetyLedger,
 } from '../../../src/lib/block-safety';
 import { categoryLabel, UI_COPY, type UiLanguage } from '../../../src/lib/i18n';
-import {
-  AppIcon,
-  FAILURE_LABELS,
-  HelpIcon,
-  normalizeManualInput,
-  type PageMarkedItem,
-} from './shared';
+import { AppIcon, FAILURE_LABELS, normalizeManualInput, type PageMarkedItem } from './shared';
+import QueuePanel from './QueuePanel';
 
 interface PageBlockResult {
   blocked: string[];
@@ -61,7 +48,6 @@ interface CleanViewProps {
   pauseDestructive: boolean;
   killSwitchActive: boolean;
   killSwitchReason?: string;
-  communityEntries: CommunityEntry[];
 }
 
 const BLOCK_MESSAGE = { type: 'feedsieve:run-page-block' } as const;
@@ -75,7 +61,6 @@ export default function CleanView({
   pauseDestructive,
   killSwitchActive,
   killSwitchReason,
-  communityEntries,
 }: CleanViewProps) {
   const t = UI_COPY[language];
   const [daily, setDaily] = useState<DailyStats>({ days: {} });
@@ -85,9 +70,6 @@ export default function CleanView({
   const [blockResult, setBlockResult] = useState<PageBlockResult | null>(null);
   const [manualHandle, setManualHandle] = useState('');
   const [manualRunning, setManualRunning] = useState(false);
-  const [allowlist, setAllowlist] = useState<AllowlistItem[] | null>(null);
-  const [blocked, setBlocked] = useState<BlockedAccount[] | null>(null);
-  const [following, setFollowing] = useState<FollowingAllowlistItem[] | null>(null);
   const [queue, setQueue] = useState<PersistentBlockQueueState | null>(null);
   /** 追踪上一个队列状态：page-batch 收尾时据此判断是否该刷新页面黄框。 */
   const pageBatchQueueRef = useRef<PersistentBlockQueueState | null>(null);
@@ -121,9 +103,6 @@ export default function CleanView({
 
   useEffect(() => {
     void getDailyStats().then(setDaily);
-    void getBlockedAccounts().then(setBlocked);
-    void getAllowlist().then(setAllowlist);
-    void getFollowingAllowlist().then(setFollowing);
     void getPersistentBlockQueue().then(setQueue);
     void loadSafetyLedger().then((ledger) => {
       setSafety(ledger);
@@ -131,9 +110,6 @@ export default function CleanView({
     });
     const unsubs = [
       subscribeDaily(setDaily),
-      subscribeBlocked(setBlocked),
-      subscribeAllowlist(setAllowlist),
-      subscribeFollowingAllowlist(setFollowing),
       subscribePersistentBlockQueue(handleQueueChange),
       subscribeSafetyLedger((ledger) => {
         setSafety(ledger);
@@ -204,26 +180,6 @@ export default function CleanView({
     }
   }
 
-  async function startCommunityQueue(): Promise<void> {
-    if (cloudEligible.length === 0) return;
-    setRunning(true);
-    notify(null);
-    try {
-      await sendToXPage({
-        type: 'feedsieve:community-block-start',
-        items: cloudEligible.map((entry) => ({
-          handle: entry.handle,
-          ...(entry.x_user_id ? { xUserId: entry.x_user_id } : {}),
-          category: entry.category,
-        })),
-      });
-    } catch {
-      notify(t.openXNotice);
-    } finally {
-      setRunning(false);
-    }
-  }
-
   async function controlQueue(action: 'resume' | 'pause' | 'cancel'): Promise<void> {
     try {
       await sendToXPage({ type: `feedsieve:block-queue-${action}` });
@@ -233,23 +189,8 @@ export default function CleanView({
   }
 
   const pageCount = pageMarked?.length ?? null;
-  const protectedHandles = new Set([
-    ...(allowlist ?? []).map((item) => item.handle),
-    ...(following ?? []).map((item) => item.handle),
-    ...(blocked ?? []).map((item) => item.handle),
-  ]);
-  const cloudEligible = communityEntries.filter(
-    (entry) => !protectedHandles.has(entry.handle.toLowerCase()),
-  );
-  const cloudExcluded = communityEntries.length - cloudEligible.length;
   const queueSummary = blockQueueProgress(queue);
   const queueDone = queueSummary.success + queueSummary.failed;
-  // 社区清理失败项：队列收尾后留在卡片上按来源标签展示原因（如「缺少用户 ID」），
-  // 避免用户对「怎么都清不掉」的条目陷在无限重试里。
-  const queueFailedTasks =
-    queue && queue.source === 'community-batch'
-      ? queue.tasks.filter((task) => task.status === 'failed')
-      : [];
   const queueActive =
     queue &&
     queueSummary.total > 0 &&
@@ -387,6 +328,18 @@ export default function CleanView({
           </ul>
         ) : null}
 
+        {queueActive ? (
+          <QueuePanel
+            language={language}
+            queue={queue!}
+            done={queueDone}
+            total={queueSummary.total}
+            statusLabel={queueStatusLabel}
+            pauseNote={queuePauseNote}
+            onControl={(action) => void controlQueue(action)}
+          />
+        ) : null}
+
         <form
           className="manual-block-form"
           onSubmit={(event) => {
@@ -445,127 +398,6 @@ export default function CleanView({
         </div>
       </section>
 
-      <section className="community-clean-card" aria-labelledby="community-clean-title">
-        <div className="section-heading compact">
-          <h2 id="community-clean-title">
-            {t.communityClean} <HelpIcon text={t.communityCleanHint} />
-          </h2>
-          <span className="count-badge">{cloudEligible.length}</span>
-        </div>
-        <div className="community-clean-metrics">
-          <span>
-            {t.cloudEligible} <strong>{cloudEligible.length}</strong>
-          </span>
-          <span>
-            {t.cloudProtected} <strong>{cloudExcluded}</strong>
-          </span>
-        </div>
-
-        {cloudEligible.length > 0 ? (
-          <ul className="community-preview" aria-label={t.communityPreview}>
-            {cloudEligible.slice(0, 5).map((entry) => (
-              <li key={entry.handle}>
-                <span>@{entry.handle}</span>
-                <small>
-                  {entry.sources.includes('maintainer') && entry.sources.includes('community')
-                    ? t.communitySourceBoth(entry.net_votes)
-                    : entry.sources.includes('maintainer')
-                      ? t.communitySourceMaintainer
-                      : t.communitySourceVotes(entry.net_votes)}
-                </small>
-              </li>
-            ))}
-            {cloudEligible.length > 5 ? (
-              <li className="community-preview-more">
-                {t.communityMore(cloudEligible.length - 5)}
-              </li>
-            ) : null}
-          </ul>
-        ) : (
-          <p className="community-empty">{t.communityEmpty}</p>
-        )}
-
-        {queueActive ? (
-          <div className="queue-panel">
-            <div className="queue-line">
-              <span>
-                {queue.source === 'page-batch' ? t.pageMarked : t.communityClean} ·{' '}
-                {t.queueProgress(queueDone, queueSummary.total)}
-              </span>
-              <strong>{queueStatusLabel}</strong>
-            </div>
-            <div className="queue-track" aria-hidden="true">
-              <div
-                className="queue-fill"
-                style={{
-                  width: `${Math.round((queueDone / Math.max(queueSummary.total, 1)) * 100)}%`,
-                }}
-              />
-            </div>
-            {queue.status === 'running' ? (
-              <div className="queue-actions">
-                <button className="secondary-inline" onClick={() => void controlQueue('pause')}>
-                  {t.pause}
-                </button>
-                <button className="text-action" onClick={() => void controlQueue('cancel')}>
-                  {t.cancel}
-                </button>
-              </div>
-            ) : queue.status === 'paused' ? (
-              <div className="queue-actions">
-                <button className="secondary-inline" onClick={() => void controlQueue('resume')}>
-                  {t.resume}
-                </button>
-                <button className="text-action" onClick={() => void controlQueue('cancel')}>
-                  {t.cancel}
-                </button>
-              </div>
-            ) : null}
-            {queuePauseNote ? (
-              <p className="queue-pause-note" role="status">
-                {queuePauseNote}
-              </p>
-            ) : null}
-          </div>
-        ) : queueFailedTasks.length > 0 ? (
-          // 队列已收尾但仍有失败项：如实展示失败原因，而不是让按钮无声地重试
-          <div className="queue-panel queue-result" role="status">
-            <div className="queue-line">
-              <span>
-                {t.communityClean} · {t.queueProgress(queueDone, queueSummary.total)}
-              </span>
-              <strong>{queueStatusLabel}</strong>
-            </div>
-            <ul className="queue-failed-list">
-              {queueFailedTasks.map((task) => (
-                <li key={task.handle}>
-                  @{task.handle}（
-                  {FAILURE_LABELS[language][task.failureCode ?? ''] ??
-                    task.failureCode ??
-                    t.unknown}
-                  ）
-                </li>
-              ))}
-            </ul>
-            <button
-              className="secondary-action community-clean-action"
-              disabled={running || cloudEligible.length === 0 || pauseDestructive}
-              onClick={() => void startCommunityQueue()}
-            >
-              {t.startCommunityClean(cloudEligible.length)}
-            </button>
-          </div>
-        ) : (
-          <button
-            className="secondary-action community-clean-action"
-            disabled={running || cloudEligible.length === 0 || pauseDestructive}
-            onClick={() => void startCommunityQueue()}
-          >
-            {t.startCommunityClean(cloudEligible.length)}
-          </button>
-        )}
-      </section>
-
       <section className="summary-card" aria-labelledby="today-title">
         <div className="section-heading compact">
           <h2 id="today-title">{t.todaySummary}</h2>
@@ -610,7 +442,10 @@ export default function CleanView({
                   <div key={bar.key} className="report-bar">
                     <span className="report-bar-label">{bar.label}</span>
                     <div className="report-bar-track" aria-hidden="true">
-                      <div className="report-bar-fill" style={{ width: `${Math.max(bar.pct, 4)}%` }} />
+                      <div
+                        className="report-bar-fill"
+                        style={{ width: `${Math.max(bar.pct, 4)}%` }}
+                      />
                     </div>
                     <span className="report-bar-count">{bar.count}</span>
                   </div>
@@ -622,12 +457,7 @@ export default function CleanView({
                 <button type="button" className="secondary-inline" onClick={makeCard}>
                   {t.reportCard}
                 </button>
-                <a
-                  className="secondary-inline"
-                  href={shareHref}
-                  target="_blank"
-                  rel="noreferrer"
-                >
+                <a className="secondary-inline" href={shareHref} target="_blank" rel="noreferrer">
                   {t.share} ↗
                 </a>
               </div>
