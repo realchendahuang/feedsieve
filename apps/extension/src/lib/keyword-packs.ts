@@ -7,6 +7,7 @@ import {
   type ManifestSignature,
   type TrustedKey,
 } from '@feedsieve/community-lists';
+import { API_BASE } from './api-base';
 
 export interface KeywordPackRule {
   id: string;
@@ -43,7 +44,7 @@ interface StoredKeywordPackCatalog {
   synced_at: number;
 }
 
-export const KEYWORD_PACK_API_BASE = 'https://feedsieve-api.chendahuang.com';
+export const KEYWORD_PACK_API_BASE = API_BASE;
 const STORAGE_KEY = 'keywordPacksSnapshotV1';
 /** X 页面活跃时每 15 分钟最多检查一次远程 manifest。 */
 export const KEYWORD_PACK_SYNC_MAX_AGE_MS = 15 * 60 * 1000;
