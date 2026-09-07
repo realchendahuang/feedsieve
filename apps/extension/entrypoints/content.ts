@@ -155,6 +155,8 @@ export default defineContentScript({
     const followingCache = new Set<string>();
     /** 已拉黑名单缓存：X 偶尔仍会展示已拉黑账号（f=live 等），需要标注 */
     const blockedCache = new Set<string>();
+    /** 当前登录用户自己的 handle（小写）：自己的帖子永不折叠也永不标注 */
+    let selfHandle: string | null = null;
     /** 社区最终名单运行时状态（快照同步后的索引） */
     let community: RuntimeCommunity | null = null;
     /** 检测总开关；关闭后仍保留用户主动「标记垃圾并拉黑」入口。 */
@@ -173,6 +175,7 @@ export default defineContentScript({
     refreshAllowCache();
     refreshFollowingCache();
     refreshBlockedCache();
+    refreshSelfCache();
     void refreshCommunity();
     void refreshKeywordHeuristics();
     void getUiLanguage().then((language) => {
@@ -327,6 +330,13 @@ export default defineContentScript({
             }
           }
           if (parsed.selfHandle) {
+            // 同步本地缓存（先于存储落盘，让后续扫描立即豁免自己的帖子）；
+            // 切换账号时清理旧账号帖子的标注装饰。
+            const normalizedSelf = parsed.selfHandle.trim().replace(/^@+/, '').toLowerCase();
+            if (selfHandle !== normalizedSelf) {
+              selfHandle = normalizedSelf;
+              resetPageDecorationsForHandles(new Set([normalizedSelf]));
+            }
             void setSelfHandle(parsed.selfHandle);
           }
           const isFollowingPage = parsed.matchedEndpoints.includes('Following');
@@ -379,6 +389,20 @@ export default defineContentScript({
           // storage 异常保持旧缓存
         });
       subscribeBlocked(apply);
+    }
+
+    function refreshSelfCache(): void {
+      const apply = (handle: string | null): void => {
+        if (selfHandle === handle) return;
+        selfHandle = handle;
+        // selfHandle 首次解析或切换账号：清理自己帖子已有的标注装饰（若有）
+        if (handle) resetPageDecorationsForHandles(new Set([handle]));
+      };
+      void getSelfHandle()
+        .then(apply)
+        .catch(() => {
+          // storage 异常保持旧缓存（未知 = 不跳过，防御性）
+        });
     }
 
     /**
@@ -566,6 +590,13 @@ export default defineContentScript({
         bio,
         links: item.links,
       };
+
+      // 自己的帖子：永不折叠也永不标注（selfHandle 未知时防御性不跳过；
+      // 后面 blockedCache 等检查都不得先于它，避免自己拉黑自己这种数据异常
+      // 把帖子藏起来）。
+      if (selfHandle && handle === selfHandle) {
+        return;
+      }
 
       // 用户已经显式拉黑的账号高于检测开关/白名单保护：X 若又把它渲染出来，
       // 直接以非破坏性的方式折叠该 cell，而不是插入一个会再次改变高度的提示条。
