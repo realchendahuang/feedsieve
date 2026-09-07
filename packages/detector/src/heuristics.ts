@@ -17,8 +17,6 @@ export interface HeuristicRule {
 
 /** X 新号常见形态：「User123456789」/「用户 9527」。 */
 const DEFAULT_NAME_RE = /^(?:user|用户)[\s\u00a0]*\d{5,}$/i;
-/** handle 形态：极短字母前缀 + 长数字尾巴（如 ab12345678），经典批量注册产物。 */
-const DIGIT_TAIL_HANDLE_RE = /^[a-z]{1,10}\d{5,}$/;
 
 const defaultNameDigits: HeuristicRule = {
   id: 'default-name-digits',
@@ -27,16 +25,11 @@ const defaultNameDigits: HeuristicRule = {
     if (displayName && DEFAULT_NAME_RE.test(displayName)) {
       return '默认名 + 随机数字，疑似批量注册账号';
     }
-    // displayName 缺失通常只是 X 懒加载 / 引用帖 DOM 暂时没解析出来，
-    // 不能把“读取不到证据”当成“没有有效昵称”。只有昵称本身也明确保持
-    // 默认数字名时，handle 形态才作为第二条相互独立的证据参与判定。
-    if (
-      DIGIT_TAIL_HANDLE_RE.test(input.handle) &&
-      displayName &&
-      DEFAULT_NAME_RE.test(displayName)
-    ) {
-      return 'handle 为短前缀长数字，且昵称也是默认数字名';
-    }
+    // 曾有「handle 短前缀 + 长数字（ab12345678）作为第二条独立证据」的设想，
+    // 但 displayName 缺失通常只是 X 懒加载 / 引用帖 DOM 暂时没解析出来：
+    // 昵称没渲染出来时单凭 handle 形态判定，会误标真实用户（真实误标记录见
+    // detect.test.ts「does not treat a temporarily missing display name」）。
+    // 结论：displayName 缺失 = 证据不足，宁可漏判。
     return null;
   },
 };
@@ -122,7 +115,7 @@ const EROGENOUS_MARKERS: ReadonlyArray<readonly [RegExp, string]> = [
   [/涩|色色/, '涩'],
   [/没我骚|比我[^。]{0,8}骚/, '骚'],
   [/玩[得的]{1,2}更?开/, '玩得开'],
-  [/[🍑🍒🍆💧💋🌹〕]/u, '擦边emoji'],
+  [/[🍑🍒🍆💧💋🌹]/u, '擦边emoji'],
 ];
 
 const pornBaitZh: HeuristicRule = {
