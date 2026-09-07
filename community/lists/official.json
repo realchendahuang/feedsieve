@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
   "policy_version": 3,
-  "snapshot_version": "2026.09.07.23",
-  "generated_at": "2026-09-07T05:47:03.221Z",
+  "snapshot_version": "2026.09.07.24",
+  "generated_at": "2026-09-07T06:12:45.237Z",
   "entries": [
     {
       "handle": "__erwinmar",
@@ -23,7 +23,7 @@
         "ffff486c6500249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "_majestda",
@@ -59,8 +59,8 @@
       "fingerprints": [
         "ffff08626f602589"
       ],
-      "campaign_entry_id": "fionalegros",
-      "campaign_size": 30
+      "campaign_entry_id": "anakbuahnuna",
+      "campaign_size": 34
     },
     {
       "handle": "9hgiuhqvntj4phl",
@@ -81,7 +81,7 @@
         "ffff486d6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "abby_doylex",
@@ -102,7 +102,7 @@
         "ffff486c6500249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "abeljackc3",
@@ -181,12 +181,12 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.64,
-      "report_count": 12,
+      "community_score": 0.67,
+      "report_count": 16,
       "rescue_count": 0,
-      "net_votes": 12,
+      "net_votes": 16,
       "first_seen_at": "2026-09-07T04:11:14.000Z",
-      "updated_at": "2026-09-07T05:28:36.000Z",
+      "updated_at": "2026-09-07T06:06:42.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff086165202497",
@@ -194,7 +194,7 @@
         "ffff486d6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "agoosogas",
@@ -214,7 +214,7 @@
       "fingerprints": [
         "ffff487c6500359f"
       ],
-      "campaign_entry_id": "agoosogas",
+      "campaign_entry_id": "ilkeeesemiz",
       "campaign_size": 3
     },
     {
@@ -257,18 +257,18 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.56,
-      "report_count": 7,
+      "community_score": 0.58,
+      "report_count": 8,
       "rescue_count": 0,
-      "net_votes": 7,
+      "net_votes": 8,
       "first_seen_at": "2026-09-07T03:29:49.000Z",
-      "updated_at": "2026-09-07T04:46:47.000Z",
+      "updated_at": "2026-09-07T06:05:24.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff486767602589"
       ],
       "campaign_entry_id": "dreher_luiza",
-      "campaign_size": 5
+      "campaign_size": 6
     },
     {
       "handle": "ajjuyadav123",
@@ -279,33 +279,39 @@
         "community"
       ],
       "community_score": 0.5,
-      "report_count": 3,
+      "report_count": 5,
       "rescue_count": 0,
-      "net_votes": 3,
+      "net_votes": 5,
       "first_seen_at": "2026-09-07T01:50:37.000Z",
-      "updated_at": "2026-09-07T05:36:33.000Z",
-      "evidence_post_ids": []
+      "updated_at": "2026-09-07T06:11:20.000Z",
+      "evidence_post_ids": [],
+      "fingerprints": [
+        "ffff486767602589",
+        "ffff486d6d00249f"
+      ],
+      "campaign_entry_id": "dreher_luiza",
+      "campaign_size": 6
     },
     {
       "handle": "ajmalvirk",
       "x_user_id": "99536235",
       "aliases": [],
-      "category": "copy_paste",
+      "category": "other",
       "sources": [
         "community"
       ],
-      "community_score": 0.58,
-      "report_count": 8,
+      "community_score": 0.62,
+      "report_count": 10,
       "rescue_count": 0,
-      "net_votes": 8,
+      "net_votes": 10,
       "first_seen_at": "2026-09-07T04:13:49.000Z",
-      "updated_at": "2026-09-07T05:23:10.000Z",
+      "updated_at": "2026-09-07T06:08:34.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff4061650025be"
       ],
-      "campaign_entry_id": "hoseokiieeee_",
-      "campaign_size": 11
+      "campaign_entry_id": "tmgebjc1977",
+      "campaign_size": 14
     },
     {
       "handle": "albertreyedzzw",
@@ -342,7 +348,7 @@
         "ffff7bffaf008219"
       ],
       "campaign_entry_id": "eymencakmarnrb",
-      "campaign_size": 49
+      "campaign_size": 50
     },
     {
       "handle": "alexisgwvovg",
@@ -406,7 +412,7 @@
         "ffff7bffaf008219"
       ],
       "campaign_entry_id": "eymencakmarnrb",
-      "campaign_size": 49
+      "campaign_size": 50
     },
     {
       "handle": "alexisupowg",
@@ -427,7 +433,7 @@
         "ffff7bffaf008219"
       ],
       "campaign_entry_id": "eymencakmarnrb",
-      "campaign_size": 49
+      "campaign_size": 50
     },
     {
       "handle": "alexlomux",
@@ -448,7 +454,7 @@
         "ffff7bffaf008219"
       ],
       "campaign_entry_id": "eymencakmarnrb",
-      "campaign_size": 49
+      "campaign_size": 50
     },
     {
       "handle": "alimiaaan",
@@ -458,13 +464,18 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.57,
-      "report_count": 4,
+      "community_score": 0.56,
+      "report_count": 7,
       "rescue_count": 0,
-      "net_votes": 4,
+      "net_votes": 7,
       "first_seen_at": "2026-09-07T04:26:44.000Z",
-      "updated_at": "2026-09-07T05:28:27.000Z",
-      "evidence_post_ids": []
+      "updated_at": "2026-09-07T06:10:56.000Z",
+      "evidence_post_ids": [],
+      "fingerprints": [
+        "ffff486d6d00249f"
+      ],
+      "campaign_entry_id": "lokiztazx",
+      "campaign_size": 82
     },
     {
       "handle": "alitekinykg8",
@@ -485,7 +496,7 @@
         "ffff69d551008455"
       ],
       "campaign_entry_id": "omerkoc1kdi",
-      "campaign_size": 4
+      "campaign_size": 5
     },
     {
       "handle": "alyshamettokp",
@@ -522,7 +533,7 @@
         "ffff7bffaf008219"
       ],
       "campaign_entry_id": "eymencakmarnrb",
-      "campaign_size": 49
+      "campaign_size": 50
     },
     {
       "handle": "amberkrinepq",
@@ -581,7 +592,7 @@
         "ffff7bffaf008219"
       ],
       "campaign_entry_id": "eymencakmarnrb",
-      "campaign_size": 49
+      "campaign_size": 50
     },
     {
       "handle": "anakbuahnuna",
@@ -591,19 +602,19 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.63,
-      "report_count": 11,
+      "community_score": 0.67,
+      "report_count": 15,
       "rescue_count": 0,
-      "net_votes": 11,
+      "net_votes": 15,
       "first_seen_at": "2026-09-07T01:50:37.000Z",
-      "updated_at": "2026-09-07T05:28:48.000Z",
+      "updated_at": "2026-09-07T06:08:20.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff086367602589",
         "ffff086667602588"
       ],
-      "campaign_entry_id": "fionalegros",
-      "campaign_size": 30
+      "campaign_entry_id": "anakbuahnuna",
+      "campaign_size": 34
     },
     {
       "handle": "aniruddhsinh143",
@@ -613,18 +624,19 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.6,
-      "report_count": 9,
+      "community_score": 0.62,
+      "report_count": 10,
       "rescue_count": 0,
-      "net_votes": 9,
+      "net_votes": 10,
       "first_seen_at": "2026-09-07T03:29:49.000Z",
-      "updated_at": "2026-09-07T04:53:59.000Z",
+      "updated_at": "2026-09-07T06:03:57.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff00616500249e",
+        "ffff486d6d00249f",
         "ffff4875750025ff"
       ],
-      "campaign_entry_id": "neny_14",
+      "campaign_entry_id": "aniruddhsinh143",
       "campaign_size": 3
     },
     {
@@ -662,7 +674,7 @@
         "ffff7bffaf008219"
       ],
       "campaign_entry_id": "eymencakmarnrb",
-      "campaign_size": 49
+      "campaign_size": 50
     },
     {
       "handle": "annaloves1d123",
@@ -699,7 +711,7 @@
         "ffff7bffaf008219"
       ],
       "campaign_entry_id": "eymencakmarnrb",
-      "campaign_size": 49
+      "campaign_size": 50
     },
     {
       "handle": "antoniouvtgj",
@@ -782,6 +794,22 @@
       "evidence_post_ids": []
     },
     {
+      "handle": "ardeliaandbtve",
+      "x_user_id": "2088125923577257984",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.5,
+      "report_count": 3,
+      "rescue_count": 0,
+      "net_votes": 3,
+      "first_seen_at": "2026-09-07T01:21:59.000Z",
+      "updated_at": "2026-09-07T06:06:03.000Z",
+      "evidence_post_ids": []
+    },
+    {
       "handle": "artlohn",
       "x_user_id": "2087844237589241856",
       "aliases": [],
@@ -816,7 +844,23 @@
         "ffff486d6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
+    },
+    {
+      "handle": "atelierssaveurs",
+      "x_user_id": "245843408",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.5,
+      "report_count": 3,
+      "rescue_count": 0,
+      "net_votes": 3,
+      "first_seen_at": "2026-09-07T05:47:42.000Z",
+      "updated_at": "2026-09-07T06:11:24.000Z",
+      "evidence_post_ids": []
     },
     {
       "handle": "autumn_frommer",
@@ -826,18 +870,18 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.53,
-      "report_count": 6,
+      "community_score": 0.6,
+      "report_count": 9,
       "rescue_count": 0,
-      "net_votes": 6,
+      "net_votes": 9,
       "first_seen_at": "2026-09-07T04:11:14.000Z",
-      "updated_at": "2026-09-07T04:54:02.000Z",
+      "updated_at": "2026-09-07T06:06:31.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff486d6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "awdhesh_nema",
@@ -863,18 +907,18 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.58,
-      "report_count": 8,
+      "community_score": 0.62,
+      "report_count": 10,
       "rescue_count": 0,
-      "net_votes": 8,
+      "net_votes": 10,
       "first_seen_at": "2026-09-07T03:29:35.000Z",
-      "updated_at": "2026-09-07T04:46:52.000Z",
+      "updated_at": "2026-09-07T06:04:00.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff486d6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "aysebozkurnl8n",
@@ -884,12 +928,12 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.5,
-      "report_count": 3,
+      "community_score": 0.57,
+      "report_count": 4,
       "rescue_count": 0,
-      "net_votes": 3,
+      "net_votes": 4,
       "first_seen_at": "2026-09-07T03:11:51.000Z",
-      "updated_at": "2026-09-07T05:27:37.000Z",
+      "updated_at": "2026-09-07T06:09:34.000Z",
       "evidence_post_ids": []
     },
     {
@@ -900,12 +944,12 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.56,
-      "report_count": 7,
+      "community_score": 0.58,
+      "report_count": 8,
       "rescue_count": 0,
-      "net_votes": 7,
+      "net_votes": 8,
       "first_seen_at": "2026-09-07T03:38:39.000Z",
-      "updated_at": "2026-09-07T05:33:12.000Z",
+      "updated_at": "2026-09-07T06:06:29.000Z",
       "evidence_post_ids": []
     },
     {
@@ -916,12 +960,12 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.5,
-      "report_count": 3,
+      "community_score": 0.57,
+      "report_count": 4,
       "rescue_count": 0,
-      "net_votes": 3,
+      "net_votes": 4,
       "first_seen_at": "2026-09-07T00:53:38.000Z",
-      "updated_at": "2026-09-07T04:14:32.000Z",
+      "updated_at": "2026-09-07T05:50:57.000Z",
       "evidence_post_ids": []
     },
     {
@@ -948,13 +992,18 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.5,
-      "report_count": 3,
+      "community_score": 0.57,
+      "report_count": 4,
       "rescue_count": 0,
-      "net_votes": 3,
+      "net_votes": 4,
       "first_seen_at": "2026-09-07T01:50:37.000Z",
-      "updated_at": "2026-09-07T05:36:24.000Z",
-      "evidence_post_ids": []
+      "updated_at": "2026-09-07T06:11:13.000Z",
+      "evidence_post_ids": [],
+      "fingerprints": [
+        "ffff40616d00249e"
+      ],
+      "campaign_entry_id": "lokiztazx",
+      "campaign_size": 9
     },
     {
       "handle": "babimsouza",
@@ -975,8 +1024,8 @@
         "ffff08636f602589",
         "ffff486367602589"
       ],
-      "campaign_entry_id": "fionalegros",
-      "campaign_size": 30
+      "campaign_entry_id": "anakbuahnuna",
+      "campaign_size": 34
     },
     {
       "handle": "baharbozkustui",
@@ -1008,6 +1057,38 @@
       "net_votes": 3,
       "first_seen_at": "2026-09-07T00:54:33.000Z",
       "updated_at": "2026-09-07T05:08:50.000Z",
+      "evidence_post_ids": []
+    },
+    {
+      "handle": "bayyankutuk",
+      "x_user_id": "1179557240",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.5,
+      "report_count": 3,
+      "rescue_count": 0,
+      "net_votes": 3,
+      "first_seen_at": "2026-09-07T05:48:25.000Z",
+      "updated_at": "2026-09-07T06:10:59.000Z",
+      "evidence_post_ids": []
+    },
+    {
+      "handle": "becca_b_dawes",
+      "x_user_id": "389558010",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.5,
+      "report_count": 3,
+      "rescue_count": 0,
+      "net_votes": 3,
+      "first_seen_at": "2026-09-07T01:50:37.000Z",
+      "updated_at": "2026-09-07T06:07:23.000Z",
       "evidence_post_ids": []
     },
     {
@@ -1099,6 +1180,22 @@
       "evidence_post_ids": []
     },
     {
+      "handle": "breakingjb",
+      "x_user_id": "476040694",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.5,
+      "report_count": 3,
+      "rescue_count": 0,
+      "net_votes": 3,
+      "first_seen_at": "2026-09-07T03:48:09.000Z",
+      "updated_at": "2026-09-07T06:02:38.000Z",
+      "evidence_post_ids": []
+    },
+    {
       "handle": "briannemat6nhn",
       "x_user_id": "2087485221880893441",
       "aliases": [],
@@ -1166,16 +1263,16 @@
       "handle": "calvinl42618319",
       "x_user_id": "1568486254752448512",
       "aliases": [],
-      "category": "copy_paste",
+      "category": "other",
       "sources": [
         "community"
       ],
-      "community_score": 0.59,
-      "report_count": 4,
+      "community_score": 0.77,
+      "report_count": 9,
       "rescue_count": 0,
-      "net_votes": 4,
+      "net_votes": 9,
       "first_seen_at": "2026-09-01T10:12:06.000Z",
-      "updated_at": "2026-09-07T05:07:25.000Z",
+      "updated_at": "2026-09-07T06:08:41.000Z",
       "evidence_post_ids": []
     },
     {
@@ -1255,19 +1352,19 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.62,
-      "report_count": 10,
+      "community_score": 0.64,
+      "report_count": 12,
       "rescue_count": 0,
-      "net_votes": 10,
+      "net_votes": 12,
       "first_seen_at": "2026-09-07T03:37:31.000Z",
-      "updated_at": "2026-09-07T05:31:03.000Z",
+      "updated_at": "2026-09-07T06:06:30.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff086367602589",
         "ffff486d6500249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "cemretekin9cyq",
@@ -1289,10 +1386,10 @@
       ]
     },
     {
-      "handle": "cerradaamabil",
-      "x_user_id": "1075732530580602880",
+      "handle": "cerencetinhch5",
+      "x_user_id": "2086644097700257792",
       "aliases": [],
-      "category": "copy_paste",
+      "category": "other",
       "sources": [
         "community"
       ],
@@ -1300,8 +1397,24 @@
       "report_count": 3,
       "rescue_count": 0,
       "net_votes": 3,
+      "first_seen_at": "2026-09-06T14:03:31.000Z",
+      "updated_at": "2026-09-07T06:05:20.000Z",
+      "evidence_post_ids": []
+    },
+    {
+      "handle": "cerradaamabil",
+      "x_user_id": "1075732530580602880",
+      "aliases": [],
+      "category": "copy_paste",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.69,
+      "report_count": 6,
+      "rescue_count": 0,
+      "net_votes": 6,
       "first_seen_at": "2026-09-06T18:09:54.000Z",
-      "updated_at": "2026-09-07T05:12:14.000Z",
+      "updated_at": "2026-09-07T06:11:19.000Z",
       "evidence_post_ids": []
     },
     {
@@ -1324,7 +1437,7 @@
         "ffff486c6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "choeririri",
@@ -1345,28 +1458,32 @@
         "ffff486c6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "christinam6fbu",
       "x_user_id": "2086699866764292096",
       "aliases": [],
-      "category": "other",
+      "category": "adult_gray_traffic",
       "sources": [
-        "community"
+        "community",
+        "maintainer"
       ],
       "community_score": 0.5,
       "report_count": 3,
       "rescue_count": 0,
       "net_votes": 3,
       "first_seen_at": "2026-09-07T03:15:35.000Z",
-      "updated_at": "2026-09-07T04:44:28.000Z",
-      "evidence_post_ids": [],
+      "updated_at": "2026-09-07T06:12:45.000Z",
+      "evidence_post_ids": [
+        "2096790296478847257"
+      ],
       "fingerprints": [
         "ffff6dd151008555"
       ],
       "campaign_entry_id": "mehmetgunedrdj",
-      "campaign_size": 2
+      "campaign_size": 2,
+      "maintainer_note": "用户举报黄推引流：擦边引语+emoji话术"
     },
     {
       "handle": "christyrayne79",
@@ -1387,7 +1504,7 @@
         "ffff6036560085f7"
       ],
       "campaign_entry_id": "xmercredi",
-      "campaign_size": 3
+      "campaign_size": 4
     },
     {
       "handle": "ckanaczet",
@@ -1406,7 +1523,9 @@
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff40616d00248e"
-      ]
+      ],
+      "campaign_entry_id": "lokiztazx",
+      "campaign_size": 9
     },
     {
       "handle": "claritabar7o",
@@ -1464,12 +1583,12 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.65,
-      "report_count": 5,
+      "community_score": 0.69,
+      "report_count": 6,
       "rescue_count": 0,
-      "net_votes": 5,
+      "net_votes": 6,
       "first_seen_at": "2026-09-06T18:09:52.000Z",
-      "updated_at": "2026-09-07T05:28:36.000Z",
+      "updated_at": "2026-09-07T06:06:22.000Z",
       "evidence_post_ids": []
     },
     {
@@ -1489,6 +1608,22 @@
       "evidence_post_ids": []
     },
     {
+      "handle": "cubalandenselle",
+      "x_user_id": "4468911192",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.57,
+      "report_count": 4,
+      "rescue_count": 0,
+      "net_votes": 4,
+      "first_seen_at": "2026-09-07T05:48:02.000Z",
+      "updated_at": "2026-09-07T06:08:13.000Z",
+      "evidence_post_ids": []
+    },
+    {
       "handle": "czzpra164",
       "x_user_id": "2069757380162670592",
       "aliases": [],
@@ -1505,6 +1640,22 @@
       "evidence_post_ids": []
     },
     {
+      "handle": "dagiggs86",
+      "x_user_id": "420858773",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.57,
+      "report_count": 4,
+      "rescue_count": 0,
+      "net_votes": 4,
+      "first_seen_at": "2026-09-07T04:55:16.000Z",
+      "updated_at": "2026-09-07T06:04:14.000Z",
+      "evidence_post_ids": []
+    },
+    {
       "handle": "danielc1260",
       "x_user_id": "4832712360",
       "aliases": [],
@@ -1512,18 +1663,18 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.65,
-      "report_count": 13,
+      "community_score": 0.66,
+      "report_count": 14,
       "rescue_count": 0,
-      "net_votes": 13,
+      "net_votes": 14,
       "first_seen_at": "2026-09-07T03:37:02.000Z",
-      "updated_at": "2026-09-07T05:33:13.000Z",
+      "updated_at": "2026-09-07T05:47:34.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff486d6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "daniellalicxyb",
@@ -1549,19 +1700,19 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.65,
-      "report_count": 13,
+      "community_score": 0.67,
+      "report_count": 16,
       "rescue_count": 0,
-      "net_votes": 13,
+      "net_votes": 16,
       "first_seen_at": "2026-09-07T03:29:15.000Z",
-      "updated_at": "2026-09-07T04:54:01.000Z",
+      "updated_at": "2026-09-07T06:07:10.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff0061650025be",
         "ffff00616d00249e"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 6
+      "campaign_size": 9
     },
     {
       "handle": "debinuckloprhj",
@@ -1600,7 +1751,7 @@
         "ffff486c6500249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "dgratefuld",
@@ -1655,7 +1806,7 @@
         "ffff487d6d0024bf"
       ],
       "campaign_entry_id": "dreher_luiza",
-      "campaign_size": 5
+      "campaign_size": 6
     },
     {
       "handle": "dtm_iii",
@@ -1815,12 +1966,12 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.59,
-      "report_count": 4,
+      "community_score": 0.65,
+      "report_count": 5,
       "rescue_count": 0,
-      "net_votes": 4,
+      "net_votes": 5,
       "first_seen_at": "2026-09-06T18:09:52.000Z",
-      "updated_at": "2026-09-07T05:28:37.000Z",
+      "updated_at": "2026-09-07T05:48:35.000Z",
       "evidence_post_ids": []
     },
     {
@@ -1831,12 +1982,12 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.5,
-      "report_count": 3,
+      "community_score": 0.57,
+      "report_count": 4,
       "rescue_count": 0,
-      "net_votes": 3,
+      "net_votes": 4,
       "first_seen_at": "2026-09-07T03:31:37.000Z",
-      "updated_at": "2026-09-07T03:49:58.000Z",
+      "updated_at": "2026-09-07T06:11:27.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff223733103568"
@@ -2168,7 +2319,7 @@
         "ffff7bffaf008219"
       ],
       "campaign_entry_id": "eymencakmarnrb",
-      "campaign_size": 49
+      "campaign_size": 50
     },
     {
       "handle": "farahamir146",
@@ -2188,8 +2339,8 @@
       "fingerprints": [
         "ffff086367602589"
       ],
-      "campaign_entry_id": "fionalegros",
-      "campaign_size": 30
+      "campaign_entry_id": "anakbuahnuna",
+      "campaign_size": 34
     },
     {
       "handle": "fatmakayabwtr",
@@ -2218,12 +2369,12 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.5,
-      "report_count": 5,
+      "community_score": 0.53,
+      "report_count": 6,
       "rescue_count": 0,
-      "net_votes": 5,
+      "net_votes": 6,
       "first_seen_at": "2026-09-07T04:24:11.000Z",
-      "updated_at": "2026-09-07T05:45:00.000Z",
+      "updated_at": "2026-09-07T05:48:54.000Z",
       "evidence_post_ids": []
     },
     {
@@ -2250,18 +2401,36 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.62,
-      "report_count": 10,
+      "community_score": 0.67,
+      "report_count": 15,
       "rescue_count": 0,
-      "net_votes": 10,
+      "net_votes": 15,
       "first_seen_at": "2026-09-07T03:26:10.000Z",
-      "updated_at": "2026-09-07T04:55:48.000Z",
+      "updated_at": "2026-09-07T06:10:38.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
-        "ffff00656500248e"
+        "ffff00656500248e",
+        "ffff486d6500249f",
+        "ffff486d6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 6
+      "campaign_size": 9
+    },
+    {
+      "handle": "ferial_akhmad26",
+      "x_user_id": "3412215314",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.5,
+      "report_count": 3,
+      "rescue_count": 0,
+      "net_votes": 3,
+      "first_seen_at": "2026-09-07T05:47:36.000Z",
+      "updated_at": "2026-09-07T06:11:15.000Z",
+      "evidence_post_ids": []
     },
     {
       "handle": "fernandamuruab",
@@ -2281,7 +2450,7 @@
       "fingerprints": [
         "ffff487c6500359f"
       ],
-      "campaign_entry_id": "agoosogas",
+      "campaign_entry_id": "ilkeeesemiz",
       "campaign_size": 3
     },
     {
@@ -2304,7 +2473,7 @@
         "ffff486d6500249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "flofrasca",
@@ -2314,12 +2483,12 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.62,
-      "report_count": 10,
+      "community_score": 0.64,
+      "report_count": 12,
       "rescue_count": 0,
-      "net_votes": 10,
+      "net_votes": 12,
       "first_seen_at": "2026-09-07T03:26:56.000Z",
-      "updated_at": "2026-09-07T05:13:56.000Z",
+      "updated_at": "2026-09-07T06:04:23.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff086767602588",
@@ -2327,7 +2496,7 @@
         "ffff486d6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "fly_minhavidaa",
@@ -2401,19 +2570,19 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.62,
-      "report_count": 10,
+      "community_score": 0.64,
+      "report_count": 12,
       "rescue_count": 0,
-      "net_votes": 10,
+      "net_votes": 12,
       "first_seen_at": "2026-09-07T03:26:56.000Z",
-      "updated_at": "2026-09-07T04:46:32.000Z",
+      "updated_at": "2026-09-07T06:05:24.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff406161002496",
         "ffff48656500249f"
       ],
-      "campaign_entry_id": "gagodelfina",
-      "campaign_size": 2
+      "campaign_entry_id": "lokiztazx",
+      "campaign_size": 82
     },
     {
       "handle": "fredy_dynova",
@@ -2423,18 +2592,18 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.62,
-      "report_count": 10,
+      "community_score": 0.63,
+      "report_count": 11,
       "rescue_count": 0,
-      "net_votes": 10,
+      "net_votes": 11,
       "first_seen_at": "2026-09-07T03:25:15.000Z",
-      "updated_at": "2026-09-07T05:38:11.000Z",
+      "updated_at": "2026-09-07T06:05:21.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff40616d0025be"
       ],
-      "campaign_entry_id": "hoseokiieeee_",
-      "campaign_size": 11
+      "campaign_entry_id": "tmgebjc1977",
+      "campaign_size": 14
     },
     {
       "handle": "gabrielaed6g",
@@ -2450,6 +2619,22 @@
       "net_votes": 5,
       "first_seen_at": "2026-09-06T11:38:53.000Z",
       "updated_at": "2026-09-06T13:40:11.000Z",
+      "evidence_post_ids": []
+    },
+    {
+      "handle": "gabrielajulio4",
+      "x_user_id": "513411157",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.52,
+      "report_count": 3,
+      "rescue_count": 0,
+      "net_votes": 3,
+      "first_seen_at": "2026-09-06T21:53:04.000Z",
+      "updated_at": "2026-09-07T05:55:01.000Z",
       "evidence_post_ids": []
     },
     {
@@ -2473,7 +2658,7 @@
         "ffff406169002496"
       ],
       "campaign_entry_id": "gagodelfina",
-      "campaign_size": 2
+      "campaign_size": 3
     },
     {
       "handle": "gameanimelab",
@@ -2483,12 +2668,12 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.62,
-      "report_count": 10,
+      "community_score": 0.63,
+      "report_count": 11,
       "rescue_count": 0,
-      "net_votes": 10,
+      "net_votes": 11,
       "first_seen_at": "2026-09-07T03:37:02.000Z",
-      "updated_at": "2026-09-07T05:31:03.000Z",
+      "updated_at": "2026-09-07T05:47:14.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff486165002486"
@@ -2555,19 +2740,19 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.63,
-      "report_count": 11,
+      "community_score": 0.66,
+      "report_count": 14,
       "rescue_count": 0,
-      "net_votes": 11,
+      "net_votes": 14,
       "first_seen_at": "2026-09-07T04:16:11.000Z",
-      "updated_at": "2026-09-07T05:13:09.000Z",
+      "updated_at": "2026-09-07T06:08:40.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff08656500349f",
         "ffff086767602589"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "gigiixalvarezz",
@@ -2692,7 +2877,7 @@
         "ffff003333203168"
       ],
       "campaign_entry_id": "yigitbulutuzjk",
-      "campaign_size": 3
+      "campaign_size": 4
     },
     {
       "handle": "gumgumgumilar5",
@@ -2712,8 +2897,8 @@
       "fingerprints": [
         "ffff486767602588"
       ],
-      "campaign_entry_id": "fionalegros",
-      "campaign_size": 30
+      "campaign_entry_id": "anakbuahnuna",
+      "campaign_size": 34
     },
     {
       "handle": "haben_12",
@@ -2734,7 +2919,7 @@
         "ffff486d6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "hamza92100",
@@ -2744,13 +2929,39 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.5,
-      "report_count": 3,
+      "community_score": 0.57,
+      "report_count": 4,
       "rescue_count": 0,
-      "net_votes": 3,
+      "net_votes": 4,
       "first_seen_at": "2026-09-07T05:13:32.000Z",
-      "updated_at": "2026-09-07T05:28:50.000Z",
-      "evidence_post_ids": []
+      "updated_at": "2026-09-07T06:04:08.000Z",
+      "evidence_post_ids": [],
+      "fingerprints": [
+        "ffff486c6d00249f"
+      ],
+      "campaign_entry_id": "lokiztazx",
+      "campaign_size": 82
+    },
+    {
+      "handle": "hamzaaydinuxro",
+      "x_user_id": "2086471913216294912",
+      "aliases": [],
+      "category": "copy_paste",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.57,
+      "report_count": 4,
+      "rescue_count": 0,
+      "net_votes": 4,
+      "first_seen_at": "2026-09-07T03:20:31.000Z",
+      "updated_at": "2026-09-07T06:07:55.000Z",
+      "evidence_post_ids": [],
+      "fingerprints": [
+        "ffff225e5f009528"
+      ],
+      "campaign_entry_id": "omerkoc1kdi",
+      "campaign_size": 2
     },
     {
       "handle": "hamzayalcih769",
@@ -2781,18 +2992,18 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.6,
-      "report_count": 9,
+      "community_score": 0.62,
+      "report_count": 10,
       "rescue_count": 0,
-      "net_votes": 9,
+      "net_votes": 10,
       "first_seen_at": "2026-09-07T03:55:45.000Z",
-      "updated_at": "2026-09-07T05:30:31.000Z",
+      "updated_at": "2026-09-07T06:07:09.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff486d6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "hannahxxily",
@@ -2802,13 +3013,19 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.5,
-      "report_count": 3,
+      "community_score": 0.56,
+      "report_count": 7,
       "rescue_count": 0,
-      "net_votes": 3,
+      "net_votes": 7,
       "first_seen_at": "2026-09-07T04:55:33.000Z",
-      "updated_at": "2026-09-07T05:36:32.000Z",
-      "evidence_post_ids": []
+      "updated_at": "2026-09-07T06:11:15.000Z",
+      "evidence_post_ids": [],
+      "fingerprints": [
+        "ffff4061650025bf",
+        "ffff486d6d00249f"
+      ],
+      "campaign_entry_id": "tmgebjc1977",
+      "campaign_size": 14
     },
     {
       "handle": "hari26292072049",
@@ -2818,18 +3035,19 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.59,
-      "report_count": 4,
+      "community_score": 0.65,
+      "report_count": 5,
       "rescue_count": 0,
-      "net_votes": 4,
+      "net_votes": 5,
       "first_seen_at": "2026-09-06T10:47:15.000Z",
-      "updated_at": "2026-09-07T02:47:04.000Z",
+      "updated_at": "2026-09-07T05:47:48.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
-        "ffff4837770020f6"
+        "ffff4837770020f6",
+        "ffff6036560085f7"
       ],
       "campaign_entry_id": "xmercredi",
-      "campaign_size": 13
+      "campaign_size": 4
     },
     {
       "handle": "harikes18224639",
@@ -2992,8 +3210,8 @@
         "ffff4061610025be",
         "ffff486d6d002497"
       ],
-      "campaign_entry_id": "hoseokiieeee_",
-      "campaign_size": 11
+      "campaign_entry_id": "tmgebjc1977",
+      "campaign_size": 14
     },
     {
       "handle": "henriettabgulp",
@@ -3019,13 +3237,18 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.53,
-      "report_count": 6,
+      "community_score": 0.56,
+      "report_count": 7,
       "rescue_count": 0,
-      "net_votes": 6,
+      "net_votes": 7,
       "first_seen_at": "2026-09-07T05:05:18.000Z",
-      "updated_at": "2026-09-07T05:31:17.000Z",
-      "evidence_post_ids": []
+      "updated_at": "2026-09-07T06:06:48.000Z",
+      "evidence_post_ids": [],
+      "fingerprints": [
+        "ffff486c6d00249f"
+      ],
+      "campaign_entry_id": "lokiztazx",
+      "campaign_size": 82
     },
     {
       "handle": "hjtztlhibshdkp",
@@ -3035,12 +3258,12 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.52,
-      "report_count": 3,
+      "community_score": 0.59,
+      "report_count": 4,
       "rescue_count": 0,
-      "net_votes": 3,
+      "net_votes": 4,
       "first_seen_at": "2026-09-06T21:21:01.000Z",
-      "updated_at": "2026-09-07T03:43:10.000Z",
+      "updated_at": "2026-09-07T05:57:03.000Z",
       "evidence_post_ids": []
     },
     {
@@ -3051,13 +3274,18 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.57,
-      "report_count": 4,
+      "community_score": 0.5,
+      "report_count": 5,
       "rescue_count": 0,
-      "net_votes": 4,
+      "net_votes": 5,
       "first_seen_at": "2026-09-07T05:14:49.000Z",
-      "updated_at": "2026-09-07T05:30:13.000Z",
-      "evidence_post_ids": []
+      "updated_at": "2026-09-07T06:04:13.000Z",
+      "evidence_post_ids": [],
+      "fingerprints": [
+        "ffff086767603589"
+      ],
+      "campaign_entry_id": "anakbuahnuna",
+      "campaign_size": 34
     },
     {
       "handle": "hoseokiieeee_",
@@ -3078,8 +3306,8 @@
         "ffff40616d0024fe",
         "ffff40616d0025be"
       ],
-      "campaign_entry_id": "hoseokiieeee_",
-      "campaign_size": 11
+      "campaign_entry_id": "tmgebjc1977",
+      "campaign_size": 14
     },
     {
       "handle": "houastronut",
@@ -3101,7 +3329,7 @@
         "ffff486767602589"
       ],
       "campaign_entry_id": "dreher_luiza",
-      "campaign_size": 5
+      "campaign_size": 6
     },
     {
       "handle": "hugmeluke5sos",
@@ -3138,7 +3366,7 @@
         "ffff69d151008455"
       ],
       "campaign_entry_id": "omerkoc1kdi",
-      "campaign_size": 4
+      "campaign_size": 5
     },
     {
       "handle": "hwabougcrave",
@@ -3185,12 +3413,12 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.52,
-      "report_count": 3,
+      "community_score": 0.65,
+      "report_count": 5,
       "rescue_count": 0,
-      "net_votes": 3,
+      "net_votes": 5,
       "first_seen_at": "2026-09-06T21:20:55.000Z",
-      "updated_at": "2026-09-07T04:14:55.000Z",
+      "updated_at": "2026-09-07T05:57:00.000Z",
       "evidence_post_ids": []
     },
     {
@@ -3208,6 +3436,27 @@
       "first_seen_at": "2026-09-06T10:53:32.000Z",
       "updated_at": "2026-09-06T13:35:34.000Z",
       "evidence_post_ids": []
+    },
+    {
+      "handle": "ifuckingcatira",
+      "x_user_id": "215378800",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.59,
+      "report_count": 4,
+      "rescue_count": 0,
+      "net_votes": 4,
+      "first_seen_at": "2026-09-06T14:52:58.000Z",
+      "updated_at": "2026-09-07T05:55:01.000Z",
+      "evidence_post_ids": [],
+      "fingerprints": [
+        "ffff006c65003597"
+      ],
+      "campaign_entry_id": "kspeqsaaitfnae0",
+      "campaign_size": 3
     },
     {
       "handle": "ihyfeyydjbevwk",
@@ -3233,17 +3482,17 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.52,
-      "report_count": 3,
+      "community_score": 0.59,
+      "report_count": 4,
       "rescue_count": 0,
-      "net_votes": 3,
+      "net_votes": 4,
       "first_seen_at": "2026-09-06T14:51:33.000Z",
-      "updated_at": "2026-09-07T01:45:25.000Z",
+      "updated_at": "2026-09-07T05:57:46.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff487c6500359f"
       ],
-      "campaign_entry_id": "agoosogas",
+      "campaign_entry_id": "ilkeeesemiz",
       "campaign_size": 3
     },
     {
@@ -3293,6 +3542,27 @@
       "first_seen_at": "2026-09-06T15:52:34.000Z",
       "updated_at": "2026-09-07T00:53:52.000Z",
       "evidence_post_ids": []
+    },
+    {
+      "handle": "itaberabanotici",
+      "x_user_id": "322720079",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.5,
+      "report_count": 3,
+      "rescue_count": 0,
+      "net_votes": 3,
+      "first_seen_at": "2026-09-07T03:36:35.000Z",
+      "updated_at": "2026-09-07T06:02:41.000Z",
+      "evidence_post_ids": [],
+      "fingerprints": [
+        "ffff00646500349f"
+      ],
+      "campaign_entry_id": "lokiztazx",
+      "campaign_size": 82
     },
     {
       "handle": "jacquelynn9nwd",
@@ -3385,18 +3655,18 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.57,
-      "report_count": 4,
+      "community_score": 0.5,
+      "report_count": 5,
       "rescue_count": 0,
-      "net_votes": 4,
+      "net_votes": 5,
       "first_seen_at": "2026-09-07T04:31:57.000Z",
-      "updated_at": "2026-09-07T05:28:35.000Z",
+      "updated_at": "2026-09-07T05:48:14.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff486d6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "joeijoelle",
@@ -3480,12 +3750,12 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.52,
-      "report_count": 3,
+      "community_score": 0.59,
+      "report_count": 4,
       "rescue_count": 0,
-      "net_votes": 3,
+      "net_votes": 4,
       "first_seen_at": "2026-09-06T14:52:58.000Z",
-      "updated_at": "2026-09-07T04:21:23.000Z",
+      "updated_at": "2026-09-07T05:48:12.000Z",
       "evidence_post_ids": []
     },
     {
@@ -3506,8 +3776,8 @@
       "fingerprints": [
         "ffff086767603589"
       ],
-      "campaign_entry_id": "fionalegros",
-      "campaign_size": 30
+      "campaign_entry_id": "anakbuahnuna",
+      "campaign_size": 34
     },
     {
       "handle": "juliettesadb7k",
@@ -3543,8 +3813,8 @@
       "fingerprints": [
         "ffff4061650025be"
       ],
-      "campaign_entry_id": "hoseokiieeee_",
-      "campaign_size": 11
+      "campaign_entry_id": "tmgebjc1977",
+      "campaign_size": 14
     },
     {
       "handle": "k_na0121",
@@ -3626,18 +3896,18 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.62,
-      "report_count": 10,
+      "community_score": 0.64,
+      "report_count": 12,
       "rescue_count": 0,
-      "net_votes": 10,
+      "net_votes": 12,
       "first_seen_at": "2026-09-07T03:38:20.000Z",
-      "updated_at": "2026-09-07T05:31:16.000Z",
+      "updated_at": "2026-09-07T05:52:25.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff486267602589"
       ],
-      "campaign_entry_id": "fionalegros",
-      "campaign_size": 30
+      "campaign_entry_id": "anakbuahnuna",
+      "campaign_size": 34
     },
     {
       "handle": "katthanson",
@@ -3647,19 +3917,51 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.62,
-      "report_count": 10,
+      "community_score": 0.64,
+      "report_count": 12,
       "rescue_count": 0,
-      "net_votes": 10,
+      "net_votes": 12,
       "first_seen_at": "2026-09-07T04:25:37.000Z",
-      "updated_at": "2026-09-07T05:37:32.000Z",
+      "updated_at": "2026-09-07T06:03:44.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff086767602588",
         "ffff486d6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
+    },
+    {
+      "handle": "kbra_masal",
+      "x_user_id": "2256590346",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.52,
+      "report_count": 3,
+      "rescue_count": 0,
+      "net_votes": 3,
+      "first_seen_at": "2026-09-06T15:01:34.000Z",
+      "updated_at": "2026-09-07T05:54:04.000Z",
+      "evidence_post_ids": []
+    },
+    {
+      "handle": "kdana97",
+      "x_user_id": "404689472",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.5,
+      "report_count": 3,
+      "rescue_count": 0,
+      "net_votes": 3,
+      "first_seen_at": "2026-09-07T03:40:11.000Z",
+      "updated_at": "2026-09-07T06:02:23.000Z",
+      "evidence_post_ids": []
     },
     {
       "handle": "keremcelik17vj",
@@ -3691,6 +3993,22 @@
       "net_votes": 3,
       "first_seen_at": "2026-09-06T14:13:23.000Z",
       "updated_at": "2026-09-07T00:53:53.000Z",
+      "evidence_post_ids": []
+    },
+    {
+      "handle": "kevinwoodffpu",
+      "x_user_id": "2086607174638120960",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.5,
+      "report_count": 3,
+      "rescue_count": 0,
+      "net_votes": 3,
+      "first_seen_at": "2026-09-07T04:14:46.000Z",
+      "updated_at": "2026-09-07T05:47:50.000Z",
       "evidence_post_ids": []
     },
     {
@@ -3726,6 +4044,22 @@
       "evidence_post_ids": []
     },
     {
+      "handle": "kingstudiostech",
+      "x_user_id": "453713162",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.52,
+      "report_count": 3,
+      "rescue_count": 0,
+      "net_votes": 3,
+      "first_seen_at": "2026-09-06T18:09:24.000Z",
+      "updated_at": "2026-09-07T06:02:14.000Z",
+      "evidence_post_ids": []
+    },
+    {
       "handle": "kitwalczak1gx",
       "x_user_id": "2087844325153746945",
       "aliases": [],
@@ -3749,18 +4083,19 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.53,
-      "report_count": 6,
+      "community_score": 0.62,
+      "report_count": 10,
       "rescue_count": 0,
-      "net_votes": 6,
+      "net_votes": 10,
       "first_seen_at": "2026-09-07T04:11:13.000Z",
-      "updated_at": "2026-09-07T04:42:04.000Z",
+      "updated_at": "2026-09-07T06:08:25.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
+        "ffff086367602589",
         "ffff406c6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "kononono0610",
@@ -3947,7 +4282,7 @@
         "ffff006d65003497"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "kr05291",
@@ -4048,7 +4383,7 @@
         "ffff006465003497"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "kspeqsaaitfnae0",
@@ -4058,20 +4393,20 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.53,
-      "report_count": 6,
+      "community_score": 0.72,
+      "report_count": 7,
       "rescue_count": 0,
-      "net_votes": 6,
+      "net_votes": 7,
       "first_seen_at": "2026-09-06T10:16:02.000Z",
-      "updated_at": "2026-09-06T15:10:29.000Z",
+      "updated_at": "2026-09-07T06:10:41.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff006c65003597",
         "ffff006d65003497",
         "ffff0a577700358e"
       ],
-      "campaign_entry_id": "leocargnelutti",
-      "campaign_size": 9
+      "campaign_entry_id": "kspeqsaaitfnae0",
+      "campaign_size": 3
     },
     {
       "handle": "ksrem3",
@@ -4247,7 +4582,7 @@
         "ffff006465003497"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "kurararinet",
@@ -4273,12 +4608,12 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.5,
-      "report_count": 3,
+      "community_score": 0.59,
+      "report_count": 4,
       "rescue_count": 0,
-      "net_votes": 3,
+      "net_votes": 4,
       "first_seen_at": "2026-09-06T13:58:18.000Z",
-      "updated_at": "2026-09-06T16:44:43.000Z",
+      "updated_at": "2026-09-07T06:10:46.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff0a577700358e"
@@ -4347,7 +4682,7 @@
         "ffff486d6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "laekhena",
@@ -4469,7 +4804,7 @@
         "ffff006d65003497"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "leocargnelutti",
@@ -4556,7 +4891,7 @@
         "ffff006465003497"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "lhddp7",
@@ -4653,7 +4988,7 @@
         "ffff006465003497"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "livleo514",
@@ -4711,19 +5046,20 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.69,
-      "report_count": 18,
+      "community_score": 0.7,
+      "report_count": 20,
       "rescue_count": 0,
-      "net_votes": 18,
+      "net_votes": 20,
       "first_seen_at": "2026-09-07T03:37:02.000Z",
-      "updated_at": "2026-09-07T05:44:52.000Z",
+      "updated_at": "2026-09-07T06:06:44.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff00616500249e",
-        "ffff086c6500349f"
+        "ffff086c6500349f",
+        "ffff406d6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 6
+      "campaign_size": 9
     },
     {
       "handle": "louktan_a",
@@ -4764,8 +5100,8 @@
       "fingerprints": [
         "ffff40617d0025be"
       ],
-      "campaign_entry_id": "hoseokiieeee_",
-      "campaign_size": 11
+      "campaign_entry_id": "tmgebjc1977",
+      "campaign_size": 14
     },
     {
       "handle": "luz_cespedes02",
@@ -4844,12 +5180,12 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.52,
-      "report_count": 3,
+      "community_score": 0.59,
+      "report_count": 4,
       "rescue_count": 0,
-      "net_votes": 3,
+      "net_votes": 4,
       "first_seen_at": "2026-09-06T14:13:23.000Z",
-      "updated_at": "2026-09-07T00:53:50.000Z",
+      "updated_at": "2026-09-07T06:05:27.000Z",
       "evidence_post_ids": []
     },
     {
@@ -4887,7 +5223,7 @@
         "ffff003233203568"
       ],
       "campaign_entry_id": "yigitbulutuzjk",
-      "campaign_size": 3
+      "campaign_size": 4
     },
     {
       "handle": "maritalutton",
@@ -4980,13 +5316,19 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.5,
-      "report_count": 5,
+      "community_score": 0.63,
+      "report_count": 11,
       "rescue_count": 0,
-      "net_votes": 5,
+      "net_votes": 11,
       "first_seen_at": "2026-09-07T01:50:37.000Z",
-      "updated_at": "2026-09-07T05:37:00.000Z",
-      "evidence_post_ids": []
+      "updated_at": "2026-09-07T06:11:30.000Z",
+      "evidence_post_ids": [],
+      "fingerprints": [
+        "ffff40616900259e",
+        "ffff486d6d00249f"
+      ],
+      "campaign_entry_id": "tmgebjc1977",
+      "campaign_size": 14
     },
     {
       "handle": "maymisoe3",
@@ -5126,7 +5468,7 @@
         "ffff486767602589"
       ],
       "campaign_entry_id": "dreher_luiza",
-      "campaign_size": 5
+      "campaign_size": 6
     },
     {
       "handle": "mertpolat2oxf",
@@ -5263,19 +5605,19 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.6,
-      "report_count": 9,
+      "community_score": 0.62,
+      "report_count": 10,
       "rescue_count": 0,
-      "net_votes": 9,
+      "net_votes": 10,
       "first_seen_at": "2026-09-07T03:05:16.000Z",
-      "updated_at": "2026-09-07T04:24:35.000Z",
+      "updated_at": "2026-09-07T06:08:21.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff00616d00248e",
         "ffff406d6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 6
+      "campaign_size": 9
     },
     {
       "handle": "mistafsu",
@@ -5318,7 +5660,7 @@
         "ffff486d6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "morrisbarnick",
@@ -5354,8 +5696,8 @@
       "fingerprints": [
         "ffff486267603589"
       ],
-      "campaign_entry_id": "fionalegros",
-      "campaign_size": 30
+      "campaign_entry_id": "anakbuahnuna",
+      "campaign_size": 34
     },
     {
       "handle": "mrcwwljn_",
@@ -5365,19 +5707,19 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.62,
-      "report_count": 10,
+      "community_score": 0.63,
+      "report_count": 11,
       "rescue_count": 0,
-      "net_votes": 10,
+      "net_votes": 11,
       "first_seen_at": "2026-09-07T03:04:24.000Z",
-      "updated_at": "2026-09-07T05:45:03.000Z",
+      "updated_at": "2026-09-07T06:02:31.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff00616d00248e",
         "ffff486c6500249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 6
+      "campaign_size": 9
     },
     {
       "handle": "mrymryh1126",
@@ -5403,19 +5745,19 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.64,
-      "report_count": 12,
+      "community_score": 0.65,
+      "report_count": 13,
       "rescue_count": 0,
-      "net_votes": 12,
+      "net_votes": 13,
       "first_seen_at": "2026-09-07T03:29:46.000Z",
-      "updated_at": "2026-09-07T05:37:50.000Z",
+      "updated_at": "2026-09-07T06:05:16.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff486267602589",
         "ffff486d6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "muratgulerwf3f",
@@ -5500,7 +5842,23 @@
         "ffff486d6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
+    },
+    {
+      "handle": "nandinhanoguera",
+      "x_user_id": "260031279",
+      "aliases": [],
+      "category": "copy_paste",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.5,
+      "report_count": 3,
+      "rescue_count": 0,
+      "net_votes": 3,
+      "first_seen_at": "2026-09-07T01:50:37.000Z",
+      "updated_at": "2026-09-07T06:08:14.000Z",
+      "evidence_post_ids": []
     },
     {
       "handle": "natsukiorenji",
@@ -5522,6 +5880,38 @@
       ],
       "campaign_entry_id": "lgm_maju_1024",
       "campaign_size": 10
+    },
+    {
+      "handle": "ndrewwlomena",
+      "x_user_id": "725904600",
+      "aliases": [],
+      "category": "copy_paste",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.5,
+      "report_count": 3,
+      "rescue_count": 0,
+      "net_votes": 3,
+      "first_seen_at": "2026-09-07T01:50:37.000Z",
+      "updated_at": "2026-09-07T06:08:17.000Z",
+      "evidence_post_ids": []
+    },
+    {
+      "handle": "nealellebrecht",
+      "x_user_id": "2087478255032864768",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.52,
+      "report_count": 3,
+      "rescue_count": 0,
+      "net_votes": 3,
+      "first_seen_at": "2026-09-06T20:56:31.000Z",
+      "updated_at": "2026-09-07T05:47:38.000Z",
+      "evidence_post_ids": []
     },
     {
       "handle": "nelson_mageto",
@@ -5558,7 +5948,7 @@
         "ffff40757d0025fe",
         "ffff486d6500249f"
       ],
-      "campaign_entry_id": "neny_14",
+      "campaign_entry_id": "aniruddhsinh143",
       "campaign_size": 3
     },
     {
@@ -5578,6 +5968,27 @@
       "evidence_post_ids": []
     },
     {
+      "handle": "nigth_changes",
+      "x_user_id": "2869290675",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.5,
+      "report_count": 3,
+      "rescue_count": 0,
+      "net_votes": 3,
+      "first_seen_at": "2026-09-07T05:47:17.000Z",
+      "updated_at": "2026-09-07T06:11:17.000Z",
+      "evidence_post_ids": [],
+      "fingerprints": [
+        "ffff08656500249f"
+      ],
+      "campaign_entry_id": "lokiztazx",
+      "campaign_size": 82
+    },
+    {
       "handle": "niicaurys",
       "x_user_id": "405702156",
       "aliases": [],
@@ -5585,19 +5996,35 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.62,
-      "report_count": 10,
+      "community_score": 0.64,
+      "report_count": 12,
       "rescue_count": 0,
-      "net_votes": 10,
+      "net_votes": 12,
       "first_seen_at": "2026-09-07T03:32:01.000Z",
-      "updated_at": "2026-09-07T05:38:03.000Z",
+      "updated_at": "2026-09-07T06:06:46.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff086767602589",
         "ffff486d6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
+    },
+    {
+      "handle": "nmnnrsk",
+      "x_user_id": "2826045866",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.5,
+      "report_count": 3,
+      "rescue_count": 0,
+      "net_votes": 3,
+      "first_seen_at": "2026-09-07T00:41:48.000Z",
+      "updated_at": "2026-09-07T06:02:20.000Z",
+      "evidence_post_ids": []
     },
     {
       "handle": "no_pardons",
@@ -5685,7 +6112,7 @@
         "ffff486d6500249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "omerkoc1kdi",
@@ -5695,19 +6122,19 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.89,
-      "report_count": 20,
+      "community_score": 0.9,
+      "report_count": 22,
       "rescue_count": 0,
-      "net_votes": 20,
+      "net_votes": 22,
       "first_seen_at": "2026-09-06T14:08:19.000Z",
-      "updated_at": "2026-09-07T05:14:56.000Z",
+      "updated_at": "2026-09-07T05:49:13.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff225e5f009528",
         "ffff69d151008455"
       ],
       "campaign_entry_id": "omerkoc1kdi",
-      "campaign_size": 4
+      "campaign_size": 2
     },
     {
       "handle": "omerozeroln3",
@@ -5860,12 +6287,12 @@
         "community",
         "maintainer"
       ],
-      "community_score": 0.75,
-      "report_count": 8,
+      "community_score": 0.77,
+      "report_count": 9,
       "rescue_count": 0,
-      "net_votes": 8,
+      "net_votes": 9,
       "first_seen_at": "2026-09-06T21:47:10.000Z",
-      "updated_at": "2026-09-07T05:47:03.000Z",
+      "updated_at": "2026-09-07T06:12:45.000Z",
       "evidence_post_ids": [
         "2096654611319083171"
       ],
@@ -5905,8 +6332,24 @@
       "fingerprints": [
         "ffff4061690025fe"
       ],
-      "campaign_entry_id": "hoseokiieeee_",
-      "campaign_size": 11
+      "campaign_entry_id": "tmgebjc1977",
+      "campaign_size": 14
+    },
+    {
+      "handle": "pellotea",
+      "x_user_id": "521476051",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.5,
+      "report_count": 3,
+      "rescue_count": 0,
+      "net_votes": 3,
+      "first_seen_at": "2026-09-07T05:15:44.000Z",
+      "updated_at": "2026-09-07T06:05:47.000Z",
+      "evidence_post_ids": []
     },
     {
       "handle": "petersullihhsh",
@@ -5932,18 +6375,18 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.53,
-      "report_count": 6,
+      "community_score": 0.56,
+      "report_count": 7,
       "rescue_count": 0,
-      "net_votes": 6,
+      "net_votes": 7,
       "first_seen_at": "2026-09-07T05:07:30.000Z",
-      "updated_at": "2026-09-07T05:30:48.000Z",
+      "updated_at": "2026-09-07T05:47:59.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff486d6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "porterponeiw",
@@ -6022,12 +6465,12 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.62,
-      "report_count": 10,
+      "community_score": 0.63,
+      "report_count": 11,
       "rescue_count": 0,
-      "net_votes": 10,
+      "net_votes": 11,
       "first_seen_at": "2026-09-07T03:32:05.000Z",
-      "updated_at": "2026-09-07T05:38:12.000Z",
+      "updated_at": "2026-09-07T06:05:15.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff08696d20249d"
@@ -6041,13 +6484,18 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.5,
-      "report_count": 3,
+      "community_score": 0.53,
+      "report_count": 6,
       "rescue_count": 0,
-      "net_votes": 3,
+      "net_votes": 6,
       "first_seen_at": "2026-09-07T05:07:22.000Z",
-      "updated_at": "2026-09-07T05:41:31.000Z",
-      "evidence_post_ids": []
+      "updated_at": "2026-09-07T06:12:19.000Z",
+      "evidence_post_ids": [],
+      "fingerprints": [
+        "ffff486367602588"
+      ],
+      "campaign_entry_id": "anakbuahnuna",
+      "campaign_size": 34
     },
     {
       "handle": "rennarattedw",
@@ -6063,6 +6511,22 @@
       "net_votes": 3,
       "first_seen_at": "2026-09-06T16:50:30.000Z",
       "updated_at": "2026-09-07T04:03:06.000Z",
+      "evidence_post_ids": []
+    },
+    {
+      "handle": "richardwernett",
+      "x_user_id": "2087478194844618752",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.52,
+      "report_count": 3,
+      "rescue_count": 0,
+      "net_votes": 3,
+      "first_seen_at": "2026-09-06T20:56:10.000Z",
+      "updated_at": "2026-09-07T05:47:36.000Z",
       "evidence_post_ids": []
     },
     {
@@ -6105,12 +6569,12 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.5,
-      "report_count": 3,
+      "community_score": 0.57,
+      "report_count": 4,
       "rescue_count": 0,
-      "net_votes": 3,
+      "net_votes": 4,
       "first_seen_at": "2026-09-07T04:25:31.000Z",
-      "updated_at": "2026-09-07T05:45:17.000Z",
+      "updated_at": "2026-09-07T05:48:55.000Z",
       "evidence_post_ids": []
     },
     {
@@ -6121,13 +6585,18 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.75,
-      "report_count": 8,
+      "community_score": 0.82,
+      "report_count": 12,
       "rescue_count": 0,
-      "net_votes": 8,
+      "net_votes": 12,
       "first_seen_at": "2026-09-06T18:10:00.000Z",
-      "updated_at": "2026-09-07T05:24:02.000Z",
-      "evidence_post_ids": []
+      "updated_at": "2026-09-07T06:08:21.000Z",
+      "evidence_post_ids": [],
+      "fingerprints": [
+        "ffff486d6d00249f"
+      ],
+      "campaign_entry_id": "lokiztazx",
+      "campaign_size": 82
     },
     {
       "handle": "rocoxsmith",
@@ -6147,8 +6616,8 @@
       "fingerprints": [
         "ffff40616500259e"
       ],
-      "campaign_entry_id": "hoseokiieeee_",
-      "campaign_size": 11
+      "campaign_entry_id": "tmgebjc1977",
+      "campaign_size": 14
     },
     {
       "handle": "rolfjulianj3p",
@@ -6233,7 +6702,7 @@
         "ffff006d65003497"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "rowdyyhayy",
@@ -6259,12 +6728,12 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.65,
-      "report_count": 5,
+      "community_score": 0.69,
+      "report_count": 6,
       "rescue_count": 0,
-      "net_votes": 5,
+      "net_votes": 6,
       "first_seen_at": "2026-09-06T19:00:39.000Z",
-      "updated_at": "2026-09-07T03:43:06.000Z",
+      "updated_at": "2026-09-07T05:57:04.000Z",
       "evidence_post_ids": []
     },
     {
@@ -6338,8 +6807,8 @@
       "fingerprints": [
         "ffff006c65003597"
       ],
-      "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_entry_id": "kspeqsaaitfnae0",
+      "campaign_size": 3
     },
     {
       "handle": "sanjeet30116449",
@@ -6381,19 +6850,19 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.58,
-      "report_count": 8,
+      "community_score": 0.62,
+      "report_count": 10,
       "rescue_count": 0,
-      "net_votes": 8,
+      "net_votes": 10,
       "first_seen_at": "2026-09-07T03:25:19.000Z",
-      "updated_at": "2026-09-07T05:37:46.000Z",
+      "updated_at": "2026-09-07T06:04:08.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff406d6d00249f",
         "ffff486d6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "savannahashtyn",
@@ -6414,7 +6883,7 @@
         "ffff486d6500249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "sayrecheyenne",
@@ -6483,7 +6952,39 @@
         "ffff486c6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
+    },
+    {
+      "handle": "shawnmalboom0l",
+      "x_user_id": "2087478263517999104",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.52,
+      "report_count": 3,
+      "rescue_count": 0,
+      "net_votes": 3,
+      "first_seen_at": "2026-09-06T20:56:24.000Z",
+      "updated_at": "2026-09-07T05:47:45.000Z",
+      "evidence_post_ids": []
+    },
+    {
+      "handle": "shelbylabine",
+      "x_user_id": "1970142253",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.5,
+      "report_count": 3,
+      "rescue_count": 0,
+      "net_votes": 3,
+      "first_seen_at": "2026-09-07T05:13:47.000Z",
+      "updated_at": "2026-09-07T06:04:14.000Z",
+      "evidence_post_ids": []
     },
     {
       "handle": "shendyjanuar",
@@ -6504,8 +7005,8 @@
         "ffff00616500259e",
         "ffff486d6d00249f"
       ],
-      "campaign_entry_id": "hoseokiieeee_",
-      "campaign_size": 11
+      "campaign_entry_id": "tmgebjc1977",
+      "campaign_size": 14
     },
     {
       "handle": "sheremadraswala",
@@ -6525,8 +7026,24 @@
       "fingerprints": [
         "ffff086767602588"
       ],
-      "campaign_entry_id": "fionalegros",
-      "campaign_size": 30
+      "campaign_entry_id": "anakbuahnuna",
+      "campaign_size": 34
+    },
+    {
+      "handle": "shirleeyus4ll8",
+      "x_user_id": "2087477944713412608",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.52,
+      "report_count": 3,
+      "rescue_count": 0,
+      "net_votes": 3,
+      "first_seen_at": "2026-09-06T20:56:31.000Z",
+      "updated_at": "2026-09-07T05:47:41.000Z",
+      "evidence_post_ids": []
     },
     {
       "handle": "shreefm15979887",
@@ -6536,13 +7053,18 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.5,
-      "report_count": 3,
+      "community_score": 0.53,
+      "report_count": 6,
       "rescue_count": 0,
-      "net_votes": 3,
+      "net_votes": 6,
       "first_seen_at": "2026-09-07T05:07:03.000Z",
-      "updated_at": "2026-09-07T05:36:45.000Z",
-      "evidence_post_ids": []
+      "updated_at": "2026-09-07T06:11:40.000Z",
+      "evidence_post_ids": [],
+      "fingerprints": [
+        "ffff486667602589"
+      ],
+      "campaign_entry_id": "anakbuahnuna",
+      "campaign_size": 34
     },
     {
       "handle": "sig1023_moco",
@@ -6565,6 +7087,25 @@
       ]
     },
     {
+      "handle": "sketchantiques",
+      "x_user_id": "1278071914511183874",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.5,
+      "report_count": 5,
+      "rescue_count": 0,
+      "net_votes": 5,
+      "first_seen_at": "2026-09-07T04:55:23.000Z",
+      "updated_at": "2026-09-07T06:11:38.000Z",
+      "evidence_post_ids": [],
+      "fingerprints": [
+        "ffff48646d202496"
+      ]
+    },
+    {
       "handle": "slickslump",
       "x_user_id": "1022521869340209152",
       "aliases": [],
@@ -6572,12 +7113,28 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.52,
-      "report_count": 3,
+      "community_score": 0.59,
+      "report_count": 4,
       "rescue_count": 0,
-      "net_votes": 3,
+      "net_votes": 4,
       "first_seen_at": "2026-09-06T12:39:03.000Z",
-      "updated_at": "2026-09-07T04:21:16.000Z",
+      "updated_at": "2026-09-07T05:51:45.000Z",
+      "evidence_post_ids": []
+    },
+    {
+      "handle": "smiledamiley",
+      "x_user_id": "245165071",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.5,
+      "report_count": 5,
+      "rescue_count": 0,
+      "net_votes": 5,
+      "first_seen_at": "2026-09-07T01:50:37.000Z",
+      "updated_at": "2026-09-07T06:10:54.000Z",
       "evidence_post_ids": []
     },
     {
@@ -6600,7 +7157,7 @@
         "ffff48656520249e"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "solangesintzen",
@@ -6631,40 +7188,40 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.58,
-      "report_count": 8,
+      "community_score": 0.63,
+      "report_count": 11,
       "rescue_count": 0,
-      "net_votes": 8,
+      "net_votes": 11,
       "first_seen_at": "2026-09-07T04:18:25.000Z",
-      "updated_at": "2026-09-07T05:08:10.000Z",
+      "updated_at": "2026-09-07T06:08:29.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff486c6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "staysee__",
       "x_user_id": "1077868462670782465",
       "aliases": [],
-      "category": "other",
+      "category": "copy_paste",
       "sources": [
         "community"
       ],
-      "community_score": 0.56,
-      "report_count": 7,
+      "community_score": 0.58,
+      "report_count": 8,
       "rescue_count": 0,
-      "net_votes": 7,
+      "net_votes": 8,
       "first_seen_at": "2026-09-07T05:09:47.000Z",
-      "updated_at": "2026-09-07T05:31:22.000Z",
+      "updated_at": "2026-09-07T06:06:20.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff086667602589",
         "ffff486d6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "stephaniej4s0q",
@@ -6714,12 +7271,12 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.65,
-      "report_count": 13,
+      "community_score": 0.66,
+      "report_count": 14,
       "rescue_count": 0,
-      "net_votes": 13,
+      "net_votes": 14,
       "first_seen_at": "2026-09-07T03:05:16.000Z",
-      "updated_at": "2026-09-07T05:44:51.000Z",
+      "updated_at": "2026-09-07T06:02:35.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff006c6500349f",
@@ -6727,7 +7284,7 @@
         "ffff486c6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "suzanneberhkpw",
@@ -6753,18 +7310,19 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.53,
-      "report_count": 6,
+      "community_score": 0.6,
+      "report_count": 9,
       "rescue_count": 0,
-      "net_votes": 6,
+      "net_votes": 9,
       "first_seen_at": "2026-09-07T04:11:13.000Z",
-      "updated_at": "2026-09-07T05:14:58.000Z",
+      "updated_at": "2026-09-07T06:08:27.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
-        "ffff08636760358b"
+        "ffff08636760358b",
+        "ffff486367602589"
       ],
-      "campaign_entry_id": "fionalegros",
-      "campaign_size": 30
+      "campaign_entry_id": "anakbuahnuna",
+      "campaign_size": 34
     },
     {
       "handle": "sylviacolgcwn",
@@ -6806,18 +7364,18 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.5,
-      "report_count": 3,
+      "community_score": 0.57,
+      "report_count": 4,
       "rescue_count": 0,
-      "net_votes": 3,
+      "net_votes": 4,
       "first_seen_at": "2026-09-07T03:36:35.000Z",
-      "updated_at": "2026-09-07T05:24:49.000Z",
+      "updated_at": "2026-09-07T06:02:43.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff486d650024bf"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "tedburianio",
@@ -6843,12 +7401,12 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.57,
-      "report_count": 4,
+      "community_score": 0.53,
+      "report_count": 6,
       "rescue_count": 0,
-      "net_votes": 4,
+      "net_votes": 6,
       "first_seen_at": "2026-09-07T01:50:37.000Z",
-      "updated_at": "2026-09-07T04:54:01.000Z",
+      "updated_at": "2026-09-07T06:06:43.000Z",
       "evidence_post_ids": []
     },
     {
@@ -6869,8 +7427,8 @@
       "fingerprints": [
         "ffff086267602589"
       ],
-      "campaign_entry_id": "fionalegros",
-      "campaign_size": 30
+      "campaign_entry_id": "anakbuahnuna",
+      "campaign_size": 34
     },
     {
       "handle": "theblazejp",
@@ -6880,18 +7438,34 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.5,
-      "report_count": 5,
+      "community_score": 0.53,
+      "report_count": 6,
       "rescue_count": 0,
-      "net_votes": 5,
+      "net_votes": 6,
       "first_seen_at": "2026-09-07T01:50:37.000Z",
-      "updated_at": "2026-09-07T05:44:53.000Z",
+      "updated_at": "2026-09-07T05:47:22.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff486d6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
+    },
+    {
+      "handle": "thelovelyx",
+      "x_user_id": "895583695",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.52,
+      "report_count": 3,
+      "rescue_count": 0,
+      "net_votes": 3,
+      "first_seen_at": "2026-09-06T16:11:27.000Z",
+      "updated_at": "2026-09-07T06:03:59.000Z",
+      "evidence_post_ids": []
     },
     {
       "handle": "tinajacksojhjc",
@@ -6920,20 +7494,20 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.65,
-      "report_count": 13,
+      "community_score": 0.69,
+      "report_count": 18,
       "rescue_count": 0,
-      "net_votes": 13,
+      "net_votes": 18,
       "first_seen_at": "2026-09-07T04:11:42.000Z",
-      "updated_at": "2026-09-07T05:37:28.000Z",
+      "updated_at": "2026-09-07T06:08:28.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff00646500349f",
         "ffff40616d0025ff",
         "ffff486c6500249f"
       ],
-      "campaign_entry_id": "hoseokiieeee_",
-      "campaign_size": 11
+      "campaign_entry_id": "tmgebjc1977",
+      "campaign_size": 14
     },
     {
       "handle": "tonasalterpi40",
@@ -6969,8 +7543,8 @@
       "fingerprints": [
         "ffff486367602589"
       ],
-      "campaign_entry_id": "fionalegros",
-      "campaign_size": 30
+      "campaign_entry_id": "anakbuahnuna",
+      "campaign_size": 34
     },
     {
       "handle": "tuannavoneznam",
@@ -6996,12 +7570,12 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.69,
-      "report_count": 6,
+      "community_score": 0.72,
+      "report_count": 7,
       "rescue_count": 0,
-      "net_votes": 6,
+      "net_votes": 7,
       "first_seen_at": "2026-09-06T21:21:01.000Z",
-      "updated_at": "2026-09-07T05:45:04.000Z",
+      "updated_at": "2026-09-07T05:57:03.000Z",
       "evidence_post_ids": []
     },
     {
@@ -7018,7 +7592,7 @@
       "rescue_count": 0,
       "net_votes": 7,
       "first_seen_at": "2026-09-06T21:19:27.000Z",
-      "updated_at": "2026-09-07T05:47:03.000Z",
+      "updated_at": "2026-09-07T06:12:45.000Z",
       "evidence_post_ids": [],
       "maintainer_note": "用户举报黄推引流号：随机ID+emoji灌水话术"
     },
@@ -7067,19 +7641,20 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.6,
-      "report_count": 9,
+      "community_score": 0.64,
+      "report_count": 12,
       "rescue_count": 0,
-      "net_votes": 9,
+      "net_votes": 12,
       "first_seen_at": "2026-09-07T04:11:13.000Z",
-      "updated_at": "2026-09-07T05:17:14.000Z",
+      "updated_at": "2026-09-07T06:08:24.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff086667602589",
-        "ffff486767602589"
+        "ffff486767602589",
+        "ffff486d6d00249f"
       ],
       "campaign_entry_id": "dreher_luiza",
-      "campaign_size": 5
+      "campaign_size": 6
     },
     {
       "handle": "utxxytb36nsnuvg",
@@ -7089,13 +7664,18 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.57,
-      "report_count": 4,
+      "community_score": 0.56,
+      "report_count": 7,
       "rescue_count": 0,
-      "net_votes": 4,
+      "net_votes": 7,
       "first_seen_at": "2026-09-07T04:53:52.000Z",
-      "updated_at": "2026-09-07T05:45:09.000Z",
-      "evidence_post_ids": []
+      "updated_at": "2026-09-07T06:11:38.000Z",
+      "evidence_post_ids": [],
+      "fingerprints": [
+        "ffff4061610024be"
+      ],
+      "campaign_entry_id": "tmgebjc1977",
+      "campaign_size": 14
     },
     {
       "handle": "wandaalleni1ld",
@@ -7106,12 +7686,33 @@
         "community"
       ],
       "community_score": 0.5,
+      "report_count": 5,
+      "rescue_count": 0,
+      "net_votes": 5,
+      "first_seen_at": "2026-09-07T03:18:19.000Z",
+      "updated_at": "2026-09-07T06:11:16.000Z",
+      "evidence_post_ids": []
+    },
+    {
+      "handle": "waynewillizwhl",
+      "x_user_id": "2086697983597297664",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.52,
       "report_count": 3,
       "rescue_count": 0,
       "net_votes": 3,
-      "first_seen_at": "2026-09-07T03:18:19.000Z",
-      "updated_at": "2026-09-07T04:17:52.000Z",
-      "evidence_post_ids": []
+      "first_seen_at": "2026-09-06T12:48:27.000Z",
+      "updated_at": "2026-09-07T06:03:30.000Z",
+      "evidence_post_ids": [],
+      "fingerprints": [
+        "ffff69d151008455"
+      ],
+      "campaign_entry_id": "omerkoc1kdi",
+      "campaign_size": 5
     },
     {
       "handle": "wendolynervtmi",
@@ -7130,6 +7731,27 @@
       "evidence_post_ids": []
     },
     {
+      "handle": "william21080940",
+      "x_user_id": "1603709381979381761",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.5,
+      "report_count": 5,
+      "rescue_count": 0,
+      "net_votes": 5,
+      "first_seen_at": "2026-09-07T04:26:17.000Z",
+      "updated_at": "2026-09-07T06:08:31.000Z",
+      "evidence_post_ids": [],
+      "fingerprints": [
+        "ffff486d6d00249f"
+      ],
+      "campaign_entry_id": "lokiztazx",
+      "campaign_size": 82
+    },
+    {
       "handle": "willit32",
       "x_user_id": "15015855",
       "aliases": [],
@@ -7138,12 +7760,17 @@
         "community"
       ],
       "community_score": 0.5,
-      "report_count": 3,
+      "report_count": 5,
       "rescue_count": 0,
-      "net_votes": 3,
+      "net_votes": 5,
       "first_seen_at": "2026-09-07T01:50:37.000Z",
-      "updated_at": "2026-09-07T05:36:45.000Z",
-      "evidence_post_ids": []
+      "updated_at": "2026-09-07T06:11:21.000Z",
+      "evidence_post_ids": [],
+      "fingerprints": [
+        "ffff486d6d00249f"
+      ],
+      "campaign_entry_id": "lokiztazx",
+      "campaign_size": 82
     },
     {
       "handle": "wrcobblxgubjrj",
@@ -7169,12 +7796,12 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.5,
-      "report_count": 5,
+      "community_score": 0.58,
+      "report_count": 8,
       "rescue_count": 0,
-      "net_votes": 5,
+      "net_votes": 8,
       "first_seen_at": "2026-09-07T04:55:23.000Z",
-      "updated_at": "2026-09-07T05:44:59.000Z",
+      "updated_at": "2026-09-07T06:04:14.000Z",
       "evidence_post_ids": []
     },
     {
@@ -7199,7 +7826,7 @@
         "ffff6036560085f7"
       ],
       "campaign_entry_id": "xmercredi",
-      "campaign_size": 3
+      "campaign_size": 4
     },
     {
       "handle": "yaqelincarballo",
@@ -7225,19 +7852,19 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.77,
-      "report_count": 9,
+      "community_score": 0.79,
+      "report_count": 10,
       "rescue_count": 0,
-      "net_votes": 9,
+      "net_votes": 10,
       "first_seen_at": "2026-09-06T11:49:34.000Z",
-      "updated_at": "2026-09-07T04:14:31.000Z",
+      "updated_at": "2026-09-07T05:47:26.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff003333203569",
         "ffff007636103568"
       ],
       "campaign_entry_id": "yigitbulutuzjk",
-      "campaign_size": 3
+      "campaign_size": 4
     },
     {
       "handle": "yjudvzzjvtiio9",
@@ -7279,18 +7906,18 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.62,
-      "report_count": 10,
+      "community_score": 0.63,
+      "report_count": 11,
       "rescue_count": 0,
-      "net_votes": 10,
+      "net_votes": 11,
       "first_seen_at": "2026-09-07T03:38:27.000Z",
-      "updated_at": "2026-09-07T05:26:59.000Z",
+      "updated_at": "2026-09-07T05:47:32.000Z",
       "evidence_post_ids": [],
       "fingerprints": [
         "ffff406d6d00249f"
       ],
       "campaign_entry_id": "lokiztazx",
-      "campaign_size": 70
+      "campaign_size": 82
     },
     {
       "handle": "young_malice_",
@@ -7300,12 +7927,12 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.59,
-      "report_count": 4,
+      "community_score": 0.65,
+      "report_count": 5,
       "rescue_count": 0,
-      "net_votes": 4,
+      "net_votes": 5,
       "first_seen_at": "2026-09-06T20:13:30.000Z",
-      "updated_at": "2026-09-07T04:37:04.000Z",
+      "updated_at": "2026-09-07T06:02:27.000Z",
       "evidence_post_ids": []
     },
     {
@@ -7325,8 +7952,8 @@
       "evidence_post_ids": []
     },
     {
-      "handle": "yusfiainunajih",
-      "x_user_id": "1275479203060649984",
+      "handle": "yuliaarumsarii",
+      "x_user_id": "592456679",
       "aliases": [],
       "category": "other",
       "sources": [
@@ -7336,8 +7963,24 @@
       "report_count": 3,
       "rescue_count": 0,
       "net_votes": 3,
+      "first_seen_at": "2026-09-07T04:41:55.000Z",
+      "updated_at": "2026-09-07T05:47:55.000Z",
+      "evidence_post_ids": []
+    },
+    {
+      "handle": "yusfiainunajih",
+      "x_user_id": "1275479203060649984",
+      "aliases": [],
+      "category": "other",
+      "sources": [
+        "community"
+      ],
+      "community_score": 0.57,
+      "report_count": 4,
+      "rescue_count": 0,
+      "net_votes": 4,
       "first_seen_at": "2026-09-07T04:25:53.000Z",
-      "updated_at": "2026-09-07T05:28:46.000Z",
+      "updated_at": "2026-09-07T05:48:52.000Z",
       "evidence_post_ids": []
     },
     {
@@ -7422,12 +8065,12 @@
       "sources": [
         "community"
       ],
-      "community_score": 0.57,
-      "report_count": 4,
+      "community_score": 0.5,
+      "report_count": 5,
       "rescue_count": 0,
-      "net_votes": 4,
+      "net_votes": 5,
       "first_seen_at": "2026-09-07T03:35:46.000Z",
-      "updated_at": "2026-09-07T05:09:44.000Z",
+      "updated_at": "2026-09-07T06:04:07.000Z",
       "evidence_post_ids": []
     },
     {
