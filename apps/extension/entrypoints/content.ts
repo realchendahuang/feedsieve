@@ -1382,7 +1382,7 @@ function ensureStyles(): void {
     /* 统一细黄环标注：所有命中保持同一种视觉语言。outline 不占布局空间（区别于
        border），不会挤压格子内容；降低线宽和不透明度，避免时间线变成警戒围栏。 */
     [${MARK_ATTRIBUTE}] {
-      outline: 2px solid rgb(242 201 76 / 72%) !important;
+      outline: 2px solid rgba(245, 158, 11, 0.68) !important;
       outline-offset: -2px;
       border-radius: 16px;
     }
@@ -1394,16 +1394,17 @@ function ensureStyles(): void {
       display: flex;
       gap: 10px;
       align-items: center;
-      padding: 3px 10px;
-      margin: 2px 12px 8px;
+      padding: 3.5px 11px;
+      margin: 3px 12px 8px;
       width: fit-content;
       max-width: calc(100% - 24px);
-      border: 1px solid #f2c94c;
+      border: 1px solid rgba(245, 158, 11, 0.35);
       border-radius: 999px;
-      background: #fffbe6;
-      color: #5c4d00;
+      background: #fffbeb;
+      color: #92400e;
       font-size: 12px;
       line-height: 1.5;
+      box-shadow: 0 1px 3px rgba(245, 158, 11, 0.08);
     }
     .fs-reason { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     /* 主操作组：保持短标签，避免挤压 X 自带操作。 */
@@ -1411,45 +1412,49 @@ function ensureStyles(): void {
     /* 次操作组：抢救 / 误标？（低频治理，弱化） */
     .fs-actions-soft { gap: 4px; }
     .fs-pick { display: flex; align-items: center; gap: 4px; white-space: nowrap; cursor: pointer; user-select: none; }
-    .fs-pick input { accent-color: #d4a900; cursor: pointer; }
+    .fs-pick input { accent-color: #d97706; cursor: pointer; }
     .fs-block-now {
       min-width: 34px;
-      padding: 2px 7px;
-      border: 1px solid #d4a900;
+      padding: 2.5px 8px;
+      border: 1px solid #d97706;
       border-radius: 999px;
-      background: #f2c94c;
-      color: #3d3200;
+      background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+      color: #ffffff;
       font-size: 12px;
       font-weight: 700;
       cursor: pointer;
       white-space: nowrap;
+      box-shadow: 0 1px 2px rgba(217, 119, 6, 0.2);
+      transition: all 120ms ease;
     }
-    .fs-block-now:hover:not(:disabled) { background: #ffd950; }
+    .fs-block-now:hover:not(:disabled) { background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%); transform: translateY(-0.5px); }
     .fs-block-now:disabled { opacity: 0.6; cursor: wait; }
     .fs-allow {
-      padding: 2px 8px;
-      border: 1px solid #d9d9d9;
+      padding: 2.5px 8px;
+      border: 1px solid #d4d4d8;
       border-radius: 999px;
       background: #fff;
-      color: #999;
+      color: #71717a;
       font-size: 12px;
       cursor: pointer;
       white-space: nowrap;
+      transition: all 120ms ease;
     }
-    .fs-allow:hover { border-color: #b3b3b3; color: #666; }
+    .fs-allow:hover { border-color: #a1a1aa; color: #3f3f46; }
     .fs-manual-mark {
       margin-left: auto;
       min-width: 32px;
-      padding: 0 6px;
+      padding: 0 7px;
       min-height: 26px;
       border: 0;
       border-radius: 999px;
       background: transparent;
       color: rgb(113, 118, 123);
       font: inherit;
-      font-size: 11px;
+      font-size: 11.5px;
       cursor: pointer;
       white-space: nowrap;
+      transition: all 120ms ease;
     }
     .fs-manual-mark:hover:not(:disabled) {
       background: rgba(244, 33, 46, 0.1);
