@@ -75,7 +75,9 @@ export function noteActionResult(
 }
 
 /** UserByScreenName 的底层原因（由 resolve-user-id 回填，区分「查无此人」与「解析失败」）。 */
-export function noteResolveTrace(reason: 'ok' | 'no_csrf' | 'http' | 'network' | 'unavailable' | 'parse'): void {
+export function noteResolveTrace(
+  reason: 'ok' | 'no_csrf' | 'http' | 'network' | 'unavailable' | 'parse' | 'rate_limited',
+): void {
   pushTrace('resolve', {
     at: Date.now(),
     ok: reason === 'ok' || reason === 'unavailable',
@@ -117,7 +119,9 @@ function nativeActionState(latest: OpTrace): OpState {
 function resolveState(latest: OpTrace): OpState {
   // 查无此人 = 解析流程正常工作的确定结论
   if (latest.ok) return 'working';
-  return latest.reason === 'no_csrf' || latest.reason === 'network' ? 'degraded' : 'failed';
+  return latest.reason === 'no_csrf' || latest.reason === 'network' || latest.reason === 'rate_limited'
+    ? 'degraded'
+    : 'failed';
 }
 
 function timelineState(latest: OpTrace): OpState {

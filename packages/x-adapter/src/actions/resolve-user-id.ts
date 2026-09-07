@@ -23,20 +23,42 @@ const USER_FEATURES = encodeURIComponent(
 const FIELD_TOGGLES = encodeURIComponent('{"withAuxiliaryUserLabels":false}');
 
 /**
+ * 解析失败码（不再把所有失败静默压成 null）：
+ * - no_user      —— 查无此人（注销/被封/UserUnavailable）：确定结论，重试无意义
+ * - rate_limited —— 429 / 200+errors(88)：瞬时，调用方应重试
+ * - http_error   —— 其余非 200：携带 statusCode 供分类
+ * - network_error—— fetch 抛错：瞬时
+ * - no_csrf      —— cookie 不可读或 401/403：会话失效，上层暂停队列等重登
+ * - parse        —— 200 但形状不符（如 User 在而 rest_id 缺失）：X 契约变化，
+ *                   绝不能伪装成「查无此人」
+ */
+export type ResolveUserIdFailureCode =
+  | 'no_user'
+  | 'rate_limited'
+  | 'http_error'
+  | 'network_error'
+  | 'no_csrf'
+  | 'parse';
+
+export type ResolveUserIdOutcome =
+  | { ok: true; xUserId: string }
+  | { ok: false; code: ResolveUserIdFailureCode; statusCode?: number };
+
+/**
  * 用页面登录会话按 handle 查 rest_id。
  *
  * 必须在 x.com 页面上下文执行（content script）：需要 ct0 与页面会话凭证。
- * 解析失败（网络/未登录/账号不存在）返回 null，绝不 throw——
- * 调用方如实反馈「无ID」，不假装成功。
+ * 失败不 throw，返回结构化原因——「查无此人」与「解析失败」必须可区分，
+ * 否则队列只能给用户一个没法行动的「缺少用户 ID」。
  */
 export async function resolveUserIdByHandle(
   handle: string,
   fetchImpl: typeof fetch = fetch,
-): Promise<string | null> {
+): Promise<ResolveUserIdOutcome> {
   const csrf = readCsrfToken();
   if (!csrf) {
     noteResolveTrace('no_csrf');
-    return null;
+    return { ok: false, code: 'no_csrf' };
   }
   const variables = encodeURIComponent(
     JSON.stringify({ screen_name: handle, withSafetyModeUserFields: true }),
@@ -56,23 +78,49 @@ export async function resolveUserIdByHandle(
       },
     });
     if (!response.ok) {
+      if (response.status === 429) {
+        noteResolveTrace('rate_limited');
+        return { ok: false, code: 'rate_limited', statusCode: response.status };
+      }
       // 401/403 = 会话失效；其余 = 端点契约变化或服务端错误
-      noteResolveTrace(response.status === 401 || response.status === 403 ? 'no_csrf' : 'http');
-      return null;
+      if (response.status === 401 || response.status === 403) {
+        noteResolveTrace('no_csrf');
+        return { ok: false, code: 'no_csrf', statusCode: response.status };
+      }
+      noteResolveTrace('http');
+      return { ok: false, code: 'http_error', statusCode: response.status };
     }
     const body = (await response.json()) as {
+      errors?: Array<{ code?: number; message?: string }>;
       data?: { user?: { result?: { __typename?: string; rest_id?: string } } };
     };
-    const result = body.data?.user?.result;
-    if (result?.__typename === 'UserUnavailable' || !result?.rest_id) {
+    // X 偶尔用 200 承载失败（限流 errors code 88 等）；其余 errors 按契约异常处理
+    if (Array.isArray(body.errors) && body.errors.length > 0) {
+      const rateLimited = body.errors.some(
+        (error) => error?.code === 88 || /rate limit/i.test(String(error?.message ?? '')),
+      );
+      if (rateLimited) {
+        noteResolveTrace('rate_limited');
+        return { ok: false, code: 'rate_limited' };
+      }
+      noteResolveTrace('parse');
+      return { ok: false, code: 'parse' };
+    }
+    const user = body.data?.user;
+    if (!user || user.result?.__typename === 'UserUnavailable') {
       // 查无此人 = 解析流程正常工作的确定结论（不算失败）
       noteResolveTrace('unavailable');
-      return null;
+      return { ok: false, code: 'no_user' };
+    }
+    if (!user.result?.rest_id) {
+      // 账号存在但响应里没有 rest_id：形状迁移期，如实上报，别让用户以为账号没了
+      noteResolveTrace('parse');
+      return { ok: false, code: 'parse' };
     }
     noteResolveTrace('ok');
-    return String(result.rest_id);
+    return { ok: true, xUserId: String(user.result.rest_id) };
   } catch {
     noteResolveTrace('network');
-    return null;
+    return { ok: false, code: 'network_error' };
   }
 }

@@ -444,6 +444,24 @@ input:focus-visible + span {
   margin-top: 9px;
 }
 
+/* 顶部安全额度条：一行纯数字（剩余/上限），控件名已自述，不加解释 */
+.safety-quota-line {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  color: var(--fs-muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+/* 队列因额度暂停：一句「为什么停 + 怎么办」，不做第二层弹窗 */
+.queue-pause-note {
+  margin: 9px 0 0;
+  color: var(--fs-muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
 /* 队列收尾失败项：社区清理失败时如实列出原因，不占用运营线索 */
 .queue-result {
   padding: 10px 11px;

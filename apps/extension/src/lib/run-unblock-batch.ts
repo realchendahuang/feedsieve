@@ -9,14 +9,18 @@ import { resolveUserIdByHandle, runNativeAction } from '@feedsieve/x-adapter';
 import { getBlockedAccounts, removeBlockedAccount } from './blocked-accounts';
 import { bumpStat } from './local-stats';
 import { bumpDaily } from './daily-stats';
-import { getUserId } from './user-ids';
+import { getUserId, saveUserIds } from './user-ids';
 
 export interface UnblockBatchResult {
   unblocked: string[];
   failed: Array<{ handle: string; code: string }>;
 }
 
-/** 相邻两次撤销请求的间隔（毫秒），与批量拉黑一致。 */
+/**
+ * 相邻两次撤销请求的间隔（毫秒）。
+ * TODO(block-safety PR2, docs/BLOCK_SAFETY.md)：撤销仍 400ms 定速且不占安全账本；
+ * 与批量拉黑共用同一 pace + 响应式预算的改动留到新版后按生产数据再做。
+ */
 const PACE_MS = 400;
 
 export async function runUnblockBatch(handle?: string): Promise<UnblockBatchResult> {
@@ -49,10 +53,18 @@ async function unblockOne(
 ): Promise<{ ok: true } | { ok: false; code: string }> {
   let xUserId = cachedId ?? (await getUserId(handle));
   if (!xUserId) {
-    xUserId = (await resolveUserIdByHandle(handle)) ?? undefined;
-  }
-  if (!xUserId) {
-    return { ok: false, code: 'no-id' };
+    const resolved = await resolveUserIdByHandle(handle);
+    if (resolved.ok) {
+      xUserId = resolved.xUserId;
+      void saveUserIds([{ handle, xUserId }]).catch(() => {
+        // 回填失败不影响本次撤销
+      });
+    } else {
+      return {
+        ok: false,
+        code: resolved.code === 'no_csrf' ? 'missing_csrf' : resolved.code,
+      };
+    }
   }
 
   const result = await runNativeAction('unblock', xUserId);

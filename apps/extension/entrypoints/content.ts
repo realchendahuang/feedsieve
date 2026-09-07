@@ -64,6 +64,17 @@ import {
   type PersistentBlockQueueState,
 } from '../src/lib/block-queue-store';
 import {
+  currentAccountKey,
+  DEFAULT_PRESET,
+  loadSafetyLedger,
+  paceForPreset,
+  persistSignal,
+  RATE_LIMIT_STORM_THRESHOLD,
+  recordSafetyEvent,
+  remainingQuota,
+  type SafetyPreset,
+} from '../src/lib/block-safety';
+import {
   getUiLanguage,
   subscribeUiLanguage,
   type UiLanguage,
@@ -895,15 +906,25 @@ export default defineContentScript({
       }
       let xUserId: string | undefined | null = item.xUserId ?? (await getUserId(item.handle));
       if (!xUserId) {
-        xUserId = await resolveUserIdByHandle(item.handle);
-        if (xUserId) {
+        const resolved = await resolveUserIdByHandle(item.handle);
+        if (resolved.ok) {
+          xUserId = resolved.xUserId;
           void saveUserIds([{ handle: item.handle, xUserId }]).catch(() => {
             // 回填失败不影响本次拉黑
           });
+        } else {
+          // 解析失败如实归类：「账号已不存在」与「限流/网络」分开，后者交给队列退避重试
+          console.warn(
+            `[FeedSieve] resolve @${item.handle} failed:`,
+            resolved.code,
+            resolved.statusCode ?? '',
+          );
+          return {
+            ok: false,
+            code: resolved.code === 'no_csrf' ? 'missing_csrf' : resolved.code,
+            ...(resolved.statusCode !== undefined ? { httpStatus: resolved.statusCode } : {}),
+          };
         }
-      }
-      if (!xUserId) {
-        return { ok: false, code: 'no-id' };
       }
 
       const result = await runNativeAction('block', xUserId);
@@ -928,6 +949,8 @@ export default defineContentScript({
       await bumpStat('blocked');
       // v0.6 战报：今日拉黑 + 分类计数
       await bumpDaily('blocked', item.category);
+      // 安全账本：只记确认成功的写操作；顺手拉黑与队列拉黑共用同一本账（docs/BLOCK_SAFETY.md）
+      await recordSafetyEvent(currentAccountKey());
       // 摩擦设计：拉黑成功即自动贡献社区（无弹窗；全局开关在 contributeBlocks 内判断）
       if (options.communityVote !== false && !options.deferContribution) {
         contributeBlocks([
@@ -1215,6 +1238,7 @@ export default defineContentScript({
       const state = await getPersistentBlockQueue();
       if (!state) return { status: 'absent' };
       state.status = 'running';
+      delete state.pauseReason;
       for (const task of state.tasks) {
         if (task.status === 'running') task.status = 'pending';
         // 用户显式 resume：清掉退避计时，立即重试
@@ -1246,6 +1270,7 @@ export default defineContentScript({
       const state = await getPersistentBlockQueue();
       if (!state) return { status: 'absent' };
       state.status = status;
+      state.pauseReason = 'user';
       await setPersistentBlockQueue(state);
       return { status };
     }
@@ -1278,7 +1303,14 @@ export default defineContentScript({
         perform: async (task) => {
           // 恢复/换源后 source 可能变化：每次执行按当前队列状态取 origin 与贡献策略
           const current = await getPersistentBlockQueue();
-          return blockOne(
+          const accountKey = currentAccountKey();
+          // 安全额度：响应式预算用尽则本任务不发请求，走 quota_exhausted → 整队暂停（次日手动继续）
+          const ledger = await loadSafetyLedger(accountKey);
+          safetyPresetCache = ledger.preset;
+          if (remainingQuota(ledger, Date.now()) <= 0) {
+            return { ok: false, code: 'quota_exhausted' };
+          }
+          const outcome = await blockOne(
             {
               handle: task.handle,
               ...(task.xUserId ? { xUserId: task.xUserId } : {}),
@@ -1292,7 +1324,28 @@ export default defineContentScript({
               batchId: current?.id,
             },
           );
+          // 429 风暴：连续 RATE_LIMIT_STORM_THRESHOLD 次 429 不再退避硬磨——
+          // 收缩当日预算（砍半）并升级为整队暂停（docs/BLOCK_SAFETY.md Layer B/C）
+          if (!outcome.ok && outcome.code === 'rate_limited') {
+            consecutiveRateLimited += 1;
+            if (consecutiveRateLimited >= RATE_LIMIT_STORM_THRESHOLD) {
+              consecutiveRateLimited = 0;
+              await persistSignal(accountKey, 'rate_limit_storm');
+              return { ok: false, code: 'rate_limit_storm' };
+            }
+            return outcome;
+          }
+          consecutiveRateLimited = 0;
+          // 服务端明确拒绝写操作（登出/风控锁定）：当天预算清零，账号红线收缩
+          // TODO(block-safety PR2, docs/BLOCK_SAFETY.md)：Arkose/登录墙（challenge）检测
+          // 待真机验证 X 验证码响应特征后在此并链（persistSignal(accountKey, 'challenge')）
+          if (!outcome.ok && outcome.code === 'auth_required') {
+            await persistSignal(accountKey, 'auth_required');
+          }
+          return outcome;
         },
+        // 成功后相邻间隔按安全档位「base + 抖动」，避免固定节拍器（docs/BLOCK_SAFETY.md Layer A）
+        successPaceMs: () => paceForPreset(safetyPresetCache, Math.random),
         onSuccess: (task) => {
           // 队列侧页面副作用：移除黄框并隐藏该账号推文（对齐 X 原生拉黑行为）
           blockedCache.add(task.handle);
@@ -1306,6 +1359,11 @@ export default defineContentScript({
 
 /** bio 内存缓存上限（每页会话），防止超长会话无界增长。 */
 const BIO_CACHE_MAX = 2000;
+
+/** 安全档位缓存：每次账本读取时刷新，供 successPaceMs 同步注入（runner 的 pace 是同步函数）。 */
+let safetyPresetCache: SafetyPreset = DEFAULT_PRESET;
+/** 连续 429 计数：达到阈值升级为 rate_limit_storm（收缩当日预算 + 整队暂停）。 */
+let consecutiveRateLimited = 0;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));

@@ -16,11 +16,15 @@ describe('classifyFailure（失败分类）', () => {
     ['auth_required', 403, 'pause'],
     ['missing_csrf', undefined, 'pause'],
     ['kill_switch', undefined, 'pause'],
+    ['quota_exhausted', undefined, 'pause'],
+    ['rate_limit_storm', undefined, 'pause'],
     ['http_error', 404, 'unsupported'],
     ['http_error', 405, 'unsupported'],
     ['http_error', 410, 'unsupported'],
     ['http_error', 400, 'permanent'],
     ['no-id', undefined, 'permanent'],
+    ['no_user', undefined, 'permanent'],
+    ['parse', undefined, 'permanent'],
     ['unknown_code', undefined, 'permanent'],
   ])('%s / %s -> %s', (code, httpStatus, expected) => {
     expect(classifyFailure({ code, httpStatus })).toBe(expected);

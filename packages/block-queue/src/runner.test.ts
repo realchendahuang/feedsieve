@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { PACE_FLOOR_MS } from './failure';
 import { runQueuedBlocks, type QueueRunnerOptions, type QueueSession, type TaskRunRecord } from './runner';
 
 interface FakeTask extends TaskRunRecord {
@@ -14,13 +15,19 @@ interface Harness {
   perform: ReturnType<typeof vi.fn>;
   onSuccess: ReturnType<typeof vi.fn>;
   saveCount: () => number;
+  sleeps: number[];
   run: () => Promise<void>;
 }
 
-function makeHarness(initialTasks: FakeTask[], initialStatus: QueueSession<FakeTask>['status'] = 'running'): Harness {
+function makeHarness(
+  initialTasks: FakeTask[],
+  initialStatus: QueueSession<FakeTask>['status'] = 'running',
+  overrides: Partial<QueueRunnerOptions<FakeTask>> = {},
+): Harness {
   let session: QueueSession<FakeTask> = { status: initialStatus, tasks: [...initialTasks] };
   let saves = 0;
   let clock = 1_000_000;
+  const sleeps: number[] = [];
   const perform = vi.fn(async () => {
     return { ok: true } as const;
   });
@@ -34,10 +41,12 @@ function makeHarness(initialTasks: FakeTask[], initialStatus: QueueSession<FakeT
     perform,
     onSuccess,
     now: () => clock,
-    sleep: async () => {
-      // 测试里瞬时推进时钟，避免真实等待
-      clock += 250;
+    sleep: async (ms) => {
+      // 测试里瞬时推进时钟，避免真实等待；同时留档以便断言注入的节奏
+      sleeps.push(ms);
+      clock += ms;
     },
+    ...overrides,
   };
   return {
     session: session!,
@@ -48,6 +57,7 @@ function makeHarness(initialTasks: FakeTask[], initialStatus: QueueSession<FakeT
       return onSuccess;
     },
     saveCount: () => saves,
+    sleeps,
     run: () => runQueuedBlocks(options),
   };
 }
@@ -96,15 +106,38 @@ describe('runQueuedBlocks（持久化队列 runner）', () => {
     h.perform.mockResolvedValue({ ok: false, code: 'auth_required', httpStatus: 403 });
     await h.run();
     expect(h.session.status).toBe('paused');
+    expect(h.session.pauseReason).toBe('auth_required');
     expect(h.session.tasks[0]).toMatchObject({ status: 'pending', lastErrorCode: 'auth_required' });
 
-    // 用户重登后 resume：同一 runner 继续执行
+    // 用户重登后 resume：同一 runner 继续执行，pauseReason 随成功清除
     h.session.status = 'running';
     h.perform.mockReset();
     h.perform.mockResolvedValue({ ok: true });
     await h.run();
     expect(h.session.tasks[0]?.status).toBe('success');
     expect(h.session.status).toBe('completed');
+    expect(h.session.pauseReason).toBeUndefined();
+  });
+
+  it('quota_exhausted（安全额度用尽）整队列暂停并记录 pauseReason，任务保持 pending', async () => {
+    const h = makeHarness([task('quota'), task('rest')]);
+    h.perform.mockResolvedValue({ ok: false, code: 'quota_exhausted' });
+    await h.run();
+    expect(h.session.status).toBe('paused');
+    expect(h.session.pauseReason).toBe('quota_exhausted');
+    expect(h.session.tasks.map((t) => t.status)).toEqual(['pending', 'pending']);
+    // 额度暂停不发第二路请求：quota 任务只试一次
+    expect(h.perform).toHaveBeenCalledTimes(1);
+  });
+
+  it('successPaceMs 注入生效：成功后按注入节奏休眠；默认仍为 PACE_FLOOR_MS', async () => {
+    const injected = makeHarness([task('a')], 'running', { successPaceMs: () => 1500 });
+    await injected.run();
+    expect(injected.sleeps).toContain(1500);
+
+    const defaulted = makeHarness([task('a')]);
+    await defaulted.run();
+    expect(defaulted.sleeps).toContain(PACE_FLOOR_MS);
   });
 
   it('permanent / unsupported 单任务判死，队列继续其它任务', async () => {

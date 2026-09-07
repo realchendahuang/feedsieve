@@ -6,8 +6,9 @@
  *
  * 特性：
  * - transient 失败按任务退避重试（指数退避 + Retry-After + 抖动），不暂停整个队列
- * - pause 失败暂停队列（认证失效 / 官方暂停），等用户重登或开关解除后 resume
+ * - pause 失败暂停队列（认证失效 / 官方暂停 / 安全额度用尽），等用户重登、开关解除或手动继续
  * - permanent / unsupported 单任务判死
+ * - 成功后按注入节奏休眠（successPaceMs，默认 400ms），宿主可给「base + 抖动」防固定节拍
  * - 每次迭代重新 load：pause/cancel/页面刷新都能安全中断
  * - 短 sleep 分片：暂停/取消在 ≤250ms 内生效
  */
@@ -28,6 +29,8 @@ export interface TaskRunRecord {
 export interface QueueSession<T extends TaskRunRecord> {
   status: 'running' | 'paused' | 'completed' | 'cancelled';
   tasks: T[];
+  /** 最近一次暂停原因（如 quota_exhausted / auth_required / user），host 侧可读 */
+  pauseReason?: string;
 }
 
 export type QueueRunOutcome =
@@ -41,6 +44,8 @@ export interface QueueRunnerOptions<T extends TaskRunRecord> {
   perform(task: T): Promise<QueueRunOutcome>;
   /** 成功收尾（宿主侧页面副作用等），在任务标记 success 之后调用。 */
   onSuccess?(task: T): Promise<void> | void;
+  /** 成功后相邻任务间隔（ms）——供宿主注入「base + 抖动」节奏；默认 PACE_FLOOR_MS。 */
+  successPaceMs?(): number;
   now?(): number;
   sleep?(ms: number): Promise<void>;
 }
@@ -60,6 +65,7 @@ export async function runQueuedBlocks<T extends TaskRunRecord>(
 ): Promise<void> {
   const now = options.now ?? Date.now;
   const sleep = options.sleep ?? defaultSleep;
+  const successPaceMs = options.successPaceMs ?? (() => PACE_FLOOR_MS);
 
   for (;;) {
     const session = await options.load();
@@ -71,6 +77,7 @@ export async function runQueuedBlocks<T extends TaskRunRecord>(
     );
     if (!task) {
       session.status = 'completed';
+      delete session.pauseReason;
       await options.save(session);
       return;
     }
@@ -96,11 +103,12 @@ export async function runQueuedBlocks<T extends TaskRunRecord>(
       delete current.lastErrorCode;
       delete current.retryAt;
       delete current.retryAfterMs;
+      delete reloaded.pauseReason;
       await options.save(reloaded);
       if (options.onSuccess) {
         await options.onSuccess(task);
       }
-      await sleep(PACE_FLOOR_MS);
+      await sleep(successPaceMs());
       continue;
     }
 
@@ -114,9 +122,10 @@ export async function runQueuedBlocks<T extends TaskRunRecord>(
     const failureClass = classifyFailure({ code: outcome.code, httpStatus: outcome.httpStatus });
 
     if (failureClass === 'pause') {
-      // 认证失效 / 缺 CSRF / 官方暂停：整队列暂停，等重登或开关解除后 resume
+      // 认证失效 / 缺 CSRF / 官方暂停 / 安全额度用尽：整队列暂停，等重登、开关解除或手动继续
       current.status = 'pending';
       reloaded.status = 'paused';
+      reloaded.pauseReason = outcome.code;
       await options.save(reloaded);
       return;
     }

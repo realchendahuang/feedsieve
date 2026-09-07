@@ -60,6 +60,10 @@ export const UI_COPY = {
     queuePaused: '已暂停',
     queueCompleted: '已完成',
     queueCancelled: '已取消',
+    safetyQuota: (used: number, limit: number) => `今日安全额度 ${used}/${limit}`,
+    queuePausedQuota: (limit: number) =>
+      `今天的安全上限已到（${limit}/24h）。剩下的还在队列里，明天可继续。`,
+    queuePausedRateLimit: '短时间请求过多，已暂停。等 15 分钟后再继续。',
     pause: '暂停',
     resume: '继续',
     cancel: '取消',
@@ -231,6 +235,11 @@ export const UI_COPY = {
     queuePaused: 'Paused',
     queueCompleted: 'Completed',
     queueCancelled: 'Cancelled',
+    safetyQuota: (used: number, limit: number) => `Daily safety quota ${used}/${limit}`,
+    queuePausedQuota: (limit: number) =>
+      `Daily safety limit reached (${limit}/24h). The rest stays queued — continue tomorrow.`,
+    queuePausedRateLimit:
+      'Too many requests in a short window. Paused — try again in about 15 minutes.',
     pause: 'Pause',
     resume: 'Resume',
     cancel: 'Cancel',

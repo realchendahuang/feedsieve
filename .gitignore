@@ -13,3 +13,6 @@ coverage/
 
 # 发布者签名私钥（scripts/keygen.mjs 生成，永远不提交）
 /.secrets/
+
+# 本地会话计划产物（不入库）
+/.zcode/

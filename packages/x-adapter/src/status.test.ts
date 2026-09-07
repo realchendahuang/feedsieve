@@ -61,11 +61,13 @@ describe('readCapabilities（非破坏性观测汇总）', () => {
     expect(shouldPauseDestructive(caps)).toBe(true);
   });
 
-  it('resolve 查无此人算 working；no_csrf 算 degraded', () => {
+  it('resolve 查无此人算 working；no_csrf/限流/网络算 degraded', () => {
     document.cookie = 'ct0=garbage-token';
     noteResolveTrace('unavailable');
     expect(readCapabilities().userIdResolution).toBe('working');
     noteResolveTrace('no_csrf');
+    expect(readCapabilities().userIdResolution).toBe('degraded');
+    noteResolveTrace('rate_limited');
     expect(readCapabilities().userIdResolution).toBe('degraded');
   });
 

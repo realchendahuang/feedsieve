@@ -42,6 +42,8 @@ export interface PersistentBlockQueueState {
   targetTabId?: number;
   status: PersistentBlockQueueStatus;
   tasks: PersistentBlockTask[];
+  /** 最近一次暂停原因（quota_exhausted / auth_required / user …），popup 按它给专属文案 */
+  pauseReason?: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -117,6 +119,7 @@ function normalizeQueue(value: unknown): PersistentBlockQueueState | null {
     ...(typeof raw.targetTabId === 'number' ? { targetTabId: raw.targetTabId } : {}),
     status: raw.status as PersistentBlockQueueStatus,
     tasks,
+    ...(typeof raw.pauseReason === 'string' ? { pauseReason: raw.pauseReason } : {}),
     createdAt: Number(raw.createdAt) || Date.now(),
     updatedAt: Number(raw.updatedAt) || Date.now(),
   };

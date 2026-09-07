@@ -61,6 +61,34 @@ describe('持久化拉黑队列', () => {
     });
   });
 
+  it('保留 runner 写入的 pauseReason，供 popup 区分暂停原因', async () => {
+    storage.persistentBlockQueueV1 = {
+      id: 'paused-queue',
+      source: 'community-batch',
+      status: 'paused',
+      pauseReason: 'quota_exhausted',
+      createdAt: 1,
+      updatedAt: 2,
+      tasks: [{ handle: 'quota', category: 'other', status: 'pending' }],
+    };
+    expect(await getPersistentBlockQueue()).toMatchObject({
+      id: 'paused-queue',
+      status: 'paused',
+      pauseReason: 'quota_exhausted',
+    });
+    // 无 pauseReason 的旧队列正常兼容（字段可选）
+    storage.persistentBlockQueueV1 = {
+      id: 'legacy-paused',
+      source: 'page-batch',
+      status: 'paused',
+      createdAt: 1,
+      updatedAt: 2,
+      tasks: [],
+    };
+    const restored = await getPersistentBlockQueue();
+    expect(restored?.pauseReason).toBeUndefined();
+  });
+
   it('兼容旧社区队列，不要求旧任务包含证据字段', async () => {
     storage.persistentBlockQueueV1 = {
       id: 'legacy-queue',

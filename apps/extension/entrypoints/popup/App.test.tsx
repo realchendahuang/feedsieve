@@ -527,10 +527,12 @@ describe('popup App 渲染冒烟', () => {
 
   it('页面批量拉黑队列完成后重新拉取黄框，「一键拉黑全部」随真实剩余禁用', async () => {
     const snapshot = communitySnapshot([{ handle: 'three_votes' }]);
-    // holder 对象：TS 控制流看不到回调内赋值，直接 let + ?. 会被收窄成不可调用
-    const queueListenerHolder: {
-      current: ((changes: Record<string, unknown>, areaName: string) => void) | null;
-    } = { current: null };
+    // push 模式收集所有 addListener 注册的回调：popup 同时订阅队列与安全账本等多个 storage 通道，
+    // 单槽位 holder 会让后注册的订阅顶掉队列回调（真实浏览器是 N 个监听器并存）
+    const queueListeners: Array<(changes: Record<string, unknown>, areaName: string) => void> = [];
+    const fireStorageChange = (changes: Record<string, unknown>): void => {
+      for (const listener of queueListeners) listener(changes, 'local');
+    };
     let storedQueue: PersistentBlockQueueState | null = null;
     vi.stubGlobal('browser', {
       storage: {
@@ -544,7 +546,7 @@ describe('popup App 渲染冒烟', () => {
         },
         onChanged: {
           addListener: vi.fn((listener: (changes: Record<string, unknown>, areaName: string) => void) => {
-            queueListenerHolder.current = listener;
+            queueListeners.push(listener);
           }),
           removeListener: vi.fn(),
         },
@@ -578,12 +580,12 @@ describe('popup App 渲染冒烟', () => {
       createdAt: 0,
       updatedAt: 0,
     };
-    queueListenerHolder.current?.({ persistentBlockQueueV1: {} }, 'local');
+    fireStorageChange({ persistentBlockQueueV1: {} });
     await new Promise((resolve) => setTimeout(resolve, 30));
 
     tabSendMessage.mockResolvedValueOnce([]);
     storedQueue = { ...storedQueue!, status: 'completed', updatedAt: 1 };
-    queueListenerHolder.current?.({ persistentBlockQueueV1: {} }, 'local');
+    fireStorageChange({ persistentBlockQueueV1: {} });
     await new Promise((resolve) => setTimeout(resolve, 30));
 
     const refreshCalls = tabSendMessage.mock.calls.filter(([, message]) =>
@@ -641,5 +643,55 @@ describe('popup App 渲染冒烟', () => {
     // 剩余可清理条目仍在，可重试
     const retry = rootEl.querySelector<HTMLButtonElement>('.community-clean-action');
     expect(retry?.disabled).toBe(false);
+  });
+
+  it('页面批量收尾有失败项时，在当前页面卡片如实展示原因（账号已消失与解析失败分开）', async () => {
+    const failedQueue: PersistentBlockQueueState = {
+      id: 'q3',
+      source: 'page-batch',
+      status: 'completed',
+      tasks: [
+        {
+          handle: 'mtzntzvcuuvan5',
+          category: 'adult_gray_traffic',
+          status: 'failed',
+          failureCode: 'no_user',
+          lastErrorCode: 'no_user',
+        },
+        {
+          handle: 'petersulli92sm',
+          category: 'adult_gray_traffic',
+          status: 'failed',
+          failureCode: 'rate_limited',
+          lastErrorCode: 'rate_limited',
+        },
+      ],
+      createdAt: 0,
+      updatedAt: 1,
+    };
+    vi.stubGlobal('browser', {
+      storage: {
+        local: {
+          get: vi.fn().mockResolvedValue({
+            uiLanguage: 'zh',
+            persistentBlockQueueV1: failedQueue,
+          }),
+          set: vi.fn().mockResolvedValue(undefined),
+        },
+        onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+      },
+      tabs: {
+        query: vi.fn().mockResolvedValue([{ id: 1, active: true, url: 'https://x.com/search' }]),
+        sendMessage: tabSendMessage,
+      },
+      runtime: { sendMessage: runtimeSendMessage },
+    });
+
+    const rootEl = renderApp();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    // 死账号与瞬时失败语义分开：前者不用重试，后者等待重试
+    expect(rootEl.textContent).toContain('@mtzntzvcuuvan5（账号已不存在）');
+    expect(rootEl.textContent).toContain('@petersulli92sm（请求过于频繁）');
   });
 });

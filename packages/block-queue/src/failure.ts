@@ -3,7 +3,8 @@
  *
  * 分类决定恢复语义：
  * - transient  —— 限流/网络/5xx：单任务按指数退避重试（含 Retry-After），不阻塞队列其它任务
- * - pause      —— 认证失效 / 缺 CSRF / 官方暂停：整个队列暂停，等用户重登或开关解除
+ * - pause      —— 认证失效 / 缺 CSRF / 官方暂停 / 安全额度用尽：整个队列暂停，
+ *                  等用户重登、开关解除或次日手动继续（quota_exhausted 见 docs/BLOCK_SAFETY.md）
  * - permanent  —— 目标不存在 / 永久 4xx：单任务判死
  * - unsupported—— 端点被移除（404/405/410）：X 侧结构性变化，停止并提示版本兼容问题
  */
@@ -26,6 +27,8 @@ export function classifyFailure(failure: FailureInfo): FailureClass {
     case 'auth_required':
     case 'missing_csrf':
     case 'kill_switch':
+    case 'quota_exhausted':
+    case 'rate_limit_storm':
       return 'pause';
     case 'rate_limited':
     case 'network_error':
@@ -38,8 +41,14 @@ export function classifyFailure(failure: FailureInfo): FailureClass {
         return 'unsupported';
       }
       return 'permanent';
+    case 'no_user':
+      // 账号已不存在（注销/被封）：重试无意义
+      return 'permanent';
+    case 'parse':
+      // 响应形状/契约异常：结构性问题，重试同样无意义
+      return 'permanent';
     default:
-      // no-id / 其它业务失败码：不盲目重试
+      // no-id（旧版遗留）/ 其它业务失败码：不盲目重试
       return 'permanent';
   }
 }
@@ -58,4 +67,17 @@ export function nextBackoffMs(consecutiveFailures: number, retryAfterMs?: number
   const delay = retryAfterMs !== undefined ? Math.max(retryAfterMs, PACE_FLOOR_MS) : base;
   const jitter = delay * JITTER_RATIO * Math.random();
   return Math.round(delay + jitter);
+}
+
+/**
+ * 成功后相邻动作的间隔：base + random(0, jitter)。
+ * 固定间隔等于节拍器，X 对规律自动化更敏感；base/jitter 由宿主按安全档位给定
+ * （见 apps/extension/src/lib/block-safety.ts 与 docs/BLOCK_SAFETY.md）。
+ */
+export function jitteredPaceMs(
+  baseMs: number,
+  jitterMs: number,
+  random: () => number = Math.random,
+): number {
+  return Math.round(Math.max(0, baseMs) + Math.max(0, jitterMs) * random());
 }

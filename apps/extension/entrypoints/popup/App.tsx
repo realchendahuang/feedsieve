@@ -45,6 +45,14 @@ import {
   type PersistentBlockQueueState,
 } from '../../src/lib/block-queue-store';
 import {
+  DEFAULT_PRESET,
+  loadSafetyLedger,
+  SAFETY_PRESETS,
+  subscribeSafetyLedger,
+  usedInWindow,
+  type SafetyLedger,
+} from '../../src/lib/block-safety';
+import {
   categoryLabel,
   defaultUiLanguage,
   getUiLanguage,
@@ -244,19 +252,23 @@ function HelpIcon({ text }: { text: string }) {
 const FAILURE_LABELS: Record<UiLanguage, Record<string, string>> = {
   zh: {
     'no-id': '缺少用户 ID',
+    no_user: '账号已不存在',
     auth_required: '登录已失效',
     rate_limited: '请求过于频繁',
     http_error: '请求异常',
     network_error: '网络失败',
     missing_csrf: '登录态缺失',
+    parse: '响应异常',
   },
   en: {
     'no-id': 'Missing user ID',
+    no_user: 'Account no longer exists',
     auth_required: 'Sign-in expired',
     rate_limited: 'Rate limited',
     http_error: 'Request error',
     network_error: 'Network error',
     missing_csrf: 'Missing session',
+    parse: 'Unexpected response',
   },
 };
 
@@ -380,6 +392,9 @@ export default function App() {
   });
   const [queue, setQueue] = useState<PersistentBlockQueueState | null>(null);
   const [communityEntries, setCommunityEntries] = useState<CommunityEntry[]>([]);
+  // 安全额度条：滚动 24h 已用数（账本事件驱动更新，渲染期不调 Date.now）
+  const [safety, setSafety] = useState<SafetyLedger | null>(null);
+  const [safetyUsed, setSafetyUsed] = useState(0);
 
   const t = UI_COPY[language];
 
@@ -483,6 +498,10 @@ export default function App() {
     void getFollowingAllowlist().then(setFollowing);
     void getFollowingSyncState().then(setFollowingSync);
     void getPersistentBlockQueue().then(setQueue);
+    void loadSafetyLedger().then((ledger) => {
+      setSafety(ledger);
+      setSafetyUsed(usedInWindow(ledger, Date.now()));
+    });
     void sendToXPage(PAGE_MARKED_MESSAGE)
       .then((result) => setPageMarked(asPageMarkedList(result)))
       .catch(() => setPageMarked([]));
@@ -531,6 +550,10 @@ export default function App() {
       subscribeFollowingAllowlist(setFollowing),
       subscribeFollowingSyncState(setFollowingSync),
       subscribePersistentBlockQueue(handleQueueChange),
+      subscribeSafetyLedger((ledger) => {
+        setSafety(ledger);
+        setSafetyUsed(usedInWindow(ledger, Date.now()));
+      }),
     ];
     return () => unsubs.forEach((unsub) => unsub());
   }, [applyCommunitySnapshotState, handleQueueChange, sendToXPage]);
@@ -943,6 +966,12 @@ export default function App() {
     queue &&
     queueSummary.total > 0 &&
     (queue.status === 'running' || queue.status === 'paused');
+  // 页面批量收尾后的失败项：失败账号仍留在黄框清单里，原因如实展示在
+  // 「当前页面」卡片（账号已消失 vs 可重试的解析失败），避免无声的死循环。
+  const pageQueueFailedTasks =
+    queue && queue.source === 'page-batch' && !queueActive
+      ? queue.tasks.filter((task) => task.status === 'failed')
+      : [];
   const queueStatusLabel = queue
     ? {
         running: t.queueRunning,
@@ -951,6 +980,13 @@ export default function App() {
         cancelled: t.queueCancelled,
       }[queue.status]
     : '';
+  // 暂停原因专属说明：仅额度用尽 / 短窗限流两种需要解释，其余用通用「已暂停」
+  const queuePauseNote =
+    queue?.status === 'paused' && queue.pauseReason === 'quota_exhausted'
+      ? t.queuePausedQuota(safety?.budget ?? SAFETY_PRESETS[DEFAULT_PRESET].dailyLimit)
+      : queue?.status === 'paused' && queue.pauseReason === 'rate_limit_storm'
+        ? t.queuePausedRateLimit
+        : null;
   const followingSyncActive =
     followingSync.status === 'running' || followingSync.status === 'waiting';
   // 关注同步"过期"提示：render 期不调用 Date.now（保持纯净），
@@ -1024,6 +1060,11 @@ export default function App() {
       <div className="popup-content">
         {view === 'home' ? (
           <div className="view-stack home-view">
+            {safety && safetyUsed > 0 ? (
+              <div className="safety-quota-line" role="status">
+                {t.safetyQuota(safetyUsed, safety.budget)}
+              </div>
+            ) : null}
             <section className={`review-card${pageCount === 0 ? ' is-clean' : ''}`}>
               <div className="section-heading">
                 <h2>{t.pageMarked}</h2>
@@ -1075,6 +1116,20 @@ export default function App() {
                     </span>
                   ) : null}
                 </p>
+              ) : null}
+
+              {pageQueueFailedTasks.length > 0 ? (
+                <ul className="queue-failed-list" role="status">
+                  {pageQueueFailedTasks.map((task) => (
+                    <li key={task.handle}>
+                      @{task.handle}（
+                      {FAILURE_LABELS[language][task.failureCode ?? ''] ??
+                        task.failureCode ??
+                        t.unknown}
+                      ）
+                    </li>
+                  ))}
+                </ul>
               ) : null}
 
               <form
@@ -1223,6 +1278,11 @@ export default function App() {
                         {t.cancel}
                       </button>
                     </div>
+                  ) : null}
+                  {queuePauseNote ? (
+                    <p className="queue-pause-note" role="status">
+                      {queuePauseNote}
+                    </p>
                   ) : null}
                 </div>
               ) : queueFailedTasks.length > 0 ? (

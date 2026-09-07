@@ -126,6 +126,9 @@ x.com
 
 批量拉黑动作走持久化队列，绝不做 `for (...) click()`。架构边界见 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)，X 原生操作见 [`docs/X_ACTION_ADAPTER.md`](docs/X_ACTION_ADAPTER.md)。
 
+> [!WARNING]
+> **批量拉黑请节制。** FeedSieve 走的是你已登录 X 会话的内部 Block 接口，和手动点屏蔽是同一条请求。X 不公布每日上限，但社区实测大约每天 400–500 个之后容易被强制登出或要求验证。扩展默认按 400/24h 自动停，剩余队列会留到你下次点继续。这不是永久封号，但连续硬打会把临时锁定拖长。大名单先入队，不要指望一个晚上跑完。策略细节见 [`docs/BLOCK_SAFETY.md`](docs/BLOCK_SAFETY.md)。
+
 ## 社区名单，晒在阳光下
 
 > **Open Code + Open Rules + Open Lists + Open Governance**
