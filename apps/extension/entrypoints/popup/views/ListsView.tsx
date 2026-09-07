@@ -168,7 +168,9 @@ export default function ListsView({
       const outcome = res?.outcome;
       if (outcome?.status === 'updated' || outcome?.status === 'unchanged') {
         await onRefreshCommunitySnapshot();
-        setSyncMsg(outcome.status === 'updated' ? t.synced(outcome.version) : t.upToDate);
+        // 瞬时成功提示走 toast（4s 自动消失，AGENTS 红线：不常驻遮挡界面）；
+        // 错误留在 inline 供排查。
+        notify(outcome.status === 'updated' ? t.synced(outcome.version) : t.upToDate);
       } else if (outcome?.status === 'error') {
         setSyncMsg(outcome.error ? `${t.syncFailed}: ${outcome.error}` : t.syncFailed);
       } else {
