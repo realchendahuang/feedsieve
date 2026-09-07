@@ -101,6 +101,55 @@ const templatedText: HeuristicRule = {
 };
 
 /**
+ * 「单词沙拉」模板（2026-09-07 真机样本：hard/fire/💙/lift/road、
+ * make/forgive/✅/who/happy 等批量注册号连续发布；正文 = 随机小写英文单词 +
+ * emoji，无标点/数字/链接/大写，单词全是字典词，无法做成关键词包）。
+ *
+ * 结构单独出现会误伤「心情贴」（some days feel 🖤 hollow 这类真实句式），
+ * 因此强制账号侧佐证：昵称/简介带中文引流隐语（与线上词库同语义的小集合，
+ * 不自建词包）。宁可漏判干净昵称的同类账号——那类由社区指纹/变体层兜底。
+ */
+const WORD_SALAD_TOKEN_RE = /^[a-z]{2,12}$/;
+const WORD_SALAD_SYMBOL_RE = /^[\p{S}]{1,3}$/u;
+const WORD_SALAD_TRAFFIC_HINT_RE = /主页|简介|牵线|福利|同城|上门|私|全国|空降|约/i;
+
+const wordSalad: HeuristicRule = {
+  id: 'word-salad',
+  check(input) {
+    const text = input.text?.trim();
+    if (!text || (input.links?.length ?? 0) > 0) {
+      return null;
+    }
+    const tokens = text.split(/\s+/);
+    if (tokens.length < 5 || tokens.length > 9) {
+      return null;
+    }
+    let words = 0;
+    let symbols = 0;
+    for (const token of tokens) {
+      if (WORD_SALAD_TOKEN_RE.test(token)) {
+        words += 1;
+        continue;
+      }
+      if (WORD_SALAD_SYMBOL_RE.test(token)) {
+        symbols += 1;
+        continue;
+      }
+      // 任一 token 含数字/标点/大写/中文 → 不是该模板
+      return null;
+    }
+    if (words < 4 || symbols < 1) {
+      return null;
+    }
+    const side = [input.displayName, input.bio].filter(Boolean).join(' ');
+    if (!WORD_SALAD_TRAFFIC_HINT_RE.test(side)) {
+      return null;
+    }
+    return '英文单词沙拉模板（随机词 + emoji），疑似引流黄推';
+  },
+};
+
+/**
  * 黄推「福」隐语（2026-08 真实样本：「我福不黑不信你看」「有人想批评一下我的福嘛」）。
  * 福 = 福利（露骨内容）；这类短语在正常中文语境几乎不出现，单命中即可标。
  */
@@ -147,4 +196,5 @@ export const DEFAULT_HEURISTICS: readonly HeuristicRule[] = [
   pornBaitZh,
   spamLinkHint,
   templatedText,
+  wordSalad,
 ];

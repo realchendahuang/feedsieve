@@ -186,6 +186,55 @@
       "input": { "handle": "tpl_02", "text": "点主页🍓专业牵线😸全国1-5线覆盖" },
       "expected": null,
       "known_limitation": true
+    },
+    {
+      "id": "word-salad-rtobadj473-real",
+      "note": "2026-09-07 真机采集：批量注册号 rtobadj473 发布「hard/fire/💙/lift/road」每行一词+emoji，昵称=点主页/专业牵线/全国1-5线覆盖引流话术",
+      "input": { "handle": "rtobadj473", "displayName": "点主页🥳专业牵线💖全国1-5线覆盖", "text": "hard\nfire\n💙\nlift\nroad" },
+      "expected": "word-salad"
+    },
+    {
+      "id": "word-salad-make-forgive",
+      "note": "同模板第二例（2026-09-07 采集，昵称按同模板建模）",
+      "input": { "handle": "tpl_5521", "displayName": "点主页🥳专业牵线💖全国1-5线覆盖", "text": "make\nforgive\n✅\nwho\nhappy" },
+      "expected": "word-salad"
+    },
+    {
+      "id": "word-salad-might-walk",
+      "note": "同模板第三例（2026-09-07 采集，昵称按同模板建模）",
+      "input": { "handle": "tpl_8837", "displayName": "点主页🥳专业牵线💖全国1-5线覆盖", "text": "might\nwalk\n⭐\nnotice\nhear" },
+      "expected": "word-salad"
+    },
+    {
+      "id": "word-salad-bus-green",
+      "note": "同模板第四例（2026-09-07 采集，昵称按同模板建模）",
+      "input": { "handle": "tpl_2216", "displayName": "点主页🥳专业牵线💖全国1-5线覆盖", "text": "bus\ngreen\n😘\nacross\nwinter" },
+      "expected": "word-salad"
+    },
+    {
+      "id": "word-salad-mood-post-guard",
+      "note": "误伤守卫：真实心情贴句式（5 token/4 词+emoji，形状同模板）但昵称干净 → 必须漏判",
+      "input": { "handle": "jane_doe", "displayName": "Jane", "text": "some days feel hollow 🖤" },
+      "expected": null
+    },
+    {
+      "id": "word-salad-caps-guard",
+      "note": "误伤守卫：心情贴带大写 → 不是该模板",
+      "input": { "handle": "grace_w", "displayName": "Grace", "text": "Some Days Feel 🖤 Hollow" },
+      "expected": null
+    },
+    {
+      "id": "word-salad-punct-guard",
+      "note": "误伤守卫：引流昵称 + 单词沙拉但带标点（road!）→ 非模板",
+      "input": { "handle": "xwz9912", "displayName": "点主页🥳专业牵线💖全国1-5线覆盖", "text": "hard fire 💙 lift road!" },
+      "expected": null
+    },
+    {
+      "id": "word-salad-clean-nickname-guard",
+      "note": "已知局限：批量形态 handle + 干净昵称的单词沙拉漏判（宁可漏判；此类由社区指纹/SimHash 变体层兜底）",
+      "input": { "handle": "rtobadj473", "displayName": "CleanName", "text": "hard\nfire\n💙\nlift\nroad" },
+      "expected": null,
+      "known_limitation": true
     }
-  ]
+]
 }
