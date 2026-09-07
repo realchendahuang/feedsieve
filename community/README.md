@@ -35,7 +35,7 @@ final blocklist = community ∪ maintainer
 - [`policy/v3.yaml`](policy/v3.yaml)：唯一阈值、计票与维护者来源的公开政策。
 - [`schema/account-list.schema.json`](schema/account-list.schema.json)：JSON 快照协议。
 
-`lists/` 是线上 Worker 快照的仓库镜像，由 [`../scripts/mirror-community-lists.sh`](../scripts/mirror-community-lists.sh) 下载全部 manifest 文件并逐个验证 SHA-256。GitHub Actions 每天 01:17 UTC 自动镜像一次（[`../.github/workflows/mirror-community-lists.yml`](../.github/workflows/mirror-community-lists.yml)，无变化不产生提交），发版前或名单大变化后也可手动运行。镜像不承诺实时：线上快照按“当日一版”发布（当天首次实质变化后 ≤1 小时公开，同日不再刷新版本号），权威数据始终以 Worker API 为准。
+`lists/` 是线上 Worker 快照的仓库镜像，由 [`../scripts/mirror-community-lists.sh`](../scripts/mirror-community-lists.sh) 下载全部 manifest 文件并逐个验证 SHA-256。GitHub Actions 每天 01:17 UTC 自动镜像一次（[`../.github/workflows/mirror-community-lists.yml`](../.github/workflows/mirror-community-lists.yml)，无变化不产生提交），发版前或名单大变化后也可手动运行。镜像不承诺实时：线上快照默认按“当日一版”发布（当天首次实质变化后 ≤1 小时公开），维护者后台 / Agent 显式发布产生的新版本跳过当日节流即时公开，因此同一天可能有多版；权威数据始终以 Worker API 为准。
 
 **官方暂停开关（kill switch）的时效**：破坏性操作暂停与否以部署配置实时状态为准，扩展在任何破坏性动作执行前查询 `GET /v1/kill-switch`（no-store，不受快照日更节流）。快照里携带的 `kill_switch` 仅作存档与离线兜底，可能滞后到次日。
 

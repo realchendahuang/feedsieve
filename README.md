@@ -175,7 +175,7 @@ pnpm install
 git config core.hooksPath .githooks   # 启用 pre-push 本地质量门禁
 ```
 
-本项目不用云端 CI，lint / typecheck / test / build（即 `pnpm verify`）在 pre-push 时本地执行。贡献规范见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+PR 与 push 由 GitHub Actions 验证（`.github/workflows/verify.yml`：lint / 词库校验 / typecheck / 测试 / 扩展构建 / 依赖审计）；pre-push 钩子保留 lint / typecheck / test / build（即 `pnpm verify`）作为提交前的本地门禁。贡献规范见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## 本地开发
 

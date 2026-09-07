@@ -16,7 +16,7 @@
 | X adapter 需要能力边界 | 阶段二已落地能力快照 + popup 降级态 + 签名 kill switch |
 | 队列固定 400ms、失败分类不细 | 阶段三 |
 | 云端 CI（此前否决） | 折中落实：PR 验证 CI，发布仍本机 |
-| `content.ts` 职责过载（~1488 行） | 阶段三 |
+| `content.ts` 职责过载（~1488 行） | 阶段三部分完成：检测流水线 / 页面扫描控制 / 队列持久化已拆为独立模块；`content.ts` 仍 ~1460 行，剩余增量拆分随功能演进继续 |
 | detector 缺 golden corpus 与指标 | 阶段一已落地 corpus v1 + 分层指标 |
 | 词库后台发布无签名、回滚复用旧版本号（假发布：扩展 signature_missing / rollback_rejected，改动到不了用户） | 2026-09-07 修复：Worker 词库发布 / 回滚带 release-1 签名；`REQUIRE_SIGNED_KEYWORD_PACKS=1` 缺密钥拒绝发布；内容回滚按新版本号重发 |
 | 快照生成异步化 | 工作区脏标记 + cron 合并发布已落地；2026-09 起按「当日一版」节奏（内容变化当日首发，同日不再刷新；kill switch 实时走 /v1/kill-switch 端点） |

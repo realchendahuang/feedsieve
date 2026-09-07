@@ -80,7 +80,7 @@ Layer C  异常阀     429 风暴 / 认证失败 / 挑战码 / kill switch → �
 规则：
 
 - **只计成功的破坏性写操作**：失败 / no-id / 已拉黑跳过不计。
-- 顺手拉黑与队列拉黑共用同一 `recordSafetyEvent()`（撤销在 PR2 并入）。
+- 顺手拉黑与队列拉黑共用同一 `recordSafetyEvent()`（撤销尚未并入，见下方 PR2 待做）。
 - 队列 perform 前查 `remainingQuota = budget − 滚动24h已用`，到量不发请求，返回 `{ ok: false, code: 'quota_exhausted' }` → runner 整队 pause。
 - 单次顺手拉黑不做额度门禁（骚扰急用出口），但照样记账占用预算。
 - 换账号：`accountKey` 变化换一本新账（按账号分槽存储），**旧账保留不混算**。

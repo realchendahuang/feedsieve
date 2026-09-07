@@ -1,8 +1,9 @@
 # 本地开发用（gitignored）：cp .dev.vars.example .dev.vars
 # 线上密钥用 wrangler secret put 设置，绝不写进任何被提交的文件。
-ADMIN_TOKEN=local-dev-admin-token
+# 生产部署清单见 apps/community-api/README.md（ACCESS_JWKS_URL / ACCESS_AUD /
+# ACCESS_ALLOWED_EMAILS / ADMIN_HOST / AGENT_API_KEYS / DESTRUCTIVE_KILL_SWITCH /
+# REQUIRE_SIGNED_SNAPSHOTS 均为线上 secret 或 vars，测试用占位值见 vitest.config.ts）。
 INSTALLATION_SALT=local-dev-salt
-OWNER_INSTALLATION_ID=<维护者安装 ID，来自 popup「复制安装 ID」>
 # 快照与词库发布者签名共用（PKCS8 DER base64；运行 pnpm --filter @feedsieve/community-api exec node ../../scripts/keygen.mjs 生成，gitignored）
 SIGNING_PRIVATE_KEY=<pkcs8-der-base64>
 SIGNING_KEY_ID=release-1
