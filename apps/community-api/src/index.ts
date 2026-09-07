@@ -26,8 +26,19 @@ import {
 } from './keyword-admin';
 import {
   agentKeyIdentity,
+  agentStatus,
+  importAgentKeywordCatalog,
+  listAgentAssets,
+  listAgentAudit,
+  listAgentKeywords,
   listAgentMaintainerEntries,
+  listAgentReleases,
+  publishAgentKeywords,
+  removeAgentKeyword,
   removeAgentMaintainerEntry,
+  rollbackAgentRelease,
+  upsertAgentKeywordPack,
+  upsertAgentKeywordRule,
   upsertAgentMaintainerEntry,
 } from './agent-admin';
 import { MAINTAINER_CATEGORIES } from './maintainer-blocklist';
@@ -286,16 +297,22 @@ export function createApp() {
   });
 
   // Agent 维护通道：X-Agent-Key 鉴权（AGENT_API_KEYS，见 agent-admin.ts）。
-  // 只维护「维护者来源」条目并触发发布；不暴露社区票、安装数据或人工后台会话。
-  app.get('/api/agent/entries', async (c) => {
+  // 覆盖线上全部可管理数据：维护者名单 / 词库分类与规则 / 发布与回滚 / 审计 / 资产清单。
+  // 不暴露社区票原始数据、安装数据或人工后台会话。
+  const agentGuard = async (c: Context): Promise<string | Response> => {
     const identity = await agentKeyIdentity(c.env, c.req.header('x-agent-key'));
-    if (!identity) return c.json({ error: 'invalid_agent_key' }, 401);
+    return identity ?? c.json({ error: 'invalid_agent_key' }, 401);
+  };
+
+  app.get('/api/agent/entries', async (c) => {
+    const guard = await agentGuard(c);
+    if (typeof guard !== 'string') return guard;
     return c.json({ entries: await listAgentMaintainerEntries(c.env) });
   });
 
   app.put('/api/agent/entries/:handle', async (c) => {
-    const identity = await agentKeyIdentity(c.env, c.req.header('x-agent-key'));
-    if (!identity) return c.json({ error: 'invalid_agent_key' }, 401);
+    const guard = await agentGuard(c);
+    if (typeof guard !== 'string') return guard;
     const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
     if (!body || typeof body !== 'object') {
       return c.json({ error: 'invalid_body' }, 400);
@@ -305,19 +322,112 @@ export function createApp() {
     if (body.handle !== pathHandle) {
       return c.json({ error: 'handle_mismatch' }, 400);
     }
-    const result = await upsertAgentMaintainerEntry(c.env, `agent:${identity}`, body);
+    const result = await upsertAgentMaintainerEntry(c.env, `agent:${guard}`, body);
     return result.ok ? c.json(result) : c.json({ error: result.error }, 400);
   });
 
   app.delete('/api/agent/entries/:handle', async (c) => {
-    const identity = await agentKeyIdentity(c.env, c.req.header('x-agent-key'));
-    if (!identity) return c.json({ error: 'invalid_agent_key' }, 401);
+    const guard = await agentGuard(c);
+    if (typeof guard !== 'string') return guard;
     const result = await removeAgentMaintainerEntry(
       c.env,
-      `agent:${identity}`,
+      `agent:${guard}`,
       c.req.param('handle'),
     );
     return result.ok ? c.json(result) : c.json({ error: result.error }, 400);
+  });
+
+  // --- 词库（关键词名单）---
+  app.get('/api/agent/keywords', async (c) => {
+    const guard = await agentGuard(c);
+    if (typeof guard !== 'string') return guard;
+    return c.json(await listAgentKeywords(c.env));
+  });
+
+  app.put('/api/agent/keywords/packs/:id', async (c) => {
+    const guard = await agentGuard(c);
+    if (typeof guard !== 'string') return guard;
+    const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+    if (!body || typeof body !== 'object') return c.json({ error: 'invalid_body' }, 400);
+    if (body.id !== c.req.param('id')) return c.json({ error: 'handle_mismatch' }, 400);
+    const result = await upsertAgentKeywordPack(c.env, `agent:${guard}`, body);
+    return result.ok ? c.json(result) : c.json({ error: result.error }, 400);
+  });
+
+  app.delete('/api/agent/keywords/packs/:id', async (c) => {
+    const guard = await agentGuard(c);
+    if (typeof guard !== 'string') return guard;
+    const result = await removeAgentKeyword(c.env, `agent:${guard}`, 'packs', c.req.param('id'));
+    return result.ok ? c.json(result) : c.json({ error: result.error }, 400);
+  });
+
+  app.put('/api/agent/keywords/rules/:id', async (c) => {
+    const guard = await agentGuard(c);
+    if (typeof guard !== 'string') return guard;
+    const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+    if (!body || typeof body !== 'object') return c.json({ error: 'invalid_body' }, 400);
+    if (body.id !== c.req.param('id')) return c.json({ error: 'handle_mismatch' }, 400);
+    const result = await upsertAgentKeywordRule(c.env, `agent:${guard}`, body);
+    return result.ok ? c.json(result) : c.json({ error: result.error }, 400);
+  });
+
+  app.delete('/api/agent/keywords/rules/:id', async (c) => {
+    const guard = await agentGuard(c);
+    if (typeof guard !== 'string') return guard;
+    const result = await removeAgentKeyword(c.env, `agent:${guard}`, 'rules', c.req.param('id'));
+    return result.ok ? c.json(result) : c.json({ error: result.error }, 400);
+  });
+
+  app.post('/api/agent/keywords/publish', async (c) => {
+    const guard = await agentGuard(c);
+    if (typeof guard !== 'string') return guard;
+    try {
+      return c.json(await publishAgentKeywords(c.env, `agent:${guard}`));
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : 'publish_failed' }, 400);
+    }
+  });
+
+  app.post('/api/agent/keywords/import', async (c) => {
+    const guard = await agentGuard(c);
+    if (typeof guard !== 'string') return guard;
+    return c.json(await importAgentKeywordCatalog(c.env));
+  });
+
+  // --- 发布记录 / 回滚 / 审计 / 状态 / 资产 ---
+  app.get('/api/agent/releases', async (c) => {
+    const guard = await agentGuard(c);
+    if (typeof guard !== 'string') return guard;
+    return c.json({ releases: await listAgentReleases(c.env) });
+  });
+
+  app.post('/api/agent/releases/:id/rollback', async (c) => {
+    const guard = await agentGuard(c);
+    if (typeof guard !== 'string') return guard;
+    const id = Number(c.req.param('id'));
+    if (!Number.isInteger(id)) return c.json({ error: 'invalid_release_id' }, 400);
+    const result = await rollbackAgentRelease(c.env, `agent:${guard}`, id);
+    return result.ok ? c.json(result) : c.json({ error: result.error }, 400);
+  });
+
+  app.get('/api/agent/audit', async (c) => {
+    const guard = await agentGuard(c);
+    if (typeof guard !== 'string') return guard;
+    const limit = Number(c.req.query('limit') ?? 50);
+    return c.json({ audit: await listAgentAudit(c.env, Number.isFinite(limit) ? limit : 50) });
+  });
+
+  app.get('/api/agent/status', async (c) => {
+    const guard = await agentGuard(c);
+    if (typeof guard !== 'string') return guard;
+    return c.json(await agentStatus(c.env));
+  });
+
+  app.get('/api/agent/assets', async (c) => {
+    const guard = await agentGuard(c);
+    if (typeof guard !== 'string') return guard;
+    const prefix = c.req.query('prefix') || null;
+    return c.json(await listAgentAssets(c.env, prefix));
   });
 
   app.get('/v1/snapshots/:version/:path', async (c) => {

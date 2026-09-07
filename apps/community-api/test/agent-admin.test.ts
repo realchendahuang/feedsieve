@@ -110,4 +110,107 @@ describe('agent maintenance API', () => {
     const again = await agentRequest('/api/agent/entries/agent_del_user', { method: 'DELETE' });
     expect((await again.json()) as { changed: boolean }).toEqual({ ok: true, changed: false });
   });
+
+  it('词库：PUT pack/rule + publish → R2 产物与审计（agent:ops）', async () => {
+    const packId = 'agent_pack_a';
+    const packRes = await agentRequest(`/api/agent/keywords/packs/${packId}`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        id: packId,
+        name_zh: 'Agent 分类',
+        description_zh: 'Agent 分类描述',
+      }),
+    });
+    expect(packRes.status).toBe(200);
+    expect((await packRes.json()) as { id: string }).toEqual({ ok: true, id: packId });
+
+    const ruleId = 'agent-rule-a';
+    const ruleRes = await agentRequest(`/api/agent/keywords/rules/${ruleId}`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        id: ruleId,
+        pack_id: packId,
+        phrase: 'Agent 词组',
+        terms: ['Agent', '词组'],
+        max_gap: 8,
+      }),
+    });
+    expect(ruleRes.status).toBe(200);
+    expect((await ruleRes.json()) as { id: string }).toEqual({ ok: true, id: ruleId });
+
+    const published = await agentRequest('/api/agent/keywords/publish', { method: 'POST' });
+    expect(published.status).toBe(200);
+    const body = (await published.json()) as {
+      version: string;
+      packs: number;
+      rules: number;
+    };
+    expect(body.version).toMatch(/^\d{4}\.\d{2}\.\d{2}\.\d+$/);
+    expect(body.rules).toBeGreaterThanOrEqual(1);
+
+    const latestObj = await env.KEYWORD_PACKS!.get('keyword-packs/latest.json');
+    expect(latestObj).toBeTruthy();
+    const manifest = JSON.parse(await latestObj!.text()) as {
+      pack_version: string;
+      signature?: unknown;
+    };
+    expect(manifest.pack_version).toBe(body.version);
+
+    const audit = await env.DB.prepare(
+      `SELECT actor_email, action FROM admin_audit_log WHERE target_type = ?1 ORDER BY id DESC LIMIT 1`,
+    )
+      .bind('keyword_pack')
+      .first<{ actor_email: string; action: string }>();
+    expect(audit?.actor_email).toBe('agent:ops');
+  });
+
+  it('词库：停用 pack → 发布后从 R2 产物移除', async () => {
+    const packId = 'agent_pack_b';
+    await agentRequest(`/api/agent/keywords/packs/${packId}`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        id: packId,
+        name_zh: '待删除分类',
+        description_zh: '待删除分类描述',
+      }),
+    });
+    const del = await agentRequest(`/api/agent/keywords/packs/${packId}`, { method: 'DELETE' });
+    expect((await del.json()) as { changed: boolean }).toEqual({ ok: true, changed: true });
+    await agentRequest('/api/agent/keywords/publish', { method: 'POST' });
+    const keywords = await agentRequest('/api/agent/keywords');
+    const data = (await keywords.json()) as { packs: Array<{ id: string; active: boolean }> };
+    expect(data.packs.find((pack) => pack.id === packId)?.active).toBe(false);
+  });
+
+  it('status / releases / assets / audit 巡检端点齐全', async () => {
+    const statusRes = await agentRequest('/api/agent/status');
+    expect(statusRes.status).toBe(200);
+    const status = (await statusRes.json()) as {
+      snapshot: { version: string | null; entries: number };
+      kill_switch: unknown;
+      community: { listed: number; maintainer_entries: number };
+      keywords: { pack_version: string | null; signed: boolean };
+    };
+    expect(typeof status.snapshot.version).toBe('string');
+    expect(status.community.listed).toBeGreaterThanOrEqual(0);
+    expect(typeof status.keywords.pack_version).toBe('string');
+
+    const releases = await agentRequest('/api/agent/releases');
+    expect((await releases.json()) as { releases: unknown[] }).toHaveProperty('releases');
+
+    const audit = await agentRequest('/api/agent/audit?limit=10');
+    const auditBody = (await audit.json()) as { audit: Array<{ actor_email: string }> };
+    expect(Array.isArray(auditBody.audit)).toBe(true);
+    expect(auditBody.audit.some((row) => row.actor_email === 'agent:ops')).toBe(true);
+
+    const assets = await agentRequest('/api/agent/assets?prefix=keyword-packs/');
+    const assetsBody = (await assets.json()) as { assets: Array<{ key: string }> };
+    expect(assetsBody.assets.length).toBeGreaterThan(0);
+    expect(assetsBody.assets.some((asset) => asset.key === 'keyword-packs/latest.json')).toBe(
+      true,
+    );
+  });
 });
