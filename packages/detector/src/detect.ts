@@ -180,11 +180,11 @@ export function detect(
  * 当前文本的位向量与某个已知模板的距离 <= 阈值即命中。
  * 集合/文本都不产位向量时返回 null（静默，与 exact 路径同语义）。
  *
- * v0.8 双版本：v1 算法空间与 v0 不同（NFKC + 停用字 + 版本位），
+ * v0.8 双版本：v1 算法空间与 v0 不同（NFKC + 停用字 + 新哈希 + 版本位），
  * 距离只在同版本模板内计算——本地同时产 v0/v1 指纹，
  * v0 指纹只与非 '3' 开头的模板比，v1 指纹只与 '3' 开头的模板比。
- * 版本不分但哈希族不同的值（旧值恰好 0x3 开头，约 6%）距离伪随机，
- * 阈值 2 必然拒绝，只增加一个永不可达候选。
+ * 生产 v0 值实测全部 'f' 开头（旧哈希高位坍缩），与 v1 的 '3' 前缀零重叠；
+ * 假想的 '3' 开头 v0 旧值与 v1 距离属不同哈希族的伪随机值，阈值 2 必然拒绝。
  */
 function findNearSimhash(text: string, simhashes: ReadonlySet<string>): string | null {
   const localV0 = fingerprintText(text);

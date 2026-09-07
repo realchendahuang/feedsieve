@@ -16,10 +16,16 @@
  * v1 用 normalizeForFingerprintV1 + 停用字过滤 + 更低门槛，输出仍是 16 位 hex，
  * 但高 4 bit 固定为版本标记 0x3（低 60 bit 才是哈希）。
  *
- * 版本化原因：指纹是单向哈希，服务端没有原文无法重算历史指纹。
- * 直接改算法 = 社区指纹库瞬间全部失配。v0/v1 并存让旧模板继续生效、
- * 新指纹随新上报自然积累；恰好 0x3 开头的旧值（约 6%）被当作 v1 参与距离时，
- * 因哈希函数族不同距离伪随机（期望 ~30），阈值 2 必然拒绝，只多一个永不可达候选。
+ * v0 的 token 哈希（hashTokenLegacy，XOR+8 位轮转）实测分布严重退化：
+ * 生产指纹库全部值以 'f' 开头、64 位中 21 位恒定、两两平均汉明距离 13（均匀应 ~32）。
+ * v0 已有指纹靠它重算才能一致（指纹是单向哈希，无原文不可重算），因此 v0 冻结不动；
+ * v1 换用 FNV-1a 64 + splitmix64 finalizer（hashTokenV1），分布实测均匀，
+ * 新指纹随 v1 上报自然积累，v0 池只减不增。
+ *
+ * 版本隔离：客户端 detect 侧严格按模板版本选本地位向量（'3' 前缀 = v1），
+ * 不做跨版本距离计算。生产 v0 值实测全部 'f' 开头，与 v1 前缀天然零重叠；
+ * 若出现假想的 '3' 开头 v0 旧值，它与 v1 位向量的距离属于不同哈希族的伪随机值，
+ * 阈值 2 会拒绝，只是多一个永不可达候选。
  *
  * 隐私：同 v0，输入是归一化文本，输出是单向位哈希，原文永不出设备。
  */
@@ -44,14 +50,18 @@ export const MIN_GRAM_COUNT_V1 = 12;
 
 /**
  * v1 停用字（字符级）：只剔绝对高频、中性的字。保守选择——
- * 「不/这/那/一」等模棱两可的字留着（「不黑」是黄推隐语关键词），
- * 宁可少剔也不误伤模板判别力。
+ * 只有整条 gram 全由停用字/词组成才被剔除，「不黑」「信你」这类混合 gram
+ * 照常参与投票，宁可少剔也不误伤模板判别力。
  */
 const STOP_CHARS = new Set(
   '的了是在我你他她它们有和就都而及与着或也不很还没什吗嘛啊吧呢',
 );
 
-/** v1 停用词（英文，精确匹配整词）：归一化后无空格，只有恰好相邻的 2-4 字符整词才命中。 */
+/**
+ * v1 停用词（英文，精确匹配整条 gram）。归一化剥掉了空格，英文停用词只能以
+ * 「恰好等于某个 2-4 字符 gram」的形式命中；这也连带剔掉含相同子串的内容词
+ * （如 cat 里的 at），是对英文短文本判别力的已知小损耗，可接受。
+ */
 const STOP_WORDS_EN = new Set([
   'a', 'an', 'am', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
   'the', 'and', 'or', 'of', 'to', 'for', 'with', 'in', 'on', 'at', 'by',
@@ -116,7 +126,7 @@ function ngramsOf(normalized: string): string[] {
  * 每个 n-gram 特征按词频加权投票：常见词权重低，长特征/罕见词权重高。
  */
 export function textToSimhash(text: string): bigint | null {
-  return voteBits(simhashTokens(text));
+  return voteBits(simhashTokens(text), hashTokenLegacy);
 }
 
 /**
@@ -124,14 +134,46 @@ export function textToSimhash(text: string): bigint | null {
  * 输出形状仍是 16 位 hex，但 v1 值恒以 '3' 开头——检测侧据此与 v0 模板隔离。
  */
 export function textToSimhashV1(text: string): bigint | null {
-  const bits = voteBits(simhashTokensV1(text));
+  const bits = voteBits(simhashTokensV1(text), hashTokenV1);
   if (bits === null) {
     return null;
   }
   return (bits & 0x0fffffffffffffffn) | (BigInt(SIMHASH_VERSION_NIBBLE) << 60n);
 }
 
-function voteBits(tokens: string[]): bigint | null {
+/**
+ * v0 token 哈希（冻结）：XOR + 8 位轮转，实测分布退化（见文件头）。
+ * 已上报的 v0 指纹依赖此实现重算一致，绝不可改；v0 池只减不增。
+ */
+function hashTokenLegacy(token: string): bigint {
+  let h = 0x35b5e5a7n;
+  for (let i = 0; i < token.length; i++) {
+    h ^= BigInt(token.charCodeAt(i)) * 0x100000001b3n;
+    h = (h >> 8n) | (h << 56n);
+  }
+  return h & 0xffffffffffffffffn;
+}
+
+const MASK_64 = 0xffffffffffffffffn;
+
+/**
+ * v1 token 哈希：FNV-1a 64 压缩 + splitmix64 finalizer。
+ * 旧哈希的轮转-XOR 结构雪崩性不足（高位坍缩、21/64 位恒定），
+ * FNV-1a 乘法扩散后再过一轮 splitmix64 终化，实测任意文本 64 位全活跃、
+ * 两两距离均值 ~32（均匀）。无密码学强度要求，分布均匀即可。
+ */
+function hashTokenV1(token: string): bigint {
+  let h = 0xcbf29ce484222325n;
+  for (let i = 0; i < token.length; i++) {
+    h ^= BigInt(token.charCodeAt(i));
+    h = (h * 0x100000001b3n) & MASK_64;
+  }
+  h = ((h ^ (h >> 30n)) * 0xbf58476d1ce4e5b9n) & MASK_64;
+  h = ((h ^ (h >> 27n)) * 0x94d049bb133111ebn) & MASK_64;
+  return (h ^ (h >> 31n)) & MASK_64;
+}
+
+function voteBits(tokens: string[], hashToken: (token: string) => bigint): bigint | null {
   if (tokens.length === 0) {
     return null;
   }
@@ -145,13 +187,7 @@ function voteBits(tokens: string[]): bigint | null {
     if (w <= 0) {
       continue;
     }
-    // 用 token 本身的 64 bit 哈希做位置特征；哈希分布均匀即可，无需密码学强度
-    let h = 0x35b5e5a7n;
-    for (let i = 0; i < token.length; i++) {
-      h ^= BigInt(token.charCodeAt(i)) * 0x100000001b3n;
-      h = (h >> 8n) | (h << 56n);
-    }
-    weights.push({ hash: h & 0xffffffffffffffffn, weight: w });
+    weights.push({ hash: hashToken(token), weight: w });
   }
   const bits = new Array<number>(64).fill(0);
   for (const { hash, weight } of weights) {

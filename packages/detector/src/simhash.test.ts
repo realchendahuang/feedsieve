@@ -128,12 +128,20 @@ describe('simhash v1: 变体识别', () => {
     expect(hammingDistance(a!, b!)).toBe(0);
   });
 
-  it('v1 英文换词变体距离 <= 阈值（含停用词 the/of 等被剔除后仍稳定）', () => {
+  it('v1 尾部追加变体距离 <= 阈值（换号换链路之外的真实变体形态）', () => {
     const a = textToSimhashV1('claim 500 USDT giveaway on Tron follow repost');
-    const b = textToSimhashV1('claim 500 USDT giveaway on Tron please follow and repost');
+    const b = textToSimhashV1('claim 500 USDT giveaway on Tron follow repost now');
     expect(a).not.toBeNull();
     expect(b).not.toBeNull();
     expect(hammingDistance(a!, b!)).toBeLessThanOrEqual(SIMHASH_HAMMING_THRESHOLD);
+  });
+
+  it('中段换词不误判为变体（旧退化哈希下 ≤2 是噪声假象；模板变体以换号/换链路为主）', () => {
+    const a = textToSimhashV1('claim 500 USDT giveaway on Tron follow repost');
+    const c = textToSimhashV1('claim 500 USDT giveaway at Tron follow repost');
+    expect(a).not.toBeNull();
+    expect(c).not.toBeNull();
+    expect(hammingDistance(a!, c!)).toBeGreaterThan(SIMHASH_HAMMING_THRESHOLD);
   });
 
   it('语义不同的模板距离 > 阈值（不误报）', () => {
@@ -168,5 +176,85 @@ describe('simhash v1: 停用字与短话术', () => {
     expect(a).not.toBeNull();
     expect(b).not.toBeNull();
     expect(a).not.toBe(b);
+  });
+});
+
+describe('simhash v1: 哈希分布回归（防熵塌缩，v0.8）', () => {
+  // 旧 token 哈希（XOR+轮转）实测 21/64 位恒定、两两距离均值 13、
+  // 生产库 225 对假变体（阈值<=2）。本组测试把「位分布均匀」钉进 CI：
+  // 任何让分布退化的改动都会在这里失败，而不是上线后污染 campaign 聚类。
+  const WORDS = [
+    'giveaway', 'crypto', 'airdrop', '关注我', '私聊', '加微信', 'telegram', '价格',
+    '免费', '领取', '点击', '发财', '老师', '学员', '股票', '合约', '必涨', '福利',
+    '红单', '上车', '大佬', '讲解', '教学', '赚钱', '轻松', '日入', '提现', '秒到',
+    '同城', '上门', '全国空降', '我福不黑不信你看',
+  ];
+  // 固定种子 LCG：测试确定性，不依赖 Math.random
+  let seed = 42;
+  const rnd = () => {
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    return seed / 0x7fffffff;
+  };
+  const texts: string[] = [];
+  for (let i = 0; i < 120; i++) {
+    let s = '';
+    const n = 6 + ((rnd() * 10) | 0);
+    for (let j = 0; j < n; j++) s += WORDS[(rnd() * WORDS.length) | 0] + (rnd() < 0.3 ? ' ' : '');
+    texts.push(s);
+  }
+  const values = texts
+    .map((t) => textToSimhashV1(t))
+    .filter((v): v is bigint => v !== null)
+    .map((v) => simhashToHex(v));
+
+  it('样本量充足（语料构造有效）', () => {
+    expect(values.length).toBeGreaterThanOrEqual(100);
+  });
+
+  it('版本标记恒为 0x3，其余 60 位全部活跃（无恒定位）', () => {
+    for (const hex of values) expect(hex.startsWith('3')).toBe(true);
+    for (let b = 0; b < 60; b++) {
+      const bit = 1n << BigInt(b);
+      const ones = values.filter((hex) => (BigInt(`0x${hex}`) & bit) !== 0n).length;
+      expect(ones, `bit ${b} 恒定`).toBeGreaterThan(0);
+      expect(ones, `bit ${b} 恒定`).toBeLessThan(values.length);
+    }
+  });
+
+  it('两两平均汉明距离接近均匀分布（~32，退化时 ~13）', () => {
+    let sum = 0;
+    let pairs = 0;
+    for (let i = 0; i < values.length; i++) {
+      for (let j = i + 1; j < values.length; j++) {
+        sum += hammingDistance(BigInt(`0x${values[i]}`), BigInt(`0x${values[j]}`));
+        pairs += 1;
+      }
+    }
+    const mean = sum / pairs;
+    expect(mean).toBeGreaterThan(20);
+    expect(mean).toBeLessThan(44);
+  });
+
+  it('随机文本间无假变体（距离 <=2 的对数为 0）', () => {
+    let near = 0;
+    for (let i = 0; i < values.length; i++) {
+      for (let j = i + 1; j < values.length; j++) {
+        if (hammingDistance(BigInt(`0x${values[i]}`), BigInt(`0x${values[j]}`)) <= 2) near += 1;
+      }
+    }
+    expect(near).toBe(0);
+  });
+});
+
+describe('simhash v1: 金标向量（哈希重铸后冻结，改动即失败）', () => {
+  it('短隐语指纹', () => {
+    expect(fingerprintTextV1('我福不黑不信你看')).toBe('352806e09928c414');
+  });
+
+  it('NFKC 全角折叠：全角写法与半角写法指纹完全一致', () => {
+    const wide = fingerprintTextV1('ｄｍ　ｍｅ　５００ usdt giveaway');
+    const narrow = fingerprintTextV1('dm me 500 usdt giveaway');
+    expect(wide).toBe('3b0bd895d48e5884');
+    expect(wide).toBe(narrow);
   });
 });
