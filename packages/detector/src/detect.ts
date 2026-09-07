@@ -2,11 +2,14 @@ import type { Detection, DetectionSource } from './types';
 import { DEFAULT_HEURISTICS, type HeuristicRule } from './heuristics';
 import {
   contentFingerprint,
+  contentFingerprintV1,
   fingerprintText,
+  fingerprintTextV1,
 } from './fingerprint';
 import {
   SIMHASH_HAMMING_THRESHOLD,
   hammingDistance,
+  isSimhashV1,
   simhashFromHex,
 } from './simhash';
 
@@ -98,16 +101,23 @@ export function detect(
   if (options.simhashes?.size || options.fingerprints?.size) {
     const text = input.text?.trim() ? input.text : input.bio;
     if (text) {
-      // exact 优先（v0.4 行为）：同一模板精确出现，直接命中
-      const fp = contentFingerprint({ text });
-      if (fp && options.fingerprints?.has(fp)) {
+      // exact 优先（v0.4 行为）：同一模板精确出现，直接命中。
+      // v0/v1 指纹值同为 16 位 hex、字符串级匹配天然版本敏感，
+      // 两个版本塞同一个 Set 也能正确区分（v1 值恒以 '3' 开头）。
+      const fpV0 = contentFingerprint({ text });
+      const fpV1 = contentFingerprintV1({ text });
+      const exactHit =
+        (fpV0 && options.fingerprints?.has(fpV0) && fpV0) ||
+        (fpV1 && options.fingerprints?.has(fpV1) && fpV1) ||
+        null;
+      if (exactHit) {
         return {
           handle,
           marked: true,
           source: 'fingerprint',
           reason: '已知垃圾模板 · 社区指纹命中',
           ruleId: 'community-fingerprint',
-          matchedFingerprint: fp,
+          matchedFingerprint: exactHit,
         };
       }
       // 模糊兜底（v0.5）：精确集合 miss 时，按汉明距离找同模板的「换词变体」
@@ -169,24 +179,31 @@ export function detect(
  * 在 simhash 集合里找当前文本的「话术变体」：
  * 当前文本的位向量与某个已知模板的距离 <= 阈值即命中。
  * 集合/文本都不产位向量时返回 null（静默，与 exact 路径同语义）。
+ *
+ * v0.8 双版本：v1 算法空间与 v0 不同（NFKC + 停用字 + 版本位），
+ * 距离只在同版本模板内计算——本地同时产 v0/v1 指纹，
+ * v0 指纹只与非 '3' 开头的模板比，v1 指纹只与 '3' 开头的模板比。
+ * 版本不分但哈希族不同的值（旧值恰好 0x3 开头，约 6%）距离伪随机，
+ * 阈值 2 必然拒绝，只增加一个永不可达候选。
  */
-function findNearSimhash(
-  text: string,
-  simhashes: ReadonlySet<string>,
-): string | null {
-  const local = fingerprintText(text);
-  if (!local) {
-    return null;
-  }
-  const localBits = simhashFromHex(local);
-  if (localBits === null) {
-    return null;
-  }
+function findNearSimhash(text: string, simhashes: ReadonlySet<string>): string | null {
+  const localV0 = fingerprintText(text);
+  const localV1 = fingerprintTextV1(text);
+  const localBitsV0 = localV0 ? simhashFromHex(localV0) : null;
+  const localBitsV1 = localV1 ? simhashFromHex(localV1) : null;
+
   let nearest: string | null = null;
   let nearestDist = SIMHASH_HAMMING_THRESHOLD + 1;
   for (const known of simhashes) {
+    if (!localBitsV0 && !localBitsV1) {
+      break;
+    }
     const knownBits = simhashFromHex(known);
     if (knownBits === null) {
+      continue;
+    }
+    const localBits = isSimhashV1(known) ? localBitsV1 : localBitsV0;
+    if (localBits === null) {
       continue;
     }
     const dist = hammingDistance(localBits, knownBits);

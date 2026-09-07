@@ -1,4 +1,4 @@
-import { simhashToHex, textToSimhash } from './simhash';
+import { simhashToHex, textToSimhash, textToSimhashV1 } from './simhash';
 
 /**
  * 内容指纹（v0.4，IMPLEMENTATION_PLAN.md Phase 7；v0.5 升级为 SimHash）。
@@ -22,6 +22,13 @@ import { simhashToHex, textToSimhash } from './simhash';
 /** 归一化后短于此长度不产指纹：话术太短，和无关内容碰撞的概率不可忽略。 */
 export const MIN_FINGERPRINT_LENGTH = 12;
 
+/**
+ * 指纹 v1 的归一化长度门槛（v0.8）：比 v0 的 12 低，
+ * 覆盖黄推短隐语（「我福不黑不信你看」9 字符）；最终门槛
+ * 还有有效 n-gram 数（MIN_GRAM_COUNT_V1，见 simhash.ts）双保险。
+ */
+export const MIN_FINGERPRINT_LENGTH_V1 = 8;
+
 /** URL 与 @提及统一替换成占位词（占位词是纯字母数字，能活过符号剥离），换链接/换提及对象不换指纹。 */
 const URL_RE = /\b(?:https?:\/\/|www\.)\S+|\b[\w-]+(?:\.[\w-]+)+(?:\/\S*)?/gi;
 const MENTION_RE = /@[A-Za-z0-9_]{1,15}/g;
@@ -37,6 +44,16 @@ export function normalizeForFingerprint(text: string): string {
     .replace(URL_RE, 'fsurl')
     .replace(MENTION_RE, 'fsmention')
     .replace(/[^\p{L}\p{N}]/gu, '');
+}
+
+/**
+ * 指纹 v1 归一化（v0.8）：在 v0 基础上先做 NFKC 折叠——
+ * 全角字母/数字（如全角写的 dm me、500）折成半角，全角空格/标点被折叠后
+ * 再由 v0 的正则剥离。零宽/控制字符（U+200B 等）属 Cf 类，同样被
+ * 剥离正则消除（v0 行为，v1 补显式测试）。输出与 v0 同形状。
+ */
+export function normalizeForFingerprintV1(text: string): string {
+  return normalizeForFingerprint(text.normalize('NFKC'));
 }
 
 /**
@@ -63,6 +80,29 @@ export function contentFingerprint(input: { text?: string; bio?: string }): stri
     return null;
   }
   return fingerprintText(text);
+}
+
+/**
+ * 指纹 v1 入口（v0.8）：v0 同构，但走 v1 归一化（NFKC + 停用字 + 更低门槛）。
+ * 输出仍是 16 位 hex，高 4 bit 为版本标记 0x3（v1 值恒以 '3' 开头）。
+ * 新拉黑账号产生的指纹应从这里出，随上报自然积累 v1 模板；
+ * 检测侧（detect.ts）同时消费 v0/v1 模板，旧值不失效。
+ */
+export function contentFingerprintV1(input: { text?: string; bio?: string }): string | null {
+  const text = input.text?.trim() ? input.text : input.bio;
+  if (!text) {
+    return null;
+  }
+  return fingerprintTextV1(text);
+}
+
+/** v1 指纹（16 位 hex，高 4 bit 版本标记 0x3）；文本不达门槛返回 null。 */
+export function fingerprintTextV1(text: string): string | null {
+  const value = textToSimhashV1(text);
+  if (value === null) {
+    return null;
+  }
+  return simhashToHex(value);
 }
 
 /** 复读追踪器选项 */

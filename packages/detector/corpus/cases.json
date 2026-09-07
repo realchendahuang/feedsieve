@@ -158,6 +158,20 @@
       "note": "普通昵称 + 正常用户名，无正文",
       "input": { "handle": "music_lover2024", "displayName": "Music Lover" },
       "expected": null
+    },
+    {
+      "id": "adversarial-fullwidth-bait",
+      "note": "全角字母/数字黄推引流：启发式 \\b 词边界不识别全角，漏报（已知局限；指纹 v1 NFKC 折叠后 exact 覆盖，见 detect.test v1 用例）",
+      "input": { "handle": "fw_01", "text": "ｄｍ　ｍｅ　ｆｏｒ　ｃｒｙｐｔｏ　ｓｉｇｎａｌｓ　福　利　在　主　页" },
+      "expected": null,
+      "known_limitation": true
+    },
+    {
+      "id": "zh-paraphrase-variant",
+      "note": "中文换词变体（福利主页 看 vs 福 利在简介 自取）：启发式与指纹 simhash 均不覆盖，仅指纹 exact 可命中（已知局限）",
+      "input": { "handle": "pv_01", "text": "福利主页看 不收钱" },
+      "expected": null,
+      "known_limitation": true
     }
   ]
 }

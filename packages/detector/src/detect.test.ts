@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { detect, normalizeHandle, toHandleSet } from './detect';
 import { DEFAULT_HEURISTICS } from './heuristics';
-import { fingerprintText } from './fingerprint';
+import { fingerprintText, fingerprintTextV1 } from './fingerprint';
 
 const SEED_LIST = toHandleSet(['@SpamKing88', 'crypto_teacher']);
 const KNOWN_TEMPLATE_FP = fingerprintText(
@@ -87,6 +87,61 @@ describe('detect: simhash 话术变体（v0.5 Campaign）', () => {
     );
     expect(result?.source).toBe('fingerprint');
     expect(result?.ruleId).toBe('community-fingerprint-sim');
+  });
+});
+
+describe('detect: 指纹 v1（v0.8：NFKC 全角折叠 + 版本位）', () => {
+  const V1_FP = fingerprintTextV1(
+    '🚀 500 USDT Giveaway! DM @spamking88 Claim on Tron 👉 https://t.co/abc123 follow & repost 🔥',
+  )!;
+  /** v0 盲区：全角字母/数字不折叠（NFKC 只在 v1） */
+  const FULLWIDTH_TWEET = 'ｄｍ　ｍｅ　ｆｏｒ　ｃｒｙｐｔｏ　ｓｉｇｎａｌｓ';
+  const HALFWIDTH_TEMPLATE = 'dm me for crypto signals';
+
+  it('全角规避：v1 指纹与半角模板 exact 命中', () => {
+    // 全角文本 NFKC 折叠后与半角模板指纹完全相同 -> fingerprints 集合直接命中
+    const result = detect(
+      { handle: 'fullwidth_spam', text: FULLWIDTH_TWEET },
+      { fingerprints: new Set([fingerprintTextV1(HALFWIDTH_TEMPLATE)!]) },
+    );
+    expect(result?.ruleId).toBe('community-fingerprint');
+  });
+
+  it('全角规避：v0 模板不折叠全角，变体判定不命中（v0 盲区被 v1 取代）', () => {
+    // v1 查询指纹只与 v1 模板（0x3 开头）比距离；v0 模板是旧哈希族 -> 不命中
+    const result = detect(
+      { handle: 'fullwidth_spam', text: FULLWIDTH_TWEET },
+      { simhashes: new Set([fingerprintText(HALFWIDTH_TEMPLATE)!]) },
+    );
+    expect(result).toBeNull();
+  });
+
+  it('v1 英文换词变体命中 simhash 集合', () => {
+    const variant =
+      '🎉 500 usdt Giveaway！DM @brand_new_2 Claim on Tron 👉 https://t.co/zzz999 follow & repost 💥';
+    const result = detect(
+      { handle: 'rebranded_v1', text: variant },
+      { simhashes: new Set([V1_FP]) },
+    );
+    expect(result?.ruleId).toBe('community-fingerprint-sim');
+    expect(result?.reason).toContain('话术变体');
+  });
+
+  it('v1 短话术指纹 exact 命中（v0 门槛挡住的黄推隐语）', () => {
+    const fu = fingerprintTextV1('我福不黑不信你看')!;
+    const result = detect(
+      { handle: 'fu_variant', text: '我福不黑不信你看' },
+      { fingerprints: new Set([fu]) },
+    );
+    expect(result?.ruleId).toBe('community-fingerprint');
+  });
+
+  it('v1 模板不误伤干净中文', () => {
+    const result = detect(
+      { handle: 'normal_user', text: '今天天气真好，晒晒午饭，上班摸鱼' },
+      { simhashes: new Set([V1_FP]) },
+    );
+    expect(result).toBeNull();
   });
 });
 

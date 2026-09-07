@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
   MIN_FINGERPRINT_LENGTH,
   contentFingerprint,
+  contentFingerprintV1,
   createRepetitionTracker,
   fingerprintText,
+  fingerprintTextV1,
   normalizeForFingerprint,
+  normalizeForFingerprintV1,
 } from './fingerprint';
 
 const SPAM_TEMPLATE =
@@ -80,6 +83,67 @@ describe('contentFingerprint', () => {
 
   it('returns null without any content', () => {
     expect(contentFingerprint({})).toBeNull();
+  });
+});
+
+describe('normalizeForFingerprintV1', () => {
+  it('NFKC 折叠全角字母/数字到半角（v0 不折叠）', () => {
+    expect(normalizeForFingerprintV1('ｄｍ　ｍｅ　５００')).toBe(
+      normalizeForFingerprint('dm me 500'),
+    );
+    expect(normalizeForFingerprint('ｄｍ　ｍｅ　５００')).not.toBe(
+      normalizeForFingerprint('dm me 500'),
+    );
+  });
+
+  it('零宽字符被剥离（垃圾号拆词规避不改变指纹）', () => {
+    expect(normalizeForFingerprintV1('d\u200bm me for crypto si\u200bg\u200bnals')).toBe(
+      normalizeForFingerprintV1('dm me for crypto signals'),
+    );
+  });
+
+  it('全角写法与半角写法的 v1 指纹完全相同', () => {
+    expect(fingerprintTextV1('ｄｍ　ｍｅ　ｆｏｒ　ｃｒｙｐｔｏ　ｓｉｇｎａｌｓ')).toBe(
+      fingerprintTextV1('dm me for crypto signals'),
+    );
+  });
+});
+
+describe('fingerprintTextV1', () => {
+  it('输出 16 位 hex、以版本标记 3 开头，且确定性', () => {
+    const a = fingerprintTextV1(SPAM_TEMPLATE);
+    expect(a).toMatch(/^3[0-9a-f]{15}$/);
+    expect(fingerprintTextV1(SPAM_TEMPLATE)).toBe(a);
+  });
+
+  it('v0 门槛挡住的短隐语（9 字符）v1 可指纹', () => {
+    expect(fingerprintText('我福不黑不信你看')).toBeNull();
+    expect(fingerprintTextV1('我福不黑不信你看')).toMatch(/^3[0-9a-f]{15}$/);
+  });
+
+  it('更短话术（加我微信）v0/v1 都不产指纹', () => {
+    expect(fingerprintTextV1('加我微信')).toBeNull();
+    expect(fingerprintTextV1('')).toBeNull();
+  });
+});
+
+describe('contentFingerprintV1', () => {
+  it('正文优先于 bio（与 v0 同构）', () => {
+    const fp = contentFingerprintV1({
+      text: SPAM_TEMPLATE,
+      bio: '加我微信进内部群包赚稳赚不赔',
+    });
+    expect(fp).toBe(fingerprintTextV1(SPAM_TEMPLATE));
+  });
+
+  it('正文为空时退回 bio', () => {
+    const bio = '我福不黑不信你看';
+    expect(contentFingerprintV1({ text: '   ', bio })).toBe(fingerprintTextV1(bio));
+    expect(contentFingerprintV1({ bio })).toBe(fingerprintTextV1(bio));
+  });
+
+  it('无内容返回 null', () => {
+    expect(contentFingerprintV1({})).toBeNull();
   });
 });
 

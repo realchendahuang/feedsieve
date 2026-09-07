@@ -11,7 +11,7 @@
  */
 
 import {
-  contentFingerprint,
+  contentFingerprintV1,
   detect,
   type DetectInput,
   type Detection,
@@ -69,8 +69,10 @@ export function runDetectionPipeline(input: DetectionPipelineInput): DetectionPi
     input;
 
   // 内容证据只用于用户主动标记或高置信命中后的社区证据。
+  // v0.8 起产 v1 指纹（NFKC + 停用字 + 更低门槛）：新拉黑账号随上报
+  // 自然积累 v1 模板；本地旧记录的 v0 指纹值继续原样上报，两者在服务端并存。
   const evidence: BlockEvidence = {};
-  const fp = contentFingerprint(source);
+  const fp = contentFingerprintV1(source);
   if (fp) evidence.contentFingerprint = fp;
   const linkDomains = collectLinkDomains(source.links ?? []);
   if (linkDomains) evidence.linkDomains = linkDomains;

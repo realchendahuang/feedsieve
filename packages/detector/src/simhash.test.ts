@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   SIMHASH_HAMMING_THRESHOLD,
   hammingDistance,
+  isSimhashV1,
   simhashFromHex,
   simhashToHex,
+  simhashTokensV1,
   textToSimhash,
+  textToSimhashV1,
 } from './simhash';
-import { contentFingerprint } from './fingerprint';
+import { contentFingerprint, contentFingerprintV1, fingerprintTextV1 } from './fingerprint';
 
 const TEMPLATE =
   '🚀 500 USDT Giveaway! DM @spamking88 Claim on Tron 👉 https://t.co/abc123 follow & repost 🔥';
@@ -93,5 +96,77 @@ describe('simhash 与指纹 API 的关系', () => {
     expect(contentFingerprint({ text: TEMPLATE })).toBe(
       simhashToHex(textToSimhash(TEMPLATE)!),
     );
+  });
+});
+
+describe('simhash v1: 版本位与输出形状（v0.8）', () => {
+  it('v1 输出仍是 16 位 hex，且高 4 bit 为版本标记 0x3（恒以 3 开头）', () => {
+    const v = textToSimhashV1(TEMPLATE);
+    expect(v).not.toBeNull();
+    const hex = simhashToHex(v!);
+    expect(hex).toMatch(/^[0-9a-f]{16}$/);
+    expect(hex.startsWith('3')).toBe(true);
+  });
+
+  it('isSimhashV1 按高 4 bit 判定', () => {
+    expect(isSimhashV1('3fffffffffffffff')).toBe(true);
+    expect(isSimhashV1('afffffffffffffff')).toBe(false);
+  });
+
+  it('v1 与 v0 是不同版本：同一模板的 v1 值不等于 v0 值', () => {
+    expect(contentFingerprintV1({ text: TEMPLATE })).not.toBe(contentFingerprint({ text: TEMPLATE }));
+  });
+});
+
+describe('simhash v1: 变体识别', () => {
+  it('相同模板的 v1 汉明距离为 0（全角/半角折叠后一致）', () => {
+    const a = textToSimhashV1(TEMPLATE);
+    const b = textToSimhashV1(VARIANT);
+    expect(a).not.toBeNull();
+    expect(b).not.toBeNull();
+    // TEMPLATE 与 VARIANT 只是换 handle/URL/emoji，归一化后相同 -> 距离 0
+    expect(hammingDistance(a!, b!)).toBe(0);
+  });
+
+  it('v1 英文换词变体距离 <= 阈值（含停用词 the/of 等被剔除后仍稳定）', () => {
+    const a = textToSimhashV1('claim 500 USDT giveaway on Tron follow repost');
+    const b = textToSimhashV1('claim 500 USDT giveaway on Tron please follow and repost');
+    expect(a).not.toBeNull();
+    expect(b).not.toBeNull();
+    expect(hammingDistance(a!, b!)).toBeLessThanOrEqual(SIMHASH_HAMMING_THRESHOLD);
+  });
+
+  it('语义不同的模板距离 > 阈值（不误报）', () => {
+    const a = textToSimhashV1(TEMPLATE);
+    const c = textToSimhashV1(DIFFERENT_TEMPLATE);
+    expect(a).not.toBeNull();
+    expect(c).not.toBeNull();
+    expect(hammingDistance(a!, c!)).toBeGreaterThan(SIMHASH_HAMMING_THRESHOLD);
+  });
+});
+
+describe('simhash v1: 停用字与短话术', () => {
+  it('中文停用字 gram 被过滤：纯停用字文本不产任何 token', () => {
+    expect(simhashTokensV1('的了是在我你他她它们有和就都')).toEqual([]);
+  });
+
+  it('短隐语（>=8 字符）可产 v1 指纹（v0 的 12 字符门槛挡住它）', () => {
+    expect(textToSimhash('我福不黑不信你看')).toBeNull();
+    const v = textToSimhashV1('我福不黑不信你看');
+    expect(v).not.toBeNull();
+    expect(simhashToHex(v!)).toMatch(/^3[0-9a-f]{15}$/);
+  });
+
+  it('更短的话术仍不产指纹（区分度不足）', () => {
+    expect(textToSimhashV1('加我微信')).toBeNull();
+    expect(textToSimhashV1('')).toBeNull();
+  });
+
+  it('不同短话术指纹互异（碰撞防护）', () => {
+    const a = fingerprintTextV1('我福不黑不信你看');
+    const b = fingerprintTextV1('我福不黑审查看看');
+    expect(a).not.toBeNull();
+    expect(b).not.toBeNull();
+    expect(a).not.toBe(b);
   });
 });
