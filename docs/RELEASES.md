@@ -15,8 +15,8 @@
 
 发布产物：
 
-- `feedsieve-0.8.0-chrome.zip`
-- SHA-256：见 `apps/extension/.output/`（打包后回填）
+- `feedsieve-0.8.0-chrome.zip`（336.7 kB）
+- SHA-256：`ead596eab28b262191167c7e9460d8543e4cfcacda8a371e7b239bf58483afdd`
 
 ## v0.7.5 — 弹窗收紧与维护后台（2026-09-03）
 
