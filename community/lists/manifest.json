@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
   "policy_version": 3,
-  "snapshot_version": "2026.09.02.1",
-  "generated_at": "2026-09-02T02:15:00.000Z",
+  "snapshot_version": "2026.09.07.20",
+  "generated_at": "2026-09-07T02:08:12.976Z",
   "policy": {
     "version": 3,
     "blocklist": {
@@ -21,18 +21,22 @@
       "floor": 0.2,
       "burst_threshold": 30,
       "burst_decay": 0.1
+    },
+    "consensus_v2": {
+      "status": "shadow",
+      "formula": "trust × installation maturity weighted net votes + temporal/evidence independence"
     }
   },
   "files": [
     {
       "path": "official.json",
-      "sha256": "1773678920ba5eefb67c074d6d0815a7ca0620a622e93e3673f6836f73d7d6cd",
-      "entries": 6
+      "sha256": "c639647c7d9429de167163c16d81b9a31f7f02bdc72df74db5b11d068619e9b8",
+      "entries": 227
     },
     {
       "path": "blocklist.yaml",
-      "sha256": "d97ce70a483b13b9ef796aa92b1690af95231673305d1337182724a8d59e8229",
-      "entries": 6
+      "sha256": "6f6ae5e983579a56178e99e0385b41726b638bb4a322cb13b03f0167560fc727",
+      "entries": 227
     }
   ]
 }

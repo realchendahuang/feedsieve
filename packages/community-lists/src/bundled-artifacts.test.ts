@@ -26,7 +26,7 @@ describe('bundled public blocklist artifacts', () => {
           expect(parsed.value.entries.every((entry) => entry.sources.length > 0)).toBe(true);
         }
       } else {
-        expect(body).toContain("formula: 'block_votes - false_positive_votes'");
+        expect(body).toContain('block_votes - false_positive_votes');
         expect(body).toContain(`accounts: ${file.entries}`);
       }
     }
