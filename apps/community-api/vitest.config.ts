@@ -9,8 +9,15 @@ export default defineConfig(async () => {
       cloudflareTest({
         wrangler: { configPath: './wrangler.jsonc' },
         miniflare: {
-          // 测试专用绑定：迁移内容注入为绑定，setup 文件里 applyD1Migrations 消费
-          bindings: { TEST_MIGRATIONS: migrations },
+          // 测试专用绑定：迁移内容注入为绑定，setup 文件里 applyD1Migrations 消费；
+          // Access 中间件用占位配置驱动（JWKS 由测试的 fetchMock 拦截提供假密钥）。
+          bindings: {
+            TEST_MIGRATIONS: migrations,
+            ADMIN_HOST: 'admin.feedsieve-api.chendahuang.com',
+            ACCESS_AUD: 'feedsieve-test-aud',
+            ACCESS_JWKS_URL: 'https://jwks.test/.well-known/jwks.json',
+            ACCESS_ALLOWED_EMAILS: 'maintainer@example.com',
+          },
         },
       }),
     ],
