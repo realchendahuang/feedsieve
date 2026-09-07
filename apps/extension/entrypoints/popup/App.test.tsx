@@ -4,6 +4,7 @@ import React, { act } from 'react';
 import ReactDOM from 'react-dom/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
+import type { PersistentBlockQueueState } from '../../src/lib/block-queue-store';
 
 let storageSet: ReturnType<typeof vi.fn>;
 let runtimeSendMessage: ReturnType<typeof vi.fn>;
@@ -153,8 +154,7 @@ describe('popup App 渲染冒烟', () => {
     expect(rootEl.textContent).toContain('当前页面没有待处理账号');
     expect(rootEl.textContent).toContain('一键拉黑全部');
     expect(rootEl.textContent).toContain('社区黑名单');
-    expect(rootEl.textContent).toContain('@cndon91');
-    expect(rootEl.textContent).toContain('一键开始清理 6 个');
+    expect(rootEl.textContent).toContain('一键开始清理');
     expect(rootEl.textContent).toContain('今日概览');
     expect(rootEl.textContent).toContain('清理');
     expect(rootEl.textContent).toContain('概览');
@@ -523,5 +523,123 @@ describe('popup App 渲染冒烟', () => {
     await new Promise((resolve) => setTimeout(resolve, 150));
 
     expect(rootEl.textContent).not.toContain('拉黑接口暂不可用');
+  });
+
+  it('页面批量拉黑队列完成后重新拉取黄框，「一键拉黑全部」随真实剩余禁用', async () => {
+    const snapshot = communitySnapshot([{ handle: 'three_votes' }]);
+    // holder 对象：TS 控制流看不到回调内赋值，直接 let + ?. 会被收窄成不可调用
+    const queueListenerHolder: {
+      current: ((changes: Record<string, unknown>, areaName: string) => void) | null;
+    } = { current: null };
+    let storedQueue: PersistentBlockQueueState | null = null;
+    vi.stubGlobal('browser', {
+      storage: {
+        local: {
+          get: vi.fn(() => {
+            const base: Record<string, unknown> = { uiLanguage: 'zh', communitySnapshot: snapshot };
+            if (storedQueue) base.persistentBlockQueueV1 = storedQueue;
+            return Promise.resolve(base);
+          }),
+          set: vi.fn().mockResolvedValue(undefined),
+        },
+        onChanged: {
+          addListener: vi.fn((listener: (changes: Record<string, unknown>, areaName: string) => void) => {
+            queueListenerHolder.current = listener;
+          }),
+          removeListener: vi.fn(),
+        },
+      },
+      tabs: {
+        query: vi.fn().mockResolvedValue([{ id: 1, active: true, url: 'https://x.com/home' }]),
+        sendMessage: tabSendMessage,
+      },
+      runtime: { sendMessage: runtimeSendMessage },
+    });
+
+    // 首屏：页面有 3 个黄框 → 按钮可用并带计数
+    tabSendMessage.mockResolvedValue([
+      { handle: 'alpha', category: 'bot_spam', reason: 'r' },
+      { handle: 'bravo', category: 'bot_spam', reason: 'r' },
+      { handle: 'charlie', category: 'bot_spam', reason: 'r' },
+    ]);
+    const rootEl = renderApp();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    const blockAll = rootEl.querySelector<HTMLButtonElement>('.primary-action');
+    expect(blockAll?.disabled).toBe(false);
+    expect(blockAll?.textContent).toContain('3');
+
+    // 队列写入 running → 按钮仍禁用（进行中）；完成后重新拉黄框 → 已清空 → 放行并禁用
+    storedQueue = {
+      id: 'q1',
+      source: 'page-batch',
+      status: 'running',
+      tasks: [],
+      createdAt: 0,
+      updatedAt: 0,
+    };
+    queueListenerHolder.current?.({ persistentBlockQueueV1: {} }, 'local');
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    tabSendMessage.mockResolvedValueOnce([]);
+    storedQueue = { ...storedQueue!, status: 'completed', updatedAt: 1 };
+    queueListenerHolder.current?.({ persistentBlockQueueV1: {} }, 'local');
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    const refreshCalls = tabSendMessage.mock.calls.filter(([, message]) =>
+      Object.prototype.hasOwnProperty.call(message, 'type') &&
+      (message as { type: string }).type === 'feedsieve:page-marked-list',
+    );
+    expect(refreshCalls.length).toBeGreaterThanOrEqual(2);
+    expect(blockAll?.disabled).toBe(true);
+    expect(rootEl.textContent).toContain('当前页面没有待处理账号');
+  });
+
+  it('社区清理队列收尾有失败项时，如实展示失败原因而不是让按钮无声重试', async () => {
+    const snapshot = communitySnapshot([{ handle: 'cndon91', maintainer: true }]);
+    const failedQueue: PersistentBlockQueueState = {
+      id: 'q2',
+      source: 'community-batch',
+      status: 'completed',
+      tasks: [
+        {
+          handle: 'cndon91',
+          category: 'adult_gray_traffic',
+          status: 'failed',
+          failureCode: 'no-id',
+          lastErrorCode: 'no-id',
+        },
+      ],
+      createdAt: 0,
+      updatedAt: 1,
+    };
+    vi.stubGlobal('browser', {
+      storage: {
+        local: {
+          get: vi.fn().mockResolvedValue({
+            uiLanguage: 'zh',
+            communitySnapshot: snapshot,
+            persistentBlockQueueV1: failedQueue,
+          }),
+          set: vi.fn().mockResolvedValue(undefined),
+        },
+        onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+      },
+      tabs: {
+        query: vi.fn().mockResolvedValue([{ id: 1, active: true, url: 'https://x.com/home' }]),
+        sendMessage: tabSendMessage,
+      },
+      runtime: { sendMessage: runtimeSendMessage },
+    });
+
+    const rootEl = renderApp();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    // 失败条目与原因如实展示，避免「怎么都清不掉」的无声死循环
+    expect(rootEl.textContent).toContain('@cndon91');
+    expect(rootEl.textContent).toContain('缺少用户 ID');
+    // 剩余可清理条目仍在，可重试
+    const retry = rootEl.querySelector<HTMLButtonElement>('.community-clean-action');
+    expect(retry?.disabled).toBe(false);
   });
 });

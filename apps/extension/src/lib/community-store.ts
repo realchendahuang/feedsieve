@@ -88,6 +88,32 @@ export async function getCommunityKillSwitch(): Promise<
   return parsed.ok ? parsed.value.kill_switch : undefined;
 }
 
+/** 官方暂停开关实时状态：browser 侧所有破坏性操作门控用的统一形状。 */
+export type OfficialPauseState =
+  | { destructive_actions_disabled: true; reason?: string; disabled_since?: string }
+  | { destructive_actions_disabled: false };
+
+/**
+ * 破坏性操作执行前的实时门控：问 background 读 /v1/kill-switch
+ * （SW 内做 30s TTL 缓存，批量队列突发只产生一次请求）。
+ * 网络/消息失败回退到本地验签快照里的开关 —— 只会更保守，不会凭空放行。
+ */
+export async function requestOfficialPauseCheck(): Promise<OfficialPauseState> {
+  try {
+    const res = (await browser.runtime.sendMessage({
+      type: 'feedsieve:official-pause-check',
+    })) as { paused?: unknown; reason?: string; disabledSince?: string } | null | undefined;
+    if (res && typeof res.paused === 'boolean') {
+      return res.paused
+        ? { destructive_actions_disabled: true, reason: res.reason, disabled_since: res.disabledSince }
+        : { destructive_actions_disabled: false };
+    }
+  } catch {
+    // background SW 暂不可达：走本地快照回退
+  }
+  return (await getCommunityKillSwitch()) ?? { destructive_actions_disabled: false };
+}
+
 /** 传给 community-lists 同步器的存储适配器 */
 export const snapshotStore = {
   // 同步节流只能看真正写入 storage 的远端快照，不能把打包兜底误当成刚同步。

@@ -26,6 +26,7 @@ import {
   setCommunitySettings,
   getCommunitySnapshot,
   getCommunityKillSwitch,
+  requestOfficialPauseCheck,
   subscribeCommunity,
   type CommunitySettings,
 } from '../../src/lib/community-store';
@@ -364,6 +365,8 @@ export default function App() {
   const [keywordRulesOpen, setKeywordRulesOpen] = useState(false);
   const [customKeyword, setCustomKeyword] = useState('');
   const personalConfigInputRef = useRef<HTMLInputElement>(null);
+  /** 追踪上一个队列状态：page-batch 收尾时据此判断是否该刷新页面黄框。 */
+  const pageBatchQueueRef = useRef<PersistentBlockQueueState | null>(null);
   const [personalConfigPreview, setPersonalConfigPreview] =
     useState<PersonalConfigPreviewState | null>(null);
   const [personalConfigMessage, setPersonalConfigMessage] = useState<string | null>(null);
@@ -407,6 +410,63 @@ export default function App() {
     applyCommunitySnapshotState(await getCommunitySnapshot());
   }
 
+  const sendToXPage = useCallback(
+    async (message: {
+      type: string;
+      handle?: string;
+      force?: boolean;
+      items?: Array<{ handle: string; xUserId?: string; category: string }>;
+    }): Promise<unknown> => {
+      // Only target the active tab. Sending a destructive action to an arbitrary
+      // background X tab is surprising and can block the wrong account.
+      const activeTabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+      const tab = activeTabs.find((candidate) => {
+        const url = candidate.url ?? '';
+        return (
+          candidate.active === true &&
+          /^https:\/\/(www\.)?x\.com\//.test(url) &&
+          Boolean(candidate.id)
+        );
+      });
+      if (!tab?.id) throw new Error('no x.com receiver');
+      return browser.tabs.sendMessage(tab.id, { ...message, targetTabId: tab.id });
+    },
+    [],
+  );
+
+  const refreshPageMarked = useCallback(async (): Promise<void> => {
+    try {
+      const result = await sendToXPage(PAGE_MARKED_MESSAGE);
+      setPageMarked(asPageMarkedList(result));
+    } catch {
+      setPageMarked([]);
+    }
+  }, [sendToXPage]);
+
+  /**
+   * 队列状态回调：page-batch 批量拉黑收尾（completed/cancelled）时，
+   * 页面黄框已被逐个移除，重新拉一次让「一键拉黑」按钮随真实剩余禁用，
+   * 而不是停留在这个会话开始时的旧计数。
+   */
+  const handleQueueChange = useCallback(
+    (next: PersistentBlockQueueState | null): void => {
+      const prev = pageBatchQueueRef.current;
+      pageBatchQueueRef.current = next;
+      setQueue(next);
+      if (
+        next &&
+        next.source === 'page-batch' &&
+        (next.status === 'completed' || next.status === 'cancelled') &&
+        prev &&
+        prev.source === 'page-batch' &&
+        (prev.status === 'running' || prev.status === 'paused')
+      ) {
+        void refreshPageMarked();
+      }
+    },
+    [refreshPageMarked],
+  );
+
   useEffect(() => {
     void getUiLanguage().then(setLanguage);
     void getBlockedAccounts().then(setBlocked);
@@ -431,6 +491,10 @@ export default function App() {
     void getCommunityKillSwitch()
       .then((sw) => setKillSwitch(sw ?? null))
       .catch(() => setKillSwitch(null));
+    // 实时门控：官方暂停以 /v1/kill-switch 为准（请求失败时刚读的本地快照值兜底）
+    void requestOfficialPauseCheck()
+      .then((state) => setKillSwitch(state.destructive_actions_disabled ? state : null))
+      .catch(() => undefined);
     void sendToXPage({ type: 'feedsieve:capabilities' })
       .then((result) => {
         const caps = result as XAdapterCapabilities | null;
@@ -456,16 +520,20 @@ export default function App() {
         void getCommunitySettings().then(setCommunity);
         void getCommunitySnapshot().then(applyCommunitySnapshotState);
         void getCommunityKillSwitch().then((sw) => setKillSwitch(sw ?? null)).catch(() => setKillSwitch(null));
+        // 快照更新后同步重查实时官方暂停（popup 打开期间开关翻转也能尽快反映）
+        void requestOfficialPauseCheck()
+          .then((state) => setKillSwitch(state.destructive_actions_disabled ? state : null))
+          .catch(() => undefined);
       }),
       subscribeUiLanguage(setLanguage),
       subscribeKeywordRules(setKeywordRules),
       subscribeKeywordPackCatalog(setKeywordCatalog),
       subscribeFollowingAllowlist(setFollowing),
       subscribeFollowingSyncState(setFollowingSync),
-      subscribePersistentBlockQueue(setQueue),
+      subscribePersistentBlockQueue(handleQueueChange),
     ];
     return () => unsubs.forEach((unsub) => unsub());
-  }, [applyCommunitySnapshotState]);
+  }, [applyCommunitySnapshotState, handleQueueChange, sendToXPage]);
 
   useEffect(() => {
     document.documentElement.lang = language === 'zh' ? 'zh-CN' : 'en';
@@ -476,32 +544,6 @@ export default function App() {
     const timeout = window.setTimeout(() => setNotice(null), 4_000);
     return () => window.clearTimeout(timeout);
   }, [notice]);
-
-  async function sendToXPage(message: {
-    type: string;
-    handle?: string;
-    force?: boolean;
-    items?: Array<{ handle: string; xUserId?: string; category: string }>;
-  }): Promise<unknown> {
-    // Only target the active tab. Sending a destructive action to an arbitrary
-    // background X tab is surprising and can block the wrong account.
-    const activeTabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
-    const tab = activeTabs.find((candidate) => {
-      const url = candidate.url ?? '';
-      return candidate.active === true && /^https:\/\/(www\.)?x\.com\//.test(url) && Boolean(candidate.id);
-    });
-    if (!tab?.id) throw new Error('no x.com receiver');
-    return browser.tabs.sendMessage(tab.id, { ...message, targetTabId: tab.id });
-  }
-
-  async function refreshPageMarked(): Promise<void> {
-    try {
-      const result = await sendToXPage(PAGE_MARKED_MESSAGE);
-      setPageMarked(asPageMarkedList(result));
-    } catch {
-      setPageMarked([]);
-    }
-  }
 
   // 破坏性操作降级：官方暂停开关优先，其次 X 能力快照（会话/Block 接口异常）
   const killSwitchActive = Boolean(killSwitch?.destructive_actions_disabled);
@@ -585,6 +627,11 @@ export default function App() {
         setBlockResult(null);
         setQueue(await getPersistentBlockQueue());
         setNotice(t.queueStarted(result.count ?? 0));
+        // 全部被过滤（已拉黑/白名单/关注，无实际可拉黑对象）时立即刷新，
+        // 「一键拉黑」按钮即刻回到禁用态，而不是停留在这个会话的旧计数。
+        if ((result.count ?? 0) === 0) {
+          await refreshPageMarked();
+        }
       } else if (Array.isArray((result as PageBlockResult)?.blocked)) {
         setBlockResult(result as PageBlockResult);
         await refreshPageMarked();
@@ -886,6 +933,12 @@ export default function App() {
   const cloudExcluded = communityEntries.length - cloudEligible.length;
   const queueSummary = blockQueueProgress(queue);
   const queueDone = queueSummary.success + queueSummary.failed;
+  // 社区清理失败项：队列收尾后留在卡片上按来源标签展示原因（如「缺少用户 ID」），
+  // 避免用户对「怎么都清不掉」的条目陷在无限重试里。
+  const queueFailedTasks =
+    queue && queue.source === 'community-batch'
+      ? queue.tasks.filter((task) => task.status === 'failed')
+      : [];
   const queueActive =
     queue &&
     queueSummary.total > 0 &&
@@ -900,7 +953,19 @@ export default function App() {
     : '';
   const followingSyncActive =
     followingSync.status === 'running' || followingSync.status === 'waiting';
-  const followingSyncStale = followingSyncActive && Date.now() - followingSync.updatedAt > 60_000;
+  // 关注同步"过期"提示：render 期不调用 Date.now（保持纯净），
+  // 由 effect 每 5 秒重算一次，popup 打开期间提示会随最新状态自动刷新。
+  const [followingSyncStale, setFollowingSyncStale] = useState(false);
+  useEffect(() => {
+    const refresh = (): void =>
+      setFollowingSyncStale(
+        followingSyncActive && Date.now() - followingSync.updatedAt > 60_000,
+      );
+    refresh();
+    if (!followingSyncActive) return;
+    const id = window.setInterval(refresh, 5_000);
+    return () => window.clearInterval(id);
+  }, [followingSyncActive, followingSync.updatedAt]);
   const failedSummary = (result: { failed: Array<{ handle: string; code: string }> } | null) =>
     result?.failed.length
       ? result.failed
@@ -1053,7 +1118,7 @@ export default function App() {
                   disabled={
                     !pageCount ||
                     running ||
-                    Boolean(queueActive && queue?.source === 'page-batch') ||
+                    queueActive ||
                     pauseDestructive
                   }
                   onClick={() => void runBatch()}
@@ -1159,6 +1224,34 @@ export default function App() {
                       </button>
                     </div>
                   ) : null}
+                </div>
+              ) : queueFailedTasks.length > 0 ? (
+                // 队列已收尾但仍有失败项：如实展示失败原因，而不是让按钮无声地重试
+                <div className="queue-panel queue-result" role="status">
+                  <div className="queue-line">
+                    <span>
+                      {t.communityClean} · {t.queueProgress(queueDone, queueSummary.total)}
+                    </span>
+                    <strong>{queueStatusLabel}</strong>
+                  </div>
+                  <ul className="queue-failed-list">
+                    {queueFailedTasks.map((task) => (
+                      <li key={task.handle}>
+                        @{task.handle}（
+                        {FAILURE_LABELS[language][task.failureCode ?? ''] ??
+                          task.failureCode ??
+                          t.unknown}
+                        ）
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    className="secondary-action community-clean-action"
+                    disabled={running || cloudEligible.length === 0 || pauseDestructive}
+                    onClick={() => void startCommunityQueue()}
+                  >
+                    {t.startCommunityClean(cloudEligible.length)}
+                  </button>
                 </div>
               ) : (
                 <button

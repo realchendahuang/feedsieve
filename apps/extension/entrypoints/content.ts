@@ -26,6 +26,7 @@ import { runUnblockBatch } from '../src/lib/run-unblock-batch';
 import { getUserId, saveUserIds } from '../src/lib/user-ids';
 import {
   buildRuntimeCommunity,
+  requestOfficialPauseCheck,
   subscribeCommunity,
   type RuntimeCommunity,
 } from '../src/lib/community-store';
@@ -882,9 +883,14 @@ export default defineContentScript({
       | { ok: true }
       | { ok: false; code: string; httpStatus?: number; retryAfterMs?: number }
     > {
-      // 官方破坏性动作暂停开关（来自签名快照，验签后生效）：
+      // 官方破坏性动作暂停开关：本地快照命中立刻拦截（零额外请求）；
+      // 否则实时问一次 /v1/kill-switch（background 30s TTL 缓存），网络失败回退快照。
       // 只关闭拉黑类动作，检测 / 标注 / 读取继续；单向开关，不可能远程开启自动拉黑。
       if (community?.killSwitch?.destructive_actions_disabled) {
+        return { ok: false, code: 'kill_switch' };
+      }
+      const officialPause = await requestOfficialPauseCheck();
+      if (officialPause.destructive_actions_disabled) {
         return { ok: false, code: 'kill_switch' };
       }
       let xUserId: string | undefined | null = item.xUserId ?? (await getUserId(item.handle));
@@ -1173,8 +1179,13 @@ export default defineContentScript({
       | { status: 'started'; id: string; count: number }
       | { status: 'error'; error: string; id: string; count: number }
     > {
-      // 官方暂停开关生效时拒绝新建破坏性队列（popup 也会先检查并禁用入口）
+      // 官方暂停开关生效时拒绝新建破坏性队列（popup 也会先检查并禁用入口）；
+      // 本地快照未停时再实时确认一次，避免开关刚翻转仍被旧的 6h 缓存放行。
       if (community?.killSwitch?.destructive_actions_disabled) {
+        return { status: 'error', error: 'kill_switch', id: '', count: 0 };
+      }
+      const officialPause = await requestOfficialPauseCheck();
+      if (officialPause.destructive_actions_disabled) {
         return { status: 'error', error: 'kill_switch', id: '', count: 0 };
       }
       const filtered = items.filter((item) => {
