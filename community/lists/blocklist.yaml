@@ -1,14 +1,58 @@
 # FeedSieve 公开社区黑名单
 # 拉黑仍需用户在扩展中明确点击；社区批量拉黑不会反向增加票数。
 schema_version: 2
-version: "2026.09.07.20"
-generated_at: "2026-09-07T02:08:12.976Z"
+version: "2026.09.07.22"
+generated_at: "2026-09-07T05:18:03.076Z"
 rule:
   formula: "block_votes - false_positive_votes"
   min_net_votes: 3
 summary:
-  accounts: 227
+  accounts: 386
 entries:
+  - handle: "__erwinmar"
+    x_user_id: "818676523"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T03:11:51.000Z"
+    updated_at: "2026-09-07T03:51:50.000Z"
+    evidence_post_ids: []
+  - handle: "_majestda"
+    x_user_id: "634297471"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T03:52:45.000Z"
+    updated_at: "2026-09-07T04:40:53.000Z"
+    evidence_post_ids: []
+  - handle: "1tyaaaa"
+    x_user_id: "1243671965858172928"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T00:41:33.000Z"
+    updated_at: "2026-09-07T05:00:42.000Z"
+    evidence_post_ids: []
+  - handle: "9hgiuhqvntj4phl"
+    x_user_id: "1548551995807924224"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-07T00:41:48.000Z"
+    updated_at: "2026-09-07T03:57:06.000Z"
+    evidence_post_ids: []
   - handle: "abeljackc3"
     x_user_id: "2087490276243693568"
     category: "other"
@@ -36,11 +80,33 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 5
+      block: 9
       false_positive: 0
-      net: 5
+      net: 9
     first_seen_at: "2026-09-06T10:47:24.000Z"
-    updated_at: "2026-09-07T01:57:21.000Z"
+    updated_at: "2026-09-07T04:41:23.000Z"
+    evidence_post_ids: []
+  - handle: "aditi_rps"
+    x_user_id: "750272705375723520"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T01:04:30.000Z"
+    updated_at: "2026-09-07T02:48:45.000Z"
+    evidence_post_ids: []
+  - handle: "africanviol3ts"
+    x_user_id: "19630479"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 11
+      false_positive: 0
+      net: 11
+    first_seen_at: "2026-09-07T04:11:14.000Z"
+    updated_at: "2026-09-07T05:13:07.000Z"
     evidence_post_ids: []
   - handle: "agoosogas"
     x_user_id: "955581024"
@@ -53,6 +119,17 @@ entries:
     first_seen_at: "2026-09-06T15:04:17.000Z"
     updated_at: "2026-09-06T19:11:14.000Z"
     evidence_post_ids: []
+  - handle: "ahmedlabib72"
+    x_user_id: "91555747"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T21:41:40.000Z"
+    updated_at: "2026-09-07T03:48:15.000Z"
+    evidence_post_ids: []
   - handle: "ahmetpolat6rz1"
     x_user_id: "2086483859714031617"
     category: "other"
@@ -63,6 +140,39 @@ entries:
       net: 3
     first_seen_at: "2026-09-06T11:44:57.000Z"
     updated_at: "2026-09-06T13:16:46.000Z"
+    evidence_post_ids: []
+  - handle: "aiidalc"
+    x_user_id: "947891918"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 7
+      false_positive: 0
+      net: 7
+    first_seen_at: "2026-09-07T03:29:49.000Z"
+    updated_at: "2026-09-07T04:46:47.000Z"
+    evidence_post_ids: []
+  - handle: "ajmalvirk"
+    x_user_id: "99536235"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 7
+      false_positive: 0
+      net: 7
+    first_seen_at: "2026-09-07T04:13:49.000Z"
+    updated_at: "2026-09-07T05:13:04.000Z"
+    evidence_post_ids: []
+  - handle: "albertreyedzzw"
+    x_user_id: "2086485512961822720"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T02:54:54.000Z"
+    updated_at: "2026-09-07T04:46:32.000Z"
     evidence_post_ids: []
   - handle: "alexfsdqq"
     x_user_id: "2086617018296315904"
@@ -91,11 +201,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-06T15:01:07.000Z"
-    updated_at: "2026-09-06T21:54:44.000Z"
+    updated_at: "2026-09-07T05:01:17.000Z"
     evidence_post_ids: []
   - handle: "alexisugneg"
     x_user_id: "2086569805222486016"
@@ -130,16 +240,27 @@ entries:
     first_seen_at: "2026-09-06T19:31:57.000Z"
     updated_at: "2026-09-07T01:30:56.000Z"
     evidence_post_ids: []
-  - handle: "alitekinykg8"
-    x_user_id: "2086484491871113216"
+  - handle: "alimiaaan"
+    x_user_id: "3224625157"
     category: "other"
     sources: ["community"]
     votes:
       block: 3
       false_positive: 0
       net: 3
+    first_seen_at: "2026-09-07T04:26:44.000Z"
+    updated_at: "2026-09-07T04:53:57.000Z"
+    evidence_post_ids: []
+  - handle: "alitekinykg8"
+    x_user_id: "2086484491871113216"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
     first_seen_at: "2026-09-06T13:58:31.000Z"
-    updated_at: "2026-09-07T00:47:50.000Z"
+    updated_at: "2026-09-07T02:25:24.000Z"
     evidence_post_ids: []
   - handle: "alyshamettokp"
     x_user_id: "2087490097235054592"
@@ -152,6 +273,17 @@ entries:
     first_seen_at: "2026-09-06T12:01:23.000Z"
     updated_at: "2026-09-06T12:07:55.000Z"
     evidence_post_ids: []
+  - handle: "amariuqmkd"
+    x_user_id: "2086888233208565760"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T01:06:22.000Z"
+    updated_at: "2026-09-07T03:49:57.000Z"
+    evidence_post_ids: []
   - handle: "amberkrinepq"
     x_user_id: "2087485137579556866"
     category: "other"
@@ -163,6 +295,17 @@ entries:
     first_seen_at: "2026-09-06T14:51:09.000Z"
     updated_at: "2026-09-06T15:05:07.000Z"
     evidence_post_ids: []
+  - handle: "ameliainxwy"
+    x_user_id: "2086870403218104320"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 5
+      false_positive: 0
+      net: 5
+    first_seen_at: "2026-09-06T22:01:59.000Z"
+    updated_at: "2026-09-07T03:57:28.000Z"
+    evidence_post_ids: []
   - handle: "ameliapnoekp"
     x_user_id: "2086613600102162432"
     category: "other"
@@ -173,6 +316,28 @@ entries:
       net: 3
     first_seen_at: "2026-09-06T21:00:27.000Z"
     updated_at: "2026-09-07T01:07:03.000Z"
+    evidence_post_ids: []
+  - handle: "anakbuahnuna"
+    x_user_id: "373243640"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 10
+      false_positive: 0
+      net: 10
+    first_seen_at: "2026-09-07T01:50:37.000Z"
+    updated_at: "2026-09-07T05:07:54.000Z"
+    evidence_post_ids: []
+  - handle: "aniruddhsinh143"
+    x_user_id: "367791626"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 9
+      false_positive: 0
+      net: 9
+    first_seen_at: "2026-09-07T03:29:49.000Z"
+    updated_at: "2026-09-07T04:53:59.000Z"
     evidence_post_ids: []
   - handle: "anjelicabac9"
     x_user_id: "2087477480739545088"
@@ -201,11 +366,77 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-06T19:29:02.000Z"
+    updated_at: "2026-09-07T03:43:33.000Z"
+    evidence_post_ids: []
+  - handle: "anthonyuxbvul"
+    x_user_id: "2086719732774813696"
+    category: "other"
+    sources: ["community"]
+    votes:
       block: 3
       false_positive: 0
       net: 3
-    first_seen_at: "2026-09-06T19:29:02.000Z"
-    updated_at: "2026-09-07T01:17:11.000Z"
+    first_seen_at: "2026-09-06T20:38:12.000Z"
+    updated_at: "2026-09-07T03:11:47.000Z"
+    evidence_post_ids: []
+  - handle: "antoniouvtgj"
+    x_user_id: "2086786094578765824"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T20:38:12.000Z"
+    updated_at: "2026-09-07T03:42:12.000Z"
+    evidence_post_ids: []
+  - handle: "aoqtnuzcvgfx8l"
+    x_user_id: "2069756240423440384"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T21:27:03.000Z"
+    updated_at: "2026-09-07T03:46:19.000Z"
+    evidence_post_ids: []
+  - handle: "aqyvnckrzlc9jq2"
+    x_user_id: "1353957278810992640"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T03:55:09.000Z"
+    updated_at: "2026-09-07T04:55:21.000Z"
+    evidence_post_ids: []
+  - handle: "araara6978"
+    x_user_id: "2529234710"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 5
+      false_positive: 0
+      net: 5
+    first_seen_at: "2026-09-06T11:36:50.000Z"
+    updated_at: "2026-09-07T04:42:09.000Z"
+    evidence_post_ids: []
+  - handle: "arbhosale17"
+    x_user_id: "1271131486922539008"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-06T18:03:51.000Z"
+    updated_at: "2026-09-07T05:11:59.000Z"
     evidence_post_ids: []
   - handle: "artlohn"
     x_user_id: "2087844237589241856"
@@ -218,6 +449,72 @@ entries:
     first_seen_at: "2026-09-06T13:01:27.000Z"
     updated_at: "2026-09-07T01:03:24.000Z"
     evidence_post_ids: []
+  - handle: "ashymybae"
+    x_user_id: "908653866"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T03:11:46.000Z"
+    updated_at: "2026-09-07T03:51:16.000Z"
+    evidence_post_ids: []
+  - handle: "autumn_frommer"
+    x_user_id: "2873151015"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 6
+      false_positive: 0
+      net: 6
+    first_seen_at: "2026-09-07T04:11:14.000Z"
+    updated_at: "2026-09-07T04:54:02.000Z"
+    evidence_post_ids: []
+  - handle: "awdhesh_nema"
+    x_user_id: "2739674926"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T10:47:06.000Z"
+    updated_at: "2026-09-07T04:42:01.000Z"
+    evidence_post_ids: []
+  - handle: "ayelenroldan_"
+    x_user_id: "2927315321"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 8
+      false_positive: 0
+      net: 8
+    first_seen_at: "2026-09-07T03:29:35.000Z"
+    updated_at: "2026-09-07T04:46:52.000Z"
+    evidence_post_ids: []
+  - handle: "ayulestariramli"
+    x_user_id: "2286025411"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-07T03:38:39.000Z"
+    updated_at: "2026-09-07T04:54:53.000Z"
+    evidence_post_ids: []
+  - handle: "azpft280"
+    x_user_id: "2069756622549688320"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T00:53:38.000Z"
+    updated_at: "2026-09-07T04:14:32.000Z"
+    evidence_post_ids: []
   - handle: "azrayildirs5xg"
     x_user_id: "2086483989401858049"
     category: "other"
@@ -228,6 +525,17 @@ entries:
       net: 3
     first_seen_at: "2026-09-06T12:16:25.000Z"
     updated_at: "2026-09-06T21:29:30.000Z"
+    evidence_post_ids: []
+  - handle: "babimsouza"
+    x_user_id: "62579597"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 7
+      false_positive: 0
+      net: 7
+    first_seen_at: "2026-09-07T03:37:31.000Z"
+    updated_at: "2026-09-07T05:08:17.000Z"
     evidence_post_ids: []
   - handle: "baharbozkustui"
     x_user_id: "2086482008088170496"
@@ -240,6 +548,39 @@ entries:
     first_seen_at: "2026-09-06T11:45:50.000Z"
     updated_at: "2026-09-06T20:31:43.000Z"
     evidence_post_ids: []
+  - handle: "bamjrqivamdeai"
+    x_user_id: "2069504981141479424"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T00:54:33.000Z"
+    updated_at: "2026-09-07T05:08:50.000Z"
+    evidence_post_ids: []
+  - handle: "bibigyt"
+    x_user_id: "2730258255"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T13:18:21.000Z"
+    updated_at: "2026-09-07T04:54:39.000Z"
+    evidence_post_ids: []
+  - handle: "bixdridbybnzjr"
+    x_user_id: "2069761305406304256"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 6
+      false_positive: 0
+      net: 6
+    first_seen_at: "2026-09-06T21:19:27.000Z"
+    updated_at: "2026-09-07T04:04:37.000Z"
+    evidence_post_ids: []
   - handle: "blakedvbteb"
     x_user_id: "2086267585620770816"
     category: "other"
@@ -250,6 +591,17 @@ entries:
       net: 3
     first_seen_at: "2026-09-06T12:01:03.000Z"
     updated_at: "2026-09-06T13:17:49.000Z"
+    evidence_post_ids: []
+  - handle: "botdandadan"
+    x_user_id: "744707106482249729"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-06T11:36:06.000Z"
+    updated_at: "2026-09-07T04:16:43.000Z"
     evidence_post_ids: []
   - handle: "brandiwansgnbo"
     x_user_id: "2086988324921552896"
@@ -273,6 +625,39 @@ entries:
     first_seen_at: "2026-09-06T12:32:43.000Z"
     updated_at: "2026-09-07T01:18:20.000Z"
     evidence_post_ids: []
+  - handle: "brookyln_megan"
+    x_user_id: "2344287105"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T00:33:47.000Z"
+    updated_at: "2026-09-07T05:12:46.000Z"
+    evidence_post_ids: []
+  - handle: "btnmkze605"
+    x_user_id: "2069750542818025472"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T22:41:27.000Z"
+    updated_at: "2026-09-07T03:41:49.000Z"
+    evidence_post_ids: []
+  - handle: "calvinl42618319"
+    x_user_id: "1568486254752448512"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-01T10:12:06.000Z"
+    updated_at: "2026-09-07T05:07:25.000Z"
+    evidence_post_ids: []
   - handle: "candoganv2ov"
     x_user_id: "2086680226562543617"
     category: "other"
@@ -295,6 +680,17 @@ entries:
     first_seen_at: "2026-09-06T12:26:47.000Z"
     updated_at: "2026-09-06T14:44:52.000Z"
     evidence_post_ids: []
+  - handle: "carolinaaberson"
+    x_user_id: "2087844552736735232"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T13:18:50.000Z"
+    updated_at: "2026-09-07T02:46:46.000Z"
+    evidence_post_ids: []
   - handle: "carolynwaliovr"
     x_user_id: "2086628890768801792"
     category: "other"
@@ -306,6 +702,17 @@ entries:
     first_seen_at: "2026-09-06T11:59:26.000Z"
     updated_at: "2026-09-06T12:38:48.000Z"
     evidence_post_ids: []
+  - handle: "cata_etcheverry"
+    x_user_id: "975496759899230208"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 8
+      false_positive: 0
+      net: 8
+    first_seen_at: "2026-09-07T03:37:31.000Z"
+    updated_at: "2026-09-07T04:38:36.000Z"
+    evidence_post_ids: []
   - handle: "cemretekin9cyq"
     x_user_id: "2086681148139171840"
     category: "other"
@@ -316,6 +723,72 @@ entries:
       net: 4
     first_seen_at: "2026-09-06T12:10:29.000Z"
     updated_at: "2026-09-06T18:16:56.000Z"
+    evidence_post_ids: []
+  - handle: "cerradaamabil"
+    x_user_id: "1075732530580602880"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T18:09:54.000Z"
+    updated_at: "2026-09-07T05:12:14.000Z"
+    evidence_post_ids: []
+  - handle: "chichoooo00"
+    x_user_id: "2538285007"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 7
+      false_positive: 0
+      net: 7
+    first_seen_at: "2026-09-07T03:19:15.000Z"
+    updated_at: "2026-09-07T04:56:51.000Z"
+    evidence_post_ids: []
+  - handle: "choeririri"
+    x_user_id: "89407446"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-07T05:05:16.000Z"
+    updated_at: "2026-09-07T05:14:47.000Z"
+    evidence_post_ids: []
+  - handle: "christinam6fbu"
+    x_user_id: "2086699866764292096"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T03:15:35.000Z"
+    updated_at: "2026-09-07T04:44:28.000Z"
+    evidence_post_ids: []
+  - handle: "christyrayne79"
+    x_user_id: "1482477443139182601"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T02:08:17.000Z"
+    updated_at: "2026-09-07T03:55:17.000Z"
+    evidence_post_ids: []
+  - handle: "ckanaczet"
+    x_user_id: "4518654916"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-06T20:18:31.000Z"
+    updated_at: "2026-09-07T05:00:47.000Z"
     evidence_post_ids: []
   - handle: "claritabar7o"
     x_user_id: "2087489642731896832"
@@ -350,16 +823,49 @@ entries:
     first_seen_at: "2026-09-06T12:33:08.000Z"
     updated_at: "2026-09-07T01:18:15.000Z"
     evidence_post_ids: []
+  - handle: "crackthelens"
+    x_user_id: "487919241"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-06T18:09:52.000Z"
+    updated_at: "2026-09-07T05:07:39.000Z"
+    evidence_post_ids: []
   - handle: "cresmarino1"
     x_user_id: "1196061622655041541"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-06T20:13:39.000Z"
+    updated_at: "2026-09-07T03:35:40.000Z"
+    evidence_post_ids: []
+  - handle: "czzpra164"
+    x_user_id: "2069757380162670592"
     category: "other"
     sources: ["community"]
     votes:
       block: 3
       false_positive: 0
       net: 3
-    first_seen_at: "2026-09-06T20:13:39.000Z"
-    updated_at: "2026-09-07T01:18:35.000Z"
+    first_seen_at: "2026-09-06T19:57:55.000Z"
+    updated_at: "2026-09-07T05:03:21.000Z"
+    evidence_post_ids: []
+  - handle: "danielc1260"
+    x_user_id: "4832712360"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 11
+      false_positive: 0
+      net: 11
+    first_seen_at: "2026-09-07T03:37:02.000Z"
+    updated_at: "2026-09-07T04:57:39.000Z"
     evidence_post_ids: []
   - handle: "daniellalicxyb"
     x_user_id: "2087490155523575808"
@@ -372,6 +878,17 @@ entries:
     first_seen_at: "2026-09-06T12:01:26.000Z"
     updated_at: "2026-09-06T12:07:54.000Z"
     evidence_post_ids: []
+  - handle: "dark__light_"
+    x_user_id: "3102782927"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 13
+      false_positive: 0
+      net: 13
+    first_seen_at: "2026-09-07T03:29:15.000Z"
+    updated_at: "2026-09-07T04:54:01.000Z"
+    evidence_post_ids: []
   - handle: "debinuckloprhj"
     x_user_id: "2087490332116316160"
     category: "other"
@@ -382,6 +899,17 @@ entries:
       net: 5
     first_seen_at: "2026-09-06T12:32:39.000Z"
     updated_at: "2026-09-06T13:21:27.000Z"
+    evidence_post_ids: []
+  - handle: "denivanbarbosa"
+    x_user_id: "246016740"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 12
+      false_positive: 0
+      net: 12
+    first_seen_at: "2026-09-07T03:29:15.000Z"
+    updated_at: "2026-09-07T04:53:58.000Z"
     evidence_post_ids: []
   - handle: "dgratefuld"
     x_user_id: "1782859087"
@@ -405,16 +933,38 @@ entries:
     first_seen_at: "2026-09-06T14:47:03.000Z"
     updated_at: "2026-09-06T20:19:30.000Z"
     evidence_post_ids: []
+  - handle: "dreher_luiza"
+    x_user_id: "334883222"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 12
+      false_positive: 0
+      net: 12
+    first_seen_at: "2026-09-07T01:50:37.000Z"
+    updated_at: "2026-09-07T05:08:19.000Z"
+    evidence_post_ids: []
   - handle: "dtm_iii"
     x_user_id: "4841034036"
     category: "other"
     sources: ["community"]
     votes:
-      block: 4
+      block: 6
       false_positive: 0
-      net: 4
+      net: 6
     first_seen_at: "2026-09-06T18:09:25.000Z"
-    updated_at: "2026-09-07T01:18:53.000Z"
+    updated_at: "2026-09-07T03:11:37.000Z"
+    evidence_post_ids: []
+  - handle: "dwcfnfijhlvrjp"
+    x_user_id: "2069755573629767680"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T19:09:17.000Z"
+    updated_at: "2026-09-07T02:27:10.000Z"
     evidence_post_ids: []
   - handle: "ecrinoztur3y9k"
     x_user_id: "2086649244752990208"
@@ -426,6 +976,17 @@ entries:
       net: 5
     first_seen_at: "2026-09-06T10:16:13.000Z"
     updated_at: "2026-09-06T14:19:00.000Z"
+    evidence_post_ids: []
+  - handle: "edagunes3eea"
+    x_user_id: "2086488486975082497"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T11:59:11.000Z"
+    updated_at: "2026-09-07T03:01:53.000Z"
     evidence_post_ids: []
   - handle: "edasimsek86s9"
     x_user_id: "2086644560197808128"
@@ -449,6 +1010,17 @@ entries:
     first_seen_at: "2026-09-06T11:59:32.000Z"
     updated_at: "2026-09-06T13:23:44.000Z"
     evidence_post_ids: []
+  - handle: "egffrttinjdnic"
+    x_user_id: "2069760336576520192"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T19:22:24.000Z"
+    updated_at: "2026-09-07T02:34:16.000Z"
+    evidence_post_ids: []
   - handle: "eldonfret"
     x_user_id: "2087477824668233728"
     category: "other"
@@ -470,6 +1042,28 @@ entries:
       net: 3
     first_seen_at: "2026-09-06T14:36:11.000Z"
     updated_at: "2026-09-07T00:53:47.000Z"
+    evidence_post_ids: []
+  - handle: "elhelaly_nour"
+    x_user_id: "948865140715393024"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T18:09:52.000Z"
+    updated_at: "2026-09-07T05:07:14.000Z"
+    evidence_post_ids: []
+  - handle: "elifkilicpdve"
+    x_user_id: "2086642047117651968"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T03:31:37.000Z"
+    updated_at: "2026-09-07T03:49:58.000Z"
     evidence_post_ids: []
   - handle: "elifsuleyldrm"
     x_user_id: "497005451"
@@ -498,11 +1092,55 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 6
+      block: 7
       false_positive: 0
-      net: 6
+      net: 7
     first_seen_at: "2026-09-06T12:37:36.000Z"
-    updated_at: "2026-09-06T13:54:21.000Z"
+    updated_at: "2026-09-07T02:57:17.000Z"
+    evidence_post_ids: []
+  - handle: "elveraoslem6hp"
+    x_user_id: "2087844392409460736"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T12:40:32.000Z"
+    updated_at: "2026-09-07T02:54:10.000Z"
+    evidence_post_ids: []
+  - handle: "emilb3llo"
+    x_user_id: "933223159"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T14:47:03.000Z"
+    updated_at: "2026-09-07T04:21:22.000Z"
+    evidence_post_ids: []
+  - handle: "emilioferreira1"
+    x_user_id: "314849707"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 8
+      false_positive: 0
+      net: 8
+    first_seen_at: "2026-09-07T03:19:26.000Z"
+    updated_at: "2026-09-07T04:55:26.000Z"
+    evidence_post_ids: []
+  - handle: "emirdogan8idx"
+    x_user_id: "2086646566362738688"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T03:48:54.000Z"
+    updated_at: "2026-09-07T04:56:08.000Z"
     evidence_post_ids: []
   - handle: "emirtekinbrtg"
     x_user_id: "2086712948244787200"
@@ -515,16 +1153,27 @@ entries:
     first_seen_at: "2026-09-06T13:33:38.000Z"
     updated_at: "2026-09-06T19:08:57.000Z"
     evidence_post_ids: []
+  - handle: "emrecakmakjyel"
+    x_user_id: "2086709511797055488"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T11:59:00.000Z"
+    updated_at: "2026-09-07T03:06:42.000Z"
+    evidence_post_ids: []
   - handle: "emrekorkma8jod"
     x_user_id: "2086477553414385664"
     category: "other"
     sources: ["community"]
     votes:
-      block: 4
+      block: 6
       false_positive: 0
-      net: 4
+      net: 6
     first_seen_at: "2026-09-06T12:47:10.000Z"
-    updated_at: "2026-09-06T21:15:03.000Z"
+    updated_at: "2026-09-07T03:51:39.000Z"
     evidence_post_ids: []
   - handle: "erminiarather"
     x_user_id: "2087478101135560704"
@@ -548,16 +1197,38 @@ entries:
     first_seen_at: "2026-09-06T12:33:21.000Z"
     updated_at: "2026-09-06T16:28:33.000Z"
     evidence_post_ids: []
-  - handle: "evansantoniov"
-    x_user_id: "2452303160"
+  - handle: "eteacsnxgnfikp"
+    x_user_id: "2069756791299194880"
     category: "other"
     sources: ["community"]
     votes:
       block: 3
       false_positive: 0
       net: 3
+    first_seen_at: "2026-09-06T20:05:05.000Z"
+    updated_at: "2026-09-07T02:29:12.000Z"
+    evidence_post_ids: []
+  - handle: "evamarcillefanz"
+    x_user_id: "91356076"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T03:35:58.000Z"
+    updated_at: "2026-09-07T04:10:14.000Z"
+    evidence_post_ids: []
+  - handle: "evansantoniov"
+    x_user_id: "2452303160"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 1
+      net: 3
     first_seen_at: "2026-09-06T10:47:20.000Z"
-    updated_at: "2026-09-06T12:14:47.000Z"
+    updated_at: "2026-09-07T04:26:53.000Z"
     evidence_post_ids: []
   - handle: "extra4us"
     x_user_id: "169023328"
@@ -575,44 +1246,121 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 6
+      block: 9
       false_positive: 0
-      net: 6
+      net: 9
     first_seen_at: "2026-09-06T14:49:53.000Z"
-    updated_at: "2026-09-07T02:05:55.000Z"
+    updated_at: "2026-09-07T04:55:10.000Z"
     evidence_post_ids: []
   - handle: "eymenkayalvwg"
     x_user_id: "2086674344181133312"
     category: "other"
     sources: ["community"]
     votes:
-      block: 6
+      block: 7
       false_positive: 0
-      net: 6
+      net: 7
     first_seen_at: "2026-09-06T14:22:21.000Z"
-    updated_at: "2026-09-07T01:15:56.000Z"
+    updated_at: "2026-09-07T03:40:40.000Z"
     evidence_post_ids: []
-  - handle: "fatti_smith1d"
-    x_user_id: "1468683744"
-    category: "other"
-    sources: ["community"]
-    votes:
-      block: 4
-      false_positive: 0
-      net: 4
-    first_seen_at: "2026-09-06T12:39:03.000Z"
-    updated_at: "2026-09-07T01:22:24.000Z"
-    evidence_post_ids: []
-  - handle: "fly_minhavidaa"
-    x_user_id: "2964383865"
+  - handle: "farahamir146"
+    x_user_id: "721576783045357568"
     category: "other"
     sources: ["community"]
     votes:
       block: 3
       false_positive: 0
       net: 3
+    first_seen_at: "2026-09-07T01:50:37.000Z"
+    updated_at: "2026-09-07T03:53:02.000Z"
+    evidence_post_ids: []
+  - handle: "fatmakayabwtr"
+    x_user_id: "2086675994568478720"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T03:31:43.000Z"
+    updated_at: "2026-09-07T03:54:39.000Z"
+    evidence_post_ids: []
+  - handle: "fatss187"
+    x_user_id: "909879933811462144"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T04:24:11.000Z"
+    updated_at: "2026-09-07T05:08:10.000Z"
+    evidence_post_ids: []
+  - handle: "fatti_smith1d"
+    x_user_id: "1468683744"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 5
+      false_positive: 0
+      net: 5
+    first_seen_at: "2026-09-06T12:39:03.000Z"
+    updated_at: "2026-09-07T03:26:33.000Z"
+    evidence_post_ids: []
+  - handle: "ferhhazza"
+    x_user_id: "1220645448"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 10
+      false_positive: 0
+      net: 10
+    first_seen_at: "2026-09-07T03:26:10.000Z"
+    updated_at: "2026-09-07T04:55:48.000Z"
+    evidence_post_ids: []
+  - handle: "fernandamuruab"
+    x_user_id: "391764367"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T16:15:13.000Z"
+    updated_at: "2026-09-07T04:21:07.000Z"
+    evidence_post_ids: []
+  - handle: "fionalegros"
+    x_user_id: "2292685268"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 14
+      false_positive: 0
+      net: 14
+    first_seen_at: "2026-09-07T03:05:16.000Z"
+    updated_at: "2026-09-07T05:09:38.000Z"
+    evidence_post_ids: []
+  - handle: "flofrasca"
+    x_user_id: "810986670241632256"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 10
+      false_positive: 0
+      net: 10
+    first_seen_at: "2026-09-07T03:26:56.000Z"
+    updated_at: "2026-09-07T05:13:56.000Z"
+    evidence_post_ids: []
+  - handle: "fly_minhavidaa"
+    x_user_id: "2964383865"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
     first_seen_at: "2026-09-06T16:05:37.000Z"
-    updated_at: "2026-09-07T01:09:42.000Z"
+    updated_at: "2026-09-07T04:35:58.000Z"
     evidence_post_ids: []
   - handle: "followthis4"
     x_user_id: "541593257"
@@ -636,6 +1384,39 @@ entries:
     first_seen_at: "2026-09-06T12:10:09.000Z"
     updated_at: "2026-09-06T13:51:53.000Z"
     evidence_post_ids: []
+  - handle: "franchescas05ds"
+    x_user_id: "2087477868464861184"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T14:46:16.000Z"
+    updated_at: "2026-09-07T02:55:23.000Z"
+    evidence_post_ids: []
+  - handle: "franci2070"
+    x_user_id: "712416034901368833"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 10
+      false_positive: 0
+      net: 10
+    first_seen_at: "2026-09-07T03:26:56.000Z"
+    updated_at: "2026-09-07T04:46:32.000Z"
+    evidence_post_ids: []
+  - handle: "fredy_dynova"
+    x_user_id: "1409875575024533514"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 9
+      false_positive: 0
+      net: 9
+    first_seen_at: "2026-09-07T03:25:15.000Z"
+    updated_at: "2026-09-07T04:54:53.000Z"
+    evidence_post_ids: []
   - handle: "gabrielaed6g"
     x_user_id: "2087844234741309440"
     category: "other"
@@ -646,6 +1427,28 @@ entries:
       net: 5
     first_seen_at: "2026-09-06T11:38:53.000Z"
     updated_at: "2026-09-06T13:40:11.000Z"
+    evidence_post_ids: []
+  - handle: "gagodelfina"
+    x_user_id: "3075271241"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 13
+      false_positive: 0
+      net: 13
+    first_seen_at: "2026-09-07T03:04:35.000Z"
+    updated_at: "2026-09-07T04:41:56.000Z"
+    evidence_post_ids: []
+  - handle: "gameanimelab"
+    x_user_id: "1612313235583291396"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 7
+      false_positive: 0
+      net: 7
+    first_seen_at: "2026-09-07T03:37:02.000Z"
+    updated_at: "2026-09-07T04:55:44.000Z"
     evidence_post_ids: []
   - handle: "garrymalicipnm"
     x_user_id: "2087844392555995136"
@@ -663,11 +1466,55 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-06T10:41:44.000Z"
-    updated_at: "2026-09-06T20:15:48.000Z"
+    updated_at: "2026-09-07T02:55:56.000Z"
+    evidence_post_ids: []
+  - handle: "georgiewatson1"
+    x_user_id: "441160773"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T16:05:47.000Z"
+    updated_at: "2026-09-07T04:47:04.000Z"
+    evidence_post_ids: []
+  - handle: "gicchi46"
+    x_user_id: "1367300356540010503"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 11
+      false_positive: 0
+      net: 11
+    first_seen_at: "2026-09-07T04:16:11.000Z"
+    updated_at: "2026-09-07T05:13:09.000Z"
+    evidence_post_ids: []
+  - handle: "gigiixalvarezz"
+    x_user_id: "4405292911"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T21:35:18.000Z"
+    updated_at: "2026-09-07T03:43:17.000Z"
+    evidence_post_ids: []
+  - handle: "gilmarmonfari"
+    x_user_id: "483788631"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T14:37:26.000Z"
+    updated_at: "2026-09-07T04:27:05.000Z"
     evidence_post_ids: []
   - handle: "gizeemtemel"
     x_user_id: "1140635510"
@@ -680,6 +1527,17 @@ entries:
     first_seen_at: "2026-09-06T14:52:58.000Z"
     updated_at: "2026-09-07T01:22:25.000Z"
     evidence_post_ids: []
+  - handle: "gizemozkanggfe"
+    x_user_id: "2086688653959389184"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T11:43:58.000Z"
+    updated_at: "2026-09-07T04:07:09.000Z"
+    evidence_post_ids: []
   - handle: "gizemturanazkc"
     x_user_id: "2086660809300537344"
     category: "other"
@@ -690,6 +1548,17 @@ entries:
       net: 5
     first_seen_at: "2026-09-06T11:44:15.000Z"
     updated_at: "2026-09-06T14:23:45.000Z"
+    evidence_post_ids: []
+  - handle: "gjdghs655"
+    x_user_id: "2069765322559901696"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-06T23:53:14.000Z"
+    updated_at: "2026-09-07T03:56:03.000Z"
     evidence_post_ids: []
   - handle: "gloriamartgbmv"
     x_user_id: "2086709609469767680"
@@ -702,6 +1571,28 @@ entries:
     first_seen_at: "2026-09-06T10:51:39.000Z"
     updated_at: "2026-09-06T20:31:11.000Z"
     evidence_post_ids: []
+  - handle: "gumgumgumilar5"
+    x_user_id: "1110511448910778368"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T05:08:01.000Z"
+    updated_at: "2026-09-07T05:14:52.000Z"
+    evidence_post_ids: []
+  - handle: "haben_12"
+    x_user_id: "1343475275229642754"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-06T19:29:10.000Z"
+    updated_at: "2026-09-07T03:43:45.000Z"
+    evidence_post_ids: []
   - handle: "hamzayalcih769"
     x_user_id: "2086672375685275648"
     category: "other"
@@ -713,27 +1604,38 @@ entries:
     first_seen_at: "2026-09-06T10:06:03.000Z"
     updated_at: "2026-09-06T12:41:00.000Z"
     evidence_post_ids: []
-  - handle: "hari26292072049"
-    x_user_id: "1831734587367813122"
+  - handle: "hana28v"
+    x_user_id: "2263866920"
     category: "other"
     sources: ["community"]
     votes:
-      block: 3
+      block: 6
       false_positive: 0
-      net: 3
-    first_seen_at: "2026-09-06T10:47:15.000Z"
-    updated_at: "2026-09-06T12:14:49.000Z"
+      net: 6
+    first_seen_at: "2026-09-07T03:55:45.000Z"
+    updated_at: "2026-09-07T05:13:22.000Z"
     evidence_post_ids: []
-  - handle: "harikes18224639"
-    x_user_id: "1000096308391235586"
+  - handle: "hari26292072049"
+    x_user_id: "1831734587367813122"
     category: "other"
     sources: ["community"]
     votes:
       block: 4
       false_positive: 0
       net: 4
+    first_seen_at: "2026-09-06T10:47:15.000Z"
+    updated_at: "2026-09-07T02:47:04.000Z"
+    evidence_post_ids: []
+  - handle: "harikes18224639"
+    x_user_id: "1000096308391235586"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 6
+      false_positive: 0
+      net: 6
     first_seen_at: "2026-09-06T10:47:11.000Z"
-    updated_at: "2026-09-07T01:57:33.000Z"
+    updated_at: "2026-09-07T03:49:24.000Z"
     evidence_post_ids: []
   - handle: "harmonytipun"
     x_user_id: "2087477270822928384"
@@ -751,11 +1653,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 5
+      block: 9
       false_positive: 1
-      net: 4
+      net: 8
     first_seen_at: "2026-09-06T13:19:11.000Z"
-    updated_at: "2026-09-07T01:23:12.000Z"
+    updated_at: "2026-09-07T04:42:25.000Z"
     evidence_post_ids: []
   - handle: "hasangunesgyjf"
     x_user_id: "2086620202918158336"
@@ -773,11 +1675,22 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-06T10:15:57.000Z"
+    updated_at: "2026-09-07T04:06:38.000Z"
+    evidence_post_ids: []
+  - handle: "havongxayh0nx"
+    x_user_id: "2087477983745646592"
+    category: "other"
+    sources: ["community"]
+    votes:
       block: 3
       false_positive: 0
       net: 3
-    first_seen_at: "2026-09-06T10:15:57.000Z"
-    updated_at: "2026-09-06T19:08:54.000Z"
+    first_seen_at: "2026-09-06T14:46:16.000Z"
+    updated_at: "2026-09-07T02:55:09.000Z"
     evidence_post_ids: []
   - handle: "hdbfolwbjjhj7u"
     x_user_id: "2069757302765236224"
@@ -806,11 +1719,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 7
+      block: 8
       false_positive: 0
-      net: 7
+      net: 8
     first_seen_at: "2026-09-06T19:29:10.000Z"
-    updated_at: "2026-09-07T01:29:44.000Z"
+    updated_at: "2026-09-07T03:35:39.000Z"
     evidence_post_ids: []
   - handle: "henriettabgulp"
     x_user_id: "2087485162455973888"
@@ -823,16 +1736,71 @@ entries:
     first_seen_at: "2026-09-06T12:32:43.000Z"
     updated_at: "2026-09-06T15:05:10.000Z"
     evidence_post_ids: []
-  - handle: "houastronut"
-    x_user_id: "28638091"
+  - handle: "henrikardi"
+    x_user_id: "92273530"
     category: "other"
     sources: ["community"]
     votes:
       block: 3
       false_positive: 0
       net: 3
+    first_seen_at: "2026-09-07T05:05:18.000Z"
+    updated_at: "2026-09-07T05:10:08.000Z"
+    evidence_post_ids: []
+  - handle: "hjtztlhibshdkp"
+    x_user_id: "2069755204266774528"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T21:21:01.000Z"
+    updated_at: "2026-09-07T03:43:10.000Z"
+    evidence_post_ids: []
+  - handle: "hoseokiieeee_"
+    x_user_id: "1247067952177754113"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 15
+      false_positive: 0
+      net: 15
+    first_seen_at: "2026-09-07T03:04:35.000Z"
+    updated_at: "2026-09-07T05:03:05.000Z"
+    evidence_post_ids: []
+  - handle: "houastronut"
+    x_user_id: "28638091"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 5
+      false_positive: 0
+      net: 5
     first_seen_at: "2026-09-06T21:34:45.000Z"
-    updated_at: "2026-09-07T00:49:50.000Z"
+    updated_at: "2026-09-07T03:43:43.000Z"
+    evidence_post_ids: []
+  - handle: "hugmeluke5sos"
+    x_user_id: "604068190"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T15:56:17.000Z"
+    updated_at: "2026-09-07T05:10:43.000Z"
+    evidence_post_ids: []
+  - handle: "huseyincakkz7f"
+    x_user_id: "2086612230422794240"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T03:49:22.000Z"
+    updated_at: "2026-09-07T04:45:32.000Z"
     evidence_post_ids: []
   - handle: "hwabougcrave"
     x_user_id: "131025940"
@@ -845,6 +1813,28 @@ entries:
     first_seen_at: "2026-09-06T12:39:03.000Z"
     updated_at: "2026-09-06T19:44:21.000Z"
     evidence_post_ids: []
+  - handle: "hxcoztwnitzsj7"
+    x_user_id: "2069764857419710464"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 6
+      false_positive: 0
+      net: 6
+    first_seen_at: "2026-09-07T00:52:16.000Z"
+    updated_at: "2026-09-07T05:14:37.000Z"
+    evidence_post_ids: []
+  - handle: "hxejjf973"
+    x_user_id: "2069764352073256960"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T21:20:55.000Z"
+    updated_at: "2026-09-07T04:14:55.000Z"
+    evidence_post_ids: []
   - handle: "ida1dstuff"
     x_user_id: "481331081"
     category: "other"
@@ -855,6 +1845,17 @@ entries:
       net: 3
     first_seen_at: "2026-09-06T10:53:32.000Z"
     updated_at: "2026-09-06T13:35:34.000Z"
+    evidence_post_ids: []
+  - handle: "ihyfeyydjbevwk"
+    x_user_id: "2069763746965463040"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T20:11:03.000Z"
+    updated_at: "2026-09-07T02:29:05.000Z"
     evidence_post_ids: []
   - handle: "ilkeeesemiz"
     x_user_id: "2236494456"
@@ -916,11 +1917,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 4
-      false_positive: 0
-      net: 4
+      block: 8
+      false_positive: 1
+      net: 7
     first_seen_at: "2026-09-06T11:36:50.000Z"
-    updated_at: "2026-09-06T17:49:46.000Z"
+    updated_at: "2026-09-07T05:02:18.000Z"
     evidence_post_ids: []
   - handle: "jeremyhowacwpg"
     x_user_id: "2086477190292520960"
@@ -949,11 +1950,22 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 4
+      block: 6
       false_positive: 0
-      net: 4
+      net: 6
     first_seen_at: "2026-09-06T21:34:45.000Z"
-    updated_at: "2026-09-07T01:16:49.000Z"
+    updated_at: "2026-09-07T03:57:10.000Z"
+    evidence_post_ids: []
+  - handle: "jo_abencoador12"
+    x_user_id: "163442945"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T04:31:57.000Z"
+    updated_at: "2026-09-07T05:08:04.000Z"
     evidence_post_ids: []
   - handle: "joeijoelle"
     x_user_id: "228373897"
@@ -966,6 +1978,17 @@ entries:
     first_seen_at: "2026-09-06T13:15:17.000Z"
     updated_at: "2026-09-06T13:40:34.000Z"
     evidence_post_ids: []
+  - handle: "johacyka"
+    x_user_id: "919254660"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-06T21:00:22.000Z"
+    updated_at: "2026-09-07T05:04:26.000Z"
+    evidence_post_ids: []
   - handle: "jordanmancheno"
     x_user_id: "1267873855"
     category: "other"
@@ -976,6 +1999,39 @@ entries:
       net: 3
     first_seen_at: "2026-09-06T13:20:37.000Z"
     updated_at: "2026-09-07T01:22:57.000Z"
+    evidence_post_ids: []
+  - handle: "josmarsavaris"
+    x_user_id: "2508414346"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-06T11:53:32.000Z"
+    updated_at: "2026-09-07T04:27:14.000Z"
+    evidence_post_ids: []
+  - handle: "joulia_nathaly"
+    x_user_id: "2398372947"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T14:52:58.000Z"
+    updated_at: "2026-09-07T04:21:23.000Z"
+    evidence_post_ids: []
+  - handle: "julianaqd_"
+    x_user_id: "731463086"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 8
+      false_positive: 0
+      net: 8
+    first_seen_at: "2026-09-07T03:37:31.000Z"
+    updated_at: "2026-09-07T05:08:17.000Z"
     evidence_post_ids: []
   - handle: "juliettesadb7k"
     x_user_id: "2088125363888992256"
@@ -993,11 +2049,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 3
+      block: 5
       false_positive: 0
-      net: 3
+      net: 5
     first_seen_at: "2026-09-06T18:09:01.000Z"
-    updated_at: "2026-09-07T01:18:40.000Z"
+    updated_at: "2026-09-07T05:00:41.000Z"
     evidence_post_ids: []
   - handle: "k_na0121"
     x_user_id: "3074579041"
@@ -1043,6 +2099,28 @@ entries:
     first_seen_at: "2026-09-06T13:18:14.000Z"
     updated_at: "2026-09-06T13:38:59.000Z"
     evidence_post_ids: []
+  - handle: "kathyant"
+    x_user_id: "150474302"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 7
+      false_positive: 0
+      net: 7
+    first_seen_at: "2026-09-07T03:38:20.000Z"
+    updated_at: "2026-09-07T04:53:42.000Z"
+    evidence_post_ids: []
+  - handle: "katthanson"
+    x_user_id: "2658568296"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 9
+      false_positive: 0
+      net: 9
+    first_seen_at: "2026-09-07T04:25:37.000Z"
+    updated_at: "2026-09-07T05:14:59.000Z"
+    evidence_post_ids: []
   - handle: "keremcelik17vj"
     x_user_id: "2086634646561767424"
     category: "other"
@@ -1070,11 +2148,22 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-06T18:04:06.000Z"
-    updated_at: "2026-09-07T01:18:43.000Z"
+    updated_at: "2026-09-07T03:35:49.000Z"
+    evidence_post_ids: []
+  - handle: "kiamyint"
+    x_user_id: "2086230209888428032"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T21:56:41.000Z"
+    updated_at: "2026-09-07T04:24:57.000Z"
     evidence_post_ids: []
   - handle: "kitwalczak1gx"
     x_user_id: "2087844325153746945"
@@ -1086,6 +2175,17 @@ entries:
       net: 5
     first_seen_at: "2026-09-06T12:09:03.000Z"
     updated_at: "2026-09-07T01:18:19.000Z"
+    evidence_post_ids: []
+  - handle: "komajiro0101"
+    x_user_id: "218559524"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 6
+      false_positive: 0
+      net: 6
+    first_seen_at: "2026-09-07T04:11:13.000Z"
+    updated_at: "2026-09-07T04:42:04.000Z"
     evidence_post_ids: []
   - handle: "kononono0610"
     x_user_id: "2464812103"
@@ -1114,11 +2214,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 6
+      block: 7
       false_positive: 0
-      net: 6
+      net: 7
     first_seen_at: "2026-09-06T11:38:52.000Z"
-    updated_at: "2026-09-06T14:56:20.000Z"
+    updated_at: "2026-09-07T04:27:09.000Z"
     evidence_post_ids: []
   - handle: "kotapoping"
     x_user_id: "2796476028"
@@ -1224,11 +2324,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-06T12:04:13.000Z"
-    updated_at: "2026-09-06T15:46:34.000Z"
+    updated_at: "2026-09-07T03:45:50.000Z"
     evidence_post_ids: []
   - handle: "ks_raaafy"
     x_user_id: "4108787419"
@@ -1323,11 +2423,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-06T12:32:39.000Z"
-    updated_at: "2026-09-06T15:26:46.000Z"
+    updated_at: "2026-09-07T03:06:24.000Z"
     evidence_post_ids: []
   - handle: "kunsama9292"
     x_user_id: "3863762352"
@@ -1615,6 +2715,17 @@ entries:
     first_seen_at: "2026-09-06T11:37:21.000Z"
     updated_at: "2026-09-06T16:12:24.000Z"
     evidence_post_ids: []
+  - handle: "lokiztazx"
+    x_user_id: "960650635"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 14
+      false_positive: 0
+      net: 14
+    first_seen_at: "2026-09-07T03:37:02.000Z"
+    updated_at: "2026-09-07T05:13:37.000Z"
+    evidence_post_ids: []
   - handle: "louktan_a"
     x_user_id: "2597355684"
     category: "other"
@@ -1625,6 +2736,28 @@ entries:
       net: 5
     first_seen_at: "2026-09-06T11:53:48.000Z"
     updated_at: "2026-09-06T15:07:57.000Z"
+    evidence_post_ids: []
+  - handle: "lucasspitzner"
+    x_user_id: "719694932982767616"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 10
+      false_positive: 0
+      net: 10
+    first_seen_at: "2026-09-07T03:25:59.000Z"
+    updated_at: "2026-09-07T05:08:19.000Z"
+    evidence_post_ids: []
+  - handle: "luz_cespedes02"
+    x_user_id: "2958675471"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T03:36:47.000Z"
+    updated_at: "2026-09-07T04:16:59.000Z"
     evidence_post_ids: []
   - handle: "lyncastejo24"
     x_user_id: "2087844360138489856"
@@ -1637,27 +2770,27 @@ entries:
     first_seen_at: "2026-09-06T12:11:24.000Z"
     updated_at: "2026-09-06T13:21:21.000Z"
     evidence_post_ids: []
-  - handle: "lzbekpdxgc8kgo"
-    x_user_id: "2069759368359190528"
+  - handle: "madsjonesx"
+    x_user_id: "948713086608904192"
     category: "other"
     sources: ["community"]
     votes:
       block: 3
       false_positive: 0
       net: 3
-    first_seen_at: "2026-09-06T17:58:52.000Z"
-    updated_at: "2026-09-07T01:50:06.000Z"
+    first_seen_at: "2026-09-06T16:50:07.000Z"
+    updated_at: "2026-09-07T04:36:36.000Z"
     evidence_post_ids: []
   - handle: "makeup_fabyaju"
     x_user_id: "713487291407331333"
     category: "other"
     sources: ["community"]
     votes:
-      block: 3
+      block: 5
       false_positive: 0
-      net: 3
+      net: 5
     first_seen_at: "2026-09-06T20:13:26.000Z"
-    updated_at: "2026-09-06T22:49:47.000Z"
+    updated_at: "2026-09-07T04:34:10.000Z"
     evidence_post_ids: []
   - handle: "mariangoodtbe"
     x_user_id: "2087478083536457728"
@@ -1741,11 +2874,33 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 7
+      block: 8
       false_positive: 0
-      net: 7
+      net: 8
     first_seen_at: "2026-09-06T12:10:09.000Z"
-    updated_at: "2026-09-07T01:41:16.000Z"
+    updated_at: "2026-09-07T02:31:09.000Z"
+    evidence_post_ids: []
+  - handle: "mauzedong"
+    x_user_id: "46897510"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T01:50:37.000Z"
+    updated_at: "2026-09-07T04:55:37.000Z"
+    evidence_post_ids: []
+  - handle: "maymisoe3"
+    x_user_id: "841691858967310338"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 5
+      false_positive: 0
+      net: 5
+    first_seen_at: "2026-09-06T11:53:25.000Z"
+    updated_at: "2026-09-07T04:27:15.000Z"
     evidence_post_ids: []
   - handle: "mdkursheed1"
     x_user_id: "708735239821066242"
@@ -1774,11 +2929,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 9
+      block: 10
       false_positive: 0
-      net: 9
+      net: 10
     first_seen_at: "2026-09-06T13:58:05.000Z"
-    updated_at: "2026-09-06T22:21:38.000Z"
+    updated_at: "2026-09-07T04:23:24.000Z"
     evidence_post_ids: []
   - handle: "mehmetkorkz7tr"
     x_user_id: "2086622677049946112"
@@ -1791,6 +2946,17 @@ entries:
     first_seen_at: "2026-09-06T10:23:51.000Z"
     updated_at: "2026-09-06T19:09:13.000Z"
     evidence_post_ids: []
+  - handle: "mentarirmdhn"
+    x_user_id: "158233643"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 11
+      false_positive: 0
+      net: 11
+    first_seen_at: "2026-09-06T18:10:00.000Z"
+    updated_at: "2026-09-07T04:55:31.000Z"
+    evidence_post_ids: []
   - handle: "mertpolat2oxf"
     x_user_id: "2086640564972204032"
     category: "other"
@@ -1802,27 +2968,49 @@ entries:
     first_seen_at: "2026-09-06T10:16:02.000Z"
     updated_at: "2026-09-06T19:08:54.000Z"
     evidence_post_ids: []
-  - handle: "miareynaa"
-    x_user_id: "1091305108057612288"
-    category: "other"
-    sources: ["community"]
-    votes:
-      block: 4
-      false_positive: 0
-      net: 4
-    first_seen_at: "2026-09-06T19:25:45.000Z"
-    updated_at: "2026-09-07T01:16:46.000Z"
-    evidence_post_ids: []
-  - handle: "michaelgonwwmm"
-    x_user_id: "2089260948548726784"
+  - handle: "mgibrk515"
+    x_user_id: "2069754550232260608"
     category: "other"
     sources: ["community"]
     votes:
       block: 3
       false_positive: 0
       net: 3
+    first_seen_at: "2026-09-07T01:24:17.000Z"
+    updated_at: "2026-09-07T03:15:10.000Z"
+    evidence_post_ids: []
+  - handle: "miareynaa"
+    x_user_id: "1091305108057612288"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 5
+      false_positive: 0
+      net: 5
+    first_seen_at: "2026-09-06T19:25:45.000Z"
+    updated_at: "2026-09-07T02:44:54.000Z"
+    evidence_post_ids: []
+  - handle: "michaelgonwwmm"
+    x_user_id: "2089260948548726784"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
     first_seen_at: "2026-09-06T22:02:26.000Z"
-    updated_at: "2026-09-07T01:06:25.000Z"
+    updated_at: "2026-09-07T03:34:20.000Z"
+    evidence_post_ids: []
+  - handle: "milanisti_joe"
+    x_user_id: "244987022"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 7
+      false_positive: 0
+      net: 7
+    first_seen_at: "2026-09-07T03:05:16.000Z"
+    updated_at: "2026-09-07T04:41:28.000Z"
     evidence_post_ids: []
   - handle: "mirasimsekipbr"
     x_user_id: "2086478107322523648"
@@ -1834,6 +3022,17 @@ entries:
       net: 4
     first_seen_at: "2026-09-06T12:07:36.000Z"
     updated_at: "2026-09-06T19:09:14.000Z"
+    evidence_post_ids: []
+  - handle: "missjoanafaria"
+    x_user_id: "1120409287"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 9
+      false_positive: 0
+      net: 9
+    first_seen_at: "2026-09-07T03:05:16.000Z"
+    updated_at: "2026-09-07T04:24:35.000Z"
     evidence_post_ids: []
   - handle: "mistafsu"
     x_user_id: "158884279"
@@ -1851,11 +3050,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 4
+      block: 9
       false_positive: 0
-      net: 4
+      net: 9
     first_seen_at: "2026-09-06T19:53:34.000Z"
-    updated_at: "2026-09-07T01:16:36.000Z"
+    updated_at: "2026-09-07T04:34:43.000Z"
     evidence_post_ids: []
   - handle: "morrisbarnick"
     x_user_id: "2087477660221874176"
@@ -1873,11 +3072,44 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 5
+      block: 6
       false_positive: 0
-      net: 5
+      net: 6
     first_seen_at: "2026-09-06T19:53:55.000Z"
-    updated_at: "2026-09-07T01:40:59.000Z"
+    updated_at: "2026-09-07T04:23:22.000Z"
+    evidence_post_ids: []
+  - handle: "mrcwwljn_"
+    x_user_id: "1074158223370772481"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 8
+      false_positive: 0
+      net: 8
+    first_seen_at: "2026-09-07T03:04:24.000Z"
+    updated_at: "2026-09-07T04:55:19.000Z"
+    evidence_post_ids: []
+  - handle: "mrymryh1126"
+    x_user_id: "2569362247"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T12:14:15.000Z"
+    updated_at: "2026-09-07T04:55:58.000Z"
+    evidence_post_ids: []
+  - handle: "msdiana_styles"
+    x_user_id: "89438354"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 10
+      false_positive: 0
+      net: 10
+    first_seen_at: "2026-09-07T03:29:46.000Z"
+    updated_at: "2026-09-07T04:55:18.000Z"
     evidence_post_ids: []
   - handle: "muratgulerwf3f"
     x_user_id: "2086691233078882304"
@@ -1895,22 +3127,33 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-06T12:39:03.000Z"
-    updated_at: "2026-09-07T01:22:44.000Z"
+    updated_at: "2026-09-07T04:49:52.000Z"
     evidence_post_ids: []
-  - handle: "nam24827518"
-    x_user_id: "1144661024848535552"
+  - handle: "myronopoka7poo"
+    x_user_id: "2087477987872555008"
     category: "other"
     sources: ["community"]
     votes:
       block: 3
       false_positive: 0
       net: 3
+    first_seen_at: "2026-09-06T14:20:01.000Z"
+    updated_at: "2026-09-07T02:55:18.000Z"
+    evidence_post_ids: []
+  - handle: "nam24827518"
+    x_user_id: "1144661024848535552"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 6
+      false_positive: 0
+      net: 6
     first_seen_at: "2026-09-06T18:09:04.000Z"
-    updated_at: "2026-09-07T01:16:34.000Z"
+    updated_at: "2026-09-07T04:23:44.000Z"
     evidence_post_ids: []
   - handle: "natsukiorenji"
     x_user_id: "372499682"
@@ -1928,22 +3171,55 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 5
+      block: 6
       false_positive: 0
-      net: 5
+      net: 6
     first_seen_at: "2026-09-06T18:09:15.000Z"
-    updated_at: "2026-09-07T01:18:55.000Z"
+    updated_at: "2026-09-07T03:41:48.000Z"
+    evidence_post_ids: []
+  - handle: "neny_14"
+    x_user_id: "429424089"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 7
+      false_positive: 0
+      net: 7
+    first_seen_at: "2026-09-07T03:37:02.000Z"
+    updated_at: "2026-09-07T04:12:23.000Z"
     evidence_post_ids: []
   - handle: "netcdhwwnouetc"
     x_user_id: "2069762137954615296"
     category: "other"
     sources: ["community"]
     votes:
-      block: 6
+      block: 16
       false_positive: 0
-      net: 6
+      net: 16
     first_seen_at: "2026-09-06T20:35:53.000Z"
-    updated_at: "2026-09-07T01:42:02.000Z"
+    updated_at: "2026-09-07T05:03:06.000Z"
+    evidence_post_ids: []
+  - handle: "niicaurys"
+    x_user_id: "405702156"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 9
+      false_positive: 0
+      net: 9
+    first_seen_at: "2026-09-07T03:32:01.000Z"
+    updated_at: "2026-09-07T04:54:37.000Z"
+    evidence_post_ids: []
+  - handle: "no_pardons"
+    x_user_id: "1392308591953006594"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-07T00:59:59.000Z"
+    updated_at: "2026-09-07T05:12:17.000Z"
     evidence_post_ids: []
   - handle: "noelleoligtios"
     x_user_id: "2087477433595559936"
@@ -1961,33 +3237,44 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-06T19:49:02.000Z"
-    updated_at: "2026-09-07T01:28:52.000Z"
+    updated_at: "2026-09-07T03:25:10.000Z"
     evidence_post_ids: []
   - handle: "ogtdjreivyu42i"
     x_user_id: "2069755009898885120"
     category: "other"
     sources: ["community"]
     votes:
-      block: 6
+      block: 8
       false_positive: 0
-      net: 6
+      net: 8
     first_seen_at: "2026-09-06T19:18:04.000Z"
-    updated_at: "2026-09-07T01:12:48.000Z"
+    updated_at: "2026-09-07T05:03:06.000Z"
     evidence_post_ids: []
-  - handle: "omerkoc1kdi"
-    x_user_id: "2086706139031367680"
+  - handle: "olsun_sefam"
+    x_user_id: "1454598061"
     category: "other"
     sources: ["community"]
     votes:
       block: 14
       false_positive: 0
       net: 14
+    first_seen_at: "2026-09-07T03:04:35.000Z"
+    updated_at: "2026-09-07T05:00:04.000Z"
+    evidence_post_ids: []
+  - handle: "omerkoc1kdi"
+    x_user_id: "2086706139031367680"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 20
+      false_positive: 0
+      net: 20
     first_seen_at: "2026-09-06T14:08:19.000Z"
-    updated_at: "2026-09-07T00:42:15.000Z"
+    updated_at: "2026-09-07T05:14:56.000Z"
     evidence_post_ids: []
   - handle: "omerozeroln3"
     x_user_id: "2086672809816727553"
@@ -2022,6 +3309,17 @@ entries:
     first_seen_at: "2026-09-06T14:12:23.000Z"
     updated_at: "2026-09-07T00:53:53.000Z"
     evidence_post_ids: []
+  - handle: "osacfxkeoqf0ux"
+    x_user_id: "2069752078130360320"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T20:42:02.000Z"
+    updated_at: "2026-09-07T03:48:25.000Z"
+    evidence_post_ids: []
   - handle: "owagfe419"
     x_user_id: "2066194040995840000"
     category: "other"
@@ -2049,11 +3347,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-06T23:21:09.000Z"
-    updated_at: "2026-09-07T01:29:32.000Z"
+    updated_at: "2026-09-07T02:34:54.000Z"
     evidence_post_ids: []
   - handle: "paolitabeadles"
     x_user_id: "438912797"
@@ -2065,6 +3363,18 @@ entries:
       net: 3
     first_seen_at: "2026-09-06T13:54:46.000Z"
     updated_at: "2026-09-07T01:16:09.000Z"
+    evidence_post_ids: []
+  - handle: "pduxx478"
+    x_user_id: "2069758439564214272"
+    category: "adult_gray_traffic"
+    sources: ["community", "maintainer"]
+    votes:
+      block: 6
+      false_positive: 0
+      net: 6
+    maintainer_note: "用户举报黄推引流号：随机ID+emoji灌水话术"
+    first_seen_at: "2026-09-06T21:47:10.000Z"
+    updated_at: "2026-09-07T05:18:02.000Z"
     evidence_post_ids: []
   - handle: "pearlezunoqm"
     x_user_id: "2087483808153055233"
@@ -2082,22 +3392,33 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 3
+      block: 6
       false_positive: 0
-      net: 3
+      net: 6
     first_seen_at: "2026-09-06T18:03:33.000Z"
-    updated_at: "2026-09-07T01:16:59.000Z"
+    updated_at: "2026-09-07T04:34:23.000Z"
     evidence_post_ids: []
   - handle: "petersullihhsh"
     x_user_id: "2086659008010616832"
     category: "other"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-06T12:15:16.000Z"
-    updated_at: "2026-09-06T21:29:40.000Z"
+    updated_at: "2026-09-07T03:40:36.000Z"
+    evidence_post_ids: []
+  - handle: "plainjane71923"
+    x_user_id: "229364103"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-07T05:07:30.000Z"
+    updated_at: "2026-09-07T05:14:53.000Z"
     evidence_post_ids: []
   - handle: "porterponeiw"
     x_user_id: "2087844216625917952"
@@ -2115,11 +3436,22 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-06T20:11:22.000Z"
+    updated_at: "2026-09-07T03:43:34.000Z"
+    evidence_post_ids: []
+  - handle: "rabia_jb_bieber"
+    x_user_id: "285706516"
+    category: "other"
+    sources: ["community"]
+    votes:
       block: 3
       false_positive: 0
       net: 3
-    first_seen_at: "2026-09-06T20:11:22.000Z"
-    updated_at: "2026-09-06T21:35:22.000Z"
+    first_seen_at: "2026-09-06T19:16:13.000Z"
+    updated_at: "2026-09-07T05:10:45.000Z"
     evidence_post_ids: []
   - handle: "racheljacklvkq"
     x_user_id: "2086611888717119488"
@@ -2131,6 +3463,28 @@ entries:
       net: 4
     first_seen_at: "2026-09-06T13:36:04.000Z"
     updated_at: "2026-09-06T16:01:06.000Z"
+    evidence_post_ids: []
+  - handle: "rafaelaarossi"
+    x_user_id: "1549245883"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 9
+      false_positive: 0
+      net: 9
+    first_seen_at: "2026-09-07T03:32:05.000Z"
+    updated_at: "2026-09-07T04:37:43.000Z"
+    evidence_post_ids: []
+  - handle: "rennarattedw"
+    x_user_id: "2087490460856053760"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T16:50:30.000Z"
+    updated_at: "2026-09-07T04:03:06.000Z"
     evidence_post_ids: []
   - handle: "richhingle"
     x_user_id: "2087844422822264832"
@@ -2154,16 +3508,49 @@ entries:
     first_seen_at: "2026-09-06T12:09:10.000Z"
     updated_at: "2026-09-06T14:52:56.000Z"
     evidence_post_ids: []
+  - handle: "rizqanrawrrr"
+    x_user_id: "374726092"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 7
+      false_positive: 0
+      net: 7
+    first_seen_at: "2026-09-06T18:10:00.000Z"
+    updated_at: "2026-09-07T05:07:37.000Z"
+    evidence_post_ids: []
   - handle: "rocoxsmith"
     x_user_id: "1322235232897191936"
     category: "other"
     sources: ["community"]
     votes:
-      block: 5
+      block: 7
       false_positive: 0
-      net: 5
+      net: 7
     first_seen_at: "2026-09-06T20:21:30.000Z"
-    updated_at: "2026-09-07T01:17:05.000Z"
+    updated_at: "2026-09-07T04:36:05.000Z"
+    evidence_post_ids: []
+  - handle: "rolfjulianj3p"
+    x_user_id: "2087478063802056704"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T14:20:10.000Z"
+    updated_at: "2026-09-07T02:55:15.000Z"
+    evidence_post_ids: []
+  - handle: "romanawiedcxhg"
+    x_user_id: "2087478047079370752"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T14:20:10.000Z"
+    updated_at: "2026-09-07T02:55:22.000Z"
     evidence_post_ids: []
   - handle: "rosellavedrrif"
     x_user_id: "2087844380594032640"
@@ -2198,16 +3585,38 @@ entries:
     first_seen_at: "2026-09-06T11:12:38.000Z"
     updated_at: "2026-09-06T21:52:58.000Z"
     evidence_post_ids: []
+  - handle: "rowdyyhayy"
+    x_user_id: "2956753428"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-06T21:34:33.000Z"
+    updated_at: "2026-09-07T03:42:44.000Z"
+    evidence_post_ids: []
   - handle: "rpkwbyx654"
     x_user_id: "2069750433078472704"
     category: "other"
     sources: ["community"]
     votes:
-      block: 3
+      block: 5
       false_positive: 0
-      net: 3
+      net: 5
     first_seen_at: "2026-09-06T19:00:39.000Z"
-    updated_at: "2026-09-07T01:10:50.000Z"
+    updated_at: "2026-09-07T03:43:06.000Z"
+    evidence_post_ids: []
+  - handle: "rvyifxc122"
+    x_user_id: "2069761196354396160"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-06T19:57:46.000Z"
+    updated_at: "2026-09-07T04:45:53.000Z"
     evidence_post_ids: []
   - handle: "rxenmmupxonphj"
     x_user_id: "2070759270983901185"
@@ -2220,16 +3629,71 @@ entries:
     first_seen_at: "2026-09-06T11:59:32.000Z"
     updated_at: "2026-09-06T14:17:28.000Z"
     evidence_post_ids: []
+  - handle: "ryanlloyd98"
+    x_user_id: "577843726"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T11:53:25.000Z"
+    updated_at: "2026-09-07T03:55:32.000Z"
+    evidence_post_ids: []
+  - handle: "sanchonatrono"
+    x_user_id: "909905323"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T19:10:51.000Z"
+    updated_at: "2026-09-07T04:21:06.000Z"
+    evidence_post_ids: []
+  - handle: "sanjeet30116449"
+    x_user_id: "1210594103605415936"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T12:14:15.000Z"
+    updated_at: "2026-09-07T04:41:16.000Z"
+    evidence_post_ids: []
+  - handle: "sasssymalum"
+    x_user_id: "3146705370"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 7
+      false_positive: 0
+      net: 7
+    first_seen_at: "2026-09-07T03:25:19.000Z"
+    updated_at: "2026-09-07T04:55:44.000Z"
+    evidence_post_ids: []
+  - handle: "savannahashtyn"
+    x_user_id: "524725039"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 5
+      false_positive: 0
+      net: 5
+    first_seen_at: "2026-09-06T13:05:33.000Z"
+    updated_at: "2026-09-07T05:07:31.000Z"
+    evidence_post_ids: []
   - handle: "sayrecheyenne"
     x_user_id: "2944325743"
     category: "other"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-06T16:50:15.000Z"
-    updated_at: "2026-09-07T01:19:14.000Z"
+    updated_at: "2026-09-07T04:34:16.000Z"
     evidence_post_ids: []
   - handle: "selinkarayhno"
     x_user_id: "2086638816631115776"
@@ -2242,16 +3706,71 @@ entries:
     first_seen_at: "2026-09-06T13:23:39.000Z"
     updated_at: "2026-09-06T19:54:30.000Z"
     evidence_post_ids: []
+  - handle: "sellyselikane"
+    x_user_id: "1120288132094746624"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T20:13:26.000Z"
+    updated_at: "2026-09-07T03:39:51.000Z"
+    evidence_post_ids: []
+  - handle: "shendyjanuar"
+    x_user_id: "288862383"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 14
+      false_positive: 0
+      net: 14
+    first_seen_at: "2026-09-07T03:05:16.000Z"
+    updated_at: "2026-09-07T05:00:28.000Z"
+    evidence_post_ids: []
   - handle: "sheremadraswala"
     x_user_id: "937039484973211648"
     category: "other"
     sources: ["community"]
     votes:
-      block: 5
+      block: 7
       false_positive: 0
-      net: 5
+      net: 7
     first_seen_at: "2026-09-06T18:03:57.000Z"
-    updated_at: "2026-09-07T01:18:50.000Z"
+    updated_at: "2026-09-07T04:53:41.000Z"
+    evidence_post_ids: []
+  - handle: "sig1023_moco"
+    x_user_id: "1306445031780220929"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-06T10:46:55.000Z"
+    updated_at: "2026-09-07T04:26:09.000Z"
+    evidence_post_ids: []
+  - handle: "slickslump"
+    x_user_id: "1022521869340209152"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T12:39:03.000Z"
+    updated_at: "2026-09-07T04:21:16.000Z"
+    evidence_post_ids: []
+  - handle: "sofi_nicole"
+    x_user_id: "126663065"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 7
+      false_positive: 0
+      net: 7
+    first_seen_at: "2026-09-07T03:37:02.000Z"
+    updated_at: "2026-09-07T04:54:54.000Z"
     evidence_post_ids: []
   - handle: "solangesintzen"
     x_user_id: "905981412"
@@ -2264,6 +3783,50 @@ entries:
     first_seen_at: "2026-09-06T10:45:39.000Z"
     updated_at: "2026-09-06T12:14:38.000Z"
     evidence_post_ids: []
+  - handle: "staycute_32"
+    x_user_id: "456311268"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 8
+      false_positive: 0
+      net: 8
+    first_seen_at: "2026-09-07T04:18:25.000Z"
+    updated_at: "2026-09-07T05:08:10.000Z"
+    evidence_post_ids: []
+  - handle: "staysee__"
+    x_user_id: "1077868462670782465"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T05:09:47.000Z"
+    updated_at: "2026-09-07T05:14:54.000Z"
+    evidence_post_ids: []
+  - handle: "sudekiras"
+    x_user_id: "332195540"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T14:33:04.000Z"
+    updated_at: "2026-09-07T03:20:05.000Z"
+    evidence_post_ids: []
+  - handle: "susbravistas"
+    x_user_id: "618473652"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 12
+      false_positive: 0
+      net: 12
+    first_seen_at: "2026-09-07T03:05:16.000Z"
+    updated_at: "2026-09-07T04:41:32.000Z"
+    evidence_post_ids: []
   - handle: "suzanneberhkpw"
     x_user_id: "2087477504965746688"
     category: "other"
@@ -2275,16 +3838,27 @@ entries:
     first_seen_at: "2026-09-06T12:40:34.000Z"
     updated_at: "2026-09-06T15:28:55.000Z"
     evidence_post_ids: []
+  - handle: "syifaaafz"
+    x_user_id: "153298992"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 6
+      false_positive: 0
+      net: 6
+    first_seen_at: "2026-09-07T04:11:13.000Z"
+    updated_at: "2026-09-07T05:14:58.000Z"
+    evidence_post_ids: []
   - handle: "sylviacolgcwn"
     x_user_id: "2087844075273846784"
     category: "other"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-06T14:59:04.000Z"
-    updated_at: "2026-09-07T01:03:20.000Z"
+    updated_at: "2026-09-07T05:01:14.000Z"
     evidence_post_ids: []
   - handle: "tamidelanysekx"
     x_user_id: "2088124673120993280"
@@ -2297,16 +3871,49 @@ entries:
     first_seen_at: "2026-09-06T12:20:08.000Z"
     updated_at: "2026-09-06T13:55:45.000Z"
     evidence_post_ids: []
-  - handle: "teochews"
-    x_user_id: "110960151"
+  - handle: "tedburianio"
+    x_user_id: "2087483462336847872"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T22:47:01.000Z"
+    updated_at: "2026-09-07T03:38:57.000Z"
+    evidence_post_ids: []
+  - handle: "tempfix03"
+    x_user_id: "1282208803983962117"
     category: "other"
     sources: ["community"]
     votes:
       block: 4
       false_positive: 0
       net: 4
+    first_seen_at: "2026-09-07T01:50:37.000Z"
+    updated_at: "2026-09-07T04:54:01.000Z"
+    evidence_post_ids: []
+  - handle: "teochews"
+    x_user_id: "110960151"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 8
+      false_positive: 0
+      net: 8
     first_seen_at: "2026-09-06T18:03:41.000Z"
-    updated_at: "2026-09-07T01:40:48.000Z"
+    updated_at: "2026-09-07T05:13:23.000Z"
+    evidence_post_ids: []
+  - handle: "theblazejp"
+    x_user_id: "1731770480"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T01:50:37.000Z"
+    updated_at: "2026-09-07T05:07:02.000Z"
     evidence_post_ids: []
   - handle: "tinajacksojhjc"
     x_user_id: "2086728357006188544"
@@ -2318,6 +3925,17 @@ entries:
       net: 4
     first_seen_at: "2026-09-06T12:06:46.000Z"
     updated_at: "2026-09-06T16:05:18.000Z"
+    evidence_post_ids: []
+  - handle: "tmgebjc1977"
+    x_user_id: "421980174"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 12
+      false_positive: 0
+      net: 12
+    first_seen_at: "2026-09-07T04:11:42.000Z"
+    updated_at: "2026-09-07T05:14:58.000Z"
     evidence_post_ids: []
   - handle: "tonasalterpi40"
     x_user_id: "2086988327840784384"
@@ -2335,11 +3953,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-06T16:50:15.000Z"
-    updated_at: "2026-09-07T01:45:08.000Z"
+    updated_at: "2026-09-07T04:33:03.000Z"
     evidence_post_ids: []
   - handle: "tuannavoneznam"
     x_user_id: "2087482672755220480"
@@ -2357,33 +3975,67 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-06T21:21:01.000Z"
-    updated_at: "2026-09-07T01:41:11.000Z"
+    updated_at: "2026-09-07T05:10:01.000Z"
+    evidence_post_ids: []
+  - handle: "uaulk168"
+    x_user_id: "2069757595372412929"
+    category: "adult_gray_traffic"
+    sources: ["community", "maintainer"]
+    votes:
+      block: 5
+      false_positive: 0
+      net: 5
+    maintainer_note: "用户举报黄推引流号：随机ID+emoji灌水话术"
+    first_seen_at: "2026-09-06T21:19:27.000Z"
+    updated_at: "2026-09-07T05:18:02.000Z"
     evidence_post_ids: []
   - handle: "uma_no_basho"
     x_user_id: "1852847969667854336"
     category: "other"
     sources: ["community"]
     votes:
-      block: 5
+      block: 8
       false_positive: 0
-      net: 5
+      net: 8
     first_seen_at: "2026-09-06T11:53:32.000Z"
-    updated_at: "2026-09-07T01:06:00.000Z"
+    updated_at: "2026-09-07T04:26:04.000Z"
     evidence_post_ids: []
   - handle: "upgxehndizhlwr"
     x_user_id: "2069761826888241152"
     category: "other"
     sources: ["community"]
     votes:
+      block: 5
+      false_positive: 0
+      net: 5
+    first_seen_at: "2026-09-06T19:46:53.000Z"
+    updated_at: "2026-09-07T03:55:54.000Z"
+    evidence_post_ids: []
+  - handle: "urmoviegirl5556"
+    x_user_id: "3323849391"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 9
+      false_positive: 0
+      net: 9
+    first_seen_at: "2026-09-07T04:11:13.000Z"
+    updated_at: "2026-09-07T05:17:14.000Z"
+    evidence_post_ids: []
+  - handle: "wandaalleni1ld"
+    x_user_id: "2086638094950838272"
+    category: "other"
+    sources: ["community"]
+    votes:
       block: 3
       false_positive: 0
       net: 3
-    first_seen_at: "2026-09-06T19:46:53.000Z"
-    updated_at: "2026-09-07T00:58:38.000Z"
+    first_seen_at: "2026-09-07T03:18:19.000Z"
+    updated_at: "2026-09-07T04:17:52.000Z"
     evidence_post_ids: []
   - handle: "wendolynervtmi"
     x_user_id: "2087844162045452288"
@@ -2396,16 +4048,38 @@ entries:
     first_seen_at: "2026-09-06T12:11:45.000Z"
     updated_at: "2026-09-06T13:35:07.000Z"
     evidence_post_ids: []
+  - handle: "wrcobblxgubjrj"
+    x_user_id: "2069764265444036608"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T00:54:33.000Z"
+    updated_at: "2026-09-07T03:54:56.000Z"
+    evidence_post_ids: []
+  - handle: "xaviarray"
+    x_user_id: "2967670332"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T04:55:23.000Z"
+    updated_at: "2026-09-07T05:07:39.000Z"
+    evidence_post_ids: []
   - handle: "xmercredi"
     x_user_id: "736555274413039617"
     category: "other"
     sources: ["community"]
     votes:
-      block: 7
+      block: 10
       false_positive: 0
-      net: 7
+      net: 10
     first_seen_at: "2026-09-06T10:47:01.000Z"
-    updated_at: "2026-09-06T17:51:10.000Z"
+    updated_at: "2026-09-07T03:56:12.000Z"
     evidence_post_ids: []
   - handle: "yaqelincarballo"
     x_user_id: "120912387"
@@ -2423,11 +4097,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 8
+      block: 9
       false_positive: 0
-      net: 8
+      net: 9
     first_seen_at: "2026-09-06T11:49:34.000Z"
-    updated_at: "2026-09-06T19:45:12.000Z"
+    updated_at: "2026-09-07T04:14:31.000Z"
     evidence_post_ids: []
   - handle: "yjudvzzjvtiio9"
     x_user_id: "2069749421638553600"
@@ -2439,6 +4113,39 @@ entries:
       net: 3
     first_seen_at: "2026-09-06T19:01:25.000Z"
     updated_at: "2026-09-06T21:23:34.000Z"
+    evidence_post_ids: []
+  - handle: "ynonbrmsyrvlbr"
+    x_user_id: "2069756093082021888"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T04:38:16.000Z"
+    updated_at: "2026-09-07T05:14:41.000Z"
+    evidence_post_ids: []
+  - handle: "yomnaal46212035"
+    x_user_id: "1219277550893064194"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 8
+      false_positive: 0
+      net: 8
+    first_seen_at: "2026-09-07T03:38:27.000Z"
+    updated_at: "2026-09-07T04:46:10.000Z"
+    evidence_post_ids: []
+  - handle: "young_malice_"
+    x_user_id: "3033246717"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-06T20:13:30.000Z"
+    updated_at: "2026-09-07T04:37:04.000Z"
     evidence_post_ids: []
   - handle: "yuksel558"
     x_user_id: "2888087830"
@@ -2456,33 +4163,55 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 4
+      block: 9
       false_positive: 0
-      net: 4
+      net: 9
     first_seen_at: "2026-09-06T11:36:50.000Z"
-    updated_at: "2026-09-07T01:41:12.000Z"
+    updated_at: "2026-09-07T03:55:37.000Z"
     evidence_post_ids: []
   - handle: "yusufaslane9qm"
     x_user_id: "2086477041851932672"
     category: "other"
     sources: ["community"]
     votes:
-      block: 3
+      block: 7
       false_positive: 0
-      net: 3
+      net: 7
     first_seen_at: "2026-09-06T14:14:37.000Z"
-    updated_at: "2026-09-06T18:14:50.000Z"
+    updated_at: "2026-09-07T04:29:30.000Z"
     evidence_post_ids: []
   - handle: "yutam0729"
     x_user_id: "2856004014"
     category: "other"
     sources: ["community"]
     votes:
+      block: 6
+      false_positive: 0
+      net: 6
+    first_seen_at: "2026-09-06T20:11:14.000Z"
+    updated_at: "2026-09-07T05:02:49.000Z"
+    evidence_post_ids: []
+  - handle: "yvonemiskenshq"
+    x_user_id: "2087843592219897856"
+    category: "other"
+    sources: ["community"]
+    votes:
       block: 3
       false_positive: 0
       net: 3
-    first_seen_at: "2026-09-06T20:11:14.000Z"
-    updated_at: "2026-09-07T01:08:32.000Z"
+    first_seen_at: "2026-09-07T01:21:20.000Z"
+    updated_at: "2026-09-07T04:16:28.000Z"
+    evidence_post_ids: []
+  - handle: "zaj777i"
+    x_user_id: "736139186214993920"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-07T03:35:46.000Z"
+    updated_at: "2026-09-07T05:09:44.000Z"
     evidence_post_ids: []
   - handle: "zanarainbonll"
     x_user_id: "2087477840606306304"
@@ -2500,9 +4229,31 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-06T19:57:39.000Z"
+    updated_at: "2026-09-07T05:03:20.000Z"
+    evidence_post_ids: []
+  - handle: "zhlbhbfhffnkrm"
+    x_user_id: "2069755100772335616"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 5
+      false_positive: 0
+      net: 5
+    first_seen_at: "2026-09-06T18:53:25.000Z"
+    updated_at: "2026-09-07T04:40:26.000Z"
+    evidence_post_ids: []
+  - handle: "ztwo2case"
+    x_user_id: "3237769585"
+    category: "other"
+    sources: ["community"]
+    votes:
       block: 3
       false_positive: 0
       net: 3
-    first_seen_at: "2026-09-06T19:57:39.000Z"
-    updated_at: "2026-09-07T01:03:08.000Z"
+    first_seen_at: "2026-09-06T19:28:40.000Z"
+    updated_at: "2026-09-07T03:11:53.000Z"
     evidence_post_ids: []

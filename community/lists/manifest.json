@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
   "policy_version": 3,
-  "snapshot_version": "2026.09.07.20",
-  "generated_at": "2026-09-07T02:08:12.976Z",
+  "snapshot_version": "2026.09.07.22",
+  "generated_at": "2026-09-07T05:18:03.076Z",
   "policy": {
     "version": 3,
     "blocklist": {
@@ -30,13 +30,13 @@
   "files": [
     {
       "path": "official.json",
-      "sha256": "c639647c7d9429de167163c16d81b9a31f7f02bdc72df74db5b11d068619e9b8",
-      "entries": 227
+      "sha256": "d8a9c39687991717f591bdf4f578da2b0386262c0f3b4afa0d997b15228bee16",
+      "entries": 386
     },
     {
       "path": "blocklist.yaml",
-      "sha256": "6f6ae5e983579a56178e99e0385b41726b638bb4a322cb13b03f0167560fc727",
-      "entries": 227
+      "sha256": "91566b369e370f5f12810767ae9a591ab5fed58bf93542b3f37c3328d1cc74fb",
+      "entries": 386
     }
   ]
 }
