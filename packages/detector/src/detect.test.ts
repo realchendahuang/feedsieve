@@ -143,6 +143,19 @@ describe('detect: 指纹 v1（v0.8：NFKC 全角折叠 + 版本位）', () => {
     );
     expect(result).toBeNull();
   });
+
+  it('真实样本：换 emoji 的婚介引流变体 exact 命中（2026-09-07 采集，handle 匿名化）', () => {
+    // A 账号已拉黑上报指纹；B 账号换 emoji 复用同一话术 -> 归一化后逐字相同 -> exact 命中
+    const template = fingerprintTextV1('点主页🌙专业牵线🌹全国1-5线覆盖')!;
+    const result = detect(
+      { handle: 'matchmaking_b', text: '点主页🍓专业牵线😸全国1-5线覆盖' },
+      { fingerprints: new Set([template]) },
+    );
+    expect(result?.ruleId).toBe('community-fingerprint');
+    expect(fingerprintTextV1('点主页🌙专业牵线🌹全国1-5线覆盖')).toBe(
+      fingerprintTextV1('点主页🍓专业牵线😸全国1-5线覆盖'),
+    );
+  });
 });
 
 describe('detect: community domain (v0.4)', () => {

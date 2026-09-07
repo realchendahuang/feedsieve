@@ -172,6 +172,20 @@
       "input": { "handle": "pv_01", "text": "福利主页看 不收钱" },
       "expected": null,
       "known_limitation": true
+    },
+    {
+      "id": "matchmaking-bait-a",
+      "note": "婚介引流话术（2026-09-07 真机采集，handle 匿名化）：点主页 + 专业牵线 + 全国1-5线覆盖。启发式/词包均漏报（已知局限；指纹 exact 覆盖，见 detect.test 真实样本用例）",
+      "input": { "handle": "tpl_01", "text": "点主页🌙专业牵线🌹全国1-5线覆盖" },
+      "expected": null,
+      "known_limitation": true
+    },
+    {
+      "id": "matchmaking-bait-b",
+      "note": "同上模板换 emoji 的变体（🌙🌹 → 🍓😸）：归一化后与 a 逐字相同，指纹 exact 命中（corpus 只测启发式层，故记为局限）",
+      "input": { "handle": "tpl_02", "text": "点主页🍓专业牵线😸全国1-5线覆盖" },
+      "expected": null,
+      "known_limitation": true
     }
   ]
 }

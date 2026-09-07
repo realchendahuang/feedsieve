@@ -1,12 +1,12 @@
 {
   "corpus_version": 1,
-  "generated_at": "2026-09-07T11:15:38.435Z",
-  "total": 28,
+  "generated_at": "2026-09-07T13:49:42.368Z",
+  "total": 30,
   "tp": 13,
   "fp": 0,
   "fn": 0,
-  "tn": 15,
-  "known_limitation": 3,
+  "tn": 17,
+  "known_limitation": 5,
   "precision": 1,
   "recall": 1,
   "fpr": 0
