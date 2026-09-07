@@ -61,7 +61,8 @@ else:
 "
     ;;
   put)
-    handle="$1"
+    # 服务端按小写 handle 匹配路径与 body，必须先归一化再写
+    handle=$(norm "$1")
     category="${2:-bot_spam}"
     note="${3:-Agent 维护条目}"
     evidence="$4"

@@ -29,7 +29,8 @@ case "$CMD" in
   snapshot) curl -fsSL "$BASE/v1/snapshots/latest" ;;
 
   list)    curl -fsSL "${AUTH[@]}" "$BASE/api/agent/entries" ;;
-  put)     handle="$1"; category="${2:-bot_spam}"; note="${3:-Agent 维护条目}"; evidence="$4"
+  put)     handle=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed 's/^@//')
+           category="${2:-bot_spam}"; note="${3:-Agent 维护条目}"; evidence="$4"
            body="{\"handle\":\"$handle\",\"category\":\"$category\",\"note\":\"$note\""
            if [ -n "$evidence" ]; then body="$body,\"evidence_post_id\":\"$evidence\""; fi
            body="$body}"
