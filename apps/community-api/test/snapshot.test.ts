@@ -67,7 +67,8 @@ describe('snapshot pipeline', () => {
   it('empty publish -> manifest with zero entries; new-status accounts excluded', async () => {
     await report('ssssssss-1000-4000-8000-ssssssssssss', 'only_new_user');
 
-    const result = await generateSnapshot(env);
+    // bypassDailyOnce：测试关注内容正确性而非日更时序（后者见 snapshot-daily.test.ts）
+    const result = await generateSnapshot(env, 0, { bypassDailyOnce: true });
     const { snapshot_version, files } = result.manifest as unknown as Manifest;
     expect(snapshot_version).toMatch(/^\d{4}\.\d{2}\.\d{2}\.\d{1,4}$/);
     expect(files[0].entries).toBe(0);
@@ -89,7 +90,9 @@ describe('snapshot pipeline', () => {
       evidence_post_id: '18000000000000000',
     });
 
-    await generateSnapshot(env);
+    // bypassDailyOnce：本文件前面已 mint 过今日版本，这里显式走即时通道验证内容正确性；
+    // 日更语义（同一天内容变化延迟发布）由 test/snapshot-daily.test.ts 覆盖。
+    await generateSnapshot(env, 0, { bypassDailyOnce: true });
     const fileRes = await worker.fetch(
       new Request(
         `${ORIGIN}/v1/snapshots/${

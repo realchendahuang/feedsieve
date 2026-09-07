@@ -51,7 +51,8 @@ interface Entry {
 }
 
 async function publishAndGetEntry(handle: string): Promise<Entry | undefined> {
-  await generateSnapshot(env);
+  // bypassDailyOnce：用例验证聚类内容正确性；日更时序由 snapshot-daily.test.ts 覆盖
+  await generateSnapshot(env, 0, { bypassDailyOnce: true });
   const latest = (await (
     await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), env)
   ).json()) as { snapshot_version: string; files: { path: string }[] };

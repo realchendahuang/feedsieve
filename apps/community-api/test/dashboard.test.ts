@@ -92,8 +92,8 @@ describe('快照异步化（脏标记）', () => {
     expect(afterCron?.n).toBe(before?.n ?? 0);
   });
 
-  it('cron 合并：达标变更落新版本并清标记', async () => {
-    // 同一账号再补两票 → 内容变化 → cron 生成新版本
+  it('当日已有版本时 cron 顺延；达标内容经即时通道发布，cron 随后复用并清脏', async () => {
+    // 同一账号再补两票 → 内容变化（async_user 达 3 票进榜）
     await report('ffffffff-3006-4006-8006-ffffffffffff', 'async_user');
     await report('99999999-3007-4007-8007-999999999999', 'async_user');
     expect(await readSnapshotDirty(env)).not.toBeNull();
@@ -101,12 +101,25 @@ describe('快照异步化（脏标记）', () => {
     const before = await env.DB.prepare('SELECT COUNT(*) AS n FROM snapshots').first<{
       n: number;
     }>();
+    // day-once：今日已有版本（本文件首用例已发布），cron 只顺延、不清脏
     await worker.scheduled!(undefined as never, env);
-    expect(await readSnapshotDirty(env)).toBeNull();
+    expect(await readSnapshotDirty(env)).not.toBeNull();
+
+    // 维护者显式发布走即时通道（bypassDailyOnce）：内容立即可见、行数 +1
+    const published = await generateSnapshot(env, 0, { bypassDailyOnce: true });
+    expect(published.deferred).not.toBe(true);
     const after = await env.DB.prepare('SELECT COUNT(*) AS n FROM snapshots').first<{
       n: number;
     }>();
     expect(after?.n).toBe((before?.n ?? 0) + 1);
+
+    // 再跑 cron：内容与最新一致 → 复用版本并清脏标记，不落新行
+    await worker.scheduled!(undefined as never, env);
+    expect(await readSnapshotDirty(env)).toBeNull();
+    const afterCron = await env.DB.prepare('SELECT COUNT(*) AS n FROM snapshots').first<{
+      n: number;
+    }>();
+    expect(afterCron?.n).toBe(after?.n ?? 0);
 
     const meta = await getLatestSnapshotMeta(env);
     // 本文件累计数据：alpha_user + async_user（社区各 3 票）+ curated_user（维护者条目）

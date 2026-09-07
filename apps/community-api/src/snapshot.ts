@@ -140,6 +140,8 @@ export interface PublishedSnapshot {
   version: string;
   manifest: Record<string, unknown>;
   files: Record<string, SnapshotFile>;
+  /** 当日一版守卫命中：内容有变化但今天已发布过，未落新行（调用方应保留脏标记待次日）。 */
+  deferred?: boolean;
 }
 
 function nextVersion(existing: string | null, dateStamp: string): string {
@@ -356,6 +358,7 @@ async function collectContentEvidence(env: Cloudflare.Env): Promise<{
 export async function generateSnapshot(
   env: Cloudflare.Env,
   publishAttempt = 0,
+  options: { bypassDailyOnce?: boolean } = {},
 ): Promise<PublishedSnapshot> {
   const now = new Date();
   const dateStamp = now.toISOString().slice(0, 10).replaceAll('-', '.');
@@ -564,18 +567,35 @@ export async function generateSnapshot(
   // 比较 entries 内容（body 里的 generated_at 每次不同，不能整串比较）。
   // kill_switch 也参与比较：开关翻转（开/关/理由变更）必须产生新版本，不能复用旧 body。
   const lastVersion = latest?.version ?? null;
+  const loadLatestRow = () =>
+    lastVersion
+      ? env.DB.prepare('SELECT manifest_json, files_json FROM snapshots WHERE version = ?1')
+          .bind(lastVersion)
+          .first<{ manifest_json: string; files_json: string }>()
+      : Promise.resolve(null);
   const lastBody = lastVersion ? await getSnapshotFile(env, lastVersion, SNAPSHOT_PACK) : null;
   if (lastBody && entriesContentEqual(lastBody, entries, killSwitch)) {
-    const lastRow = await env.DB.prepare(
-      'SELECT manifest_json, files_json FROM snapshots WHERE version = ?1',
-    )
-      .bind(lastVersion as string)
-      .first<{ manifest_json: string; files_json: string }>();
+    const lastRow = await loadLatestRow();
     if (lastRow) {
       return {
         version: lastVersion as string,
         manifest: JSON.parse(lastRow.manifest_json),
         files: JSON.parse(lastRow.files_json) as Record<string, SnapshotFile>,
+      };
+    }
+  }
+
+  // 当日一版守卫：今天已发布过、内容又有变化时不再 mint 新版本，延迟到下一个自然日
+  // 由 cron 合并发布（版本号是 YYYY.MM.DD.N 天锚格式，天然支持日更语义）。
+  // 调用方（scheduled）看到 deferred 会保留脏标记；维护者显式发布走 bypassDailyOnce 即时通道。
+  if (lastVersion && !options.bypassDailyOnce) {
+    const lastRow = await loadLatestRow();
+    if (lastRow) {
+      return {
+        version: lastVersion as string,
+        manifest: JSON.parse(lastRow.manifest_json),
+        files: JSON.parse(lastRow.files_json) as Record<string, SnapshotFile>,
+        deferred: true,
       };
     }
   }
@@ -602,7 +622,7 @@ export async function generateSnapshot(
     if (publishAttempt >= 20) {
       throw new Error('snapshot_publish_contention');
     }
-    return generateSnapshot(env, publishAttempt + 1);
+    return generateSnapshot(env, publishAttempt + 1, options);
   }
 
   return {
@@ -741,6 +761,43 @@ export async function getLatestSnapshotVersion(env: Cloudflare.Env): Promise<str
     return typeof parsed.snapshot_version === 'string' ? parsed.snapshot_version : null;
   } catch {
     return null;
+  }
+}
+
+/**
+ * 官方暂停开关是否需要补发一次快照（cron 无脏标记时调用）。
+ *
+ * 开关状态来自部署配置 env.DESTRUCTIVE_KILL_SWITCH，翻转不落库、不置脏；
+ * 这里与最新已发布 body 里的 kill_switch 比对，不一致就值得补发（开/关/理由变更
+ * 都要让公开镜像尽快反映）。当日已发布过则直接返回 false —— day-once 守卫会把
+ * 开关变更顺延到次日，实时生效由 /v1/kill-switch 端点兜底，扩展破坏性操作前查询。
+ */
+export async function killSwitchNeedsPublish(env: Cloudflare.Env): Promise<boolean> {
+  const now = new Date();
+  const dateStamp = now.toISOString().slice(0, 10).replaceAll('-', '.');
+  const todayRow = await env.DB.prepare(
+    'SELECT 1 AS x FROM snapshots WHERE version LIKE ?1 LIMIT 1',
+  )
+    .bind(`${dateStamp}.%`)
+    .first<{ x: number }>();
+  if (todayRow) {
+    return false;
+  }
+
+  const expected = buildKillSwitch(env.DESTRUCTIVE_KILL_SWITCH, now.toISOString());
+  const latestVersion = await getLatestSnapshotVersion(env);
+  if (!latestVersion) {
+    return expected != null;
+  }
+  const body = await getSnapshotFile(env, latestVersion, SNAPSHOT_PACK);
+  if (!body) {
+    return false;
+  }
+  try {
+    const parsed = JSON.parse(body) as { kill_switch?: unknown };
+    return JSON.stringify(parsed.kill_switch ?? null) !== JSON.stringify(expected ?? null);
+  } catch {
+    return false;
   }
 }
 

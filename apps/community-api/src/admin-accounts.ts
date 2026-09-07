@@ -224,7 +224,9 @@ export async function publishAdminAccountDrafts(
     await env.DB.batch(statements.slice(index, index + D1_CHUNK));
   }
 
-  const snapshot = await generateSnapshot(env);
+  // 维护者显式发布走即时通道（bypassDailyOnce）：与社区投票的自动化高频变化不同，
+  // 人工发布是低频、可审计的，不应被 day-once 守卫顺延到次日。
+  const snapshot = await generateSnapshot(env, 0, { bypassDailyOnce: true });
   const releaseId = await recordRelease(env, 'accounts', snapshot.version, actorEmail, {
     archive_key: key,
     active_entries: activeDrafts.length,

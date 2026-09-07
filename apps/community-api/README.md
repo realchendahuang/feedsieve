@@ -77,6 +77,7 @@ pnpm deploy
 | `POST /v1/labels/retract`              | ✅   | 本地名单删除后撤回当前票（原始审计证据保留）   |
 | `GET /v1/snapshots/latest`             | ✅   | manifest（版本 + sha256 + 条目数，短缓存）     |
 | `GET /v1/snapshots/:version/:file`     | ✅   | 快照文件（immutable 缓存）                     |
+| `GET /v1/kill-switch`                  | ✅   | 官方暂停开关实时状态（no-store，不受快照日更节流） |
 | `GET /v1/blocklist/latest.yaml`        | ✅   | 当前最终黑名单（人类可读 YAML）                |
 | `GET /v1/blocklist/latest.json`        | ✅   | 当前最终黑名单（机器 JSON）                    |
 | `GET /v1/keyword-packs/latest`         | ✅   | R2 词库 manifest（版本 + SHA-256，短缓存）     |
@@ -89,6 +90,8 @@ pnpm deploy
 | `GET/POST /api/admin/releases/*`       | ✅   | 发布记录与回退                                 |
 
 社区只有一个公式：`report_count - rescue_count >= 3` 时进入最终名单，低于 3 时退出。
+
+快照按「当日一版」发布：脏标记或官方暂停开关翻转触发每小时 cron 检查，当天首次实质内容变化后 ≤1 小时公开，同一天不再刷新版本号。维护者显式发布走即时通道不受此限；官方暂停开关的实时生效独立走 `/v1/kill-switch`（破坏性操作执行前查询）。
 维护者条目存放在独立的 `maintainer_blocklist` 表，不参与社区计票。最终快照取两者并集，
 并通过 `sources` 公开标注 `community` / `maintainer`；不存在隐藏 owner 权重或永久否决。
 

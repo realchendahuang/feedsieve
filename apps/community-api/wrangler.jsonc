@@ -14,7 +14,7 @@
     "run_worker_first": true
   },
   "triggers": {
-    "crons": ["*/5 * * * *"],
+    "crons": ["0 * * * *"],
   },
   "d1_databases": [
     {

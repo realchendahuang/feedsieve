@@ -24,17 +24,25 @@ import {
   saveAdminKeywordPack,
   saveAdminKeywordRule,
 } from './keyword-admin';
+import {
+  agentKeyIdentity,
+  listAgentMaintainerEntries,
+  removeAgentMaintainerEntry,
+  upsertAgentMaintainerEntry,
+} from './agent-admin';
 import { MAINTAINER_CATEGORIES } from './maintainer-blocklist';
 import { processRetractionBatch } from './labels';
 import { POLICY, processReportBatch, publicPolicy } from './reports';
 import { processRescueBatch } from './rescues';
 import {
+  buildKillSwitch,
   clearSnapshotDirty,
   generateSnapshot,
   getLatestSnapshot,
   getLatestSnapshotFile,
   getLatestSnapshotVersion,
   getSnapshotFile,
+  killSwitchNeedsPublish,
   markSnapshotDirty,
   PUBLIC_BLOCKLIST_PACK,
   readSnapshotDirty,
@@ -269,6 +277,49 @@ export function createApp() {
     return c.body(latest.manifest, 200, { 'content-type': 'application/json' });
   });
 
+  // 官方暂停开关实时状态：不经快照日更节流，扩展在破坏性操作执行前实时查询。
+  // 只读、无数据库访问；no-store 保证边缘缓存不摊薄应急时效。
+  app.get('/v1/kill-switch', (c) => {
+    const killSwitch = buildKillSwitch(c.env.DESTRUCTIVE_KILL_SWITCH, new Date().toISOString());
+    c.header('Cache-Control', 'no-store');
+    return c.json(killSwitch ?? { destructive_actions_disabled: false });
+  });
+
+  // Agent 维护通道：X-Agent-Key 鉴权（AGENT_API_KEYS，见 agent-admin.ts）。
+  // 只维护「维护者来源」条目并触发发布；不暴露社区票、安装数据或人工后台会话。
+  app.get('/api/agent/entries', async (c) => {
+    const identity = await agentKeyIdentity(c.env, c.req.header('x-agent-key'));
+    if (!identity) return c.json({ error: 'invalid_agent_key' }, 401);
+    return c.json({ entries: await listAgentMaintainerEntries(c.env) });
+  });
+
+  app.put('/api/agent/entries/:handle', async (c) => {
+    const identity = await agentKeyIdentity(c.env, c.req.header('x-agent-key'));
+    if (!identity) return c.json({ error: 'invalid_agent_key' }, 401);
+    const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
+    if (!body || typeof body !== 'object') {
+      return c.json({ error: 'invalid_body' }, 400);
+    }
+    // 路径 handle 与 body.handle 必须一致，防止传错账号
+    const pathHandle = (c.req.param('handle') ?? '').trim().toLowerCase();
+    if (body.handle !== pathHandle) {
+      return c.json({ error: 'handle_mismatch' }, 400);
+    }
+    const result = await upsertAgentMaintainerEntry(c.env, `agent:${identity}`, body);
+    return result.ok ? c.json(result) : c.json({ error: result.error }, 400);
+  });
+
+  app.delete('/api/agent/entries/:handle', async (c) => {
+    const identity = await agentKeyIdentity(c.env, c.req.header('x-agent-key'));
+    if (!identity) return c.json({ error: 'invalid_agent_key' }, 401);
+    const result = await removeAgentMaintainerEntry(
+      c.env,
+      `agent:${identity}`,
+      c.req.param('handle'),
+    );
+    return result.ok ? c.json(result) : c.json({ error: result.error }, 400);
+  });
+
   app.get('/v1/snapshots/:version/:path', async (c) => {
     const path = c.req.param('path');
     const body = await getSnapshotFile(c.env, c.req.param('version'), path);
@@ -410,13 +461,24 @@ export function createApp() {
 async function scheduledAutoPublish(env: Cloudflare.Env): Promise<void> {
   try {
     const dirty = await readSnapshotDirty(env);
-    if (dirty == null) {
-      console.info('[community-api] cron publish: no pending changes, skip');
+    if (dirty != null) {
+      const published = await generateSnapshot(env);
+      // 当日已有一版而内容又有变化时 generateSnapshot 返回 deferred：
+      // 脏标记保留到下一自然日再由 cron 合并发布（day-once 日更语义）。
+      if (!published.deferred) {
+        await clearSnapshotDirty(env, dirty);
+      }
+      console.info(
+        `[community-api] cron publish: version=${published.version}${published.deferred ? ' (deferred to next day)' : ''}`,
+      );
       return;
     }
-    const published = await generateSnapshot(env);
-    await clearSnapshotDirty(env, dirty);
-    console.info(`[community-api] cron publish: version=${published.version}`);
+    // 无票面变更但官方暂停开关被部署配置翻转（开/关/理由变更）：仍需公开，
+    // day-once 守卫在 generateSnapshot 内部把关（当日已发布则顺延）。
+    if (await killSwitchNeedsPublish(env)) {
+      const published = await generateSnapshot(env);
+      console.info(`[community-api] cron publish (kill switch): version=${published.version}`);
+    }
   } catch (error) {
     console.error('[community-api] cron publish failed:', error);
   }

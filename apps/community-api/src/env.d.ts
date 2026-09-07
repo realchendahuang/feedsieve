@@ -12,14 +12,18 @@ declare namespace Cloudflare {
     /** 仅这个 hostname 可访问 React 维护端；公开 API host 永远不回退到静态后台。 */
     ADMIN_HOST?: string;
     INSTALLATION_SALT: string;
-    /** 快照发布者私钥（PKCS8 DER base64，见 scripts/keygen.mjs）；缺省 = 不签名 */
+    /** 快照与词库发布者私钥（PKCS8 DER base64，见 scripts/keygen.mjs）；缺省 = 不签名 */
     SIGNING_PRIVATE_KEY?: string;
     /** 签名使用的 key_id（对应扩展内置 trusted-keys.ts 的公钥） */
     SIGNING_KEY_ID?: string;
     /** "1" = 公开快照端点只服务已签名行；缺省 = 兼容旧部署（不设门槛） */
     REQUIRE_SIGNED_SNAPSHOTS?: string;
+    /** "1" = 词库后台发布/回滚必须带发布者签名，密钥缺失时拒绝发布；缺省 = 兼容本地/CI（不设门槛） */
+    REQUIRE_SIGNED_KEYWORD_PACKS?: string;
     /** 设置后随签名快照下发「破坏性动作暂停」开关（值为公开理由）；清除即恢复 */
     DESTRUCTIVE_KILL_SWITCH?: string;
+    /** Agent 维护通道密钥（`id:secret` 逗号分隔，secret ≥16 位）；缺省 = 该通道不可用 */
+    AGENT_API_KEYS?: string;
     TEST_MIGRATIONS: import('cloudflare:test').D1Migration[];
   }
 }
