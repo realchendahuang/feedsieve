@@ -1,6 +1,6 @@
 # Skill: feedsieve-admin — FeedSieve 全量线上数据管理（Agent 通道）
 
-项目级 skill。维护 FeedSieve 线上全部可管理数据：**维护者名单 / 词库（关键词分类与规则）/ 发布与回滚 / 审计 / 资产清单 / 运行状态**。官方实例：`https://feedsieve-api.chendahuang.com`（`FEEDSIEVE_API` 可覆盖为调试实例）。
+项目级 skill。维护 FeedSieve 线上全部可管理数据：**维护者名单 / 词库（关键词分类与规则）/ 发布与回滚 / 审计 / 资产清单 / 运行状态**。API 地址由部署者提供，通过环境变量 `FEEDSIEVE_API`（或本地文件 `~/.config/feedsieve/api-base`）指定；本 skill 不硬编码任何真实域名。
 
 ## 鉴权
 

@@ -7,7 +7,11 @@
 #   klist | kpack <id> <name_zh> <desc_zh> | krule <id> <pack_id> <phrase> [terms...] | kdel <pack|rule> <id> | kpub | kimport
 set -e
 
-BASE="${FEEDSIEVE_API:-https://feedsieve-api.chendahuang.com}"
+BASE="${FEEDSIEVE_API:-$(cat "$HOME/.config/feedsieve/api-base" 2>/dev/null || true)}"
+if [ -z "$BASE" ]; then
+  echo "error: 未设置 API 地址（export FEEDSIEVE_API 或写 ~/.config/feedsieve/api-base）" >&2
+  exit 1
+fi
 KEY_FILE="${FEEDSIEVE_AGENT_KEY_FILE:-$HOME/.config/feedsieve/agent.key}"
 KEY="${FEEDSIEVE_AGENT_KEY:-$(cat "$KEY_FILE" 2>/dev/null || true)}"
 if [ -z "$KEY" ]; then
