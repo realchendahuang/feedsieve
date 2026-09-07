@@ -8,6 +8,7 @@ import {
   verify as nodeVerify,
 } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
+import { buildKeywordPackManifestMessage } from './signing-message.mjs';
 
 // 与 packages/community-lists/src/trusted-keys.ts 的 release-1 对应；
 // 轮换时两处同步新增 key_id。
@@ -23,20 +24,6 @@ const versionPattern = /^\d{4}\.\d{2}\.\d{2}\.\d{1,4}$/;
 
 function fail(message) {
   throw new Error(`invalid keyword-pack source: ${message}`);
-}
-
-// 签名消息与 packages/community-lists/src/signing.ts 的 buildSigningMessage 逐字节一致：
-// 域前缀 + schema_version + version + generated_at + path/sha256/count
-function manifestMessage(packVersion, generatedAt, sha256, rules) {
-  return [
-    'feedsieve-manifest-v1',
-    '1',
-    packVersion,
-    generatedAt,
-    'official.json',
-    sha256,
-    String(rules),
-  ].join('\n');
 }
 
 async function loadSigningKey() {
@@ -56,7 +43,7 @@ async function loadSigningKey() {
 async function buildSignedManifest(parsed, sha256) {
   const privateKey = await loadSigningKey();
   if (!privateKey) return null;
-  const message = manifestMessage(parsed.pack_version, parsed.generated_at, sha256, countRules(parsed));
+  const message = buildKeywordPackManifestMessage(parsed.pack_version, parsed.generated_at, sha256, countRules(parsed));
   const sig = nodeSign(null, Buffer.from(message), privateKey).toString('base64');
   return {
     schema_version: 1,
@@ -246,7 +233,7 @@ if (signedManifest && !check) {
   if (`${JSON.stringify(committed)}\n` !== manifest)
     fail('generated manifest is stale; run pnpm keyword-packs:build');
   if (committedSig) {
-    const message = manifestMessage(
+    const message = buildKeywordPackManifestMessage(
       committed.pack_version,
       committed.generated_at,
       committed.files[0]?.sha256,
