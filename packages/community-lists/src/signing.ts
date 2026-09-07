@@ -30,7 +30,8 @@ export interface SigningMessageInput {
   schemaVersion: number;
   /** 版本字段：快照用 snapshot_version，词库用 pack_version */
   version: string;
-  generatedAt: string;
+  /** 仓库侧构建的词库产物可能为 null；join 时字节为 "null"，与签名侧一致 */
+  generatedAt: string | null;
   files: Array<{ path: string; sha256: string; count: number }>;
 }
 

@@ -173,6 +173,27 @@ describe('关键字词库同步与发布者签名', () => {
     expect(catalog.pack_version).toBe(VERSION);
   });
 
+  it('接受仓库构建产物中 generated_at 为 null 的 manifest（签名按 "null" 字节验证）', async () => {
+    const key = await testKey();
+    const body = catalogBody();
+    const fetchImpl = vi.fn(async (url: string) => {
+      if (url.endsWith('/v1/keyword-packs/latest')) {
+        return new Response(
+          JSON.stringify(await signedManifest(body, key, { generated_at: null })),
+          { status: 200 },
+        );
+      }
+      return new Response(body, { status: 200 });
+    }) as unknown as typeof fetch;
+    const outcome = await syncKeywordPackCatalog({
+      force: true,
+      fetchImpl,
+      trustedKeys: key.trustedKeys,
+    });
+    expect(outcome).toEqual({ status: 'updated', version: VERSION });
+    expect((await getKeywordPackCatalog()).pack_version).toBe(VERSION);
+  });
+
   it('拒绝无签名的 manifest，并保留 last-known-good', async () => {
     const key = await testKey();
     const body = catalogBody();

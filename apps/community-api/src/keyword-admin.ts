@@ -1,4 +1,9 @@
 import { recordAdminAudit, recordRelease } from './admin-accounts';
+import {
+  buildSigningMessage,
+  signManifestMessage,
+  type ManifestSignature,
+} from '@feedsieve/community-lists';
 import { sha256Hex } from './lib/hash';
 
 const PACK_ID = /^[a-z][a-z0-9_]{1,63}$/;
@@ -360,8 +365,47 @@ function nextVersion(current: string | undefined, stamp: string): string {
   return `${stamp}.${Number.isInteger(prior) && prior >= 0 ? prior + 1 : 1}`;
 }
 
+// manifest 契约与扩展 parseManifest / shared signing.ts 一致：schema_version=1，
+// 文件清单 count 用 rules 数。signature 在配置了发布密钥时嵌入（与快照同一把
+// release-1 私钥）；REQUIRE_SIGNED_KEYWORD_PACKS=1 时密钥缺失直接拒绝发布，
+// 避免把扩展必拒（signature_missing）的无签名 latest 顶上 R2 —— 那等于假发布。
+interface KeywordPackManifestDocument {
+  schema_version: 1;
+  pack_version: string;
+  generated_at: string;
+  files: Array<{ path: 'official.json'; sha256: string; packs: number; rules: number }>;
+  signature?: ManifestSignature;
+}
+
+function assertKeywordSigningAvailable(env: Cloudflare.Env) {
+  if (
+    env.REQUIRE_SIGNED_KEYWORD_PACKS === '1' &&
+    (!env.SIGNING_PRIVATE_KEY || !env.SIGNING_KEY_ID)
+  ) {
+    throw new Error('signing_key_missing');
+  }
+}
+
+async function signKeywordManifest(
+  env: Cloudflare.Env,
+  manifest: KeywordPackManifestDocument,
+): Promise<KeywordPackManifestDocument> {
+  if (!env.SIGNING_PRIVATE_KEY || !env.SIGNING_KEY_ID) return manifest;
+  const message = buildSigningMessage({
+    schemaVersion: manifest.schema_version,
+    version: manifest.pack_version,
+    generatedAt: manifest.generated_at,
+    files: manifest.files.map((file) => ({ path: file.path, sha256: file.sha256, count: file.rules })),
+  });
+  return {
+    ...manifest,
+    signature: await signManifestMessage(message, env.SIGNING_PRIVATE_KEY, env.SIGNING_KEY_ID),
+  };
+}
+
 export async function publishAdminKeywords(env: Cloudflare.Env, actorEmail = 'system') {
   if (!env.KEYWORD_PACKS) throw new Error('keyword_packs_unavailable');
+  assertKeywordSigningAvailable(env);
   const { packs, rules } = await listAdminKeywords(env, { limit: null });
   const activePacks = packs.filter((pack) => pack.active);
   if (!activePacks.length) throw new Error('no_active_packs');
@@ -398,12 +442,13 @@ export async function publishAdminKeywords(env: Cloudflare.Env, actorEmail = 'sy
   };
   const body = `${JSON.stringify(document)}\n`;
   const sha256 = await sha256Hex(body);
-  const manifest = `${JSON.stringify({
+  const manifestDocument: KeywordPackManifestDocument = {
     schema_version: 1,
     pack_version: version,
     generated_at: generatedAt,
     files: [{ path: 'official.json', sha256, packs: activePacks.length, rules: activeRules.length }],
-  })}\n`;
+  };
+  const manifest = `${JSON.stringify(await signKeywordManifest(env, manifestDocument))}\n`;
   await env.KEYWORD_PACKS.put(`keyword-packs/${version}/official.json`, body);
   await env.KEYWORD_PACKS.put('keyword-packs/latest.json', manifest);
   const releaseId = await recordRelease(env, 'keywords', version, actorEmail, {
@@ -415,43 +460,64 @@ export async function publishAdminKeywords(env: Cloudflare.Env, actorEmail = 'sy
   return { release_id: releaseId, version, sha256, packs: activePacks.length, rules: activeRules.length };
 }
 
+/**
+ * 回滚 = 把指定历史版本的内容以「新版本号」重新签名发布。
+ * 客户端对已接受版本有防回滚（rollback_rejected），复用旧版本号写 latest 会被拒收；
+ * body 内的 pack_version 必须等于 manifest 版本，所以历史 body 要重写版本字段。
+ */
 export async function rollbackAdminKeywordRelease(
   env: Cloudflare.Env,
   version: string,
   actorEmail: string,
 ) {
   if (!VERSION.test(version) || !env.KEYWORD_PACKS) throw new Error('invalid_release');
+  assertKeywordSigningAvailable(env);
   const object = await env.KEYWORD_PACKS.get(`keyword-packs/${version}/official.json`);
   if (!object) throw new Error('release_not_found');
-  const body = await object.text();
+  const raw = await object.text();
   let document: { packs?: unknown };
   try {
-    document = JSON.parse(body) as { packs?: unknown };
+    document = JSON.parse(raw) as { packs?: unknown };
   } catch {
     throw new Error('release_invalid');
   }
-  const packs = Array.isArray(document.packs) ? document.packs.length : 0;
-  const rules = Array.isArray(document.packs)
-    ? document.packs.reduce(
-        (total, pack) => total + (isRecord(pack) && Array.isArray(pack.rules) ? pack.rules.length : 0),
-        0,
-      )
-    : 0;
-  const sha256 = await sha256Hex(body);
-  const generatedAt = new Date().toISOString();
-  await env.KEYWORD_PACKS.put(
-    'keyword-packs/latest.json',
-    `${JSON.stringify({
-      schema_version: 1,
-      pack_version: version,
-      generated_at: generatedAt,
-      files: [{ path: 'official.json', sha256, packs, rules }],
-    })}\n`,
+  if (!Array.isArray(document.packs)) throw new Error('release_invalid');
+  const packs = document.packs.length;
+  const rules = document.packs.reduce(
+    (total, pack) => total + (isRecord(pack) && Array.isArray(pack.rules) ? pack.rules.length : 0),
+    0,
   );
-  const releaseId = await recordRelease(env, 'keywords', version, actorEmail, {
+  const latest = await env.KEYWORD_PACKS.get('keyword-packs/latest.json');
+  let latestVersion: string | undefined;
+  try {
+    const parsed = latest ? (JSON.parse(await latest.text()) as { pack_version?: unknown }) : {};
+    latestVersion = typeof parsed.pack_version === 'string' ? parsed.pack_version : undefined;
+  } catch {
+    // Invalid legacy manifest: 回滚仍应能产出一个新的有效版本。
+  }
+  const generatedAt = new Date().toISOString();
+  const stamp = generatedAt.slice(0, 10).replaceAll('-', '.');
+  const restoredVersion = nextVersion(latestVersion, stamp);
+  if (!VERSION.test(restoredVersion)) throw new Error('invalid_version');
+  const restoredBody = `${JSON.stringify({ ...document, pack_version: restoredVersion, generated_at: generatedAt })}\n`;
+  const sha256 = await sha256Hex(restoredBody);
+  const manifestDocument: KeywordPackManifestDocument = {
+    schema_version: 1,
+    pack_version: restoredVersion,
+    generated_at: generatedAt,
+    files: [{ path: 'official.json', sha256, packs, rules }],
+  };
+  const manifest = `${JSON.stringify(await signKeywordManifest(env, manifestDocument))}\n`;
+  await env.KEYWORD_PACKS.put(`keyword-packs/${restoredVersion}/official.json`, restoredBody);
+  await env.KEYWORD_PACKS.put('keyword-packs/latest.json', manifest);
+  const releaseId = await recordRelease(env, 'keywords', restoredVersion, actorEmail, {
     action: 'rollback',
     restored_version: version,
+    sha256,
   });
-  await recordAdminAudit(env, actorEmail, 'rollback', 'keywords', version, { release_id: releaseId });
-  return { release_id: releaseId, version, sha256 };
+  await recordAdminAudit(env, actorEmail, 'rollback', 'keywords', restoredVersion, {
+    release_id: releaseId,
+    restored_version: version,
+  });
+  return { release_id: releaseId, version: restoredVersion, restored_version: version, sha256 };
 }

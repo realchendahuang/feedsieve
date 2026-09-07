@@ -18,7 +18,8 @@
 | 云端 CI（此前否决） | 折中落实：PR 验证 CI，发布仍本机 |
 | `content.ts` 职责过载（~1488 行） | 阶段三 |
 | detector 缺 golden corpus 与指标 | 阶段一已落地 corpus v1 + 分层指标 |
-| 快照生成异步化 | 工作区脏标记 + 5 分钟 cron 已落地（未提交批次） |
+| 词库后台发布无签名、回滚复用旧版本号（假发布：扩展 signature_missing / rollback_rejected，改动到不了用户） | 2026-09-07 修复：Worker 词库发布 / 回滚带 release-1 签名；`REQUIRE_SIGNED_KEYWORD_PACKS=1` 缺密钥拒绝发布；内容回滚按新版本号重发 |
+| 快照生成异步化 | 工作区脏标记 + cron 合并发布已落地；2026-09 起按「当日一版」节奏（内容变化当日首发，同日不再刷新；kill switch 实时走 /v1/kill-switch 端点） |
 | 文档「原生菜单」措辞 | 阶段一已修正为「X 登录会话的内部 Block 接口」 |
 
 ## 阶段一（已完成）：信任与测量基础
@@ -31,6 +32,9 @@
   `REQUIRE_SIGNED_SNAPSHOTS=1` 时公开端点只服务已签名行。发布流程零改动。
 - 词库自动签名（本地脚本）：`keygen.mjs` 一次性生成密钥；`build-keyword-packs.mjs` 检测 `.secrets/` 密钥即嵌入签名，
   `--check` 剥离签名比对 + 内置公钥验签（CI 无密钥也能跑）；`publish-keyword-packs.sh` 拒绝未签名 manifest。
+- 词库后台发布签名（2026-09-07 补）：Worker `publishAdminKeywords` / `rollbackAdminKeywordRelease` 用同一把 release-1
+  私钥签名（与快照共用 `SIGNING_PRIVATE_KEY` / `SIGNING_KEY_ID`）；`REQUIRE_SIGNED_KEYWORD_PACKS=1` 时密钥缺失拒绝发布；
+  回滚 = 历史内容以**新版本号**重新签名发布（客户端防回滚拒收旧版本号复用）；仓库侧 `generated_at: null` 产物客户端兼容。
 - consensus v2 影子：票权重 = trust × 安装成熟度（7 天观察期爬升，下限 0.15）；入榜 = 加权净票 ≥ 2.5
   且（跨 ≥ 2 天 或 ≥ 2 独立安装的内容证据）。只写 `accounts.status_v2 / consensus_v2`，不参与入榜。
 - detector golden corpus v1（26 例）+ 回归测试 + 聚合指标（precision/recall/fpr，`CORPUS_REPORT=1` 写 metrics.json）。
@@ -70,7 +74,7 @@
 
 ## 阶段四：规模化 + 切换
 
-- 异步快照（已落地：脏标记 + 5 分钟 cron 合并发布）。
+- 异步快照（已落地：脏标记 + cron 合并发布；2026-09 起「当日一版」日更，kill switch 实时走 `/v1/kill-switch` 端点，GitHub 镜像每日自动同步见 `.github/workflows/mirror-community-lists.yml`）。
 - **consensus v2 切换（数据闸门）**：影子模式已记录 `accounts.status_v2 / consensus_v2`，切换前必须用
   真实票数历史对比 v1/v2 产出差异（这正是影子模式的设计对价，不能跳过）。数据积累到位后，切换是一次
   只改三处的普通发布：

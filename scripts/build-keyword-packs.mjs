@@ -207,6 +207,23 @@ const source = await hydrateRuleSources(JSON.parse(await readFile(sourcePath, 'u
 const output = `${JSON.stringify(build(source))}\n`;
 const sha256 = createHash('sha256').update(output).digest('hex');
 const parsed = JSON.parse(output);
+// 版本守卫：内容变了但 pack_version 没变时，客户端会判 up_to_date，改动静默收不到。
+// 与已提交产物比较（首次构建无产物时跳过）。
+const committedOutput = await (async () => {
+  try {
+    return await readFile(outputPath, 'utf8');
+  } catch {
+    return null;
+  }
+})();
+if (committedOutput !== null && committedOutput !== output) {
+  const committedParsed = JSON.parse(committedOutput);
+  if (committedParsed?.pack_version === parsed.pack_version) {
+    fail(
+      `keyword-pack content changed but pack_version (${parsed.pack_version}) did not; bump pack_version in community/keyword-packs/source.json first`,
+    );
+  }
+}
 const rules = countRules(parsed);
 const manifest = `${JSON.stringify({ schema_version: 1, pack_version: parsed.pack_version, generated_at: parsed.generated_at, files: [{ path: 'official.json', sha256, packs: parsed.packs.length, rules }] })}\n`;
 const signedManifest = await buildSignedManifest(parsed, sha256);

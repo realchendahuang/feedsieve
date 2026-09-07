@@ -32,7 +32,8 @@ export interface KeywordPackCatalog {
 interface KeywordPackManifest {
   schema_version: 1;
   pack_version: string;
-  generated_at: string;
+  /** 仓库侧构建产物可能是 null（此时签名字节为 "null"），两种都必须接受 */
+  generated_at: string | null;
   files: Array<{ path: 'official.json'; sha256: string; packs: number; rules: number }>;
   signature?: ManifestSignature;
 }
@@ -162,7 +163,7 @@ function parseManifest(value: unknown): KeywordPackManifest | null {
     raw.schema_version !== 1 ||
     typeof raw.pack_version !== 'string' ||
     !VERSION_RE.test(raw.pack_version) ||
-    typeof raw.generated_at !== 'string' ||
+    (typeof raw.generated_at !== 'string' && raw.generated_at !== null) ||
     !Array.isArray(raw.files)
   )
     return null;
@@ -185,7 +186,7 @@ function parseManifest(value: unknown): KeywordPackManifest | null {
   return {
     schema_version: 1,
     pack_version: raw.pack_version,
-    generated_at: raw.generated_at,
+    generated_at: raw.generated_at as string | null,
     files: [
       {
         path: 'official.json',

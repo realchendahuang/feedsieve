@@ -35,7 +35,9 @@ final blocklist = community ∪ maintainer
 - [`policy/v3.yaml`](policy/v3.yaml)：唯一阈值、计票与维护者来源的公开政策。
 - [`schema/account-list.schema.json`](schema/account-list.schema.json)：JSON 快照协议。
 
-`lists/` 是线上 Worker 快照的仓库镜像，由 [`../scripts/mirror-community-lists.sh`](../scripts/mirror-community-lists.sh) 下载全部 manifest 文件并逐个验证 SHA-256。镜像变更应作为普通 Git diff 提交。
+`lists/` 是线上 Worker 快照的仓库镜像，由 [`../scripts/mirror-community-lists.sh`](../scripts/mirror-community-lists.sh) 下载全部 manifest 文件并逐个验证 SHA-256。GitHub Actions 每天 01:17 UTC 自动镜像一次（[`../.github/workflows/mirror-community-lists.yml`](../.github/workflows/mirror-community-lists.yml)，无变化不产生提交），发版前或名单大变化后也可手动运行。镜像不承诺实时：线上快照按“当日一版”发布（当天首次实质变化后 ≤1 小时公开，同日不再刷新版本号），权威数据始终以 Worker API 为准。
+
+**官方暂停开关（kill switch）的时效**：破坏性操作暂停与否以部署配置实时状态为准，扩展在任何破坏性动作执行前查询 `GET /v1/kill-switch`（no-store，不受快照日更节流）。快照里携带的 `kill_switch` 仅作存档与离线兜底，可能滞后到次日。
 
 ## 快照条目
 
@@ -65,6 +67,15 @@ https://admin.你的 API 域名
 维护者经邮箱一次性验证码登录。每次草稿保存、发布和回退都会写审计记录；维护者草稿只有显式“发布”才会更新公开名单。Worker 同时校验 Access JWT 的签名、Audience 和允许邮箱，公开 API 域不提供管理接口。
 
 本地三票流程可用 `apps/community-api/scripts/seed.sh` 调试；脚本拒绝非 localhost 地址，不能用来向线上伪造社区共识。
+
+## 词库（关键词包）怎么维护
+
+公开词库 = 8 个行业包 778 条规则（`keyword-packs/official.json`，源与生成物都提交在仓库，`git diff` 即审计）。发布与审计：
+
+- **日常改词走维护后台**：维护后台 → 关键词词库，先「导入公开词库」再用草稿表增删词条，保存即发布。Worker 对 manifest 用 Ed25519 签名（与名单快照同一把 release-1 私钥）后写入 R2 版本化产物；部署配置 `REQUIRE_SIGNED_KEYWORD_PACKS=1` 时密钥缺失会直接拒绝发布，不存在「无签名假发布」。用户在 X 页面最迟 15 分钟收敛到新规则，无需任何操作。
+- **离线兜底**：仓库 `community/keyword-packs/source.json` + `pnpm keyword-packs:build / check / publish`（本机 `.secrets/` 密钥签名）。发布脚本拒绝本地版本 ≤ 远程已有版本的发布，防止把最新指针顶回客户端拒收（`rollback_rejected`）的旧版；内容变更但 `pack_version` 没升时 build 直接报错。
+- **回滚语义**：后台「发布记录」回滚 = 把目标版本的内容以**新版本号**重新签名发布。客户端对已接受版本有防回滚，内容回滚必须以新版本号下发；草稿不回退，下一次保存会基于当前草稿再次发布。
+- **撤词信号**：后台「反馈」页按规则聚合的误报申诉是撤词 / 改词的第一信号源；新词入库前先过一遍分层 corpus 回归，保 recall 不伤 precision。
 
 ## 治理红线
 
