@@ -314,6 +314,14 @@ export async function generateSnapshot(
   publishAttempt = 0,
   options: { bypassDailyOnce?: boolean } = {},
 ): Promise<PublishedSnapshot> {
+  // 签名可用性 fail fast（同 keyword-admin 的 assertKeywordSigningAvailable）：
+  // REQUIRE_SIGNED_SNAPSHOTS=1 时扩展只认已签名快照，静默发布无签名版本等于假
+  // 发布。让误配在 cron 日志炸出来（脏标记保留、下小时重试），而不是顶上一份
+  // 必被扩展拒绝的 latest。
+  if (env.REQUIRE_SIGNED_SNAPSHOTS === '1' && (!env.SIGNING_PRIVATE_KEY || !env.SIGNING_KEY_ID)) {
+    throw new Error('signing_key_missing');
+  }
+
   const now = new Date();
   const dateStamp = now.toISOString().slice(0, 10).replaceAll('-', '.');
 
@@ -410,8 +418,13 @@ export async function generateSnapshot(
   }
 
   // 维护者条目是独立、透明来源，不制造社区票数。与社区条目重复时合并来源。
+  // 但 verified（抢救成功的正常账号）优先于维护者黑名单：客户端 validate.ts
+  // 对 handle 同时出现在 entries 与 verified 会整份拒绝（duplicate_snapshot_handle），
+  // 所以命中 verified 的维护者条目必须让位，黑名单不收录。
+  const verifiedHandles = new Set(verified.map((entry) => entry.handle));
   const byHandle = new Map(entries.map((entry) => [entry.handle, entry] as const));
   for (const maintained of await listMaintainerEntries(env)) {
+    if (verifiedHandles.has(maintained.handle)) continue;
     const existing = byHandle.get(maintained.handle);
     if (existing) {
       if (!existing.sources.includes('maintainer')) existing.sources.push('maintainer');

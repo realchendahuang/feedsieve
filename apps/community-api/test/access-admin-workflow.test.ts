@@ -260,4 +260,39 @@ describe('Access 管理后台工作区', () => {
     expect((await listAdminAccountDrafts(env)).find((entry) => entry.handle === handle)?.active).toBe(true);
     expect((await listMaintainerEntries(env, true)).find((entry) => entry.handle === handle)?.active).toBe(true);
   });
+
+  it('词库并发发布不产出 torn 写（manifest 与文件体 sha256 一致）', async () => {
+    if (!env.KEYWORD_PACKS) return;
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM admin_keyword_rules'),
+      env.DB.prepare('DELETE FROM admin_keyword_packs'),
+      env.DB.prepare('DELETE FROM admin_releases'),
+    ]);
+    const pack = await saveAdminKeywordPack(env, {
+      name_zh: '并发分类',
+      description_zh: '并发发布互斥测试',
+      source_refs: ['test'],
+    }, 'maintainer@example.com');
+    expect(pack?.id).toMatch(/^pack_/);
+    await saveAdminKeywordRule(env, {
+      pack_id: pack?.id,
+      phrase: '并发词一',
+    }, 'maintainer@example.com');
+    // 保存即发布与双击都会并发进 publish：互斥后必须串行算版本号，
+    // 最终 latest manifest 的 sha256 必须与版本化文件体一致。
+    const [a, b] = await Promise.all([
+      publishAdminKeywords(env, 'maintainer@example.com'),
+      publishAdminKeywords(env, 'maintainer@example.com'),
+    ]);
+    const latestRaw = await (await env.KEYWORD_PACKS.get('keyword-packs/latest.json'))!.text();
+    const manifest = JSON.parse(latestRaw) as {
+      pack_version: string;
+      files: Array<{ path: string; sha256: string }>;
+    };
+    const body = await (await env.KEYWORD_PACKS.get(`keyword-packs/${manifest.pack_version}/official.json`))!.text();
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body));
+    const actualSha = Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+    expect(manifest.files[0]?.sha256).toBe(actualSha);
+    expect([a.version, b.version]).toContain(manifest.pack_version);
+  });
 });

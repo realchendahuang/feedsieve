@@ -13,6 +13,7 @@ import {
   PUBLIC_BLOCKLIST_PACK,
   SNAPSHOT_PACK,
 } from '../src/snapshot';
+import { MAINTAINER_UPSERT_SQL } from '../src/maintainer-blocklist';
 
 const ORIGIN = 'https://api.example.com';
 
@@ -336,6 +337,18 @@ describe('snapshot pipeline', () => {
     expect(latest.snapshot_version).not.toBe('2099.01.01.1');
   });
 
+  it('REQUIRE_SIGNED_SNAPSHOTS=1 但签名密钥缺失时 fail fast，不发布扩展必拒的无签名快照', async () => {
+    const misconfigured = {
+      ...env,
+      SIGNING_PRIVATE_KEY: undefined,
+      SIGNING_KEY_ID: undefined,
+      REQUIRE_SIGNED_SNAPSHOTS: '1',
+    };
+    await expect(generateSnapshot(misconfigured, 0, { bypassDailyOnce: true })).rejects.toThrow(
+      'signing_key_missing',
+    );
+  });
+
   it('快照发布写 R2（版本化 + latest 指针），latest 端点读 R2，meta 指针 O(1) 点读版本号', async () => {
     if (!env.KEYWORD_PACKS) return;
     const result = await generateSnapshot(env, 0, { bypassDailyOnce: true });
@@ -365,5 +378,50 @@ describe('snapshot pipeline', () => {
     expect((await latestBody.json()) as { snapshot_version?: string }).toMatchObject({
       snapshot_version,
     });
+  });
+
+  it('维护者黑名单条目让位 verified：同 handle 只出现在 verified，不进 entries', async () => {
+    // dual_role_user：1 拉黑 + 4 个独立安装抢救 → 抢救净票 3，满足 verified 公式；
+    // 同时被维护者收录为黑名单条目。verified 是抢救成功的正常账号，黑名单让位 ——
+    // 客户端对 handle 同时出现在 entries 与 verified 会整份拒绝（duplicate_snapshot_handle）。
+    await report('dddddddd-6001-4601-8601-dddddddddddd', 'dual_role_user');
+    for (const id of [
+      'dddddddd-6002-4602-8602-dddddddddddd',
+      'dddddddd-6003-4603-8603-dddddddddddd',
+      'dddddddd-6004-4604-8604-dddddddddddd',
+      'dddddddd-6005-4605-8605-dddddddddddd',
+    ]) {
+      await rescue(id, 'dual_role_user');
+    }
+    await env.DB.prepare(MAINTAINER_UPSERT_SQL).bind(
+      'dual_role_user',
+      null,
+      'bot_spam',
+      '测试条目：既是维护者收录又满足 verified 公式',
+      null,
+      Math.floor(Date.now() / 1000),
+    ).run();
+
+    await generateSnapshot(env, 0, { bypassDailyOnce: true });
+    const res = await worker.fetch(
+      new Request(
+        `${ORIGIN}/v1/snapshots/${
+          (
+            (await (
+              await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), env)
+            ).json()) as Manifest
+          ).snapshot_version
+        }/${SNAPSHOT_PACK}`,
+      ),
+      env,
+    );
+    expect(res.status).toBe(200);
+    const body = JSON.parse(await res.text()) as {
+      entries: { handle: string }[];
+      verified?: { handle: string }[];
+    };
+
+    expect(body.verified?.map((entry) => entry.handle)).toContain('dual_role_user');
+    expect(body.entries.map((entry) => entry.handle)).not.toContain('dual_role_user');
   });
 });

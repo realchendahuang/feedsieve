@@ -4,11 +4,12 @@
  * access-admin-workflow.test.ts 直接调用仓库函数，绕过了两条真实防线：
  * 1) host gate —— /api/admin/* 只接受 ADMIN_HOST 的主机名，其它主机一律 404；
  * 2) Cloudflare Access JWT 校验 —— Cf-Access-Jwt-Assertion 必须由
- *    ACCESS_JWKS_URL 对应密钥签发、audience 匹配、email 在允许列表内。
+ *    ACCESS_JWKS_URL 对应密钥签发、算法限定 RS256/ES256、audience 匹配、
+ *    issuer 归属团队域、email 在允许列表内。
  *
- * 本文件用真实 Ed25519 密钥签发 JWT，并 stub 全局 fetch 让
- * jose 的 createRemoteJWKSet 从测试内拦截到假 JWKS（main worker 与测试
- * 运行在同一 isolate，全局 mock 对 worker 内部调用同样生效）。
+ * 本文件用真实 ES256 密钥签发 JWT（与 verifyAccess 的算法白名单一致），并
+ * stub 全局 fetch 让 jose 的 createRemoteJWKSet 从测试内拦截到假 JWKS
+ * （main worker 与测试运行在同一 isolate，全局 mock 对 worker 内部调用同样生效）。
  */
 
 import { env } from 'cloudflare:workers';
@@ -25,10 +26,29 @@ interface JwtFixture {
   token: string;
   wrongAudienceToken: string;
   otherEmailToken: string;
+  /** 算法白名单外（EdDSA/Ed25519）签发的 token：密钥在 JWKS 内，其余声明全部有效 */
+  ed25519Token: string;
 }
 
 let fixture: JwtFixture | undefined;
 let originalFetch: typeof fetch;
+
+async function generateEs256KeyPair(): Promise<CryptoKeyPair> {
+  return (await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, [
+    'sign',
+    'verify',
+  ])) as CryptoKeyPair;
+}
+
+async function signToken(email: string, audience: string, key: CryptoKey): Promise<string> {
+  return new SignJWT({ email })
+    .setProtectedHeader({ alg: 'ES256', kid: 'test-access-key' })
+    .setAudience(audience)
+    .setIssuer('https://test.cloudflareaccess.com')
+    .setIssuedAt()
+    .setExpirationTime('1h')
+    .sign(key);
+}
 
 // workers-types 的 generateKey 对 Ed25519 重载返回联合类型，显式断言成密钥对
 async function generateEd25519KeyPair(): Promise<CryptoKeyPair> {
@@ -38,21 +58,18 @@ async function generateEd25519KeyPair(): Promise<CryptoKeyPair> {
   ])) as CryptoKeyPair;
 }
 
-async function signToken(email: string, audience: string, key: CryptoKey): Promise<string> {
-  return new SignJWT({ email })
-    .setProtectedHeader({ alg: 'Ed25519', kid: 'test-access-key' })
-    .setAudience(audience)
-    .setIssuer('https://test.cloudflareaccess.com')
-    .setIssuedAt()
-    .setExpirationTime('1h')
-    .sign(key);
-}
-
 beforeAll(async () => {
-  const keyPair = await generateEd25519KeyPair();
+  const keyPair = await generateEs256KeyPair();
   const jwk = await crypto.subtle.exportKey('jwk', keyPair.publicKey);
-  // 与 verifyAccess 的 createRemoteJWKSet 消费格式一致：OKP/Ed25519 + kid + alg
-  const jwks = { keys: [{ ...jwk, kid: 'test-access-key', alg: 'Ed25519', use: 'sig' }] };
+  // 与 verifyAccess 的 createRemoteJWKSet 消费格式一致：EC/P-256 + kid + alg ES256
+  const edPair = await generateEd25519KeyPair();
+  const edJwk = await crypto.subtle.exportKey('jwk', edPair.publicKey);
+  const jwks = {
+    keys: [
+      { ...jwk, kid: 'test-access-key', alg: 'ES256', use: 'sig' },
+      { ...edJwk, kid: 'test-access-ed', alg: 'Ed25519', use: 'sig' },
+    ],
+  };
 
   originalFetch = globalThis.fetch;
   vi.stubGlobal(
@@ -75,6 +92,14 @@ beforeAll(async () => {
       keyPair.privateKey,
     ),
     otherEmailToken: await signToken('intruder@example.com', AUDIENCE, keyPair.privateKey),
+    // 算法白名单外的合法密钥签名（密钥就在 JWKS 里）：验证 algorithms 钉死生效
+    ed25519Token: await new SignJWT({ email: 'maintainer@example.com' })
+      .setProtectedHeader({ alg: 'Ed25519', kid: 'test-access-ed' })
+      .setAudience(AUDIENCE)
+      .setIssuer('https://test.cloudflareaccess.com')
+      .setIssuedAt()
+      .setExpirationTime('5m')
+      .sign(edPair.privateKey),
   };
 });
 
@@ -103,7 +128,7 @@ describe('管理后台 Access 中间件（HTTP 层）', () => {
   });
 
   it('伪造 token（非 JWKS 密钥签发）：401', async () => {
-    const forgedKey = (await generateEd25519KeyPair()).privateKey;
+    const forgedKey = (await generateEs256KeyPair()).privateKey;
     const forged = await signToken('maintainer@example.com', AUDIENCE, forgedKey);
     const response = await adminFetch(ADMIN_ORIGIN, {
       headers: { 'Cf-Access-Jwt-Assertion': forged },
@@ -130,6 +155,24 @@ describe('管理后台 Access 中间件（HTTP 层）', () => {
     const response = await adminFetch(ADMIN_ORIGIN, {
       headers: { 'Cf-Access-Jwt-Assertion': fixture!.otherEmailToken },
     });
+    expect(response.status).toBe(401);
+  });
+
+  it('算法白名单外（Ed25519 密钥就在 JWKS 内）：401（防 alg 混淆）', async () => {
+    const response = await adminFetch(ADMIN_ORIGIN, {
+      headers: { 'Cf-Access-Jwt-Assertion': fixture!.ed25519Token },
+    });
+    expect(response.status).toBe(401);
+  });
+
+  it('ACCESS_ALLOWED_EMAILS 为空：fail closed（漏配不等于全员放行）', async () => {
+    const emptyAllowlist = { ...env, ACCESS_ALLOWED_EMAILS: undefined };
+    const response = await worker.fetch(
+      new Request(`${ADMIN_ORIGIN}/api/admin/me`, {
+        headers: { 'Cf-Access-Jwt-Assertion': fixture!.token },
+      }),
+      emptyAllowlist,
+    );
     expect(response.status).toBe(401);
   });
 });

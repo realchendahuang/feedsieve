@@ -386,6 +386,22 @@ function assertKeywordSigningAvailable(env: Cloudflare.Env) {
   }
 }
 
+/**
+ * 发布互斥：发布流程是「读 latest → 算版本号 → 两次 R2 PUT」，两个并发发布
+ * 会算出同一个版本号交替写文件体与 latest 指针，产出 manifest 与内容 sha256
+ * 不一致的 torn 写（客户端 checksum_mismatch 拒收，直到下一次发布才恢复）。
+ * 单运营者场景的真实并发是双击 / 保存即发布连发，isolate 内 Promise 链互斥
+ * 足够；跨 isolate 的 D1 版本号预留是后继项（快照侧已有 INSERT OR IGNORE 同款）。
+ */
+let publishLock: Promise<unknown> = Promise.resolve();
+function withPublishLock<T>(operation: () => Promise<T>): Promise<T> {
+  const next = publishLock.then(operation, operation);
+  publishLock = next.catch(() => {
+    // 吞掉让后续发布不受前次失败影响；调用方自己拿原始 rejection
+  });
+  return next;
+}
+
 async function signKeywordManifest(
   env: Cloudflare.Env,
   manifest: KeywordPackManifestDocument,
@@ -404,6 +420,10 @@ async function signKeywordManifest(
 }
 
 export async function publishAdminKeywords(env: Cloudflare.Env, actorEmail = 'system') {
+  return withPublishLock(() => publishAdminKeywordsInner(env, actorEmail));
+}
+
+async function publishAdminKeywordsInner(env: Cloudflare.Env, actorEmail: string) {
   if (!env.KEYWORD_PACKS) throw new Error('keyword_packs_unavailable');
   assertKeywordSigningAvailable(env);
   const { packs, rules } = await listAdminKeywords(env, { limit: null });
@@ -466,6 +486,14 @@ export async function publishAdminKeywords(env: Cloudflare.Env, actorEmail = 'sy
  * body 内的 pack_version 必须等于 manifest 版本，所以历史 body 要重写版本字段。
  */
 export async function rollbackAdminKeywordRelease(
+  env: Cloudflare.Env,
+  version: string,
+  actorEmail: string,
+) {
+  return withPublishLock(() => rollbackAdminKeywordReleaseInner(env, version, actorEmail));
+}
+
+async function rollbackAdminKeywordReleaseInner(
   env: Cloudflare.Env,
   version: string,
   actorEmail: string,

@@ -9,6 +9,8 @@ declare namespace Cloudflare {
     ACCESS_AUD?: string;
     ACCESS_JWKS_URL?: string;
     ACCESS_ALLOWED_EMAILS?: string;
+    /** Access 团队域（形如 xxx.cloudflareaccess.com）；设置后校验 JWT issuer 归属 */
+    ACCESS_TEAM_DOMAIN?: string;
     /** 仅这个 hostname 可访问 React 维护端；公开 API host 永远不回退到静态后台。 */
     ADMIN_HOST?: string;
     INSTALLATION_SALT: string;

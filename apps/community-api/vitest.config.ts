@@ -17,6 +17,7 @@ export default defineConfig(async () => {
             ACCESS_AUD: 'feedsieve-test-aud',
             ACCESS_JWKS_URL: 'https://jwks.test/.well-known/jwks.json',
             ACCESS_ALLOWED_EMAILS: 'maintainer@example.com',
+            INSTALLATION_SALT: 'override-salt-0123456789',
           },
         },
       }),
