@@ -85,6 +85,103 @@ export interface ConsensusV2Input {
   evidenceIndependent: boolean;
 }
 
+/** 无票账号的 v2 输入：全零、无独立性证据。 */
+export const EMPTY_CONSENSUS_V2_INPUT: ConsensusV2Input = {
+  blockedWeights: [],
+  allowedWeights: [],
+  distinctDays: 0,
+  evidenceIndependent: false,
+};
+
+/**
+ * 全表批量载入 v2 输入（影子重算用）。
+ *
+ * autoRateAccounts 对全表做影子重算时，逐账号 loadConsensusV2Input 会放大成
+ * N×6 次 D1 请求，账号多了会撞单次 invocation 的请求上限（1000）；
+ * 这里用 4 条聚合 SQL 一次取回全部输入，在内存里组装。
+ */
+export async function loadAllConsensusV2Inputs(
+  env: Cloudflare.Env,
+): Promise<Map<string, ConsensusV2Input>> {
+  const [labelRows, dayRows, fpRows, domainRows] = await Promise.all([
+    env.DB.prepare(
+      `SELECT l.handle, l.label, i.trust, i.first_seen_at
+       FROM active_labels l
+       JOIN installations i ON i.id = l.installation_id`,
+    ).all<{ handle: string; label: 'blocked' | 'allowed'; trust: number; first_seen_at: number }>(),
+    env.DB.prepare(
+      `SELECT r.handle, COUNT(DISTINCT date(r.created_at, 'unixepoch')) AS days
+       FROM reports r
+       JOIN active_labels l
+         ON l.installation_id = r.installation_id
+        AND l.handle = r.handle
+        AND l.label = 'blocked'
+       GROUP BY r.handle`,
+    ).all<{ handle: string; days: number }>(),
+    env.DB.prepare(
+      `SELECT r.handle
+       FROM reports r
+       JOIN active_labels l
+         ON l.installation_id = r.installation_id
+        AND l.handle = r.handle
+        AND l.label = 'blocked'
+       WHERE r.content_fingerprint IS NOT NULL
+       GROUP BY r.handle, r.content_fingerprint
+       HAVING COUNT(*) >= 2`,
+    ).all<{ handle: string }>(),
+    env.DB.prepare(
+      `SELECT r.handle
+       FROM reports r
+       JOIN active_labels l
+         ON l.installation_id = r.installation_id
+        AND l.handle = r.handle
+        AND l.label = 'blocked'
+       JOIN json_each(r.link_domains) AS d
+       WHERE r.link_domains IS NOT NULL
+       GROUP BY r.handle, d.value
+       HAVING COUNT(DISTINCT r.installation_id) >= 2`,
+    ).all<{ handle: string }>(),
+  ]);
+
+  const now = Math.floor(Date.now() / 1000);
+  const ageDays = (firstSeenAt: number): number => Math.max(0, (now - firstSeenAt) / 86400);
+
+  // 按 handle 聚合权重
+  const blockedWeights = new Map<string, number[]>();
+  const allowedWeights = new Map<string, number[]>();
+  for (const row of labelRows.results ?? []) {
+    const weight = voteWeight(row.trust, ageDays(row.first_seen_at));
+    const bucket = row.label === 'blocked' ? blockedWeights : allowedWeights;
+    const list = bucket.get(row.handle) ?? [];
+    list.push(weight);
+    bucket.set(row.handle, list);
+  }
+
+  const distinctDays = new Map<string, number>();
+  for (const row of dayRows.results ?? []) distinctDays.set(row.handle, row.days);
+
+  const independentHandles = new Set<string>();
+  for (const row of fpRows.results ?? []) independentHandles.add(row.handle);
+  for (const row of domainRows.results ?? []) independentHandles.add(row.handle);
+
+  const handles = new Set([
+    ...blockedWeights.keys(),
+    ...allowedWeights.keys(),
+    ...distinctDays.keys(),
+    ...independentHandles,
+  ]);
+  const inputs = new Map<string, ConsensusV2Input>();
+  for (const handle of handles) {
+    inputs.set(handle, {
+      blockedWeights: blockedWeights.get(handle) ?? [],
+      allowedWeights: allowedWeights.get(handle) ?? [],
+      distinctDays: distinctDays.get(handle) ?? 0,
+      evidenceIndependent: independentHandles.has(handle),
+    });
+  }
+  return inputs;
+}
+
 /** 从 active_labels + installations 载入单账号的 v2 输入（每张当前票对应一个安装）。 */
 export async function loadConsensusV2Input(
   env: Cloudflare.Env,
