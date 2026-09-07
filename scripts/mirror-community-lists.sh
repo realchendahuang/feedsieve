@@ -1,9 +1,12 @@
 #!/usr/bin/env sh
 # 把线上最新社区快照镜像进仓库 community/lists/。
 #
-# 作用（治理承诺：GitHub 就是审计日志 + jsDelivr CDN 兜底）：
-#   1. 每次名单变化都以 git diff 形式可见、可回溯
-#   2. 公开仓库同时保留机器 JSON 和人类可读 YAML
+# 作用（公开审计留档）：官方 Worker 快照是权威数据源（扩展直接从 API 拉取，
+# 不经 jsDelivr 或本仓库分发）；这里把线上快照以 git diff 形式留在公开仓库，
+# 供人读、审计与构建期打包兜底（扩展随包内置 official.json）。
+#
+# 运行方式：GitHub Actions 每日 01:17 UTC 自动跑（无变化不提交），
+# 发版前 / 名单大变化后也可手动在本地运行一次并提交。
 #
 # 用法: scripts/mirror-community-lists.sh   （发版前 / 名单变化后运行并提交）
 # 环境变量: FEEDSIEVE_API（默认官方实例）
@@ -31,4 +34,4 @@ for item in json.load(open('$DIR/manifest.json'))['files']:
   echo "mirrored $DIR/$path (v$version, sha256 ok)"
 done
 
-echo "记得 git add $DIR && git commit，jsDelivr 随 main 分支更新"
+echo "done: git add $DIR && git commit（Actions 每天自动做；无变化时不要硬造空提交）"

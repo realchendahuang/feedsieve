@@ -1,0 +1,35 @@
+name: mirror-community-lists
+
+# 每日镜像线上最新社区快照到 community/lists/（权威数据在 Cloudflare Worker，
+# 仓库镜像只作公开审计留档；发版/名单大变化后仍可手动跑 workflow_dispatch 补档）。
+# 无变化不产生提交，避免空 commit 刷历史。
+
+on:
+  schedule:
+    # 每天 01:17 UTC：服务端快照是 day-once 日更，这里每天补一档即可
+    - cron: '17 1 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Mirror latest community snapshot
+        run: ./scripts/mirror-community-lists.sh
+
+      - name: Commit and push when changed
+        run: |
+          if git status --porcelain -- community/lists | grep -q .; then
+            git config user.name 'feedsieve-bot'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add community/lists
+            git commit -m "chore(community): mirror snapshot $(date -u +%Y.%m.%d)"
+            git push
+          else
+            echo "no snapshot change; nothing to commit"
+          fi
