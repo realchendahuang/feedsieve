@@ -921,7 +921,8 @@ export default defineContentScript({
           );
           return {
             ok: false,
-            code: resolved.code === 'no_csrf' ? 'missing_csrf' : resolved.code,
+            // no_csrf / missing_csrf 均在 block-queue classifyFailure 中归类为 pause
+            code: resolved.code,
             ...(resolved.statusCode !== undefined ? { httpStatus: resolved.statusCode } : {}),
           };
         }

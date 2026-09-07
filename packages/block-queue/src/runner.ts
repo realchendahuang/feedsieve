@@ -5,12 +5,14 @@
  * runner 不关心 X 具体动作 —— perform 由宿主提供，结果按 failure.ts 分类。
  *
  * 特性：
- * - transient 失败按任务退避重试（指数退避 + Retry-After + 抖动），不暂停整个队列
+ * - transient 失败按任务退避重试（指数退避 + Retry-After + 抖动）；串行执行，
+ *   单个任务退避期间后续任务顺延（换并发前先确认 X 侧风控接受）
  * - pause 失败暂停队列（认证失效 / 官方暂停 / 安全额度用尽），等用户重登、开关解除或手动继续
  * - permanent / unsupported 单任务判死
  * - 成功后按注入节奏休眠（successPaceMs，默认 400ms），宿主可给「base + 抖动」防固定节拍
- * - 每次迭代重新 load：pause/cancel/页面刷新都能安全中断
- * - 短 sleep 分片：暂停/取消在 ≤250ms 内生效
+ * - 每次迭代重新 load；所有等待均分片（≤250ms/片），pause/cancel 最迟一片内生效
+ * - 存储写入前复核队列仍 running：宿主在执行 / 等待期间暂停不会被旧数据覆盖
+ * - 宿主动作 / 存储读写异常不逃逸：perform 抛错按瞬时失败分类，存储故障放弃本次写
  */
 
 import { classifyFailure, maxAttemptsForClass, nextBackoffMs, PACE_FLOOR_MS } from './failure';
@@ -67,8 +69,54 @@ export async function runQueuedBlocks<T extends TaskRunRecord>(
   const sleep = options.sleep ?? defaultSleep;
   const successPaceMs = options.successPaceMs ?? (() => PACE_FLOOR_MS);
 
+  // perform 是主风险面：网络/会话失败已结构化，但 DOM / 页面异常仍可能裸抛。
+  // 一律按瞬时网络失败走统一分类退避，任务不会卡死在 running。
+  const perform = async (task: T): Promise<QueueRunOutcome> => {
+    try {
+      return await options.perform(task);
+    } catch {
+      return { ok: false, code: 'network_error' };
+    }
+  };
+  const load = async (): Promise<QueueSession<T> | null> => {
+    try {
+      return await options.load();
+    } catch {
+      // storage 读故障：按「会话不可用」处理，本轮放弃
+      return null;
+    }
+  };
+  /** 写前复核：宿主可能在执行 / 等待期间暂停了队列（load 能感知到，
+   *  但直接把内存里的旧 session 写回会覆盖宿主刚写下的 paused）。
+   *  返回 false = 队列已非 running（或存储不可读），放弃写入并让 runner 退出。 */
+  const save = async (session: QueueSession<T>): Promise<boolean> => {
+    const fresh = await load();
+    if (!fresh || fresh.status !== 'running') {
+      return false;
+    }
+    try {
+      await options.save(session);
+    } catch {
+      // storage 写故障：放弃本次写；任务保持 running，下次启动按 at-least-once 重做
+    }
+    return true;
+  };
+  /** 分片等待：每片醒来复核队列仍 running，宿主 pause/cancel 最迟一片（≤250ms）生效。 */
+  const sleepSliced = async (totalMs: number): Promise<boolean> => {
+    let remaining = Math.max(0, totalMs);
+    while (remaining > 0) {
+      await sleep(Math.min(remaining, SLEEP_SLICE_MS));
+      remaining -= SLEEP_SLICE_MS;
+      const fresh = await load();
+      if (!fresh || fresh.status !== 'running') {
+        return false;
+      }
+    }
+    return true;
+  };
+
   for (;;) {
-    const session = await options.load();
+    const session = await load();
     if (!session || session.status !== 'running') {
       return;
     }
@@ -78,18 +126,26 @@ export async function runQueuedBlocks<T extends TaskRunRecord>(
     if (!task) {
       session.status = 'completed';
       delete session.pauseReason;
-      await options.save(session);
+      if (!(await save(session))) {
+        return;
+      }
       return;
     }
 
     task.status = 'running';
-    await options.save(session);
+    if (!(await save(session))) {
+      return;
+    }
 
     const startedAt = now();
-    const outcome = await options.perform(task);
+    const outcome = await perform(task);
     const latency = Math.max(0, now() - startedAt);
 
-    const reloaded = (await options.load()) ?? session;
+    const reloaded = await load();
+    if (!reloaded) {
+      // 存储消失（用户清理数据等）：不把旧 session 写回复活任务，直接中止
+      return;
+    }
     const current = reloaded.tasks.find((candidate) => candidate.handle === task.handle);
     if (!current) {
       // 等待期间任务被移除/取消：直接进入下一轮，不重写状态
@@ -101,14 +157,23 @@ export async function runQueuedBlocks<T extends TaskRunRecord>(
     if (outcome.ok) {
       current.status = 'success';
       delete current.lastErrorCode;
+      delete current.lastHttpStatus;
       delete current.retryAt;
       delete current.retryAfterMs;
       delete reloaded.pauseReason;
-      await options.save(reloaded);
-      if (options.onSuccess) {
-        await options.onSuccess(task);
+      if (!(await save(reloaded))) {
+        return;
       }
-      await sleep(successPaceMs());
+      if (options.onSuccess) {
+        try {
+          await options.onSuccess(task);
+        } catch {
+          // 收尾副作用失败不影响已成功的任务状态
+        }
+      }
+      if (!(await sleepSliced(successPaceMs()))) {
+        return;
+      }
       continue;
     }
 
@@ -126,7 +191,9 @@ export async function runQueuedBlocks<T extends TaskRunRecord>(
       current.status = 'pending';
       reloaded.status = 'paused';
       reloaded.pauseReason = outcome.code;
-      await options.save(reloaded);
+      if (!(await save(reloaded))) {
+        return;
+      }
       return;
     }
 
@@ -136,19 +203,23 @@ export async function runQueuedBlocks<T extends TaskRunRecord>(
     ) {
       current.status = 'pending';
       current.retryAt = now() + nextBackoffMs(current.attempts, outcome.retryAfterMs);
-      await options.save(reloaded);
-      // 分片等到 retryAt（期间可被 pause/cancel 打断）
-      for (;;) {
-        const remaining = (current.retryAt ?? now()) - now();
-        if (remaining <= 0) break;
-        await sleep(Math.min(remaining, SLEEP_SLICE_MS));
+      if (!(await save(reloaded))) {
+        return;
+      }
+      // 分片等到 retryAt（期间每片复核，pause/cancel 立即生效）
+      if (!(await sleepSliced((current.retryAt ?? now()) - now()))) {
+        return;
       }
       continue;
     }
 
     // permanent / unsupported / transient 次数耗尽
     current.status = 'failed';
-    await options.save(reloaded);
-    await sleep(PACE_FLOOR_MS);
+    if (!(await save(reloaded))) {
+      return;
+    }
+    if (!(await sleepSliced(PACE_FLOOR_MS))) {
+      return;
+    }
   }
 }

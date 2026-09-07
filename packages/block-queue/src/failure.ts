@@ -26,6 +26,7 @@ export function classifyFailure(failure: FailureInfo): FailureClass {
   switch (failure.code) {
     case 'auth_required':
     case 'missing_csrf':
+    case 'no_csrf': // x-adapter resolve-user-id 的会话失效码（cookie 不可读 / 401/403），收敛后宿主无需自行重映射
     case 'kill_switch':
     case 'quota_exhausted':
     case 'rate_limit_storm':

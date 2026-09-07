@@ -15,6 +15,7 @@ describe('classifyFailure（失败分类）', () => {
     ['http_error', 503, 'transient'],
     ['auth_required', 403, 'pause'],
     ['missing_csrf', undefined, 'pause'],
+    ['no_csrf', undefined, 'pause'],
     ['kill_switch', undefined, 'pause'],
     ['quota_exhausted', undefined, 'pause'],
     ['rate_limit_storm', undefined, 'pause'],

@@ -258,6 +258,7 @@ const FAILURE_LABELS: Record<UiLanguage, Record<string, string>> = {
     http_error: '请求异常',
     network_error: '网络失败',
     missing_csrf: '登录态缺失',
+    no_csrf: '登录态缺失',
     parse: '响应异常',
   },
   en: {
@@ -268,6 +269,7 @@ const FAILURE_LABELS: Record<UiLanguage, Record<string, string>> = {
     http_error: 'Request error',
     network_error: 'Network error',
     missing_csrf: 'Missing session',
+    no_csrf: 'Missing session',
     parse: 'Unexpected response',
   },
 };

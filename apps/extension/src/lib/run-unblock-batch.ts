@@ -60,9 +60,10 @@ async function unblockOne(
         // 回填失败不影响本次撤销
       });
     } else {
+      // no_csrf 与 missing_csrf 同属会话失效，block-queue classifyFailure 统一判 pause
       return {
         ok: false,
-        code: resolved.code === 'no_csrf' ? 'missing_csrf' : resolved.code,
+        code: resolved.code,
       };
     }
   }

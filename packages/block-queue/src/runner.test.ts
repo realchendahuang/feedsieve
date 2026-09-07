@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from 'vitest';
-import { PACE_FLOOR_MS } from './failure';
 import { runQueuedBlocks, type QueueRunnerOptions, type QueueSession, type TaskRunRecord } from './runner';
 
 interface FakeTask extends TaskRunRecord {
@@ -130,14 +129,16 @@ describe('runQueuedBlocks（持久化队列 runner）', () => {
     expect(h.perform).toHaveBeenCalledTimes(1);
   });
 
-  it('successPaceMs 注入生效：成功后按注入节奏休眠；默认仍为 PACE_FLOOR_MS', async () => {
+  it('successPaceMs 注入生效：成功后分片休眠（≤250ms/片，总量一致）；默认仍为 PACE_FLOOR_MS', async () => {
     const injected = makeHarness([task('a')], 'running', { successPaceMs: () => 1500 });
     await injected.run();
-    expect(injected.sleeps).toContain(1500);
+    // 1500ms 注入节奏被切成 6 片 250ms，保持总量一致且期间可响应 pause
+    expect(injected.sleeps.filter((ms) => ms === 250).length).toBe(6);
 
     const defaulted = makeHarness([task('a')]);
     await defaulted.run();
-    expect(defaulted.sleeps).toContain(PACE_FLOOR_MS);
+    // 默认 400ms 同样分片（250 + 150）
+    expect(defaulted.sleeps).toContain(250);
   });
 
   it('permanent / unsupported 单任务判死，队列继续其它任务', async () => {
@@ -168,5 +169,79 @@ describe('runQueuedBlocks（持久化队列 runner）', () => {
     const h = makeHarness([task('a')], 'paused');
     await h.run();
     expect(h.perform).not.toHaveBeenCalled();
+  });
+
+  it('perform 裸抛异常按瞬时网络失败处理：重试后判死，不卡死在 running', async () => {
+    const h = makeHarness([task('boom')]);
+    h.perform.mockRejectedValue(new Error('DOM broken'));
+    await h.run();
+    expect(h.perform).toHaveBeenCalledTimes(3); // MAX_TRANSIENT_ATTEMPTS
+    expect(h.session.tasks[0]).toMatchObject({
+      status: 'failed',
+      attempts: 3,
+      lastErrorCode: 'network_error',
+    });
+  });
+
+  it('存储消失（load 返回 null）时中止，不把旧 session 写回复活任务', async () => {
+    let loads = 0;
+    const h = makeHarness([task('a')], 'running', {
+      load: async () => {
+        loads += 1;
+        // 第 1/2 次：主循环读取 + 标记 running 的写前复核；第 3 次是 perform 后的重读
+        if (loads >= 3) {
+          return null; // perform 之后存储消失
+        }
+        return h.session;
+      },
+    });
+    h.perform.mockResolvedValue({ ok: true });
+    await h.run();
+    expect(h.perform).toHaveBeenCalledTimes(1);
+    // 只写了一次（标记 running）；perform 后的写入被「会话不可用」挡掉
+    expect(h.saveCount()).toBe(1);
+  });
+
+  it('退避等待每片醒来复核队列状态：宿主暂停不等满整个退避', async () => {
+    let wakes = 0;
+    const h = makeHarness([task('flaky')], 'running', {
+      sleep: async () => {
+        wakes += 1;
+        if (wakes === 1) {
+          h.session.status = 'paused'; // 第一片睡眠期间宿主暂停
+        }
+      },
+    });
+    h.perform.mockResolvedValueOnce({ ok: false, code: 'network_error' });
+    h.perform.mockResolvedValue({ ok: true });
+    await h.run();
+    // 只睡了一片就因 pause 退出，没有等到后续分片/重试
+    expect(wakes).toBe(1);
+    expect(h.perform).toHaveBeenCalledTimes(1);
+    expect(h.session.status).toBe('paused');
+  });
+
+  it('成功时清除上次失败留下的 httpStatus', async () => {
+    const h = makeHarness([task('a', { lastHttpStatus: 429 })]);
+    h.perform.mockResolvedValue({ ok: true });
+    await h.run();
+    expect(h.session.tasks[0]?.lastHttpStatus).toBeUndefined();
+    expect(h.session.tasks[0]?.status).toBe('success');
+  });
+
+  it('执行期间宿主暂停：成功结果不会把队列状态从 paused 覆盖回 running/completed', async () => {
+    const h = makeHarness([task('a')]);
+    let pausedByHost = false;
+    h.perform.mockImplementation(async () => {
+      if (!pausedByHost) {
+        pausedByHost = true;
+        h.session.status = 'paused'; // perform 期间用户手动暂停
+      }
+      return { ok: true };
+    });
+    await h.run();
+    // runner 写前复核发现 paused → 放弃写入并退出；任务保持 running 留给下次恢复重做
+    expect(h.session.status).toBe('paused');
+    expect(h.perform).toHaveBeenCalledTimes(1);
   });
 });
