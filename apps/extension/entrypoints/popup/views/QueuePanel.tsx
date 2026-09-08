@@ -52,7 +52,7 @@ export default function QueuePanel({
       ) : queue.status === 'paused' ? (
         <div className="queue-actions">
           <button className="secondary-inline" onClick={() => onControl('resume')}>
-            {t.resume}
+            {queue.pauseReason === 'quota_exhausted' ? t.resumeAnyway : t.resume}
           </button>
           <button className="text-action" onClick={() => onControl('cancel')}>
             {t.cancel}

@@ -8,7 +8,8 @@
  *
  * - 顺手拉黑与队列拉黑共用同一本账（撤销在 PR2 并入，见 BLOCK_SAFETY.md）；
  * - 只计确认成功的 block；失败 / no-id / 跳过不计；
- * - 到量后队列整队 pause（quota_exhausted），剩余任务保留，次日用户手动继续；
+ * - 到量后队列整队 pause（quota_exhausted），剩余任务保留；额度是友情提醒不是硬闸，
+ *   用户点「仍要继续」即放行本轮（quotaOverride），X 侧真实推力由 429 风暴 / 认证失效兜底；
  * - 成功后相邻间隔（base + 抖动）也由此处给出，速度与日量一处置于扩展。
  *
  * 纯函数与 storage 适配分离：runQueuedBlocks 不引用本模块；额度判断由宿主
@@ -119,6 +120,19 @@ export function usedInWindow(ledger: SafetyLedger, now: number): number {
 /** 剩余预算 = 当前生效预算 − 滚动 24h 已用；到 0 即队列不再发请求。 */
 export function remainingQuota(ledger: SafetyLedger, now: number): number {
   return Math.max(0, ledger.budget - usedInWindow(ledger, now));
+}
+
+/**
+ * 队列是否应因额度暂停。额度是友情提醒而不是硬闸：用户对「额度用尽」暂停点了
+ * 「仍要继续」（队列 quotaOverride）后，本轮不再因额度停队——X 侧真实推力仍由
+ * 429 风暴 / 认证失效信号负责兜底。
+ */
+export function shouldPauseForQuota(
+  queue: { quotaOverride?: boolean } | null | undefined,
+  ledger: SafetyLedger,
+  now: number,
+): boolean {
+  return !queue?.quotaOverride && remainingQuota(ledger, now) <= 0;
 }
 
 /**

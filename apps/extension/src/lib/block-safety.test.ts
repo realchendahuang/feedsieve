@@ -11,6 +11,7 @@ import {
   remainingQuota,
   rolloverBudget,
   SAFETY_PRESETS,
+  shouldPauseForQuota,
   usedInWindow,
   type SafetyLedger,
 } from './block-safety';
@@ -65,13 +66,18 @@ describe('block-safety 安全账本', () => {
     expect(usedInWindow(ledgerA, NOW)).toBe(1);
   });
 
-  it('到量后 remaining 为 0（队列侧据此不再发请求）', async () => {
+  it('到量后 remaining 为 0；「仍要继续」的队列本轮放行（友情提醒不是硬闸）', async () => {
     for (let i = 0; i < SAFETY_PRESETS.balanced.dailyLimit; i += 1) {
       await recordSafetyEvent('acc-1', NOW + i);
     }
     const ledger = await loadSafetyLedger('acc-1');
     expect(usedInWindow(ledger, NOW + 10_000)).toBe(SAFETY_PRESETS.balanced.dailyLimit);
     expect(remainingQuota(ledger, NOW + 10_000)).toBe(0);
+    expect(shouldPauseForQuota(null, ledger, NOW + 10_000)).toBe(true);
+    expect(shouldPauseForQuota({}, ledger, NOW + 10_000)).toBe(true);
+    expect(shouldPauseForQuota({ quotaOverride: true }, ledger, NOW + 10_000)).toBe(false);
+    // 有余量时无论是否 override 都不停
+    expect(shouldPauseForQuota({}, { ...ledger, events: [] }, NOW + 10_000)).toBe(false);
   });
 
   it('pace 抖动：间隔落在 [base, base+jitter]，随机注入时非固定节拍', () => {

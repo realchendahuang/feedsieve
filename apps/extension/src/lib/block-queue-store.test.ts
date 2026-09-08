@@ -76,6 +76,22 @@ describe('持久化拉黑队列', () => {
       status: 'paused',
       pauseReason: 'quota_exhausted',
     });
+    // 「仍要继续」标记随队列持久化（本轮放行额度门控）
+    storage.persistentBlockQueueV1 = {
+      id: 'paused-queue',
+      source: 'community-batch',
+      status: 'paused',
+      pauseReason: 'quota_exhausted',
+      quotaOverride: true,
+      createdAt: 1,
+      updatedAt: 2,
+      tasks: [{ handle: 'quota', category: 'other', status: 'pending' }],
+    };
+    expect(await getPersistentBlockQueue()).toMatchObject({
+      status: 'paused',
+      pauseReason: 'quota_exhausted',
+      quotaOverride: true,
+    });
     // 无 pauseReason 的旧队列正常兼容（字段可选）
     storage.persistentBlockQueueV1 = {
       id: 'legacy-paused',
@@ -87,6 +103,7 @@ describe('持久化拉黑队列', () => {
     };
     const restored = await getPersistentBlockQueue();
     expect(restored?.pauseReason).toBeUndefined();
+    expect(restored?.quotaOverride).toBeUndefined();
   });
 
   it('兼容旧社区队列，不要求旧任务包含证据字段', async () => {

@@ -666,6 +666,51 @@ describe('popup App 渲染冒烟', () => {
     expect(retry?.disabled).toBe(false);
   });
 
+  it('额度用尽暂停时给友情提醒，点「仍要继续」显式放行本轮', async () => {
+    const pausedQueue: PersistentBlockQueueState = {
+      id: 'q4',
+      source: 'community-batch',
+      status: 'paused',
+      pauseReason: 'quota_exhausted',
+      tasks: [
+        { handle: 'cndon91', category: 'adult_gray_traffic', status: 'pending' },
+        { handle: 'spamking88', category: 'bot_spam', status: 'success' },
+      ],
+      createdAt: 0,
+      updatedAt: 1,
+    };
+    vi.stubGlobal('browser', {
+      storage: {
+        local: { remove: vi.fn(),
+          get: vi.fn().mockResolvedValue({
+            uiLanguage: 'zh',
+            persistentBlockQueueV1: pausedQueue,
+          }),
+          set: vi.fn().mockResolvedValue(undefined),
+        },
+        onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+      },
+      tabs: {
+        query: vi.fn().mockResolvedValue([{ id: 1, active: true, url: 'https://x.com/home' }]),
+        sendMessage: tabSendMessage,
+      },
+      runtime: { sendMessage: runtimeSendMessage },
+    });
+
+    const rootEl = renderApp();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    await act(async () => buttonWithText(rootEl, '名单').click());
+
+    // 友情提醒：额度到顶 + 风险提示；不再是「只能明天继续」的硬规定
+    expect(rootEl.textContent).toContain('今日安全额度已到（400/24h）');
+    expect(rootEl.textContent).toContain('仍要继续可以，但被 X 临时限制的风险会变高');
+    await act(async () => buttonWithText(rootEl, '仍要继续').click());
+    expect(tabSendMessage).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ type: 'feedsieve:block-queue-resume' }),
+    );
+  });
+
   it('页面批量收尾有失败项时，在当前页面卡片如实展示原因（账号已消失与解析失败分开）', async () => {
     const failedQueue: PersistentBlockQueueState = {
       id: 'q3',

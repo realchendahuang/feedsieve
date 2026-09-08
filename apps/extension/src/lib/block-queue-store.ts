@@ -44,6 +44,8 @@ export interface PersistentBlockQueueState {
   tasks: PersistentBlockTask[];
   /** 最近一次暂停原因（quota_exhausted / auth_required / user …），popup 按它给专属文案 */
   pauseReason?: string;
+  /** 用户对「额度用尽」暂停点了「仍要继续」：本轮队列不再因额度硬停（友情提醒模式，新队列重置） */
+  quotaOverride?: boolean;
   createdAt: number;
   updatedAt: number;
 }
@@ -120,6 +122,7 @@ function normalizeQueue(value: unknown): PersistentBlockQueueState | null {
     status: raw.status as PersistentBlockQueueStatus,
     tasks,
     ...(typeof raw.pauseReason === 'string' ? { pauseReason: raw.pauseReason } : {}),
+    ...(raw.quotaOverride === true ? { quotaOverride: true } : {}),
     createdAt: Number(raw.createdAt) || Date.now(),
     updatedAt: Number(raw.updatedAt) || Date.now(),
   };

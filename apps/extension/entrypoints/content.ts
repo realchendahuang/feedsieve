@@ -72,7 +72,7 @@ import {
   persistSignal,
   RATE_LIMIT_STORM_THRESHOLD,
   recordSafetyEvent,
-  remainingQuota,
+  shouldPauseForQuota,
   type SafetyPreset,
 } from '../src/lib/block-safety';
 import {
@@ -1306,6 +1306,11 @@ export default defineContentScript({
       const state = await getPersistentBlockQueue();
       if (!state) return { status: 'absent' };
       state.status = 'running';
+      // 额度用尽的暂停由用户显式放行：本轮不再因额度停队（友情提醒模式）。
+      // 其它暂停原因（认证失效 / 429 风暴 / 手动）不解除额度门控语义。
+      if (state.pauseReason === 'quota_exhausted') {
+        state.quotaOverride = true;
+      }
       delete state.pauseReason;
       for (const task of state.tasks) {
         if (task.status === 'running') task.status = 'pending';
@@ -1384,10 +1389,12 @@ export default defineContentScript({
           // 恢复/换源后 source 可能变化：每次执行按当前队列状态取 origin 与贡献策略
           const current = await getPersistentBlockQueue();
           const accountKey = currentAccountKey();
-          // 安全额度：响应式预算用尽则本任务不发请求，走 quota_exhausted → 整队暂停（次日手动继续）
+          // 安全额度：响应式预算用尽则本任务不发请求，走 quota_exhausted → 整队暂停。
+          // 额度是友情提醒不是硬闸：用户点「仍要继续」后（quotaOverride）本轮放行，
+          // X 侧真实推力仍由 429 风暴 / 认证失效信号兜底。
           const ledger = await loadSafetyLedger(accountKey);
           safetyPresetCache = ledger.preset;
-          if (remainingQuota(ledger, Date.now()) <= 0) {
+          if (shouldPauseForQuota(current, ledger, Date.now())) {
             return { ok: false, code: 'quota_exhausted' };
           }
           const outcome = await blockOne(
