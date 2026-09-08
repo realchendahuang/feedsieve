@@ -1386,6 +1386,17 @@ export default defineContentScript({
         load: () => getPersistentBlockQueue(),
         save: (session) => setPersistentBlockQueue(session as PersistentBlockQueueState),
         perform: async (task) => {
+          // 入队后白名单/关注/自己可能变化：执行期再次豁免，绝不拉黑受保护账号
+          // （创建队列时的过滤只覆盖入队那一刻的状态，暂停期间加白名单要靠这里兜住）。
+          const lcHandle = task.handle.toLowerCase();
+          if (
+            allowCache.has(lcHandle) ||
+            followingCache.has(lcHandle) ||
+            blockedCache.has(lcHandle) ||
+            (selfHandle !== null && lcHandle === selfHandle)
+          ) {
+            return { ok: true };
+          }
           // 恢复/换源后 source 可能变化：每次执行按当前队列状态取 origin 与贡献策略
           const current = await getPersistentBlockQueue();
           const accountKey = currentAccountKey();

@@ -199,6 +199,33 @@ describe('popup App 渲染冒烟', () => {
     expect(rootEl.textContent).toContain('Detection level');
   });
 
+  it('白名单 tab 手动添加账号：写入本地白名单并显示瞬时反馈', async () => {
+    const rootEl = renderApp();
+    await new Promise((r) => setTimeout(r, 150));
+    await act(async () => buttonWithText(rootEl, '名单').click());
+    const allowTab = rootEl.querySelector<HTMLButtonElement>('#allowlist-tab');
+    if (!allowTab) throw new Error('allowlist tab not found');
+    await act(async () => allowTab.click());
+
+    const input = rootEl.querySelector<HTMLInputElement>('#allowlist-handle');
+    if (!input) throw new Error('allowlist input not found');
+    // React 受控输入必须走原生 value setter 再派发 input 事件，直接赋值不触发 onChange
+    const valueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+    await act(async () => {
+      valueSetter?.call(input, '@MyHero88');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => {
+      buttonWithText(rootEl, '添加').click();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    expect(storageSet).toHaveBeenCalledWith({
+      allowlist: [expect.objectContaining({ handle: 'myhero88' })],
+    });
+    expect(rootEl.textContent).toContain('已加入白名单 @myhero88');
+  });
+
   it('renders a real hover help overlay instead of relying on a native title', async () => {
     const rootEl = renderApp();
     await new Promise((r) => setTimeout(r, 150));

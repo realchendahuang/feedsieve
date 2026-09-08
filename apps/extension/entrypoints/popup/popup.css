@@ -292,6 +292,16 @@ input:focus-visible + span {
   max-width: 140px;
 }
 
+/* 白名单 tab 的添加表单放在面板顶部：分割线随之换到底边 */
+.allow-add-form {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+  border-bottom: 1px solid var(--fs-line);
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+}
+
 .community-clean-card {
   padding: 14px 16px;
 }

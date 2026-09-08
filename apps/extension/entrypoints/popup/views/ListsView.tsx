@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { CommunityEntry } from '@feedsieve/community-lists';
 import { getBlockedAccounts, subscribeBlocked, type BlockedAccount } from '../../../src/lib/blocked-accounts';
 import {
+  addAllowlist,
   getAllowlist,
   removeAllowed,
   subscribeAllowlist,
@@ -37,6 +38,7 @@ import {
   formatAgo,
   formatDate,
   HelpIcon,
+  normalizeManualInput,
   type CommunityMeta,
 } from './shared';
 import QueuePanel from './QueuePanel';
@@ -93,6 +95,8 @@ export default function ListsView({
   });
   const [unblockResult, setUnblockResult] = useState<UnblockBatchResult | null>(null);
   const [running, setRunning] = useState(false);
+  const [allowHandle, setAllowHandle] = useState('');
+  const [allowAdding, setAllowAdding] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [queue, setQueue] = useState<PersistentBlockQueueState | null>(null);
@@ -137,6 +141,25 @@ export default function ListsView({
   async function removeFromAllowlist(handle: string): Promise<void> {
     await removeAllowed(handle);
     await browser.runtime.sendMessage({ type: 'feedsieve:labels-sync' }).catch(() => undefined);
+  }
+
+  /** 手动加入白名单（覆盖 @handle / x.com 主页链接两种输入）。 */
+  async function addToAllowlist(): Promise<void> {
+    const handle = normalizeManualInput(allowHandle);
+    if (!handle) {
+      notify(t.invalidHandle);
+      return;
+    }
+    setAllowAdding(true);
+    notify(null);
+    try {
+      await addAllowlist(handle);
+      setAllowHandle('');
+      notify(t.allowlistAdded(handle));
+      await browser.runtime.sendMessage({ type: 'feedsieve:labels-sync' }).catch(() => undefined);
+    } finally {
+      setAllowAdding(false);
+    }
   }
 
   async function startFollowingSync(): Promise<void> {
@@ -525,6 +548,33 @@ export default function ListsView({
           </>
         ) : listView === 'allowlist' ? (
           <>
+            <form
+              className="manual-block-form allow-add-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void addToAllowlist();
+              }}
+            >
+              <label htmlFor="allowlist-handle">{t.allowlistAddLabel}</label>
+              <div className="manual-block-row">
+                <input
+                  id="allowlist-handle"
+                  type="text"
+                  value={allowHandle}
+                  placeholder={t.allowlistPlaceholder}
+                  autoComplete="off"
+                  spellCheck={false}
+                  onChange={(event) => setAllowHandle(event.target.value)}
+                />
+                <button
+                  type="submit"
+                  className="secondary-inline"
+                  disabled={allowAdding || allowHandle.trim().length === 0}
+                >
+                  {allowAdding ? t.processing : t.allowlistAdd}
+                </button>
+              </div>
+            </form>
             {allowlist === null ? (
               <div className="loading-list" aria-hidden="true">
                 <span />
