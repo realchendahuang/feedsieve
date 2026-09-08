@@ -235,6 +235,24 @@
       "input": { "handle": "rtobadj473", "displayName": "CleanName", "text": "hard\nfire\n💙\nlift\nroad" },
       "expected": null,
       "known_limitation": true
+    },
+    {
+      "id": "word-salad-garbled-handle-real",
+      "note": "2026-09-08 真机采集：乱码 handle 批次——昵称 mhmsez ruwzw 本身即随机字母、空简介、对用户帖的回复（@mention 链接被 reader 剔除）。走佐证通道 2：乱码 handle（稀有字母 4 + 最长辅音串 6）",
+      "input": { "handle": "mhmsezruwzxjwl", "displayName": "mhmsez ruwzw", "text": "sea\nhave\n🌞\nhad\nplan" },
+      "expected": "word-salad"
+    },
+    {
+      "id": "word-salad-name-handle-guard",
+      "note": "误伤守卫：真人姓名 handle（javierzuniga 稀有字母 3 个）+ 心情贴形状 → 缺长辅音串，乱码佐证不命中",
+      "input": { "handle": "javierzuniga", "displayName": "Javier Zuniga", "text": "some days feel hollow 🖤" },
+      "expected": null
+    },
+    {
+      "id": "word-salad-keyboard-walk-guard",
+      "note": "误伤守卫：纯字母长块 handle（qwertyuiopas）但稀有字母仅 1 → 乱码佐证不命中",
+      "input": { "handle": "qwertyuiopas", "displayName": "Sam", "text": "some days feel hollow 🖤" },
+      "expected": null
     }
 ]
 }

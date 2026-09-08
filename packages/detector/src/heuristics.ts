@@ -106,12 +106,49 @@ const templatedText: HeuristicRule = {
  * emoji，无标点/数字/链接/大写，单词全是字典词，无法做成关键词包）。
  *
  * 结构单独出现会误伤「心情贴」（some days feel 🖤 hollow 这类真实句式），
- * 因此强制账号侧佐证：昵称/简介带中文引流隐语（与线上词库同语义的小集合，
- * 不自建词包）。宁可漏判干净昵称的同类账号——那类由社区指纹/变体层兜底。
+ * 因此强制账号侧佐证，两条通道满足其一：
+ * 1. 昵称/简介带中文引流隐语（与线上词库同语义的小集合，不自建词包）；
+ * 2. 乱码批量 handle（2026-09-08 真机样本 mhmsezruwzxjwl：该批不写引流话术，
+ *    昵称本身就是机器随机字母）。
+ * 通道 2 只认 handle——昵称/简介会因懒加载缺失（见 defaultNameDigits 注记），
+ * handle 是 MVP 冻结决策里唯一稳定的身份字段。
+ * 仍宁可漏判干净昵称 + 常规 handle 的同类账号——那类由社区指纹/变体层兜底。
  */
 const WORD_SALAD_TOKEN_RE = /^[a-z]{2,12}$/;
 const WORD_SALAD_SYMBOL_RE = /^[\p{S}]{1,3}$/u;
 const WORD_SALAD_TRAFFIC_HINT_RE = /主页|简介|牵线|福利|同城|上门|私|全国|空降|约/i;
+/**
+ * 乱码 handle 佐证 = 连续 ≥12 个纯小写字母（无数字/下划线/分隔）+ 乱码双征：
+ * 稀有字母 ≥2（j/q/v/x/z）且最长辅音串 ≥4。均匀随机字母块两条都会撞上；
+ * 真人姓名 handle（javierzuniga、juarezvazquez、johnsmith、schwarzenegger）
+ * 至多满足其一。稀有集合不收 w/k/y——真实姓名里太常见（wayne/wong/kim）。
+ */
+const WORD_SALAD_GARBLE_HANDLE_RE = /^[a-z]{12,}$/;
+const WORD_SALAD_RARE_LETTER_RE = /[jqvxz]/g;
+const WORD_SALAD_VOWEL_RE = /[aeiou]/;
+
+function maxConsonantRun(handle: string): number {
+  let max = 0;
+  let run = 0;
+  for (const ch of handle) {
+    if (WORD_SALAD_VOWEL_RE.test(ch)) {
+      run = 0;
+    } else {
+      run += 1;
+      max = Math.max(max, run);
+    }
+  }
+  return max;
+}
+
+function isGarbledBatchHandle(handle: string | undefined): boolean {
+  const normalized = handle?.trim().replace(/^@+/, '').toLowerCase() ?? '';
+  if (!WORD_SALAD_GARBLE_HANDLE_RE.test(normalized)) {
+    return false;
+  }
+  const rare = normalized.match(WORD_SALAD_RARE_LETTER_RE)?.length ?? 0;
+  return rare >= 2 && maxConsonantRun(normalized) >= 4;
+}
 
 const wordSalad: HeuristicRule = {
   id: 'word-salad',
@@ -142,7 +179,7 @@ const wordSalad: HeuristicRule = {
       return null;
     }
     const side = [input.displayName, input.bio].filter(Boolean).join(' ');
-    if (!WORD_SALAD_TRAFFIC_HINT_RE.test(side)) {
+    if (!WORD_SALAD_TRAFFIC_HINT_RE.test(side) && !isGarbledBatchHandle(input.handle)) {
       return null;
     }
     return '英文单词沙拉模板（随机词 + emoji），疑似引流黄推';
