@@ -5,6 +5,12 @@
 - 每个版本的详细工程记录见 [`docs/RELEASES.md`](docs/RELEASES.md)。
 - 二进制产物见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)；正式用户请从 [Chrome 应用商店](https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph)接收更新。
 
+## [0.8.1] — 2026-09-08
+
+### 修复
+
+- 社区名单的一键拉黑入口回到首屏：v0.8.0 把「一键开始清理」按钮排在名单之后，600px 弹窗内容超高且外层滚动条隐藏，按钮与进行中的队列进度整块落到可视区之外，在名单里怎么滚都找不到发起入口。现在动作区（一键入口 / 队列进度 / 失败原因）固定在统计条之下、名单之上；名单页卡片自适应填满首屏，名单列表在自身内部滚动，外层不再需要滚动；失败原因列表加滚动上限。
+
 ## [0.8.0] — 2026-09-07
 
 ### 新增
