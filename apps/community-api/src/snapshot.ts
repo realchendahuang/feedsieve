@@ -5,8 +5,10 @@ import {
   signManifestMessage,
   type ManifestSignature,
   type VerifiedEntry,
+  type WhitelistEntry,
 } from '@feedsieve/community-lists';
 import { listMaintainerEntries } from './maintainer-blocklist';
+import { listMaintainerWhitelist } from './maintainer-whitelist';
 import { publicPolicy } from './reports';
 import { POLICY } from './reports';
 import { autoRateAccounts } from './rating';
@@ -379,6 +381,17 @@ export async function generateSnapshot(
     updated_at: new Date(row.updated_at * 1000).toISOString(),
   }));
 
+  // 公开白名单（whitelist）：维护者在 GitHub 维护 whitelist.yaml，发布脚本同步进
+  // maintainer_whitelist 表。与 verified 独立成段——verified 是社区抢救票合意，
+  // whitelist 是维护者公开背书；两者在客户端都一票否决（任何检测来源不得标注）。
+  const maintainedWhitelist = await listMaintainerWhitelist(env);
+  const whitelist: WhitelistEntry[] = maintainedWhitelist.map((row) => ({
+    handle: row.handle,
+    x_user_id: row.x_user_id,
+    note: row.note,
+    added_at: new Date(row.created_at * 1000).toISOString(),
+  }));
+
   const entries: SnapshotEntry[] = [];
   const daysByHandle = aggregates.daysByHandle;
   const allAccountRows = await env.DB.prepare(
@@ -487,6 +500,14 @@ export async function generateSnapshot(
     entries.push(entry);
     byHandle.set(entry.handle, entry);
   }
+  // 白名单优先于一切黑名单来源：命中白名单的账号必须从 entries 移除，
+  // 否则客户端整份拒绝（duplicate_snapshot_handle，见 client validate.ts）。
+  const whitelistHandles = new Set(whitelist.map((entry) => entry.handle));
+  if (whitelistHandles.size > 0) {
+    for (let i = entries.length - 1; i >= 0; i--) {
+      if (whitelistHandles.has(entries[i].handle)) entries.splice(i, 1);
+    }
+  }
   entries.sort((a, b) => a.handle.localeCompare(b.handle));
 
   const generatedAt = now.toISOString();
@@ -501,6 +522,7 @@ export async function generateSnapshot(
       generated_at: generatedAt,
       entries,
       ...(verified.length > 0 ? { verified } : {}),
+      ...(whitelist.length > 0 ? { whitelist } : {}),
       ...(killSwitch ? { kill_switch: killSwitch } : {}),
     },
     null,
@@ -565,7 +587,7 @@ export async function generateSnapshot(
           .first<{ manifest_json: string; files_json: string }>()
       : Promise.resolve(null);
   const lastBody = lastVersion ? await getSnapshotFile(env, lastVersion, SNAPSHOT_PACK) : null;
-  if (lastBody && entriesContentEqual(lastBody, entries, verified, killSwitch)) {
+  if (lastBody && entriesContentEqual(lastBody, entries, verified, whitelist, killSwitch)) {
     const lastRow = await loadLatestRow();
     if (lastRow) {
       return {
@@ -638,6 +660,7 @@ function entriesContentEqual(
   lastBody: string,
   currentEntries: unknown[],
   currentVerified: unknown[],
+  currentWhitelist: unknown[],
   currentKillSwitch?: { destructive_actions_disabled: true; reason?: string; disabled_since?: string },
 ): boolean {
   let last: {
@@ -645,6 +668,7 @@ function entriesContentEqual(
     policy_version?: number;
     entries?: unknown[];
     verified?: unknown[];
+    whitelist?: unknown[];
     kill_switch?: unknown;
   };
   try {
@@ -653,6 +677,7 @@ function entriesContentEqual(
       policy_version?: number;
       entries?: unknown[];
       verified?: unknown[];
+      whitelist?: unknown[];
       kill_switch?: unknown;
     };
   } catch {
@@ -668,8 +693,9 @@ function entriesContentEqual(
   if (last.kill_switch === undefined && currentKillSwitch !== undefined) return false;
   if (JSON.stringify(last.kill_switch) !== JSON.stringify(currentKillSwitch)) return false;
   if (JSON.stringify(last.entries) !== JSON.stringify(currentEntries)) return false;
-  // 白名单也参与内容复用判断：verified 变化必须产生新版本，不能复用旧 body
-  return JSON.stringify(last.verified ?? []) === JSON.stringify(currentVerified);
+  // 白名单也参与内容复用判断：verified / whitelist 变化必须产生新版本，不能复用旧 body
+  if (JSON.stringify(last.verified ?? []) !== JSON.stringify(currentVerified)) return false;
+  return JSON.stringify(last.whitelist ?? []) === JSON.stringify(currentWhitelist);
 }
 
 /**

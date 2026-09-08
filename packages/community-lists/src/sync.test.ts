@@ -596,3 +596,79 @@ describe('parseSnapshotBody: verified（社区白名单）', () => {
     });
   });
 });
+
+describe('parseSnapshotBody: whitelist（公开白名单）', () => {
+  function bodyWithWhitelist(whitelist: unknown, entries: unknown[] = []): string {
+    return JSON.stringify({
+      schema_version: 2,
+      snapshot_version: VERSION,
+      generated_at: '2026-08-28T00:00:00Z',
+      entries,
+      ...(whitelist !== undefined ? { whitelist } : {}),
+    });
+  }
+
+  const validEntry = {
+    handle: 'vouched_user',
+    x_user_id: '1234567890',
+    note: '误标申诉已核实：知名反诈骗博主',
+    added_at: '2026-09-08T00:00:00Z',
+  };
+
+  it('接受合法 whitelist 列表并透出条目', () => {
+    const result = parseSnapshotBody(bodyWithWhitelist([validEntry]));
+    expect(result.ok).toBe(true);
+    expect(result.ok ? result.value.whitelist : null).toEqual([validEntry]);
+  });
+
+  it('无 whitelist 字段时保持缺省（旧快照兼容）', () => {
+    const result = parseSnapshotBody(bodyWithWhitelist(undefined));
+    expect(result.ok).toBe(true);
+    expect(result.ok ? result.value.whitelist : undefined).toBeUndefined();
+  });
+
+  it('whitelist 内部重复 handle 整份拒绝', () => {
+    const result = parseSnapshotBody(bodyWithWhitelist([validEntry, validEntry]));
+    expect(result).toEqual({ ok: false, error: 'invalid_whitelist_list' });
+  });
+
+  it('whitelist 与黑名单 entries handle 重复整份拒绝（防御双发）', () => {
+    const entry = {
+      handle: 'dupe_user',
+      x_user_id: null,
+      aliases: [],
+      category: 'bot_spam',
+      sources: ['community'],
+      community_score: 0.8,
+      report_count: 5,
+      rescue_count: 0,
+      net_votes: 5,
+      first_seen_at: '2026-08-28T00:00:00Z',
+      updated_at: '2026-08-28T00:00:00Z',
+      evidence_post_ids: [],
+    };
+    const result = parseSnapshotBody(
+      bodyWithWhitelist([{ ...validEntry, handle: 'dupe_user' }], [entry]),
+    );
+    expect(result).toEqual({ ok: false, error: 'duplicate_snapshot_handle' });
+  });
+
+  it('畸形 whitelist（非数组 / 缺 note / 坏 added_at）整份拒绝（保持 last-known-good）', () => {
+    expect(parseSnapshotBody(bodyWithWhitelist('yes'))).toEqual({
+      ok: false,
+      error: 'invalid_whitelist_list',
+    });
+    expect(parseSnapshotBody(bodyWithWhitelist([{ ...validEntry, note: '   ' }]))).toEqual({
+      ok: false,
+      error: 'invalid_whitelist_list',
+    });
+    expect(parseSnapshotBody(bodyWithWhitelist([{ ...validEntry, added_at: 'not-a-date' }]))).toEqual({
+      ok: false,
+      error: 'invalid_whitelist_list',
+    });
+    expect(parseSnapshotBody(bodyWithWhitelist([{ ...validEntry, x_user_id: 'abc' }]))).toEqual({
+      ok: false,
+      error: 'invalid_whitelist_list',
+    });
+  });
+});

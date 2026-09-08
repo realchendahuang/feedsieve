@@ -14,6 +14,7 @@ import {
   SNAPSHOT_PACK,
 } from '../src/snapshot';
 import { MAINTAINER_UPSERT_SQL } from '../src/maintainer-blocklist';
+import { MAINTAINER_WHITELIST_UPSERT_SQL } from '../src/maintainer-whitelist';
 
 const ORIGIN = 'https://api.example.com';
 
@@ -263,6 +264,66 @@ describe('snapshot pipeline', () => {
       ).text(),
     ) as { verified?: { handle: string }[] };
     expect(body.verified?.map((entry) => entry.handle)).toContain('rescue_user');
+  });
+
+  it('whitelist（公开白名单）：维护者条目进独立段，命中账号从黑名单 entries 让位', async () => {
+    const installs = [
+      'vvvvvvvv-3001-4001-8000-vvvvvvvvvvvv',
+      'vvvvvvvv-3002-4002-8000-vvvvvvvvvvvv',
+      'vvvvvvvv-3003-4003-8000-vvvvvvvvvvvv',
+    ];
+    // 同账号虽有 3 个黑票（单独看会进黑名单），白名单一票否决 -> 进 whitelist 段、不进 entries
+    for (const id of installs) await report(id, 'vouched_user');
+    await env.DB.prepare(MAINTAINER_WHITELIST_UPSERT_SQL)
+      .bind('vouched_user', null, '误标申诉已核实：知名反诈骗博主', Date.now())
+      .run();
+
+    await generateSnapshot(env, 0, { bypassDailyOnce: true });
+    const res = await worker.fetch(
+      new Request(
+        `${ORIGIN}/v1/snapshots/${
+          ((await (await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), env)).json()) as Manifest)
+            .snapshot_version
+        }/${SNAPSHOT_PACK}`,
+      ),
+      env,
+    );
+    expect(res.status).toBe(200);
+    const body = JSON.parse(await res.text()) as {
+      entries: { handle: string }[];
+      whitelist?: { handle: string; x_user_id: string | null; note: string; added_at: string }[];
+    };
+
+    expect(body.whitelist).toHaveLength(1);
+    expect(body.whitelist?.[0]).toMatchObject({
+      handle: 'vouched_user',
+      x_user_id: null,
+      note: '误标申诉已核实：知名反诈骗博主',
+    });
+    expect(typeof body.whitelist?.[0]?.added_at).toBe('string');
+    // 白名单优先于黑名单：命中账号不进 entries
+    expect(body.entries.map((entry) => entry.handle)).not.toContain('vouched_user');
+  });
+
+  it('whitelist 变化会 mint 新版本而不是复用旧 body', async () => {
+    const first = (await generateSnapshot(env, 0, { bypassDailyOnce: true })).manifest as unknown as Manifest;
+    await env.DB.prepare(MAINTAINER_WHITELIST_UPSERT_SQL)
+      .bind('second_vouch', '1234567890', '第二个公开白名单账号', Date.now())
+      .run();
+
+    const second = (await generateSnapshot(env, 0, { bypassDailyOnce: true })).manifest as unknown as Manifest;
+    expect(second.snapshot_version).not.toBe(first.snapshot_version);
+    const body = JSON.parse(
+      await (
+        await worker.fetch(
+          new Request(
+            `${ORIGIN}/v1/snapshots/${second.snapshot_version}/${SNAPSHOT_PACK}`,
+          ),
+          env,
+        )
+      ).text(),
+    ) as { whitelist?: { handle: string }[] };
+    expect(body.whitelist?.map((entry) => entry.handle)).toContain('second_vouch');
   });
 
   it('republishing unchanged content reuses the same version (no churn)', async () => {

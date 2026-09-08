@@ -180,6 +180,11 @@ export interface RuntimeCommunity {
    */
   verifiedSet: ReadonlySet<string>;
   /**
+   * 公开白名单（whitelist）：维护者在 GitHub 公开维护、随快照下发的账号。
+   * 一票否决，优先级最高——任何检测来源（名单/指纹/域名/词库）都不得标注或拉黑。
+   */
+  whitelistSet: ReadonlySet<string>;
+  /**
    * 已知垃圾模板指纹集合（v0.4）。间接证据：仅「大扫除」档聚合下发，
    * 其余强度档为空集合 —— 门槛收口在这里，调用方无需重复判断。
    * v0.5 起指纹即 SimHash 位向量：detect 按汉明距离做「话术变体」匹配。
@@ -217,6 +222,8 @@ export async function buildRuntimeCommunity(): Promise<RuntimeCommunity | null> 
   // 社区白名单：与黑名单条目数学互斥（±3 净票无交集），仍独立成集合
   // 供检测管线在一切识别之前豁免（防御性先查，防服务端异常双发）。
   const verifiedSet = new Set((parsed.value.verified ?? []).map((entry) => entry.handle));
+  // 公开白名单（维护者 GitHub 维护）：优先级最高的一票豁免来源。
+  const whitelistSet = new Set((parsed.value.whitelist ?? []).map((entry) => entry.handle));
   // 指纹/域名是比名单弱的间接证据（换号复用话术、垃圾域名），
   // 按用户拍板只在「大扫除」档启用；最终账号名单不受启发式强度筛选。
   const deepClean = settings.strength === 'deep_clean';
@@ -246,6 +253,7 @@ export async function buildRuntimeCommunity(): Promise<RuntimeCommunity | null> 
     index,
     handleSet,
     verifiedSet,
+    whitelistSet,
     fingerprintSet,
     domainSet,
     campaignById,

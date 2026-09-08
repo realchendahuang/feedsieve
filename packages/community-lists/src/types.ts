@@ -70,6 +70,14 @@ export interface SnapshotBody {
    */
   verified?: VerifiedEntry[];
   /**
+   * 公开白名单（whitelist，可选）：维护者在 GitHub 维护 whitelist.yaml，
+   * 发布脚本同步进服务端后随快照下发。一票否决，优先级最高——
+   * 任何检测来源（社区名单 / 指纹 / 域名 / 词库）都不得标注或拉黑。
+   * 与 verified 独立成段：verified 是社区抢救票合意，whitelist 是维护者公开背书。
+   * 旧版客户端忽略此字段（手写校验不拒绝未知顶层字段）。
+   */
+  whitelist?: WhitelistEntry[];
+  /**
    * 官方破坏性动作暂停开关（可选）：随签名快照下发，防伪造 ——
    * 只能关闭批量/单条拉黑等破坏性动作，绝不能远程开启任何自动拉黑。
    * 检测 / 标注 / 读取不受影响。
@@ -98,6 +106,19 @@ export interface VerifiedEntry {
   net_votes: number;
   first_seen_at: string;
   updated_at: string;
+}
+
+/**
+ * 公开白名单条目（whitelist）：维护者公开背书的「正常账号」。
+ * 不带票数语义（不是指控对象也不是合意对象），带入册说明（note）用于公开问责。
+ */
+export interface WhitelistEntry {
+  handle: string;
+  x_user_id: string | null;
+  /** 入册说明（公开：为什么这个账号值得豁免） */
+  note: string;
+  /** 入册时间（ISO） */
+  added_at: string;
 }
 
 /** 本地缓存的快照（last-known-good：只在全部校验通过后整体写入） */

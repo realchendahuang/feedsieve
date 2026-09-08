@@ -68,11 +68,14 @@ export function runDetectionPipeline(input: DetectionPipelineInput): DetectionPi
   const { input: source, community, builtinList, keywordHeuristics, catalog, strength, uiLanguage } =
     input;
 
-  // 社区白名单（verified）一票豁免：被验证为「误标正常」的账号在任何识别
-  // （社区名单 / 指纹 / 域名 / 词包）之前直接放行。与黑名单数学互斥，
+  // 公开白名单（whitelist）与社区白名单（verified）一票豁免：被验证为「误标正常」
+  // 的账号在任何识别（社区名单 / 指纹 / 域名 / 词包）之前直接放行。与黑名单数学互斥，
   // 此先查是防御性兜底——即便服务端异常双发，也以「验证正常」为准。
   const verifiedHandle = source.handle.trim().replace(/^@+/, '').toLowerCase();
-  if (community?.verifiedSet.has(verifiedHandle)) {
+  if (
+    community?.whitelistSet.has(verifiedHandle) ||
+    community?.verifiedSet.has(verifiedHandle)
+  ) {
     return {
       detection: null,
       evidence: {},

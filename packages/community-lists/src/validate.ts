@@ -1,4 +1,10 @@
-import type { CommunitySource, SnapshotBody, SnapshotManifest, VerifiedEntry } from './types';
+import type {
+  CommunitySource,
+  SnapshotBody,
+  SnapshotManifest,
+  VerifiedEntry,
+  WhitelistEntry,
+} from './types';
 import type { ManifestSignature } from './signing';
 
 const SOURCES: readonly CommunitySource[] = ['community', 'maintainer'];
@@ -220,6 +226,63 @@ function parseVerifiedList(raw: unknown): VerifiedEntry[] | null {
   return verified;
 }
 
+/**
+ * 公开白名单（whitelist）：维护者公开背书的账号。豁免 = 撤销检测，
+ * 防呆口径与 verified 一致——畸形条目整份拒绝（保持 last-known-good）。
+ */
+function validateWhitelistEntry(item: unknown): WhitelistEntry | null {
+  if (typeof item !== 'object' || item === null) {
+    return null;
+  }
+  const w = item as Record<string, unknown>;
+  if (
+    typeof w.handle !== 'string' ||
+    !HANDLE_RE.test(w.handle) ||
+    typeof w.note !== 'string' ||
+    w.note.trim().length === 0 ||
+    w.note.length > 240 ||
+    !isIsoDate(w.added_at)
+  ) {
+    return null;
+  }
+  if (
+    w.x_user_id !== null &&
+    w.x_user_id !== undefined &&
+    (typeof w.x_user_id !== 'string' || !USER_ID_RE.test(w.x_user_id))
+  ) {
+    return null;
+  }
+  return {
+    handle: (w.handle as string).toLowerCase(),
+    x_user_id: typeof w.x_user_id === 'string' ? w.x_user_id : null,
+    note: (w.note as string).trim(),
+    added_at: w.added_at as string,
+  };
+}
+
+function parseWhitelistList(raw: unknown): WhitelistEntry[] | null {
+  if (raw === undefined || raw === null) {
+    return null;
+  }
+  if (!Array.isArray(raw)) {
+    return null;
+  }
+  const whitelist: WhitelistEntry[] = [];
+  const handles = new Set<string>();
+  for (const item of raw) {
+    const entry = validateWhitelistEntry(item);
+    if (!entry) {
+      return null;
+    }
+    if (handles.has(entry.handle)) {
+      return null;
+    }
+    handles.add(entry.handle);
+    whitelist.push(entry);
+  }
+  return whitelist;
+}
+
 export function parseSnapshotBody(text: string): ParseResult<SnapshotBody> {
   let raw: unknown;
   try {
@@ -272,6 +335,18 @@ export function parseSnapshotBody(text: string): ParseResult<SnapshotBody> {
     }
   }
 
+  // 公开白名单（可选字段，kill_switch 先例）：畸形整份拒绝保持 last-known-good。
+  // handle 不得与黑名单 entries 重复（服务端已保证，此处为防御性兜底）。
+  const whitelist = parseWhitelistList(s.whitelist);
+  if (s.whitelist !== undefined && whitelist === null) {
+    return { ok: false, error: 'invalid_whitelist_list' };
+  }
+  if (whitelist) {
+    for (const entry of whitelist) {
+      if (handles.has(entry.handle)) return { ok: false, error: 'duplicate_snapshot_handle' };
+    }
+  }
+
   return {
     ok: true,
     value: {
@@ -280,6 +355,7 @@ export function parseSnapshotBody(text: string): ParseResult<SnapshotBody> {
       generated_at: s.generated_at,
       entries,
       ...(verified ? { verified } : {}),
+      ...(whitelist ? { whitelist } : {}),
       ...(kill_switch ? { kill_switch } : {}),
     },
   };
