@@ -5,6 +5,12 @@
 - 每个版本的详细工程记录见 [`docs/RELEASES.md`](docs/RELEASES.md)。
 - 二进制产物见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)；正式用户请从 [Chrome 应用商店](https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph)接收更新。
 
+## [0.8.2] — 2026-09-08
+
+### 变更
+
+- 每日拉黑额度从硬性暂停改为友情提醒：额度用尽时队列照旧暂停并展示风险提示，但点「仍要继续」即放行本轮队列，不再被「明天才能继续」卡死；新队列自动恢复额度门控。429 风暴降级与认证失效的硬性兜底语义不变。
+
 ## [0.8.1] — 2026-09-08
 
 ### 修复
