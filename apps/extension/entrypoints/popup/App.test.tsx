@@ -284,6 +284,16 @@ describe('popup App 渲染冒烟', () => {
     expect(rootEl.textContent).toContain('@maintained');
     expect(rootEl.textContent).toContain('维护者加入');
 
+    // 一键入口必须排在名单列表之前（否则在 600px 弹窗里落到折叠线以下不可见）
+    const cleanAction = rootEl.querySelector('.community-clean-action');
+    const communityList = rootEl.querySelector('.community-list');
+    expect(cleanAction).not.toBeNull();
+    expect(communityList).not.toBeNull();
+    const cardChildren = [...rootEl.querySelector('.community-fill-card')!.children];
+    expect(cardChildren.indexOf(communityList!)).toBeGreaterThan(
+      cardChildren.indexOf(cleanAction!),
+    );
+
     await act(async () => {
       buttonWithText(rootEl, '一键开始清理 2 个').click();
       await new Promise((resolve) => setTimeout(resolve, 0));

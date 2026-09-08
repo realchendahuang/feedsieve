@@ -329,7 +329,7 @@ export default function ListsView({
       </div>
 
       <section
-        className="manage-card"
+        className={listView === 'community' ? 'manage-card community-fill-card' : 'manage-card'}
         role="tabpanel"
         aria-labelledby={
           listView === 'community'
@@ -381,37 +381,8 @@ export default function ListsView({
               </span>
             </div>
 
-            {communityEntries.length > 0 ? (
-              <ul className="manage-list community-list" aria-label={t.communityClean}>
-                {communityEntries.map((entry) => {
-                  const excluded = !cloudEligibleSet.has(entry.handle.toLowerCase());
-                  return (
-                    <li key={entry.handle} className={`manage-item${excluded ? ' is-excluded' : ''}`}>
-                      <span className={`account-avatar${excluded ? ' is-muted' : ''}`} aria-hidden="true">
-                        {entry.handle.slice(0, 1).toUpperCase()}
-                      </span>
-                      <div className="account-info">
-                        <span className="account-handle">@{entry.handle}</span>
-                        <span className="account-meta">
-                          {entry.sources.includes('maintainer') &&
-                          entry.sources.includes('community')
-                            ? t.communitySourceBoth(entry.net_votes)
-                            : entry.sources.includes('maintainer')
-                              ? t.communitySourceMaintainer
-                              : t.communitySourceVotes(entry.net_votes)}
-                        </span>
-                        {excluded ? (
-                          <span className="account-reason">{t.cloudProtected}</span>
-                        ) : null}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p className="community-empty">{t.communityEmpty}</p>
-            )}
-
+            {/* 动作区固定在首屏（统计条之下、名单之上）：一键入口和队列进度
+                不能落到折叠线以下，否则 600px 弹窗里用户根本找不到发起入口。 */}
             {queueActive ? (
               <QueuePanel
                 language={language}
@@ -458,6 +429,37 @@ export default function ListsView({
               >
                 {t.startCommunityClean(cloudEligible.length)}
               </button>
+            )}
+
+            {communityEntries.length > 0 ? (
+              <ul className="manage-list community-list" aria-label={t.communityClean}>
+                {communityEntries.map((entry) => {
+                  const excluded = !cloudEligibleSet.has(entry.handle.toLowerCase());
+                  return (
+                    <li key={entry.handle} className={`manage-item${excluded ? ' is-excluded' : ''}`}>
+                      <span className={`account-avatar${excluded ? ' is-muted' : ''}`} aria-hidden="true">
+                        {entry.handle.slice(0, 1).toUpperCase()}
+                      </span>
+                      <div className="account-info">
+                        <span className="account-handle">@{entry.handle}</span>
+                        <span className="account-meta">
+                          {entry.sources.includes('maintainer') &&
+                          entry.sources.includes('community')
+                            ? t.communitySourceBoth(entry.net_votes)
+                            : entry.sources.includes('maintainer')
+                              ? t.communitySourceMaintainer
+                              : t.communitySourceVotes(entry.net_votes)}
+                        </span>
+                        {excluded ? (
+                          <span className="account-reason">{t.cloudProtected}</span>
+                        ) : null}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="community-empty">{t.communityEmpty}</p>
             )}
           </>
         ) : listView === 'blocked' ? (

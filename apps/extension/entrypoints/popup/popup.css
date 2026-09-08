@@ -542,6 +542,8 @@ input:focus-visible + span {
   color: var(--fs-muted);
   font-size: 11px;
   list-style: none;
+  max-height: 96px;
+  overflow-y: auto;
 }
 
 .queue-failed-list li {
@@ -1133,12 +1135,38 @@ input:focus-visible + span {
   padding: 16px;
 }
 
+/* 名单页填满首屏：动作区（一键入口 / 队列进度）常驻可见，
+   名单列表吸收剩余高度、在自己内部滚动；外层弹窗不再需要滚动。 */
+.lists-view {
+  height: 100%;
+}
+
+.lists-view .manage-card {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.lists-view .manage-card > .manage-list {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.lists-view .manage-card > .secondary-action,
+.lists-view .manage-card > .queue-panel {
+  flex: 0 0 auto;
+}
+
 .manage-list {
   max-height: 286px;
 }
 
 .manage-card > .manage-list {
   margin-top: 0;
+}
+
+.community-fill-card .manage-list {
+  margin-top: 12px;
 }
 
 .manage-item {
