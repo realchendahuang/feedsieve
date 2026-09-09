@@ -6,6 +6,9 @@
   "name": "feedsieve-community-api",
   "main": "src/index.ts",
   "compatibility_date": "2026-08-01",
+  // nodejs_compat：nodemailer 走 Workers 出站 socket 直连 SMTP 发验证码
+  // （未配置 SMTP_* 时不加载，不影响既有路径）
+  "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
   // Workers Cache：公开只读端点（快照 latest / 版本化文件 / 词库）按各自的
   // Cache-Control 在边缘缓存，命中时不再执行 Worker（不碰 D1/R2）。

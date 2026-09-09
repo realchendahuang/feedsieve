@@ -1,10 +1,10 @@
 /**
- * 猎手档案：installation 哈希即匿名账号，邮箱验证码只负责「解锁自定义
- * 昵称 / 一句话介绍」（无密码、无会话）。邮箱仅用于发码，只存加盐哈希。
- *
- * 发信走 MAIL_WEBHOOK_URL（secret）：POST {to, subject, text} 的通用
- * webhook 契约，部署侧用任意出站实现对接（如 Cloudflare Email Workers /
- * SMTP 转发 Worker）。未配置时返回 dev_code 供本地开发自测，生产必须配置。
+ * 出站邮件三层降级：
+ * 1. SMTP 直连（SMTP_USER/SMTP_PASS，nodemailer 走 Workers TCP socket；
+ *    host/port 未配时按账号域推断常见服务商）——推荐，用户只填两个 secret。
+ * 2. MAIL_WEBHOOK_URL（POST {to, subject, text} 的通用 webhook 契约），
+ *    部署侧接任意自有出口。
+ * 3. 都未配置 → 返回 false，调用方降级 dev_code（仅限本地开发自测）。
  */
 
 import { sha256Hex } from './lib/hash';
@@ -18,6 +18,81 @@ export const PLAYER = {
   displayNameMax: 16,
   bioMax: 60,
 } as const;
+
+/** 按账号域推断常见服务商的 SMTP 端点（省得手填 host/port） */
+function inferSmtpEndpoint(email: string): { host: string; port: number; secure: boolean } | null {
+  const domain = email.split('@')[1]?.toLowerCase();
+  switch (domain) {
+    case 'gmail.com':
+    case 'googlemail.com':
+      return { host: 'smtp.gmail.com', port: 465, secure: true };
+    case 'outlook.com':
+    case 'hotmail.com':
+    case 'live.com':
+      return { host: 'smtp-mail.outlook.com', port: 587, secure: false };
+    case 'qq.com':
+      return { host: 'smtp.qq.com', port: 465, secure: true };
+    case '163.com':
+      return { host: 'smtp.163.com', port: 465, secure: true };
+    case 'icloud.com':
+      return { host: 'smtp.mail.me.com', port: 587, secure: false };
+    default:
+      return null;
+  }
+}
+
+export interface MailMessage {
+  to: string;
+  subject: string;
+  text: string;
+}
+
+/** 网络失败不阻塞主流程——收不到码的用户可以重新发码。 */
+export async function sendMail(env: Cloudflare.Env, message: MailMessage): Promise<boolean> {
+  const smtpUser = env.SMTP_USER?.trim();
+  const smtpPass = env.SMTP_PASS;
+  if (smtpUser && smtpPass) {
+    try {
+      // nodemailer 支持 Workers（nodejs_compat + cloudflare:sockets）；
+      // 动态 import：未配置 SMTP 的部署完全不加载，行为与旧版一致。
+      const nodemailer = await import('nodemailer');
+      const inferred = inferSmtpEndpoint(smtpUser);
+      const host = env.SMTP_HOST?.trim() || inferred?.host;
+      if (!host) return false;
+      const secure = env.SMTP_PORT?.trim() ? Number(env.SMTP_PORT) === 465 : (inferred?.secure ?? false);
+      const port = env.SMTP_PORT?.trim() ? Number(env.SMTP_PORT) : (inferred?.port ?? (secure ? 465 : 587));
+      const transport = nodemailer.createTransport({
+        host,
+        port,
+        secure,
+        auth: { user: smtpUser, pass: smtpPass },
+      });
+      await transport.sendMail({
+        from: env.SMTP_FROM?.trim() || smtpUser,
+        to: message.to,
+        subject: message.subject,
+        text: message.text,
+      });
+      return true;
+    } catch (error) {
+      console.error('[community-api] smtp send failed:', error);
+      return false;
+    }
+  }
+
+  const url = env.MAIL_WEBHOOK_URL?.trim();
+  if (!url) return false;
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(message),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -50,31 +125,6 @@ export function isValidEmail(value: unknown): value is string {
 }
 
 type PlayerResult<T> = { ok: true; value: T } | { ok: false; httpStatus: 400 | 403 | 429; error: string };
-
-export interface MailMessage {
-  to: string;
-  subject: string;
-  text: string;
-}
-
-/**
- * 出站邮件通用接口。MAIL_WEBHOOK_URL 未配置时静默失败（调用方决定是否
- * 降级为 dev_code）；网络失败不阻塞主流程——收不到码的 用户可重新发码。
- */
-export async function sendMail(env: Cloudflare.Env, message: MailMessage): Promise<boolean> {
-  const url = env.MAIL_WEBHOOK_URL?.trim();
-  if (!url) return false;
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(message),
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
 
 function generateCode(): string {
   const buffer = new Uint32Array(1);

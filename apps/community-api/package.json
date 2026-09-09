@@ -10,13 +10,15 @@
     "deploy": "wrangler deploy --config wrangler.local.jsonc"
   },
   "dependencies": {
+    "@feedsieve/community-lists": "workspace:*",
     "hono": "^4.13.5",
     "jose": "^6.1.3",
-    "@feedsieve/community-lists": "workspace:*"
+    "nodemailer": "^7.0.13"
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "^1.1.0",
     "@cloudflare/workers-types": "^5.20260826.1",
+    "@types/nodemailer": "^8.0.1",
     "vitest": "^4.1.11",
     "wrangler": "^4.126.0"
   }

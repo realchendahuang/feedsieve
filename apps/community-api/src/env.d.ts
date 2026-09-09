@@ -28,6 +28,12 @@ declare namespace Cloudflare {
     AGENT_API_KEYS?: string;
     /** 出站邮件 webhook（POST {to, subject, text}）；缺省 = bind-email 降级返回 dev_code（仅限开发） */
     MAIL_WEBHOOK_URL?: string;
+    /** SMTP 直连发信（优先于 webhook）：SMTP_USER + SMTP_PASS 即可，host/port 按账号域自动推断 */
+    SMTP_HOST?: string;
+    SMTP_PORT?: string;
+    SMTP_USER?: string;
+    SMTP_PASS?: string;
+    SMTP_FROM?: string;
     TEST_MIGRATIONS: import('cloudflare:test').D1Migration[];
   }
 }
