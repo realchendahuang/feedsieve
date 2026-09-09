@@ -397,3 +397,39 @@ describe('heuristics are individually explainable', () => {
     }
   });
 });
+
+describe('heuristic: weak-signal-combo', () => {
+  const GARBLED = 'mhmsezruwzxjwl';
+
+  it('fires only with a garbled-batch anchor plus at least one content signal', () => {
+    const combo = (input: Parameters<typeof detect>[0]) => detect(input)?.ruleId;
+    expect(combo({ handle: GARBLED, text: '今晚的茶有点涩' })).toBe('weak-signal-combo');
+    expect(combo({ handle: GARBLED, text: '🍑🍑🍑🍑🍑' })).toBe('weak-signal-combo');
+    expect(combo({ handle: GARBLED, text: '哈哈哈哈哈哈哈哈' })).toBe('weak-signal-combo');
+    expect(combo({ handle: GARBLED, displayName: 'Rose🌸🌸', text: 'hi' })).toBe('weak-signal-combo');
+  });
+
+  it('never fires on weak content signals alone', () => {
+    expect(detect({ handle: 'rosie_bakes', displayName: 'Rose🌸🌸', text: '❤️❤️❤️❤️' })).toBeNull();
+    expect(detect({ handle: 'tea', text: '今晚的茶有点涩' })).toBeNull();
+  });
+
+  it('anchor without any content signal stays clean', () => {
+    expect(detect({ handle: GARBLED, text: '今天天气不错，出来走走' })).toBeNull();
+    expect(detect({ handle: GARBLED, text: '' })).toBeNull();
+  });
+
+  it('never fires before stronger single-signal rules', () => {
+    // 玩得开 + 涩 组合已由 porn-bait-zh 先行命中并解释
+    expect(detect({ handle: GARBLED, text: '玩得开 好涩 🍑' })?.ruleId).toBe('porn-bait-zh');
+    // 单词沙拉形状优先
+    expect(
+      detect({ handle: GARBLED, displayName: '点主页🥳专业牵线💖全国1-5线覆盖', text: 'sea\nhave\n🌞\nhad\nplan' })
+        ?.ruleId,
+    ).toBe('word-salad');
+  });
+
+  it('punctuation runs and URLs do not count as repeated filler', () => {
+    expect(detect({ handle: GARBLED, text: '哇!!!!!太棒了吧!!! https://x.com/aaaa' })).toBeNull();
+  });
+});

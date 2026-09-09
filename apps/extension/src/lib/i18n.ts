@@ -465,6 +465,9 @@ export function localizedDetectionReason(
         return '内容包含成人引流特征';
       case 'adult-traffic-bait':
         return '内容包含成人引流话术';
+      case 'weak-signal-combo':
+        // 规则理由本身就是证据清单（「批量注册特征 + …」），直接透出
+        return detection.reason;
       default:
         return '检测到可疑垃圾特征';
     }
@@ -492,6 +495,8 @@ export function localizedDetectionReason(
       return 'Adult-content bait wording';
     case 'adult-traffic-bait':
       return 'Adult-content traffic bait';
+    case 'weak-signal-combo':
+      return 'Batch-registration account with suspicious content';
     default:
       return 'Spam pattern detected';
   }

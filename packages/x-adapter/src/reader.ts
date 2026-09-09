@@ -41,11 +41,37 @@ function displayNameStripPattern(handle: string): RegExp {
   return pattern;
 }
 
+/**
+ * 收集元素的可见文本。
+ * X 把 emoji 渲染成 <img alt="🌸">，textContent 会整段漏掉，导致依赖
+ * emoji 的内容信号（擦边 marker、纯 emoji 正文、装饰昵称）拿不到输入；
+ * 遍历时必须把 img 的 alt 一并拼回。
+ */
+function visibleText(el: Element | null): string {
+  if (!el) {
+    return '';
+  }
+  let out = '';
+  const walker = el.ownerDocument.createTreeWalker(el);
+  let node: Node | null;
+  while ((node = walker.nextNode())) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      out += node.nodeValue ?? '';
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      const e = node as Element;
+      if (e.tagName === 'IMG') {
+        out += e.getAttribute('alt') ?? '';
+      }
+    }
+  }
+  return out.replace(/\s+/g, ' ').trim();
+}
+
 function extractDisplayName(area: Element | null, handle: string): string | undefined {
   if (!area) {
     return undefined;
   }
-  const full = area.textContent ?? '';
+  const full = visibleText(area);
   // X 的展示名不允许含 @，所以所有 @handle 出现都可以安全剥掉
   const withoutHandle = full.replace(displayNameStripPattern(handle), '');
   const cleaned = withoutHandle
@@ -80,12 +106,16 @@ function isInsideQuotedPost(element: Element, article: Element, articlePostId?: 
 }
 
 function extractOwnText(article: Element, postId?: string): string {
+  const parts: string[] = [];
   for (const textEl of article.querySelectorAll(tweetSelectors.text)) {
     if (!isInsideQuotedPost(textEl, article, postId)) {
-      return textEl.textContent ?? '';
+      const text = visibleText(textEl);
+      if (text) {
+        parts.push(text);
+      }
     }
   }
-  return '';
+  return parts.join(' ');
 }
 
 function extractExternalLinks(article: Element, postId?: string): FeedItem['links'] {

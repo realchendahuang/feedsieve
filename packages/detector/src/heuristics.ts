@@ -227,6 +227,77 @@ const pornBaitZh: HeuristicRule = {
   },
 };
 
+/**
+ * 弱信号组合层。
+ *
+ * 单条内容弱信号（单个擦边 marker、纯 emoji 正文、装饰昵称、重复字符）在
+ * 正常账号里都常见，任何一条单发都会成批误标，因此它们永远不单独成立；
+ * 只有叠加在「账号形状异常」的锚点上才参与判定。
+ *
+ * 锚点用乱码批量注册号（isGarbledBatchHandle）：真人 handle 至多偶中单条
+ * 特征，机器批量号两条全中。锚点 + ≥1 条内容佐证才标——对应已实证的
+ * 2026-09 批量黄推形态（乱码号 + 变体话术/emoji 灌水）。
+ * 排在 DEFAULT_HEURISTICS 末位：任何单发规则先命中先解释，本规则只收尾。
+ */
+const EMOJI_CHAR_RE = /\p{Extended_Pictographic}/gu;
+/** emoji 与紧随的变体选择符 / ZWJ 一起剥，剩余符号（© 等）与非空白全算残留。 */
+const EMOJI_SEQUENCE_RE = /\p{Extended_Pictographic}[\u{FE0E}\u{FE0F}\u{200D}]*/gu;
+const LEFTOVER_SYMBOL_RE = /[\p{S}\u{200B}-\u{200F}\u{2060}\u{FEFF}\s]/gu;
+const URL_STRIP_RE = /https?:\/\/\S+|\b[\w-]+(?:\.[\w-]+)+\/\S*/gi;
+/** 重复字符只认非标点/符号/空白的连续 4 连（!!!、……、--- 是正常用法）。 */
+const REPEATED_CHAR_RE = /([^\s\p{P}\p{S}])\1{3,}/u;
+
+function countEmoji(text: string): number {
+  return (text.match(EMOJI_CHAR_RE)?.length ?? 0);
+}
+
+function isPureEmojiText(text: string): boolean {
+  if (!countEmoji(text)) {
+    return false;
+  }
+  const remaining = text
+    .replace(EMOJI_SEQUENCE_RE, '')
+    .replace(LEFTOVER_SYMBOL_RE, '')
+    .trim();
+  return remaining === '';
+}
+
+function hasRepeatedChars(text: string): boolean {
+  // 先剥 URL：网址里的连续字符（ahhhh、//）不是话术信号
+  return REPEATED_CHAR_RE.test(text.replace(URL_STRIP_RE, ' '));
+}
+
+const weakSignalCombo: HeuristicRule = {
+  id: 'weak-signal-combo',
+  check(input) {
+    if (!isGarbledBatchHandle(input.handle)) {
+      return null;
+    }
+    const evidence: string[] = [];
+    const text = [input.text, input.bio].filter(Boolean).join('\n');
+    if (text) {
+      // 单个擦边 marker（≥2 条已由 porn-bait-zh 先行命中，这里只收尾）
+      const marker = EROGENOUS_MARKERS.find(([pattern]) => pattern.test(text));
+      if (marker) {
+        evidence.push(`擦边特征（${marker[1]}）`);
+      } else if (isPureEmojiText(text)) {
+        evidence.push('纯 emoji 正文');
+      }
+      if (hasRepeatedChars(text)) {
+        evidence.push('重复灌水字符');
+      }
+    }
+    const nameEmoji = countEmoji(input.displayName?.trim() ?? '');
+    if (nameEmoji >= 2) {
+      evidence.push(`装饰昵称（${nameEmoji} 个 emoji）`);
+    }
+    if (evidence.length === 0) {
+      return null;
+    }
+    return `批量注册特征 + ${evidence.join(' + ')}`;
+  },
+};
+
 /** 默认启发式集合，按优先级排列（前面的先命中先解释）。 */
 export const DEFAULT_HEURISTICS: readonly HeuristicRule[] = [
   defaultNameDigits,
@@ -234,4 +305,5 @@ export const DEFAULT_HEURISTICS: readonly HeuristicRule[] = [
   spamLinkHint,
   templatedText,
   wordSalad,
+  weakSignalCombo,
 ];

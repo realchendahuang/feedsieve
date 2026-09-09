@@ -173,6 +173,10 @@ export function categoryFromDetection(
       return 'scam_phishing';
     case 'templated-text':
       return 'copy_paste';
+    case 'weak-signal-combo':
+      // 佐证跨分类（擦边偏黄推、纯 emoji/复读偏机器号），不冒充具体分类，
+      // 证据细节在 reason 文本里，分类升级留给后续数据
+      return 'other';
     default:
       return 'other';
   }

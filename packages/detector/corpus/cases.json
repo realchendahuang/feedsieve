@@ -253,6 +253,36 @@
       "note": "误伤守卫：纯字母长块 handle（qwertyuiopas）但稀有字母仅 1 → 乱码佐证不命中",
       "input": { "handle": "qwertyuiopas", "displayName": "Sam", "text": "some days feel hollow 🖤" },
       "expected": null
+    },
+    {
+      "id": "combo-garbled-erogenous",
+      "note": "弱信号组合：乱码批量号 + 单个擦边 marker（不足 2 条，porn-bait-zh 不发）→ 组合命中",
+      "input": { "handle": "mhmsezruwzxjwl", "displayName": "mhmsez ruwzw", "text": "今晚的茶有点涩" },
+      "expected": "weak-signal-combo"
+    },
+    {
+      "id": "combo-garbled-pure-emoji",
+      "note": "弱信号组合：乱码批量号 + emoji 灌水正文（擦边 emoji 同时命中 marker）",
+      "input": { "handle": "mhmsezruwzxjwl", "displayName": "mhmsez ruwzw", "text": "🍑🍑🍑🍑🍑" },
+      "expected": "weak-signal-combo"
+    },
+    {
+      "id": "combo-garbled-repeated",
+      "note": "弱信号组合：乱码批量号 + 重复灌水字符（非标点 4 连以上）",
+      "input": { "handle": "mhmsezruwzxjwl", "text": "哈哈哈哈哈哈哈哈" },
+      "expected": "weak-signal-combo"
+    },
+    {
+      "id": "combo-clean-handle-weak-content",
+      "note": "误伤守卫：内容弱信号再多（纯 emoji 正文 + 装饰昵称）也无账号形状锚点，不得单独成立",
+      "input": { "handle": "rosie_bakes", "displayName": "Rose🌸🌸", "text": "❤️❤️❤️❤️" },
+      "expected": null
+    },
+    {
+      "id": "combo-garbled-plain",
+      "note": "误伤守卫：乱码锚点 + 普通日常内容 → 无内容佐证，不命中",
+      "input": { "handle": "mhmsezruwzxjwl", "displayName": "mhmsez ruwzw", "text": "今天天气不错，出来走走" },
+      "expected": null
     }
 ]
 }

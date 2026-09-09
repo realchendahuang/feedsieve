@@ -112,4 +112,50 @@ describe('extractFeedItem', () => {
     const item = extractFeedItem(article);
     expect(item?.text).toBe('This quoted claim looks suspicious.');
   });
+
+  // X 把 emoji 渲染成 <img alt="🌸">，textContent 会整段漏掉；
+  // 擦边 marker、纯 emoji 正文、装饰昵称等信号全靠这段可见文本。
+  it('includes emoji rendered as img alt in post text', () => {
+    const article = renderTweet(`
+      <div data-testid="User-Name">
+        <a href="/emojiposter"><span>Peach Poster</span></a>
+        <a href="/emojiposter"><span>@emojiposter</span></a>
+      </div>
+      <a href="/emojiposter/status/555"><time>now</time></a>
+      <div data-testid="tweetText">今晚的茶有点涩 <img src="/emoji/peach.png" alt="🍑"></div>
+    `);
+    const item = extractFeedItem(article);
+    expect(item?.text).toBe('今晚的茶有点涩 🍑');
+  });
+
+  it('joins multiple own text nodes but excludes quoted ones', () => {
+    const article = renderTweet(`
+      <div data-testid="User-Name">
+        <a href="/threader"><span>Threader</span></a>
+        <a href="/threader"><span>@threader</span></a>
+      </div>
+      <a href="/threader/status/666"><time>now</time></a>
+      <div data-testid="tweetText">first part <img src="/emoji/fire.png" alt="🔥"></div>
+      <div data-testid="tweetText">second part</div>
+      <div role="link">
+        <a href="/spamaccount/status/777"><time>quoted</time></a>
+        <div data-testid="tweetText"><img src="/emoji/peach.png" alt="🍑"></div>
+      </div>
+    `);
+    const item = extractFeedItem(article);
+    expect(item?.text).toBe('first part 🔥 second part');
+  });
+
+  it('includes emoji rendered as img alt in display name', () => {
+    const article = renderTweet(`
+      <div data-testid="User-Name">
+        <a href="/flowerry"><span>Rose <img src="/emoji/blossom.png" alt="🌸"><img src="/emoji/blossom.png" alt="🌸"></span></a>
+        <a href="/flowerry"><span>@flowerry</span></a>
+      </div>
+      <a href="/flowerry/status/888"><time>now</time></a>
+      <div data-testid="tweetText">hello</div>
+    `);
+    const item = extractFeedItem(article);
+    expect(item?.author.displayName).toBe('Rose 🌸🌸');
+  });
 });
