@@ -7,6 +7,7 @@ export default defineConfig({
       'apps/*/src/**/*.test.ts',
       'apps/*/entrypoints/**/*.test.ts',
       'apps/*/entrypoints/**/*.test.tsx',
+      'scripts/**/*.test.ts',
     ],
     // community-api 用 @cloudflare/vitest-plugin（workerd 运行时）跑自己的配置，
     // 不能被根 vitest 的 happy-dom 环境误收

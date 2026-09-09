@@ -433,3 +433,43 @@ describe('heuristic: weak-signal-combo', () => {
     expect(detect({ handle: GARBLED, text: '哇!!!!!太棒了吧!!! https://x.com/aaaa' })).toBeNull();
   });
 });
+
+describe('heuristic: weak-signal-combo 数字形态锚点与沙拉佐证', () => {
+  it('digit-shape anchors need summed sub-signals, then still require content evidence', () => {
+    const combo = (input: Parameters<typeof detect>[0]) => detect(input)?.ruleId;
+    // jenny83922：长数字段 + 高数字比 → 锚点；配 emoji 灌水 → 标
+    expect(combo({ handle: 'jenny83922', text: '🍑🍑🍑🍑🍑' })).toBe('weak-signal-combo');
+    // 短数字尾缀（john2024 型）到不了锚点门槛
+    expect(combo({ handle: 'john2024', displayName: 'John', text: '🍑🍑🍑🍑🍑' })).toBeUndefined();
+    // 字母数字交替是强子信号
+    expect(combo({ handle: 'a1b2c3d4e5', text: '哈哈哈哈哈哈哈哈' })).toBe('weak-signal-combo');
+  });
+
+  it('word-salad shape counts as content evidence for the combo layer', () => {
+    // word-salad 规则缺隐语/乱码佐证不发；组合层用数字形态锚点收口同一家族
+    expect(detect({ handle: 'ab12345678', text: 'hard fire 💙 lift road' })?.ruleId).toBe(
+      'weak-signal-combo',
+    );
+    // 无锚点时沙拉形状单独永不成立
+    expect(detect({ handle: 'mood_writer', text: 'some days feel hollow 🖤' })).toBeNull();
+  });
+
+  it('traffic-hint list no longer matches benign single characters (约稿/私房菜)', () => {
+    expect(
+      detect({ handle: 'editor_wang', displayName: '自由约稿接单', text: 'some days feel hollow 🖤' }),
+    ).toBeNull();
+    expect(
+      detect({ handle: 'chef_liu', displayName: '私房菜主理人', text: 'some days feel 🖤 hollow' }),
+    ).toBeNull();
+  });
+
+  it('garbled handles still route salad text to word-salad (single-signal explains first)', () => {
+    expect(
+      detect({
+        handle: 'mhmsezruwzxjwl',
+        displayName: 'mhmsez ruwzw',
+        text: 'sea have 🌞 had plan',
+      })?.ruleId,
+    ).toBe('word-salad');
+  });
+});

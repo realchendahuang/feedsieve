@@ -43,6 +43,7 @@ import {
 } from '../src/lib/contribute';
 import { getCommunitySettings } from '../src/lib/community-store';
 import { runDetectionPipeline, type BlockEvidence } from '../src/lib/detection-pipeline';
+import { recordDetection } from '../src/lib/detection-log';
 import {
   clearFollowingSyncDraft,
   getFollowingAllowlist,
@@ -641,6 +642,16 @@ export default defineContentScript({
         attachManualAction(article as HTMLElement, handle, result.evidence);
         return;
       }
+
+      // 本地规则质量观测：只有真正到达页面的命中才计数（见 detection-log.ts）
+      void recordDetection({
+        handle,
+        ruleId: result.detection!.ruleId ?? result.detection!.source,
+        source: result.detection!.source,
+        category: result.category ?? 'other',
+        reason: result.detection!.reason,
+        fingerprint: result.evidence.contentFingerprint,
+      });
 
       // 标注打在外层时间线格子上（PureTwitter 同款目标层）；找不到才退回 article
       const cell = article.closest(tweetSelectors.timelineCell) ?? article;

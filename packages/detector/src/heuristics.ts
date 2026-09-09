@@ -101,12 +101,8 @@ const templatedText: HeuristicRule = {
 };
 
 /**
- * 「单词沙拉」模板（2026-09-07 真机样本：hard/fire/💙/lift/road、
- * make/forgive/✅/who/happy 等批量注册号连续发布；正文 = 随机小写英文单词 +
- * emoji，无标点/数字/链接/大写，单词全是字典词，无法做成关键词包）。
- *
- * 结构单独出现会误伤「心情贴」（some days feel 🖤 hollow 这类真实句式），
- * 因此强制账号侧佐证，两条通道满足其一：
+ * wordSalad 规则（2026-09-07 真机样本起家的单词沙拉模板检测）。
+ * 形状判定见 isWordSaladShape；本规则负责账号侧佐证，两条通道满足其一：
  * 1. 昵称/简介带中文引流隐语（与线上词库同语义的小集合，不自建词包）；
  * 2. 乱码批量 handle（2026-09-08 真机样本 mhmsezruwzxjwl：该批不写引流话术，
  *    昵称本身就是机器随机字母）。
@@ -116,7 +112,47 @@ const templatedText: HeuristicRule = {
  */
 const WORD_SALAD_TOKEN_RE = /^[a-z]{2,12}$/;
 const WORD_SALAD_SYMBOL_RE = /^[\p{S}]{1,3}$/u;
-const WORD_SALAD_TRAFFIC_HINT_RE = /主页|简介|牵线|福利|同城|上门|私|全国|空降|约/i;
+/**
+ * 黄推引流隐语佐证表。只收多字词与明确组合：
+ * 单字「约」/「私」会误中「约稿」「私房菜」等正常昵称（2026-09-09 修正），
+ * 引流语义靠「约炮/私信/私聊/私我」等完整词表达。
+ */
+const WORD_SALAD_TRAFFIC_HINT_RE =
+  /主页|简介|牵线|福利|同城|上门|全国|空降|约炮|约啪|私信|私聊|私我/i;
+/**
+ * 「单词沙拉」形状判定（2026-09-07 真机样本：hard/fire/💙/lift/road、
+ * make/forgive/✅/who/happy 等批量注册号连续发布；正文 = 随机小写英文单词 +
+ * emoji，无标点/数字/链接/大写，单词全是字典词，无法做成关键词包）。
+ * 形状单独出现会误伤「心情贴」（some days feel 🖤 hollow 这类真实句式），
+ * 判定必须叠加账号侧佐证——由 wordSalad（隐语昵称/乱码 handle）与
+ * weak-signal-combo（乱码/数字形态锚点 + 形状佐证）各自收口。
+ */
+export function isWordSaladShape(text: string): boolean {
+  const trimmed = text?.trim();
+  if (!trimmed) {
+    return false;
+  }
+  const tokens = trimmed.split(/\s+/);
+  if (tokens.length < 5 || tokens.length > 9) {
+    return false;
+  }
+  let words = 0;
+  let symbols = 0;
+  for (const token of tokens) {
+    if (WORD_SALAD_TOKEN_RE.test(token)) {
+      words += 1;
+      continue;
+    }
+    if (WORD_SALAD_SYMBOL_RE.test(token)) {
+      symbols += 1;
+      continue;
+    }
+    // 任一 token 含数字/标点/大写/中文 → 不是该形状
+    return false;
+  }
+  return words >= 4 && symbols >= 1;
+}
+
 /**
  * 乱码 handle 佐证 = 连续 ≥12 个纯小写字母（无数字/下划线/分隔）+ 乱码双征：
  * 稀有字母 ≥2（j/q/v/x/z）且最长辅音串 ≥4。均匀随机字母块两条都会撞上；
@@ -157,25 +193,7 @@ const wordSalad: HeuristicRule = {
     if (!text || (input.links?.length ?? 0) > 0) {
       return null;
     }
-    const tokens = text.split(/\s+/);
-    if (tokens.length < 5 || tokens.length > 9) {
-      return null;
-    }
-    let words = 0;
-    let symbols = 0;
-    for (const token of tokens) {
-      if (WORD_SALAD_TOKEN_RE.test(token)) {
-        words += 1;
-        continue;
-      }
-      if (WORD_SALAD_SYMBOL_RE.test(token)) {
-        symbols += 1;
-        continue;
-      }
-      // 任一 token 含数字/标点/大写/中文 → 不是该模板
-      return null;
-    }
-    if (words < 4 || symbols < 1) {
+    if (!isWordSaladShape(text)) {
       return null;
     }
     const side = [input.displayName, input.bio].filter(Boolean).join(' ');
@@ -230,13 +248,14 @@ const pornBaitZh: HeuristicRule = {
 /**
  * 弱信号组合层。
  *
- * 单条内容弱信号（单个擦边 marker、纯 emoji 正文、装饰昵称、重复字符）在
- * 正常账号里都常见，任何一条单发都会成批误标，因此它们永远不单独成立；
- * 只有叠加在「账号形状异常」的锚点上才参与判定。
+ * 单条内容弱信号（单个擦边 marker、纯 emoji 正文、装饰昵称、重复字符、
+ * 单词沙拉形状）在正常账号里都常见，任何一条单发都会成批误标，因此它们
+ * 永远不单独成立；只有叠加在「账号形状异常」的锚点上才参与判定。
  *
- * 锚点用乱码批量注册号（isGarbledBatchHandle）：真人 handle 至多偶中单条
- * 特征，机器批量号两条全中。锚点 + ≥1 条内容佐证才标——对应已实证的
- * 2026-09 批量黄推形态（乱码号 + 变体话术/emoji 灌水）。
+ * 锚点两个家族（见各自函数注释）：乱码批量号（isGarbledBatchHandle）与
+ * 数字形态批量号（isDigitPatternBatchHandle，子信号求和制）。锚点 + ≥1 条
+ * 内容佐证才标——对应已实证的批量黄推形态（乱码/数字尾缀号 + 变体话术/
+ * emoji 灌水/沙拉正文）。
  * 排在 DEFAULT_HEURISTICS 末位：任何单发规则先命中先解释，本规则只收尾。
  */
 const EMOJI_CHAR_RE = /\p{Extended_Pictographic}/gu;
@@ -267,10 +286,61 @@ function hasRepeatedChars(text: string): boolean {
   return REPEATED_CHAR_RE.test(text.replace(URL_STRIP_RE, ' '));
 }
 
+/**
+ * 数字形态批量号锚点（子信号求和制，阈下不成立）。
+ *
+ * 批量注册号除「纯字母乱码」外的另一大形态是 name+digits（jenny83922、
+ * ab12345678）与字母数字交替（a1b2c3d4e5）。单条子信号在真实 handle 里
+ * 都常见（john2024、mary_smith、admin888），求和到门槛才当锚点：
+ * - ≥5 位连续数字段（机器尾缀）+2
+ * - 字母数字严格交替 ≥4 组（a1b2c3d4）+3
+ * - 数字占比 >45%（jenny83922=0.5 中，john2024=0.5 不中——前者有长数字段
+ *   叠加，后者只有短段，靠占比门槛压掉纯短尾缀）+1
+ * - 长度 ≥12 +1
+ * - 去数字后剩余字母段 ≥5 且全无元音（zxcvbn 型）+2
+ * 门槛 3：ab12345678（2+1）、jenny83922（2+1）过线；
+ * john2024（1）、mary123（0）、music_lover2024（0）到不了。
+ * 锚点只意味着「账号形状异常」，仍须叠加内容佐证才标注。
+ */
+const DIGIT_CLUSTER_RE = /\d+/g;
+const ALTERNATION_RE = /^(?:[a-z]\d){4,}$|^(?:\d[a-z]){4,}$/;
+
+export function isDigitPatternBatchHandle(handle: string | undefined): boolean {
+  const normalized = handle?.trim().replace(/^@+/, '').toLowerCase() ?? '';
+  if (!normalized || !/\d/.test(normalized)) {
+    return false;
+  }
+  let suspicion = 0;
+  const clusters = normalized.match(DIGIT_CLUSTER_RE) ?? [];
+  if (Math.max(...clusters.map((d) => d.length)) >= 5) {
+    suspicion += 2;
+  }
+  if (ALTERNATION_RE.test(normalized)) {
+    suspicion += 3;
+  }
+  const digitCount = clusters.reduce((sum, d) => sum + d.length, 0);
+  if (digitCount / normalized.length > 0.45) {
+    suspicion += 1;
+  }
+  if (normalized.length >= 12) {
+    suspicion += 1;
+  }
+  const lettersOnly = normalized.replace(/\d+/g, '');
+  if (lettersOnly.length >= 5 && !/[aeiou]/.test(lettersOnly)) {
+    suspicion += 2;
+  }
+  return suspicion >= 3;
+}
+
+/** 组合层锚点：乱码批量号或数字形态批量号。 */
+export function hasBatchHandleAnchor(handle: string | undefined): boolean {
+  return isGarbledBatchHandle(handle) || isDigitPatternBatchHandle(handle);
+}
+
 const weakSignalCombo: HeuristicRule = {
   id: 'weak-signal-combo',
   check(input) {
-    if (!isGarbledBatchHandle(input.handle)) {
+    if (!hasBatchHandleAnchor(input.handle)) {
       return null;
     }
     const evidence: string[] = [];
@@ -282,6 +352,9 @@ const weakSignalCombo: HeuristicRule = {
         evidence.push(`擦边特征（${marker[1]}）`);
       } else if (isPureEmojiText(text)) {
         evidence.push('纯 emoji 正文');
+      }
+      if (isWordSaladShape(text)) {
+        evidence.push('英文单词沙拉形状');
       }
       if (hasRepeatedChars(text)) {
         evidence.push('重复灌水字符');

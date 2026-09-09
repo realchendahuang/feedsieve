@@ -283,6 +283,42 @@
       "note": "误伤守卫：乱码锚点 + 普通日常内容 → 无内容佐证，不命中",
       "input": { "handle": "mhmsezruwzxjwl", "displayName": "mhmsez ruwzw", "text": "今天天气不错，出来走走" },
       "expected": null
+    },
+    {
+      "id": "combo-digit-anchor-pure-emoji",
+      "note": "数字形态锚点（jenny83922 型：长数字段+高数字比求和过线）+ emoji 灌水佐证",
+      "input": { "handle": "jenny83922", "text": "🍑🍑🍑🍑🍑" },
+      "expected": "weak-signal-combo"
+    },
+    {
+      "id": "combo-digit-anchor-salad",
+      "note": "数字形态锚点 + 单词沙拉佐证（word-salad 规则因缺隐语/乱码佐证不发，组合层收口）",
+      "input": { "handle": "ab12345678", "text": "hard fire 💙 lift road" },
+      "expected": "weak-signal-combo"
+    },
+    {
+      "id": "combo-alternation-anchor-repeated",
+      "note": "字母数字交替锚点（a1b2c3d4 型）+ 重复灌水佐证",
+      "input": { "handle": "a1b2c3d4e5", "text": "哈哈哈哈哈哈哈哈" },
+      "expected": "weak-signal-combo"
+    },
+    {
+      "id": "combo-real-digits-handle-guard",
+      "note": "误伤守卫：短数字尾缀真实 handle（john2024 型，无长数字段/低占比）到不了锚点门槛",
+      "input": { "handle": "john2024", "displayName": "John", "text": "🍑🍑🍑🍑🍑" },
+      "expected": null
+    },
+    {
+      "id": "word-salad-editor-nickname-guard",
+      "note": "误伤守卫（2026-09-09 隐语表收窄）：「约稿」昵称不再是引流隐语，心情贴形状无佐证不标",
+      "input": { "handle": "editor_wang", "displayName": "自由约稿接单", "text": "some days feel hollow 🖤" },
+      "expected": null
+    },
+    {
+      "id": "word-salad-private-nickname-guard",
+      "note": "误伤守卫（同上）：「私房菜」昵称不再是引流隐语",
+      "input": { "handle": "chef_liu", "displayName": "私房菜主理人", "text": "some days feel 🖤 hollow" },
+      "expected": null
     }
 ]
 }
