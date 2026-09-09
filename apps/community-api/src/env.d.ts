@@ -26,6 +26,8 @@ declare namespace Cloudflare {
     DESTRUCTIVE_KILL_SWITCH?: string;
     /** Agent 维护通道密钥（`id:secret` 逗号分隔，secret ≥16 位）；缺省 = 该通道不可用 */
     AGENT_API_KEYS?: string;
+    /** 出站邮件 webhook（POST {to, subject, text}）；缺省 = bind-email 降级返回 dev_code（仅限开发） */
+    MAIL_WEBHOOK_URL?: string;
     TEST_MIGRATIONS: import('cloudflare:test').D1Migration[];
   }
 }

@@ -43,6 +43,9 @@ import {
   upsertAgentKeywordRule,
   upsertAgentMaintainerEntry,
 } from './agent-admin';
+import { hunterPageHtml } from './hunter-page';
+import { LEADERBOARD, getLeaderboard, markLeaderboardDirty, settleDueSeasons } from './leaderboard';
+import { bindEmail, getProfile, updateProfile, verifyEmail } from './player';
 import { MAINTAINER_CATEGORIES } from './maintainer-blocklist';
 import { processRetractionBatch } from './labels';
 import { POLICY, processReportBatch, publicPolicy } from './reports';
@@ -120,6 +123,7 @@ export function createApp() {
     // 快照异步化：只落库并置脏，由 cron 每小时合并生成（当日一版守卫，见 snapshot.ts day-once）；
     // 响应返回当前有效版本。
     await markSnapshotDirty(c.env);
+    await markLeaderboardDirty(c.env);
     return c.json({
       policy: {
         formula: 'block_votes - false_positive_votes',
@@ -513,6 +517,7 @@ export function createApp() {
       return c.json({ error: result.error }, result.httpStatus);
     }
     await markSnapshotDirty(c.env);
+    await markLeaderboardDirty(c.env);
     return c.json({ results: result.results, snapshot_version: await getLatestSnapshotVersion(c.env) });
   });
 
@@ -523,6 +528,7 @@ export function createApp() {
       return c.json({ error: result.error }, result.httpStatus);
     }
     await markSnapshotDirty(c.env);
+    await markLeaderboardDirty(c.env);
     return c.json({ results: result.results, snapshot_version: await getLatestSnapshotVersion(c.env) });
   });
 
@@ -530,6 +536,75 @@ export function createApp() {
   app.get('/v1/policy', (c) => {
     c.header('Cache-Control', 'no-store');
     return c.json(publicPolicy());
+  });
+
+  // 打野排位赛榜单（脏标记懒重算，读这条就是实时口径）。
+  // 隐私：installation_id / me 前缀都走 POST body，不进 URL 与边缘访问日志；
+  // me 是加盐哈希前缀（不可逆），只用于定位高亮，无任何敏感操作。
+  app.post('/v1/leaderboard', async (c) => {
+    const body: unknown = await c.req.json().catch(() => undefined);
+    let mePrefix: string | null = null;
+    if (typeof body === 'object' && body !== null) {
+      const b = body as Record<string, unknown>;
+      if (
+        typeof b.installation_id === 'string' &&
+        b.installation_id.length >= 8 &&
+        b.installation_id.length <= 128
+      ) {
+        mePrefix = (await hashInstallationId(c.env.INSTALLATION_SALT, b.installation_id)).slice(0, 12);
+      } else if (typeof b.me === 'string' && /^[0-9a-f]{12}$/.test(b.me)) {
+        mePrefix = b.me;
+      }
+    }
+    const data = await getLeaderboard(c.env);
+    let me: (Record<string, unknown> & { rank: number }) | null = null;
+    if (mePrefix) {
+      const rank = data.rows.findIndex((row) => row.id.startsWith(mePrefix));
+      if (rank >= 0) me = { ...data.rows[rank], rank: rank + 1 };
+    }
+    c.header('Cache-Control', 'no-store');
+    // 公开面只暴露加盐哈希前 12 位（me 匹配粒度），完整哈希不出网
+    const trim = (row: Record<string, unknown>) => ({ ...row, id: String(row.id).slice(0, 12) });
+    return c.json({
+      season: data.season,
+      updated_at: data.computed_at,
+      server_time: Math.floor(Date.now() / 1000),
+      rows: data.rows.slice(0, LEADERBOARD.topSize).map((row, index) => trim({ ...row, rank: index + 1 })),
+      me: me ? trim(me) : null,
+      last_season: data.last_season ?? null,
+    });
+  });
+
+  // 猎手档案：邮箱验证码解锁昵称 / 一句话介绍（无密码无会话）
+  app.post('/v1/player/bind-email', async (c) => {
+    const result = await bindEmail(c.env, await c.req.json().catch(() => undefined));
+    if (!result.ok) return c.json({ error: result.error }, result.httpStatus);
+    c.header('Cache-Control', 'no-store');
+    return c.json(result.value);
+  });
+  app.post('/v1/player/verify', async (c) => {
+    const result = await verifyEmail(c.env, await c.req.json().catch(() => undefined));
+    if (!result.ok) return c.json({ error: result.error }, result.httpStatus);
+    c.header('Cache-Control', 'no-store');
+    return c.json(result.value);
+  });
+  app.post('/v1/player/profile', async (c) => {
+    const result = await updateProfile(c.env, await c.req.json().catch(() => undefined));
+    if (!result.ok) return c.json({ error: result.error }, result.httpStatus);
+    c.header('Cache-Control', 'no-store');
+    return c.json(result.value);
+  });
+  app.post('/v1/player/me', async (c) => {
+    const result = await getProfile(c.env, await c.req.json().catch(() => undefined));
+    if (!result.ok) return c.json({ error: result.error }, result.httpStatus);
+    c.header('Cache-Control', 'no-store');
+    return c.json(result.value);
+  });
+
+  // 打野周榜公开页：静态壳 + 客户端拉取，与 /v1/leaderboard 同一份数据。
+  app.get('/leaderboard', (c) => {
+    c.header('Cache-Control', 'no-store');
+    return c.html(hunterPageHtml());
   });
 
   // 我的贡献统计（v0.6）：按安装哈希查累计上报 / 被采纳 / 抢救数。
@@ -633,5 +708,12 @@ export default {
   },
   async scheduled(_controller, env) {
     await scheduledAutoPublish(env);
+    // 打野排位赛：跨周结算（称号发放）。失败只记日志，下小时重试。
+    try {
+      const settled = await settleDueSeasons(env);
+      if (settled > 0) console.info(`[community-api] cron settled seasons: ${settled}`);
+    } catch (error) {
+      console.error('[community-api] cron season settle failed:', error);
+    }
   },
 } satisfies ExportedHandler<Cloudflare.Env>;

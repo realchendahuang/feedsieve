@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { MARK_STRENGTHS, type MarkStrength } from '@feedsieve/community-lists';
 import { getContributionStats, getInstallationId, type ContributionStats } from '../../../src/lib/contribute';
+import HunterProfile from './HunterProfile';
 import {
   getKeywordRuleSettings,
   replaceKeywordRuleSettings,
@@ -234,6 +235,8 @@ export default function SettingsView({
 
   return (
     <div className="view-stack settings-view">
+      <HunterProfile language={language} notify={notify} />
+
       <section className="settings-card">
         <div className="settings-card-head">
           <h2>{t.autoMarking}</h2>

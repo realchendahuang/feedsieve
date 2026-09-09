@@ -2,6 +2,7 @@ import { hashInstallationId } from './lib/hash';
 import { deriveStatus } from './rating';
 import { computeConsensusV2, EMPTY_CONSENSUS_V2_INPUT, loadConsensusV2InputsByHandles } from './lib/consensus-v2';
 import { inferCategory, type CategoryVoteRow } from './category-inference';
+import { syncConsensusEvents, type ConsensusTransition } from './leaderboard';
 import { validateRescue } from './lib/validate';
 
 const MAX_LABEL_BATCH = 50;
@@ -71,9 +72,9 @@ export async function refreshAccountsFromLabels(
   const inClause = unique.map((_, index) => `?${index + 1}`).join(', ');
 
   const [accountRows, blockedRows, allowedRows, voteRows, evidence] = await Promise.all([
-    env.DB.prepare(`SELECT handle FROM accounts WHERE handle IN (${inClause})`)
+    env.DB.prepare(`SELECT handle, x_user_id FROM accounts WHERE handle IN (${inClause})`)
       .bind(...unique)
-      .all<{ handle: string }>(),
+      .all<{ handle: string; x_user_id: string | null }>(),
     env.DB.prepare(
       `SELECT handle, COUNT(*) AS n FROM active_labels
        WHERE handle IN (${inClause}) AND label = 'blocked' GROUP BY handle`,
@@ -101,6 +102,11 @@ export async function refreshAccountsFromLabels(
   ]);
 
   const existingHandles = new Set(accountRows.results.map((row) => row.handle));
+  const xUserIdByHandle = new Map(
+    accountRows.results.map((row) => [row.handle, row.x_user_id] as const),
+  );
+  // 共识锚点同步：本次收敛进/出 strong 的账号写入或删除击杀事件（打野排位赛计分）
+  const consensusTransitions = new Map<string, ConsensusTransition>();
   const blockedCount = new Map(blockedRows.results.map((row) => [row.handle, row.n] as const));
   const allowedCount = new Map(allowedRows.results.map((row) => [row.handle, row.n] as const));
   // 分类用证据推理，不再原样取票面多数（回声票会把 'other' 越滚越大）
@@ -128,6 +134,10 @@ export async function refreshAccountsFromLabels(
       votes: votesByHandle.get(handle) ?? [],
       hasDomainEvidence: evidence.domainEvidenceHandles.has(handle),
       hasFingerprintEvidence: evidence.fingerprintEvidenceHandles.has(handle),
+    });
+    consensusTransitions.set(handle, {
+      strong: status === 'strong',
+      xUserId: xUserIdByHandle.get(handle) ?? null,
     });
     statements.push(
       env.DB.prepare(
@@ -157,6 +167,7 @@ export async function refreshAccountsFromLabels(
   for (let index = 0; index < statements.length; index += D1_CHUNK) {
     await env.DB.batch(statements.slice(index, index + D1_CHUNK));
   }
+  await syncConsensusEvents(env, consensusTransitions);
   return existingHandles;
 }
 

@@ -1838,3 +1838,48 @@ input:focus-visible + span {
   color: var(--fs-muted);
   opacity: 0.75;
 }
+
+/* 打野战报线（popup 首页底部）：数字 + 榜单入口，无说明文字 */
+.hunter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--fs-surface);
+  border: 1px solid var(--fs-line);
+  font-size: 12.5px;
+  color: var(--fs-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.hunter-bar .hunter-stat {
+  white-space: nowrap;
+}
+
+.hunter-bar .hunter-link {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--fs-accent);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.hunter-bar .hunter-link:hover {
+  text-decoration: underline;
+}
+
+/* 猎手档案（设置区）：输入行与现有 setting-row 对齐 */
+.settings-fields input[type='text'],
+.settings-fields input[type='email'] {
+  flex: 1;
+  min-width: 0;
+}

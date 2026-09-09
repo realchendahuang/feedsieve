@@ -24,6 +24,7 @@ import CleanView from './views/CleanView';
 import ListsView from './views/ListsView';
 import KeywordsView from './views/KeywordsView';
 import SettingsView from './views/SettingsView';
+import HunterBar from './views/HunterBar';
 import { AppIcon, asPageMarkedList, type CommunityMeta, type PageMarkedItem } from './views/shared';
 
 type PopupView = 'clean' | 'lists' | 'keywords' | 'settings';
@@ -232,16 +233,19 @@ export default function App() {
 
       <div className="popup-content">
         {view === 'clean' ? (
-          <CleanView
-            language={language}
-            notify={notify}
-            sendToXPage={sendToXPage}
-            pageMarked={pageMarked}
-            refreshPageMarked={refreshPageMarked}
-            pauseDestructive={pauseDestructive}
-            killSwitchActive={killSwitchActive}
-            killSwitchReason={killSwitch?.reason}
-          />
+          <>
+            <CleanView
+              language={language}
+              notify={notify}
+              sendToXPage={sendToXPage}
+              pageMarked={pageMarked}
+              refreshPageMarked={refreshPageMarked}
+              pauseDestructive={pauseDestructive}
+              killSwitchActive={killSwitchActive}
+              killSwitchReason={killSwitch?.reason}
+            />
+            <HunterBar language={language} />
+          </>
         ) : null}
         {view === 'lists' ? (
           <ListsView

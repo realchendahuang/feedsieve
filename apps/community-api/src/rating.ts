@@ -8,6 +8,7 @@
  */
 
 import { POLICY } from './reports';
+import { syncConsensusEvents, type ConsensusTransition } from './leaderboard';
 import {
   computeConsensusV2,
   EMPTY_CONSENSUS_V2_INPUT,
@@ -24,6 +25,7 @@ export interface RateableAccount {
   status: string;
   report_count: number;
   rescue_count: number;
+  x_user_id?: string | null;
 }
 
 /** 根据纯净票数派生内部状态（白盒逻辑，policy 端点可透明展示）。 */
@@ -47,13 +49,15 @@ export async function autoRateAccounts(
   aggregates?: CommunityAggregates,
 ): Promise<{ changed: number }> {
   const rows = await env.DB.prepare(
-    `SELECT handle, status, report_count, rescue_count
+    `SELECT handle, x_user_id, status, report_count, rescue_count
      FROM accounts`,
   ).all<RateableAccount>();
   const v2Inputs =
     aggregates?.v2Inputs ?? (await loadAllConsensusV2Inputs(env));
 
   const statements: D1PreparedStatement[] = [];
+  // 进/出 strong 的账号同步击杀事件（打野排位赛计分，快照路径兜底）
+  const consensusTransitions = new Map<string, ConsensusTransition>();
   let changed = 0;
   for (const row of rows.results) {
     const target = deriveStatus(row);
@@ -63,6 +67,10 @@ export async function autoRateAccounts(
           .bind(row.handle, target),
       );
       changed++;
+      consensusTransitions.set(row.handle, {
+        strong: target === 'strong',
+        xUserId: row.x_user_id ?? null,
+      });
     }
     // consensus v2 影子：全表重算，与入榜逻辑无关
     const v2 = computeConsensusV2(v2Inputs.get(row.handle) ?? EMPTY_CONSENSUS_V2_INPUT);
@@ -74,5 +82,6 @@ export async function autoRateAccounts(
   for (let index = 0; index < statements.length; index += D1_CHUNK) {
     await env.DB.batch(statements.slice(index, index + D1_CHUNK));
   }
+  await syncConsensusEvents(env, consensusTransitions);
   return { changed };
 }
