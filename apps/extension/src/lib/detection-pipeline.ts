@@ -16,6 +16,7 @@ import {
   type DetectInput,
   type Detection,
   type HeuristicRule,
+  weakSignalCombo,
 } from '@feedsieve/detector';
 import type { CommunityEntry, MarkStrength } from '@feedsieve/community-lists';
 import type { RuntimeCommunity } from './community-store';
@@ -155,8 +156,10 @@ export function runDetectionPipeline(input: DetectionPipelineInput): DetectionPi
   if (!detection) {
     detection = detect(source, {
       ...evidenceOptions,
-      // 仅运行用户明确配置的字面短语和可逐条关闭的官方词库
-      heuristics: keywordHeuristics,
+      // 用户明确配置的字面短语 / 官方词库，加上弱信号组合层——唯一升到页面的
+      // 内置启发式（乱码批量号锚点 + 内容佐证，分层见 detection-policy；
+      // 其余内置单信号规则仍只留在 detector 评测层）。排在词库规则之后收尾。
+      heuristics: [...keywordHeuristics, weakSignalCombo],
     });
   }
 

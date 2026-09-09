@@ -307,3 +307,9 @@ export const DEFAULT_HEURISTICS: readonly HeuristicRule[] = [
   wordSalad,
   weakSignalCombo,
 ];
+
+/**
+ * 弱信号组合层单独导出：扩展运行时只装配本规则（其余内置单信号规则
+ * 留在 detector 评测层，分层决策见 extension detection-policy）。
+ */
+export { weakSignalCombo };

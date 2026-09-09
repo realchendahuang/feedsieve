@@ -120,7 +120,8 @@ interface PageMarkedAccount {
  * 「是否给社区加票」的唯一口径，单条拉黑与一键批量拉黑共用。
  * 防自我放大：社区名单命中是既有结论；keyword:*（本地自定义 + 官方词库）
  * 是短语偏好层、只做人工确认提示 —— 两者都不反向加票。
- * builtin-list / fingerprint / domain 是独立发现，正常计票。
+ * builtin-list / fingerprint / domain / weak-signal-combo（乱码批量号锚点 +
+ * 内容佐证，直接证据）是独立发现，用户确认拉黑后正常计票。
  */
 function communityVoteForDetection(detectionSource: string | undefined, ruleId?: string): boolean {
   return detectionSource !== 'community-list' && !ruleId?.startsWith('keyword:');

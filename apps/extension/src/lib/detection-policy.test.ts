@@ -37,6 +37,26 @@ describe('扩展检测安全政策', () => {
     ).toBe('review');
   });
 
+  it('weak-signal-combo（乱码锚点 + 内容佐证）全强度档 review，其余内置启发式维持 ignore', () => {
+    for (const strength of ['refresh', 'standard', 'deep_clean'] as const) {
+      expect(
+        classifyDetection({
+          detection: { ...detection('heuristic'), ruleId: 'weak-signal-combo' },
+          strength,
+        }),
+      ).toBe('review');
+    }
+    // 范围钉死：单信号内置规则不随组合层升档，升档需逐条单独评审
+    for (const ruleId of ['word-salad', 'porn-bait-zh', 'templated-text', 'default-name-digits', 'spam-link-hint']) {
+      expect(
+        classifyDetection({
+          detection: { ...detection('heuristic'), ruleId },
+          strength: 'deep_clean',
+        }),
+      ).toBe('ignore');
+    }
+  });
+
   it('指纹/域名只在大扫除档提示，不进批量拉黑', () => {
     expect(classifyDetection({ detection: detection('fingerprint'), strength: 'standard' })).toBe(
       'ignore',

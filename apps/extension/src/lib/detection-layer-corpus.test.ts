@@ -126,6 +126,32 @@ const cases: LayerCase[] = [
     expected: { presentation: 'review', source: 'heuristic' },
   },
   {
+    id: '弱信号组合层 · 标准档 → review（乱码批量号锚点 + emoji 灌水佐证）',
+    input: {
+      input: { handle: 'vxqzjwmrhbtdn', text: '🍑🍑🍑🍑🍑' },
+      community: fakeCommunity(),
+      builtinList: new Set(),
+      keywordHeuristics: [keywordRule],
+      catalog: BUNDLED_KEYWORD_PACK_CATALOG,
+      strength: 'standard',
+      uiLanguage: 'zh',
+    },
+    expected: { presentation: 'review', source: 'heuristic' },
+  },
+  {
+    id: '组合层锚点缺内容佐证 → ignore（乱码号 + 普通日常内容不标）',
+    input: {
+      input: { handle: 'vxqzjwmrhbtdn', text: '今天天气不错，出来走走' },
+      community: fakeCommunity(),
+      builtinList: new Set(),
+      keywordHeuristics: [keywordRule],
+      catalog: BUNDLED_KEYWORD_PACK_CATALOG,
+      strength: 'deep_clean',
+      uiLanguage: 'zh',
+    },
+    expected: { presentation: 'ignore' },
+  },
+  {
     id: '指纹命中 · 标准档 → ignore（间接证据，仅大扫除档给 review）',
     input: {
       input: { handle: 'fp_user_1', text: '同一话术模板的第 1 号账号' },
