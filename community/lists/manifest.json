@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
   "policy_version": 3,
-  "snapshot_version": "2026.09.08.2",
-  "generated_at": "2026-09-08T08:19:08.949Z",
+  "snapshot_version": "2026.09.09.1",
+  "generated_at": "2026-09-09T00:00:50.013Z",
   "policy": {
     "version": 3,
     "blocklist": {
@@ -30,18 +30,18 @@
   "files": [
     {
       "path": "official.json",
-      "sha256": "3e32a2d86383fa08d6c1fa474ead784afa8124fdd896d50975d6bdde1e7bb0e7",
-      "entries": 989
+      "sha256": "18a94a08b4cc692bc8723cca74e38deb87e504d90bcf5669707dd79e6ff41cf1",
+      "entries": 1121
     },
     {
       "path": "blocklist.yaml",
-      "sha256": "0c9556f26557e26f43ff9b4561118c49d58fa8ac24cc7342773153eac1450ce2",
-      "entries": 989
+      "sha256": "afa7772a43c52d5803cd78ee07872dcb331d2164787f39e213108ee0ad842634",
+      "entries": 1121
     }
   ],
   "signature": {
     "key_id": "release-1",
     "alg": "ed25519",
-    "sig": "KwfYSwwVmWsjUy03YzXUEv4ieuKZGzqqktUwbQ2zDy+vgDoiPaKlzi3psTYMFabfKlaSdpxQayoqYKO7j3oNBQ=="
+    "sig": "XZJ6diX/yFRAPwk1gUvfLuZyVGMpoZ939I9rVT4bxTeUwmR8dcdS+whDKb1G5etg8GT33aAC4F5tGCx8oe8VDw=="
   }
 }
