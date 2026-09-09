@@ -1,6 +1,7 @@
 import { hashInstallationId } from './lib/hash';
 import { deriveStatus } from './rating';
 import { computeConsensusV2, EMPTY_CONSENSUS_V2_INPUT, loadConsensusV2InputsByHandles } from './lib/consensus-v2';
+import { inferCategory, type CategoryVoteRow } from './category-inference';
 import { validateRescue } from './lib/validate';
 
 const MAX_LABEL_BATCH = 50;
@@ -69,7 +70,7 @@ export async function refreshAccountsFromLabels(
   }
   const inClause = unique.map((_, index) => `?${index + 1}`).join(', ');
 
-  const [accountRows, blockedRows, allowedRows, categoryRows, v2Inputs] = await Promise.all([
+  const [accountRows, blockedRows, allowedRows, voteRows, evidence] = await Promise.all([
     env.DB.prepare(`SELECT handle FROM accounts WHERE handle IN (${inClause})`)
       .bind(...unique)
       .all<{ handle: string }>(),
@@ -86,31 +87,29 @@ export async function refreshAccountsFromLabels(
       .bind(...unique)
       .all<{ handle: string; n: number }>(),
     env.DB.prepare(
-      `SELECT handle, reason FROM (
-         SELECT l.handle, r.reason,
-                ROW_NUMBER() OVER (
-                  PARTITION BY l.handle
-                  ORDER BY COUNT(*) DESC, MAX(r.created_at) DESC, r.reason ASC
-                ) AS rn
-         FROM active_labels l
-         JOIN reports r
-           ON r.installation_id = l.installation_id
-          AND r.handle = l.handle
-         WHERE l.handle IN (${inClause}) AND l.label = 'blocked'
-         GROUP BY l.handle, r.reason
-       ) WHERE rn = 1`,
+      `SELECT l.handle, r.reason, r.detection_source, COUNT(*) AS n
+       FROM active_labels l
+       JOIN reports r
+         ON r.installation_id = l.installation_id
+        AND r.handle = l.handle
+       WHERE l.handle IN (${inClause}) AND l.label = 'blocked'
+       GROUP BY l.handle, r.reason, r.detection_source`,
     )
       .bind(...unique)
-      .all<{ handle: string; reason: string }>(),
+      .all<{ handle: string; reason: string; detection_source: string | null; n: number }>(),
     loadConsensusV2InputsByHandles(env, unique),
   ]);
 
   const existingHandles = new Set(accountRows.results.map((row) => row.handle));
   const blockedCount = new Map(blockedRows.results.map((row) => [row.handle, row.n] as const));
   const allowedCount = new Map(allowedRows.results.map((row) => [row.handle, row.n] as const));
-  const categoryByHandle = new Map(
-    categoryRows.results.map((row) => [row.handle, row.reason] as const),
-  );
+  // 分类用证据推理，不再原样取票面多数（回声票会把 'other' 越滚越大）
+  const votesByHandle = new Map<string, CategoryVoteRow[]>();
+  for (const row of voteRows.results) {
+    const list = votesByHandle.get(row.handle) ?? [];
+    list.push({ reason: row.reason, detectionSource: row.detection_source, count: row.n });
+    votesByHandle.set(row.handle, list);
+  }
 
   const now = Math.floor(Date.now() / 1000);
   const statements: D1PreparedStatement[] = [];
@@ -124,7 +123,12 @@ export async function refreshAccountsFromLabels(
       rescue_count: rescueCount,
     });
     // consensus v2 影子：与入榜无关，只为影子对比积累数据
-    const v2 = computeConsensusV2(v2Inputs.get(handle) ?? EMPTY_CONSENSUS_V2_INPUT);
+    const v2 = computeConsensusV2(evidence.inputs.get(handle) ?? EMPTY_CONSENSUS_V2_INPUT);
+    const category = inferCategory({
+      votes: votesByHandle.get(handle) ?? [],
+      hasDomainEvidence: evidence.domainEvidenceHandles.has(handle),
+      hasFingerprintEvidence: evidence.fingerprintEvidenceHandles.has(handle),
+    });
     statements.push(
       env.DB.prepare(
         `UPDATE accounts SET
@@ -132,7 +136,7 @@ export async function refreshAccountsFromLabels(
            rescue_count = ?3,
            owner_votes = ?4,
            status = ?5,
-           category = COALESCE(?6, category),
+           category = ?6,
            status_v2 = ?8,
            consensus_v2 = ?9,
            updated_at = ?7
@@ -143,7 +147,7 @@ export async function refreshAccountsFromLabels(
         rescueCount,
         0,
         status,
-        categoryByHandle.get(handle) ?? null,
+        category,
         now,
         v2.status,
         v2.score,

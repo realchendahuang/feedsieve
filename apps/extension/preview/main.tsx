@@ -10,12 +10,12 @@ const pageMarked = [
   {
     handle: 'crypto_gift88',
     category: 'scam_phishing',
-    reason: '5 人标记为诈骗',
+    reason: '5 人标记 · 诈骗',
   },
-  { handle: 'daily_alpha369', category: 'copy_paste', reason: '4 人标记为重复刷屏' },
-  { handle: 'beauty_live520', category: 'adult_gray_traffic', reason: '6 人标记为色情引流' },
-  { handle: 'auto_reply_bot', category: 'bot_spam', reason: '3 人标记为机器人' },
-  { handle: 'hot_topic_ai', category: 'ai_slop', reason: '5 人标记为 AI 垃圾' },
+  { handle: 'daily_alpha369', category: 'copy_paste', reason: '4 人标记 · 重复刷屏' },
+  { handle: 'beauty_live520', category: 'adult_gray_traffic', reason: '6 人标记 · 色情引流' },
+  { handle: 'auto_reply_bot', category: 'bot_spam', reason: '3 人标记 · 机器人' },
+  { handle: 'hot_topic_ai', category: 'ai_slop', reason: '5 人标记 · AI 垃圾' },
 ];
 
 const snapshotBody = JSON.stringify({

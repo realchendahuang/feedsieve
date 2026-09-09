@@ -414,7 +414,8 @@ const CATEGORY_LABELS: Record<UiLanguage, Record<string, string>> = {
     adult_gray_traffic: '色情引流',
     scam_phishing: '诈骗',
     engagement_bait: '互动钓鱼',
-    other: '其他',
+    // 统计桶语境：分类为 other 的拉黑仍是垃圾账号（未细分），不再显示「其他」
+    other: '垃圾账号',
   },
   en: {
     bot_spam: 'Bots',
@@ -424,7 +425,7 @@ const CATEGORY_LABELS: Record<UiLanguage, Record<string, string>> = {
     adult_gray_traffic: 'Adult bait',
     scam_phishing: 'Scams',
     engagement_bait: 'Engagement bait',
-    other: 'Other',
+    other: 'Spam',
   },
 };
 

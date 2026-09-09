@@ -12,6 +12,7 @@ import { listMaintainerWhitelist } from './maintainer-whitelist';
 import { publicPolicy } from './reports';
 import { POLICY } from './reports';
 import { autoRateAccounts } from './rating';
+import { inferCategory } from './category-inference';
 import { loadCommunityAggregates } from './lib/consensus-v2';
 
 export const SNAPSHOT_SCHEMA_VERSION = 2;
@@ -204,6 +205,7 @@ function nextVersion(existing: string | null, dateStamp: string): string {
 // 键按固定顺序写入（JS 字符串键保持插入序）+ 条目按 handle 排序 => 同一数据必然产出同字节 JSON
 function buildEntry(
   row: AccountRow,
+  category: string,
   evidence: string[],
   distinctDays: number,
   fingerprints: string[],
@@ -223,7 +225,7 @@ function buildEntry(
     handle: row.handle,
     x_user_id: row.x_user_id,
     aliases,
-    category: row.category,
+    category,
     sources: ['community'],
     community_score: computeScore({
       reportCount: row.report_count,
@@ -415,12 +417,22 @@ export async function generateSnapshot(
   }
   const campaigns = clusterCampaigns(evidenceFpAccounts, reportCounts);
   const evidenceByHandle = aggregates.evidenceByHandle;
+  const votesByHandle = aggregates.votesByHandle;
+  // 发布分类 = 证据推理（accounts.category 是票面多数，可能被历史回声票钉在 other；
+  // 维护者合并层会在推理结果之上覆盖，优先级最高）
+  const inferredCategory = (handle: string): string =>
+    inferCategory({
+      votes: votesByHandle.get(handle) ?? [],
+      hasDomainEvidence: (domainsByHandle.get(handle)?.length ?? 0) > 0,
+      hasFingerprintEvidence: (fingerprintsByHandle.get(handle)?.length ?? 0) > 0,
+    });
   for (const row of accounts.results) {
     const evidence = evidenceByHandle.get(row.handle) ?? [];
     const campaign = campaigns.get(row.handle);
     entries.push(
       buildEntry(
         row,
+        inferredCategory(row.handle),
         evidence,
         daysByHandle.get(row.handle) ?? 1,
         fingerprintsByHandle.get(row.handle) ?? [],
@@ -460,6 +472,8 @@ export async function generateSnapshot(
     const entry: SnapshotEntry = belowThresholdAccount
       ? buildEntry(
           belowThresholdAccount,
+          // 维护者分类马上会覆盖此值（entry.category = maintained.category）
+          inferredCategory(maintained.handle),
           evidenceByHandle.get(maintained.handle) ?? [],
           daysByHandle.get(maintained.handle) ?? 1,
           fingerprintsByHandle.get(maintained.handle) ?? [],

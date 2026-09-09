@@ -30,6 +30,7 @@ import {
 } from './keyword-admin';
 import { getDashboardMetrics } from './dashboard';
 import { buildKillSwitch, getLatestSnapshotVersion } from './snapshot';
+import { refreshAccountsFromLabels } from './labels';
 
 /** id 短写（业务名），secret 至少 16 位，避免弱密钥。 */
 const AGENT_KEY_PAIR = /^([A-Za-z0-9_-]{1,32}):(.{16,128})$/;
@@ -129,6 +130,39 @@ export async function removeAgentMaintainerEntry(
     snapshot_version: published.snapshot_version,
     active_entries: published.active_entries,
   };
+}
+
+/**
+ * 全量重算 accounts 衍生字段（计票 + 分类推理）。
+ *
+ * 分类推理上线前的存量行仍是旧「票面多数」值（可能被历史回声票钉在 other）；
+ * 快照发布时按证据独立推理不受影响，这里让 admin/候选池与快照口径对齐。
+ * 分页 + 分块收敛；重算幂等，期间并发写入的行由下一次上报/发布自然收敛。
+ */
+export async function recomputeAllAccountCategories(
+  env: Cloudflare.Env,
+  actor: string,
+): Promise<{ accounts: number }> {
+  const CHUNK = 100;
+  let offset = 0;
+  let total = 0;
+  for (;;) {
+    const rows = await env.DB.prepare(
+      'SELECT handle FROM accounts ORDER BY handle ASC LIMIT ?1 OFFSET ?2',
+    )
+      .bind(CHUNK, offset)
+      .all<{ handle: string }>();
+    const handles = rows.results.map((row) => row.handle);
+    if (handles.length === 0) break;
+    await refreshAccountsFromLabels(env, handles);
+    total += handles.length;
+    if (handles.length < CHUNK) break;
+    offset += CHUNK;
+  }
+  await recordAdminAudit(env, actor, 'recompute_categories', 'accounts', 'all', {
+    accounts: total,
+  });
+  return { accounts: total };
 }
 
 // ---------------------------------------------------------------------------

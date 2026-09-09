@@ -8,7 +8,7 @@
  */
 import { contentFingerprint, type DetectInput } from '@feedsieve/detector';
 import { afterAll, describe, expect, it } from 'vitest';
-import { runDetectionPipeline, type DetectionPipelineInput } from './detection-pipeline';
+import { communityHitReason, runDetectionPipeline, type DetectionPipelineInput } from './detection-pipeline';
 import { BUNDLED_KEYWORD_PACK_CATALOG } from './keyword-packs';
 import type { RuntimeCommunity } from './community-store';
 import type { CommunityEntry } from '@feedsieve/community-lists';
@@ -215,6 +215,43 @@ describe('检测管线分层金标', () => {
     expect(result.detection?.reason).toContain('3 人标记');
     expect(result.communityEntry?.handle).toBe('inlist_user');
     expect(result.category).toBe('bot_spam');
+  });
+
+  it('黄框理由不冒充票面主张：other 只报票数，证据写事实，具体分类用注脚', () => {
+    // other（无证据、无具体票）：只报票数，绝不出现「标记为其他」
+    expect(
+      communityHitReason(
+        { category: 'other', report_count: 7, domains: undefined, campaign_size: undefined },
+        'zh',
+      ),
+    ).toBe('7 人标记');
+    // 域名证据：写事实，不宣称「N 人标记为诈骗」
+    expect(
+      communityHitReason(
+        { category: 'other', report_count: 2, domains: ['spam.example'], campaign_size: undefined },
+        'zh',
+      ),
+    ).toBe('2 人标记 · 外链指向垃圾域名');
+    // 同模板簇：写网络事实
+    expect(
+      communityHitReason(
+        { category: 'other', report_count: 1, domains: undefined, campaign_size: 5 },
+        'zh',
+      ),
+    ).toBe('社区名单 · 与 5 个已确认垃圾账号同模板');
+    // 具体分类（可能来自证据推导）：注脚形式，不再用「标记为」句式
+    expect(
+      communityHitReason(
+        { category: 'bot_spam', report_count: 3, domains: undefined, campaign_size: undefined },
+        'zh',
+      ),
+    ).toBe('3 人标记 · 机器人');
+    expect(
+      communityHitReason(
+        { category: 'bot_spam', report_count: 3, domains: undefined, campaign_size: undefined },
+        'en',
+      ),
+    ).toBe('3 community marks · Bots');
   });
 });
 

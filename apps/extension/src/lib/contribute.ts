@@ -10,6 +10,7 @@ import { COMMUNITY_API_BASE, getCommunitySettings } from './community-store';
 import { getAllowlist, type FalsePositiveEvidence } from './allowlist';
 import { getBlockedAccounts } from './blocked-accounts';
 import { categoryForKeywordRuleId } from './keyword-rules';
+import { upgradeBlockedCategories } from './category-upgrade';
 
 export interface ContributionItem {
   handle: string;
@@ -285,6 +286,10 @@ export function syncLocalLabels(): Promise<LabelSyncSummary> {
 async function runLocalLabelSync(): Promise<LabelSyncSummary> {
   const summary: LabelSyncSummary = { blocked: 0, allowed: 0, retracted: 0, pending: 0 };
   const settings = await getCommunitySettings();
+  // 参与社区时先把存量 'other' 票按达标证据升级（只升不降），再收集同步期望状态
+  if (settings.autoContribute) {
+    await upgradeBlockedCategories().catch(() => 0);
+  }
   const desired = await collectLocalLabels();
   if (!settings.autoContribute) {
     summary.pending = desired.size;

@@ -5,6 +5,15 @@
 - 每个版本的详细工程记录见 [`docs/RELEASES.md`](docs/RELEASES.md)。
 - 二进制产物见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)；正式用户请从 [Chrome 应用商店](https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph)接收更新。
 
+## [未发布]
+
+### 变更
+
+- 社区名单条目分类改为证据推理：外链域名（≥2 独立安装一致）→ 诈骗，达标话术指纹 → 重复刷屏，具体类票面判断压过历史回声票（社区名单来源的旧票不再计入分类）；维护者分类仍最高优先。入榜公式不变，只影响分类展示。
+- 黄框理由不再出现「N 人标记为其他」：票数与证据 / 分类分开表述，无证据、无具体票时只显示票数；统计桶「其他」改叫「垃圾账号」。
+- 存量本地拉黑票的「其他」分类按社区达标证据自动升级（只升不降），升级后随下次同步改写服务端票面分类。
+- 新增 agent 端点 `POST /api/agent/recompute-categories`：全量重算 accounts 计票与分类，admin / 候选池与快照口径对齐。
+
 ## [0.8.2] — 2026-09-08
 
 ### 变更

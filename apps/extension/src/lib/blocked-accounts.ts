@@ -101,6 +101,18 @@ export async function removeBlockedAccount(handle: string): Promise<void> {
   await browser.storage.local.set({ [STORAGE_KEY]: remaining });
 }
 
+/** 批量原位更新（存量分类升级等治理用）；有变更才写盘，返回变更条数。 */
+export async function mutateBlockedAccounts(
+  mutate: (accounts: BlockedAccount[]) => number,
+): Promise<number> {
+  const accounts = await getBlockedAccounts();
+  const changed = mutate(accounts);
+  if (changed > 0) {
+    await browser.storage.local.set({ [STORAGE_KEY]: accounts });
+  }
+  return changed;
+}
+
 /** 订阅变化（popup 实时刷新）。返回解绑函数。 */
 export function subscribeBlocked(onChange: (accounts: BlockedAccount[]) => void): () => void {
   const listener = (changes: Record<string, { newValue?: unknown }>, areaName: string) => {

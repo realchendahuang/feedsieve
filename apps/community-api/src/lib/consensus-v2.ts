@@ -11,6 +11,8 @@
  *   举报横跨多个日期，或存在 ≥2 个独立安装一致上报的内容指纹/域名。
  */
 
+import type { CategoryVoteRow } from '../category-inference';
+
 export const CONSENSUS_V2_POLICY = {
   /** 新安装观察期天数：此期内投票权重从 minWeight 向 1 线性爬升 */
   probationDays: 7,
@@ -83,6 +85,13 @@ export interface ConsensusV2Input {
   allowedWeights: number[];
   distinctDays: number;
   evidenceIndependent: boolean;
+}
+
+/** 分类推理需要的按 handle 批量证据（与快照下发门槛同源：≥2 独立安装一致）。 */
+export interface HandleEvidenceSets {
+  inputs: Map<string, ConsensusV2Input>;
+  fingerprintEvidenceHandles: Set<string>;
+  domainEvidenceHandles: Set<string>;
 }
 
 /** 无票账号的 v2 输入：全零、无独立性证据。 */
@@ -192,10 +201,14 @@ export async function loadAllConsensusV2Inputs(
 export async function loadConsensusV2InputsByHandles(
   env: Cloudflare.Env,
   handles: string[],
-): Promise<Map<string, ConsensusV2Input>> {
+): Promise<HandleEvidenceSets> {
   const unique = [...new Set(handles)];
   if (unique.length === 0) {
-    return new Map();
+    return {
+      inputs: new Map(),
+      fingerprintEvidenceHandles: new Set(),
+      domainEvidenceHandles: new Set(),
+    };
   }
   const inClause = unique.map((_, index) => `?${index + 1}`).join(', ');
 
@@ -278,8 +291,16 @@ export async function loadConsensusV2InputsByHandles(
   for (const row of dayRows.results ?? []) distinctDays.set(row.handle, row.days);
 
   const independentHandles = new Set<string>();
-  for (const row of fpRows.results ?? []) independentHandles.add(row.handle);
-  for (const row of domainRows.results ?? []) independentHandles.add(row.handle);
+  const fingerprintEvidenceHandles = new Set<string>();
+  const domainEvidenceHandles = new Set<string>();
+  for (const row of fpRows.results ?? []) {
+    independentHandles.add(row.handle);
+    fingerprintEvidenceHandles.add(row.handle);
+  }
+  for (const row of domainRows.results ?? []) {
+    independentHandles.add(row.handle);
+    domainEvidenceHandles.add(row.handle);
+  }
 
   const inputs = new Map<string, ConsensusV2Input>();
   for (const handle of unique) {
@@ -290,7 +311,7 @@ export async function loadConsensusV2InputsByHandles(
       evidenceIndependent: independentHandles.has(handle),
     });
   }
-  return inputs;
+  return { inputs, fingerprintEvidenceHandles, domainEvidenceHandles };
 }
 /**
  * 快照聚合的共享产出：一次跑完全部社区聚合，供 generateSnapshot（快照内容）
@@ -298,7 +319,7 @@ export async function loadConsensusV2InputsByHandles(
  * 各扫两遍 reports / active_labels。
  *
  * 原快照路径 4 条（day、fp、domain、evidence）+ v2 影子 4 条（label、day、fp、
- * domain）= 8 条全表扫；合并后 5 条：label、day、fp、domain、evidence。
+ * domain）= 8 条全表扫；合并后 6 条：label、day、fp、domain、evidence、votes。
  */
 export interface CommunityAggregates {
   v2Inputs: Map<string, ConsensusV2Input>;
@@ -306,6 +327,8 @@ export interface CommunityAggregates {
   domainsByHandle: Map<string, string[]>;
   daysByHandle: Map<string, number>;
   evidenceByHandle: Map<string, string[]>;
+  /** 当前 blocked 票的 reason × detection_source 分布（分类推理输入） */
+  votesByHandle: Map<string, CategoryVoteRow[]>;
 }
 
 /** 快照证据下发上限 / 门槛（与快照 schema 对齐；改动需同步快照侧语义）。 */
@@ -315,7 +338,7 @@ export const SNAPSHOT_EVIDENCE = {
 } as const;
 
 export async function loadCommunityAggregates(env: Cloudflare.Env): Promise<CommunityAggregates> {
-  const [labelRows, dayRows, fpRows, domainRows, evidenceRows] = await Promise.all([
+  const [labelRows, dayRows, fpRows, domainRows, evidenceRows, voteRows] = await Promise.all([
     // v2 权重：每张当前票对应的安装 trust 与成熟度
     env.DB.prepare(
       `SELECT l.handle, l.label, i.trust, i.first_seen_at
@@ -380,6 +403,17 @@ export async function loadCommunityAggregates(env: Cloudflare.Env): Promise<Comm
     )
       .bind(SNAPSHOT_EVIDENCE.maxPerEntry)
       .all<{ handle: string; evidence_post_id: string }>(),
+    // 票型分布（分类推理输入）：reports 唯一索引保证一行 = 一个安装的当前票，
+    // reason/detection_source 为该票最新值，与「one_current_vote_per_installation」一致
+    env.DB.prepare(
+      `SELECT r.handle, r.reason, r.detection_source, COUNT(*) AS n
+       FROM reports r
+       JOIN active_labels l
+         ON l.installation_id = r.installation_id
+        AND l.handle = r.handle
+        AND l.label = 'blocked'
+       GROUP BY r.handle, r.reason, r.detection_source`,
+    ).all<{ handle: string; reason: string; detection_source: string | null; n: number }>(),
   ]);
 
   const now = Math.floor(Date.now() / 1000);
@@ -459,5 +493,19 @@ export async function loadCommunityAggregates(env: Cloudflare.Env): Promise<Comm
     evidenceByHandle.set(row.handle, list);
   }
 
-  return { v2Inputs, fingerprintsByHandle, domainsByHandle, daysByHandle, evidenceByHandle };
+  const votesByHandle = new Map<string, CategoryVoteRow[]>();
+  for (const row of voteRows.results ?? []) {
+    const list = votesByHandle.get(row.handle) ?? [];
+    list.push({ reason: row.reason, detectionSource: row.detection_source, count: row.n });
+    votesByHandle.set(row.handle, list);
+  }
+
+  return {
+    v2Inputs,
+    fingerprintsByHandle,
+    domainsByHandle,
+    daysByHandle,
+    evidenceByHandle,
+    votesByHandle,
+  };
 }

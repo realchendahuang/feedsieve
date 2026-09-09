@@ -177,6 +177,46 @@ describe('snapshot pipeline', () => {
     expect(await sha256HexOf(yaml)).toBe(yamlFile?.sha256);
   });
 
+  it('发布分类按证据推理：回声 other 票不淹没具体票，达标指纹归 copy_paste', async () => {
+    // v0.8.2 前客户端行为：社区名单命中拉黑也加票，票面分类继承条目自身（回声）。
+    // echo_user：3 张回声 other + 1 张真实具体票 -> 分类取具体票而非 other 多数。
+    for (let i = 1; i <= 3; i++) {
+      await report(`echo0000-300${i}-4000-8000-eeeeeeeeeeee`, 'echo_user', {
+        reason: 'other',
+        detection_source: 'community-list',
+      });
+    }
+    await report('echo1000-3004-4000-8000-eeeeeeeeeeee', 'echo_user', {
+      reason: 'scam_phishing',
+      detection_source: 'heuristic',
+    });
+    // fp_user：4 张 other 票（2 个安装带同一话术指纹，达快照下发门槛）→ copy_paste
+    for (const id of ['fp000000-3001-4000-8000-ffffffffffff', 'fp000000-3002-4000-8000-ffffffffffff']) {
+      await report(id, 'fp_user', { reason: 'other', content_fingerprint: '0123456789abcdef' });
+    }
+    await report('fp000000-3003-4000-8000-ffffffffffff', 'fp_user', { reason: 'other' });
+
+    await generateSnapshot(env, 0, { bypassDailyOnce: true });
+    const fileRes = await worker.fetch(
+      new Request(
+        `${ORIGIN}/v1/snapshots/${
+          (
+            (await (
+              await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), env)
+            ).json()) as Manifest
+          ).snapshot_version
+        }/${SNAPSHOT_PACK}`,
+      ),
+      env,
+    );
+    const body = JSON.parse(await fileRes.text()) as {
+      entries: { handle: string; category: string }[];
+    };
+    const byHandle = new Map(body.entries.map((entry) => [entry.handle, entry.category] as const));
+    expect(byHandle.get('echo_user')).toBe('scam_phishing');
+    expect(byHandle.get('fp_user')).toBe('copy_paste');
+  });
+
   it('verified（社区白名单）与黑名单镜像入榜且互斥，争议账号两边都不进', async () => {
     // verified_user：5 个独立安装，第 1 个先拉黑后抢救（同安装改判 -> 只剩 allowed 票），
     // 其余 4 个只抢救 → 抢救净票 5 -> 进 verified（report_count 为 0 是改判语义，非自由票流失）

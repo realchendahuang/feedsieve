@@ -213,4 +213,26 @@ describe('agent maintenance API', () => {
       true,
     );
   });
+
+  it('recompute-categories：存量行按推理口径重算并记审计', async () => {
+    // 直接播种一行旧口径数据（票面多数时代的历史行）：无票无证据，旧分类是 scam_phishing
+    await env.DB.prepare(
+      `INSERT INTO accounts (handle, x_user_id, category, status, report_count, rescue_count,
+         first_report_at, updated_at)
+       VALUES ('rc_stale_user', NULL, 'scam_phishing', 'new', 0, 0, 1758000000, 1758000000)`,
+    ).run();
+    const response = await agentRequest('/api/agent/recompute-categories', { method: 'POST' });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toHaveProperty('accounts');
+    const row = await env.DB.prepare('SELECT category FROM accounts WHERE handle = ?1')
+      .bind('rc_stale_user')
+      .first<{ category: string }>();
+    expect(row?.category).toBe('other');
+
+    const audit = await agentRequest('/api/agent/audit?limit=10');
+    const auditBody = (await audit.json()) as { audit: Array<{ action: string }> };
+    expect(auditBody.audit.some((auditRow) => auditRow.action === 'recompute_categories')).toBe(
+      true,
+    );
+  });
 });

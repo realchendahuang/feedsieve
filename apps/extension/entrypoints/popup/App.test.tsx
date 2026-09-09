@@ -261,11 +261,11 @@ describe('popup App 渲染冒烟', () => {
       },
       tabs: {
         query: vi.fn().mockResolvedValue([{ id: 1, active: true, url: 'https://x.com/home' }]),
-        // 页面黄框清单：内容脚本实时查询返回
+        // 页面黄框清单：内容脚本实时查询返回（communityHitReason 新句式）
         sendMessage: vi
           .fn()
           .mockResolvedValue([
-            { handle: 'spamking88', category: 'copy_paste', reason: '3 人标记为重复刷屏' },
+            { handle: 'spamking88', category: 'copy_paste', reason: '3 人标记 · 重复刷屏' },
           ]),
       },
       runtime: {
@@ -277,7 +277,7 @@ describe('popup App 渲染冒烟', () => {
     await new Promise((r) => setTimeout(r, 150));
 
     expect(rootEl.textContent).toContain('@spamking88');
-    expect(rootEl.textContent).toContain('3 人标记为重复刷屏');
+    expect(rootEl.textContent).toContain('3 人标记 · 重复刷屏');
     expect(rootEl.textContent).toContain('一键拉黑全部 · 1');
   });
 

@@ -64,6 +64,38 @@ function keywordCategoryFromCatalog(
   return catalog.packs.find((pack) => pack.rules.some((rule) => rule.id === officialId))?.id;
 }
 
+/**
+ * 社区名单命中的黄框理由：票数为主体，证据/分类为注脚。
+ * 发布分类可能来自证据推导而非逐张票面，措辞不宣称「N 人标记为 X」；
+ * 分类为 other（无证据、无具体票）时只报票数，不冒充具体理由。
+ */
+export function communityHitReason(
+  entry: Pick<CommunityEntry, 'category' | 'report_count' | 'domains' | 'campaign_size'>,
+  uiLanguage: UiLanguage,
+): string {
+  const voteSummary =
+    entry.report_count > 1
+      ? uiLanguage === 'zh'
+        ? `${entry.report_count} 人标记`
+        : `${entry.report_count} community marks`
+      : uiLanguage === 'zh'
+        ? '社区名单'
+        : 'Community list';
+  const detail =
+    (entry.domains?.length ?? 0) > 0
+      ? uiLanguage === 'zh'
+        ? '外链指向垃圾域名'
+        : 'links to spam domains'
+      : (entry.campaign_size ?? 0) >= 2
+        ? uiLanguage === 'zh'
+          ? `与 ${entry.campaign_size} 个已确认垃圾账号同模板`
+          : `matches template of ${entry.campaign_size} confirmed spam accounts`
+        : entry.category !== 'other'
+          ? categoryLabel(entry.category, uiLanguage)
+          : '';
+  return detail ? `${voteSummary} · ${detail}` : voteSummary;
+}
+
 export function runDetectionPipeline(input: DetectionPipelineInput): DetectionPipelineResult {
   const { input: source, community, builtinList, keywordHeuristics, catalog, strength, uiLanguage } =
     input;
@@ -139,7 +171,7 @@ export function runDetectionPipeline(input: DetectionPipelineInput): DetectionPi
     };
   }
 
-  // 社区名单命中：徽章带分类与票数，可解释性优先
+  // 社区名单命中：徽章带可解释理由（票数 + 证据/分类注脚，绝不说「标记为其他」）
   let communityEntry: CommunityEntry | null = null;
   let communityCategory: string | undefined;
   if (detection.source === 'community-list' && community) {
@@ -147,18 +179,9 @@ export function runDetectionPipeline(input: DetectionPipelineInput): DetectionPi
     if (entry) {
       communityEntry = entry;
       communityCategory = entry.category;
-      const label = categoryLabel(entry.category, uiLanguage);
-      const voteSummary =
-        entry.report_count > 1
-          ? uiLanguage === 'zh'
-            ? `${entry.report_count} 人标记`
-            : `${entry.report_count} community marks`
-          : uiLanguage === 'zh'
-            ? '社区名单'
-            : 'Community list';
       detection = {
         ...detection,
-        reason: uiLanguage === 'zh' ? `${voteSummary}为${label}` : `${voteSummary}: ${label}`,
+        reason: communityHitReason(entry, uiLanguage),
       };
     }
   }

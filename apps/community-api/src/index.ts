@@ -35,6 +35,7 @@ import {
   listAgentMaintainerEntries,
   listAgentReleases,
   publishAgentKeywords,
+  recomputeAllAccountCategories,
   removeAgentKeyword,
   removeAgentMaintainerEntry,
   rollbackAgentRelease,
@@ -357,6 +358,13 @@ export function createApp() {
       c.req.param('handle'),
     );
     return result.ok ? c.json(result) : c.json({ error: result.error }, 400);
+  });
+
+  // 全量重算 accounts 计票与分类（admin/候选池与快照推理口径对齐；幂等维护操作）
+  app.post('/api/agent/recompute-categories', async (c) => {
+    const guard = await agentGuard(c);
+    if (typeof guard !== 'string') return guard;
+    return c.json(await recomputeAllAccountCategories(c.env, `agent:${guard}`));
   });
 
   // --- 词库（关键词名单）---
