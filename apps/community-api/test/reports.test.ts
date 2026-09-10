@@ -185,6 +185,46 @@ describe('POST /v1/reports', () => {
     expect(noIp.status).toBe(200);
   });
 
+  it('keeps per-item outcomes inside one batch: intra-batch duplicate, alias fold-in, invalid item', async () => {
+    // 正主 batch_mix_canon 带 x_user_id 555
+    expect(
+      (await postOne('batchmix-aaa1-4000-8000-aaaaaaaaaaa1', 'batch_mix_canon'))!.status,
+    ).toBe('recorded');
+    await env.DB
+      .prepare('UPDATE accounts SET x_user_id = ?2 WHERE handle = ?1')
+      .bind('batch_mix_canon', '555')
+      .run();
+
+    const res = await post({
+      installation_id: 'batchmix-aaa2-4000-8000-aaaaaaaaaaa2',
+      reports: [
+        report('batch_mix_new'),
+        report('batch_mix_new'), // 批内同安装同 handle → duplicate（不重复计票）
+        report('batch_mix_ren', { x_user_id: '555' }), // 换号 → 票计正主
+        report('bad handle!'),
+      ],
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { results: { status: string; error?: string }[] };
+    expect(body.results.map((r) => r.status)).toEqual([
+      'recorded',
+      'duplicate',
+      'recorded',
+      'rejected',
+    ]);
+    expect(body.results[3]!.error).toBe('invalid_handle');
+
+    // 新 handle 建档且只计 1 票；正主 2 票；新 handle 进别名；不产生独立换号账号
+    expect((await accountRow('batch_mix_new'))?.report_count).toBe(1);
+    expect((await accountRow('batch_mix_canon'))?.report_count).toBe(2);
+    expect(await accountRow('batch_mix_ren')).toBeNull();
+    const aliases = await env.DB
+      .prepare('SELECT aliases FROM accounts WHERE handle = ?1')
+      .bind('batch_mix_canon')
+      .first<{ aliases: string }>();
+    expect(JSON.parse(aliases?.aliases ?? '[]')).toContain('batch_mix_ren');
+  });
+
   it('alias creation is capped per installation per day; the vote still lands on the canonical handle', async () => {
     // 正主：老账号带 x_user_id 777
     expect((await postOne('alias-cap-aaa-4000-8000-aaaaaaaaaaa1', 'alias_cap_old'))!.status).toBe('recorded');

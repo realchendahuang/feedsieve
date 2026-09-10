@@ -1,6 +1,12 @@
 import { validateReport, type ValidReport } from './lib/validate';
 import { hashIp } from './lib/hash';
-import { installationHash, refreshAccountsFromLabels, setActiveLabel } from './labels';
+import {
+  installationHash,
+  refreshAccountsFromLabels,
+  batchStatements,
+  batchReads,
+  type AccountLabel,
+} from './labels';
 
 // Phase D 会把阈值搬进 policy 文件/端点；先集中放这里
 export const POLICY = {
@@ -225,104 +231,189 @@ export async function processReportBatch(
     .run();
 
   // 原始证据按 (installation_id, handle) 幂等更新；active_labels 单独决定是否新增计票。
+  // 批处理（与逐条执行行为一致，仅合并 D1 往返；语句在 batch 内按原顺序执行）：
+  //   1) 换号追踪的正主读取一次 batch 完成，同 x_user_id 共享一次读取 + 内存镜像；
+  //   2) 当前标签读取一次 batch 完成，是否变化按条目顺序内存推演 —— 批内同
+  //      canonical 的后续条目与逐条执行一样得到 duplicate；
+  //   3) reports 落库与 active_labels 写入各合并为一个 batch（两表互不相干，
+  //      逐条执行时的交错写入对结果无影响）；
+  //   4) 别名写入路径保持逐条：其「预留成功才追加」的条件语义依赖逐条
+  //      meta.changes 分支，且频率受每日配额（aliasesPerDay）约束，属冷路径。
+  interface KnownAccount {
+    handle: string;
+    aliases: string;
+  }
+  const xUserIds = [
+    ...new Set(valid.map(({ report }) => report.xUserId).filter((id): id is string => id !== null)),
+  ];
+  const knownByXUserId = new Map<string, KnownAccount>();
+  if (xUserIds.length > 0) {
+    const knownRows = await batchReads<KnownAccount>(
+      env,
+      xUserIds.map((id) =>
+        env.DB.prepare('SELECT handle, aliases FROM accounts WHERE x_user_id = ?1 LIMIT 1').bind(id),
+      ),
+    );
+    xUserIds.forEach((id, index) => {
+      const row = knownRows[index]!.results[0];
+      if (row) {
+        knownByXUserId.set(id, row);
+      }
+    });
+  }
+
+  // 正主归一（纯内存计算，不依赖任何写入）。
+  const canonicalByResultIndex = new Map<number, string>();
+  for (const item of valid) {
+    let canonical = item.report.handle;
+    const known = item.report.xUserId ? (knownByXUserId.get(item.report.xUserId) ?? null) : null;
+    if (known && known.handle !== item.report.handle) {
+      canonical = known.handle;
+    }
+    canonicalByResultIndex.set(item.resultIndex, canonical);
+  }
+
+  // 当前标签读取（每个 distinct canonical 一次，等价于逐条执行时各自那次读取：
+  // 首次出现前没有任何本请求写入会改动 active_labels）。
+  const distinctCanonicals = [...new Set(canonicalByResultIndex.values())];
+  const labelState = new Map<string, AccountLabel>();
+  if (distinctCanonicals.length > 0) {
+    const labelRows = await batchReads<{ label: AccountLabel }>(
+      env,
+      distinctCanonicals.map((handle) =>
+        env.DB.prepare(
+          'SELECT label FROM active_labels WHERE installation_id = ?1 AND handle = ?2',
+        ).bind(installHash, handle),
+      ),
+    );
+    distinctCanonicals.forEach((handle, index) => {
+      const row = labelRows[index]!.results[0];
+      if (row) {
+        labelState.set(handle, row.label);
+      }
+    });
+  }
+
+  const writeStatements: D1PreparedStatement[] = [];
+  // 别名镜像：同 x_user_id 的后续条目要与逐条执行一样看到前面已成功追加的别名。
+  const aliasMirror = new Map<string, string[]>();
   const touchedHandles = new Map<string, ValidReport>();
   for (const item of valid) {
     const r = item.report;
+    const canonical = canonicalByResultIndex.get(item.resultIndex)!;
 
     // 换号追踪：同一 x_user_id 的已知账号换了个新 handle ——
     // 票记到原账号（正主）头上，新 handle 进它的别名表，不给换号者重新洗白的机会
-    let canonical = r.handle;
-    if (r.xUserId) {
-      const known = await env.DB.prepare(
-        'SELECT handle, aliases FROM accounts WHERE x_user_id = ?1 LIMIT 1',
-      )
-        .bind(r.xUserId)
-        .first<{ handle: string; aliases: string }>();
-      if (known && known.handle !== r.handle) {
-        canonical = known.handle;
-        const aliases = JSON.parse(known.aliases) as string[];
-        if (!aliases.includes(r.handle)) {
-          // 别名写入有每日配额（静默跳过，不阻塞上报）：防止利用自报
-          // x_user_id 无限制造别名污染快照。票仍计入正主，只是不记新别名。
-          const aliasReserved = await env.DB.prepare(
-            `INSERT INTO installations (id, first_seen_at, last_seen_at, aliases_day, aliases_today)
-             VALUES (?1, ?2, ?2, ?3, 1)
-             ON CONFLICT(id) DO UPDATE SET
-               aliases_day = excluded.aliases_day,
-               aliases_today = CASE
-                 WHEN installations.aliases_day = excluded.aliases_day
-                   THEN installations.aliases_today + 1
-                 ELSE 1
-               END
-             WHERE (
-               CASE
-                 WHEN installations.aliases_day = excluded.aliases_day THEN installations.aliases_today
-                 ELSE 0
-               END
-               + 1
-             ) <= ?4`,
-          )
-            .bind(installHash, now, today, POLICY.aliasesPerDay)
+    const xUserId = r.xUserId;
+    const known = xUserId ? (knownByXUserId.get(xUserId) ?? null) : null;
+    if (xUserId && known && known.handle !== r.handle) {
+      let aliases = aliasMirror.get(xUserId);
+      if (!aliases) {
+        aliases = JSON.parse(known.aliases) as string[];
+        aliasMirror.set(xUserId, aliases);
+      }
+      if (!aliases.includes(r.handle)) {
+        // 别名写入有每日配额（静默跳过，不阻塞上报）：防止利用自报
+        // x_user_id 无限制造别名污染快照。票仍计入正主，只是不记新别名。
+        const aliasReserved = await env.DB.prepare(
+          `INSERT INTO installations (id, first_seen_at, last_seen_at, aliases_day, aliases_today)
+           VALUES (?1, ?2, ?2, ?3, 1)
+           ON CONFLICT(id) DO UPDATE SET
+             aliases_day = excluded.aliases_day,
+             aliases_today = CASE
+               WHEN installations.aliases_day = excluded.aliases_day
+                 THEN installations.aliases_today + 1
+               ELSE 1
+             END
+           WHERE (
+             CASE
+               WHEN installations.aliases_day = excluded.aliases_day THEN installations.aliases_today
+               ELSE 0
+             END
+             + 1
+           ) <= ?4`,
+        )
+          .bind(installHash, now, today, POLICY.aliasesPerDay)
+          .run();
+        if ((aliasReserved.meta.changes ?? 0) > 0) {
+          aliases.push(r.handle);
+          await env.DB.prepare('UPDATE accounts SET aliases = ?2 WHERE handle = ?1')
+            .bind(known.handle, JSON.stringify(aliases))
             .run();
-          if ((aliasReserved.meta.changes ?? 0) > 0) {
-            aliases.push(r.handle);
-            await env.DB.prepare('UPDATE accounts SET aliases = ?2 WHERE handle = ?1')
-              .bind(known.handle, JSON.stringify(aliases))
-              .run();
-          }
         }
       }
     }
 
-    await env.DB.prepare(
-      `INSERT INTO reports
-         (handle, x_user_id, reason, evidence_post_id, installation_id, client_version, created_at,
-          content_fingerprint, link_domains, detection_source)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
-       ON CONFLICT(installation_id, handle) DO UPDATE SET
-         x_user_id = COALESCE(excluded.x_user_id, reports.x_user_id),
-         reason = excluded.reason,
-         evidence_post_id = COALESCE(excluded.evidence_post_id, reports.evidence_post_id),
-         client_version = excluded.client_version,
-         created_at = excluded.created_at,
-         content_fingerprint = COALESCE(excluded.content_fingerprint, reports.content_fingerprint),
-         link_domains = COALESCE(excluded.link_domains, reports.link_domains),
-         detection_source = COALESCE(excluded.detection_source, reports.detection_source)`,
-    )
-      .bind(
-        canonical,
-        r.xUserId,
-        r.reason,
-        r.evidencePostId,
-        installHash,
-        clientVersion,
-        now,
-        r.contentFingerprint,
-        r.linkDomains.length > 0 ? JSON.stringify(r.linkDomains) : null,
-        r.detectionSource,
+    writeStatements.push(
+      env.DB.prepare(
+        `INSERT INTO reports
+           (handle, x_user_id, reason, evidence_post_id, installation_id, client_version, created_at,
+            content_fingerprint, link_domains, detection_source)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+         ON CONFLICT(installation_id, handle) DO UPDATE SET
+           x_user_id = COALESCE(excluded.x_user_id, reports.x_user_id),
+           reason = excluded.reason,
+           evidence_post_id = COALESCE(excluded.evidence_post_id, reports.evidence_post_id),
+           client_version = excluded.client_version,
+           created_at = excluded.created_at,
+           content_fingerprint = COALESCE(excluded.content_fingerprint, reports.content_fingerprint),
+           link_domains = COALESCE(excluded.link_domains, reports.link_domains),
+           detection_source = COALESCE(excluded.detection_source, reports.detection_source)`,
       )
-      .run();
-    const labelChanged = await setActiveLabel(env, installHash, canonical, 'blocked', now);
-    // resultIndex 与 results 一同构造，下标必然有效。
-    results[item.resultIndex]!.status = labelChanged ? 'recorded' : 'duplicate';
+        .bind(
+          canonical,
+          r.xUserId,
+          r.reason,
+          r.evidencePostId,
+          installHash,
+          clientVersion,
+          now,
+          r.contentFingerprint,
+          r.linkDomains.length > 0 ? JSON.stringify(r.linkDomains) : null,
+          r.detectionSource,
+        ),
+    );
+
+    // 标签是否变化的内存推演：与 setActiveLabel 的「同标签幂等」语义一致。
+    if (labelState.get(canonical) !== 'blocked') {
+      writeStatements.push(
+        env.DB.prepare(
+          `INSERT INTO active_labels (installation_id, handle, label, updated_at)
+           VALUES (?1, ?2, ?3, ?4)
+           ON CONFLICT(installation_id, handle) DO UPDATE SET
+             label = excluded.label,
+             updated_at = excluded.updated_at`,
+        )
+          .bind(installHash, canonical, 'blocked', now),
+      );
+      labelState.set(canonical, 'blocked');
+      // resultIndex 与 results 一同构造，下标必然有效。
+      results[item.resultIndex]!.status = 'recorded';
+    } else {
+      results[item.resultIndex]!.status = 'duplicate';
+    }
     touchedHandles.set(canonical, { ...r, handle: canonical });
   }
+  await batchStatements(env, writeStatements);
 
   // 先保证账号存在，再从 active_labels 全量重算当前正票、负票与分类。
   // 这样“正 -> 负 -> 正”的改判和同标签证据更新都不会让聚合计数漂移。
   // 批量收敛一次完成：逐账号刷新会把 D1 调用放大 N×10 倍。
+  const accountStatements: D1PreparedStatement[] = [];
   for (const [handle, report] of touchedHandles) {
-    await env.DB.prepare(
-      `INSERT INTO accounts
-         (handle, x_user_id, category, status, report_count, rescue_count, first_report_at, updated_at)
-       VALUES (?1, ?2, ?3, 'new', 0, 0, ?4, ?4)
-       ON CONFLICT(handle) DO UPDATE SET
-         x_user_id = COALESCE(excluded.x_user_id, accounts.x_user_id),
-         updated_at = ?4`,
-    )
-      .bind(handle, report.xUserId, report.reason, now)
-      .run();
+    accountStatements.push(
+      env.DB.prepare(
+        `INSERT INTO accounts
+           (handle, x_user_id, category, status, report_count, rescue_count, first_report_at, updated_at)
+         VALUES (?1, ?2, ?3, 'new', 0, 0, ?4, ?4)
+         ON CONFLICT(handle) DO UPDATE SET
+           x_user_id = COALESCE(excluded.x_user_id, accounts.x_user_id),
+           updated_at = ?4`,
+      )
+        .bind(handle, report.xUserId, report.reason, now),
+    );
   }
+  await batchStatements(env, accountStatements);
   await refreshAccountsFromLabels(env, [...touchedHandles.keys()]);
 
   return { ok: true, results };

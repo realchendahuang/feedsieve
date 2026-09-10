@@ -8,14 +8,32 @@ import { validateRescue } from './lib/validate';
 const MAX_LABEL_BATCH = 50;
 /** 单安装每日撤回上限：报告/撤回无限对拍会反复打脏快照与榜单聚合 */
 const RETRACT_DAILY_LIMIT = 50;
-// D1 batch 单次调用与单条查询的绑定参数上限一致，按 100 分片。
-const D1_CHUNK = 100;
+/** D1 batch 单次调用与单条查询的绑定参数上限一致，按 100 分片。 */
+export const D1_CHUNK = 100;
+
+/** 批量执行（按 D1_CHUNK 分片）；batch 内语句按序执行，后续语句能看到前面的写入。 */
+export async function batchStatements(
+  env: Cloudflare.Env,
+  statements: D1PreparedStatement[],
+): Promise<void> {
+  for (let index = 0; index < statements.length; index += D1_CHUNK) {
+    await env.DB.batch(statements.slice(index, index + D1_CHUNK));
+  }
+}
+
+/** 批量执行一批读取语句，返回与语句顺序一致的结果数组。 */
+export async function batchReads<T>(
+  env: Cloudflare.Env,
+  reads: D1PreparedStatement[],
+): Promise<D1Result<T>[]> {
+  const all: D1Result<T>[] = [];
+  for (let index = 0; index < reads.length; index += D1_CHUNK) {
+    all.push(...((await env.DB.batch<T>(reads.slice(index, index + D1_CHUNK))) as D1Result<T>[]));
+  }
+  return all;
+}
 
 export type AccountLabel = 'blocked' | 'allowed';
-
-interface ActiveLabelRow {
-  label: AccountLabel;
-}
 
 export async function installationHash(
   env: Cloudflare.Env,
@@ -25,38 +43,9 @@ export async function installationHash(
 }
 
 /**
- * 设置当前判断。返回 true 表示标签发生了变化；同标签重传保持幂等。
- * 原始 reports / rescues 证据由各自路由保存，这里只管理当前计票状态。
- */
-export async function setActiveLabel(
-  env: Cloudflare.Env,
-  installHash: string,
-  handle: string,
-  label: AccountLabel,
-  now: number,
-): Promise<boolean> {
-  const previous = await env.DB.prepare(
-    'SELECT label FROM active_labels WHERE installation_id = ?1 AND handle = ?2',
-  )
-    .bind(installHash, handle)
-    .first<ActiveLabelRow>();
-  if (previous?.label === label) {
-    return false;
-  }
-  await env.DB.prepare(
-    `INSERT INTO active_labels (installation_id, handle, label, updated_at)
-     VALUES (?1, ?2, ?3, ?4)
-     ON CONFLICT(installation_id, handle) DO UPDATE SET
-       label = excluded.label,
-       updated_at = excluded.updated_at`,
-  )
-    .bind(installHash, handle, label, now)
-    .run();
-  return true;
-}
-
-/**
  * 当前标签是唯一计票源；批量请求（上报 / 抢救 / 撤回）改动一组账号后收敛计数。
+ * 逐条版本已并入调用方的批处理推演（见 reports.ts / rescues.ts 的标签内存推演），
+ * 这里只保留批量版。
  *
  * 单账号版（refreshAccountFromLabels，N×~10 次 D1 请求）在批量路由里会撞
  * 单次 invocation 的请求上限；这里用 5 条 IN 聚合 SQL + 1 次 batch 写回收敛
@@ -166,9 +155,7 @@ export async function refreshAccountsFromLabels(
       ),
     );
   }
-  for (let index = 0; index < statements.length; index += D1_CHUNK) {
-    await env.DB.batch(statements.slice(index, index + D1_CHUNK));
-  }
+  await batchStatements(env, statements);
   await syncConsensusEvents(env, consensusTransitions);
   return existingHandles;
 }
