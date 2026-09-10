@@ -28,7 +28,7 @@ async function report(
   const body = (await res.json()) as {
     results: { status: string; error?: string }[];
   };
-  return body.results[0];
+  return body.results[0]!;
 }
 
 /** 3 个独立安装上报同一 handle → 自动升 candidate，进快照 */
@@ -140,15 +140,15 @@ describe('snapshot content evidence aggregation (v0.4)', () => {
       'fp2aa-3001-4001-8000-300000000002',
       'fp3aa-3001-4001-8000-300000000003',
     ];
-    await report(installs[0], 'fp_user', {
+    await report(installs[0]!, 'fp_user', {
       content_fingerprint: FP_A,
       link_domains: ['scam.example'],
     });
-    await report(installs[1], 'fp_user', {
+    await report(installs[1]!, 'fp_user', {
       content_fingerprint: FP_A,
       link_domains: ['scam.example'],
     });
-    await report(installs[2], 'fp_user', {
+    await report(installs[2]!, 'fp_user', {
       content_fingerprint: FP_A,
       link_domains: ['lonely.example'],
     });

@@ -169,7 +169,7 @@ describe('Access 管理后台工作区', () => {
     expect(latest.pack_version).toBe(rolled.version);
     const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(restoredBody));
     const sha256 = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
-    expect(latest.files[0].sha256).toBe(sha256);
+    expect(latest.files[0]!.sha256).toBe(sha256);
     if (env.SIGNING_PRIVATE_KEY && env.SIGNING_KEY_ID) {
       expect(latest.signature?.key_id).toBe('release-1');
       const check = await verifyManifestSignature(

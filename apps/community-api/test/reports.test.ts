@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 import worker from '../src/index';
-import { hashInstallationId } from '../src/lib/hash';
+import { hashInstallationId, hashIp } from '../src/lib/hash';
 
 const ORIGIN = 'https://api.example.com';
 
@@ -42,7 +42,7 @@ describe('POST /v1/reports', () => {
     const raw = 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa';
     const result = await postOne(raw, '@Spam_User');
 
-    expect(result.status).toBe('recorded');
+    expect(result!.status).toBe('recorded');
 
     const account = await accountRow('spam_user');
     expect(account?.report_count).toBe(1);
@@ -59,8 +59,8 @@ describe('POST /v1/reports', () => {
 
   it('dedupes the same installation reporting the same handle', async () => {
     const id = 'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb';
-    expect((await postOne(id, 'dup_user')).status).toBe('recorded');
-    expect((await postOne(id, 'dup_user')).status).toBe('duplicate');
+    expect((await postOne(id, 'dup_user'))!.status).toBe('recorded');
+    expect((await postOne(id, 'dup_user'))!.status).toBe('duplicate');
 
     const account = await accountRow('dup_user');
     expect(account?.report_count).toBe(1);
@@ -93,11 +93,11 @@ describe('POST /v1/reports', () => {
     const body = (await res.json()) as {
       results: { handle: string; status: string; error?: string }[];
     };
-    expect(body.results[0].status).toBe('recorded');
-    expect(body.results[1].status).toBe('rejected');
-    expect(body.results[1].error).toBe('invalid_handle');
-    expect(body.results[2].error).toBe('invalid_reason');
-    expect(body.results[3].error).toBe('invalid_x_user_id');
+    expect(body.results[0]!.status).toBe('recorded');
+    expect(body.results[1]!.status).toBe('rejected');
+    expect(body.results[1]!.error).toBe('invalid_handle');
+    expect(body.results[2]!.error).toBe('invalid_reason');
+    expect(body.results[3]!.error).toBe('invalid_x_user_id');
   });
 
   it('stores detection_source and rejects unknown sources', async () => {
@@ -111,10 +111,10 @@ describe('POST /v1/reports', () => {
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { results: { status: string; error?: string }[] };
-    expect(body.results[0].status).toBe('recorded');
-    expect(body.results[1].status).toBe('recorded');
-    expect(body.results[2].status).toBe('rejected');
-    expect(body.results[2].error).toBe('invalid_detection_source');
+    expect(body.results[0]!.status).toBe('recorded');
+    expect(body.results[1]!.status).toBe('recorded');
+    expect(body.results[2]!.status).toBe('rejected');
+    expect(body.results[2]!.error).toBe('invalid_detection_source');
 
     const stored = await env.DB.prepare('SELECT detection_source FROM reports WHERE handle = ?1')
       .bind('src_manual')
@@ -153,6 +153,79 @@ describe('POST /v1/reports', () => {
       reports: [report('capped_user')],
     });
     expect(res.status).toBe(429);
+  });
+
+  it('rate-limits a client IP over the daily limit even with fresh installation ids', async () => {
+    const ip = '203.0.113.77';
+    const today = new Date().toISOString().slice(0, 10);
+    const ipHash = await hashIp(env.INSTALLATION_SALT, ip);
+    await env.DB.prepare(
+      'INSERT INTO ip_usage (ip_hash, day, reports_today) VALUES (?1, ?2, ?3)',
+    )
+      .bind(ipHash, today, 200)
+      .run();
+
+    const res = await worker.fetch(
+      new Request(`${ORIGIN}/v1/reports`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'cf-connecting-ip': ip },
+        body: JSON.stringify({
+          installation_id: 'sybil-aaaa-4000-8000-aaaaaaaaaaa1',
+          reports: [report('sybil_user')],
+        }),
+      }),
+      env,
+    );
+    expect(res.status).toBe(429);
+    // 未配 IP 头（或本地 curl）不受 IP 门影响，安装配额仍生效
+    const noIp = await post({
+      installation_id: 'sybil-aaaa-4000-8000-aaaaaaaaaaa2',
+      reports: [report('sybil_user')],
+    });
+    expect(noIp.status).toBe(200);
+  });
+
+  it('alias creation is capped per installation per day; the vote still lands on the canonical handle', async () => {
+    // 正主：老账号带 x_user_id 777
+    expect((await postOne('alias-cap-aaa-4000-8000-aaaaaaaaaaa1', 'alias_cap_old'))!.status).toBe('recorded');
+    await env.DB.prepare('UPDATE accounts SET x_user_id = ?2 WHERE handle = ?1')
+      .bind('alias_cap_old', '777')
+      .run();
+
+    // 新安装的别名配额已用满
+    const installerHash = await hashInstallationId(env.INSTALLATION_SALT, 'alias-cap-aaa-4000-8000-aaaaaaaaaaa2');
+    const today = new Date().toISOString().slice(0, 10);
+    await env.DB.prepare(
+      'INSERT INTO installations (id, first_seen_at, last_seen_at, aliases_day, aliases_today) VALUES (?1, ?2, ?2, ?3, ?4)',
+    )
+      .bind(installerHash, Math.floor(Date.now() / 1000), today, 10)
+      .run();
+
+    const res = await post({
+      installation_id: 'alias-cap-aaa-4000-8000-aaaaaaaaaaa2',
+      reports: [report('alias_cap_new', { x_user_id: '777' })],
+    });
+    expect(res.status).toBe(200);
+
+    // 票计入正主，但超出配额的新别名不写入
+    const account = await accountRow('alias_cap_old');
+    expect(account?.report_count).toBe(2);
+    expect(await accountRow('alias_cap_new')).toBeNull();
+    const aliases = await env.DB.prepare('SELECT aliases FROM accounts WHERE handle = ?1')
+      .bind('alias_cap_old')
+      .first<{ aliases: string }>();
+    expect(JSON.parse(aliases?.aliases ?? '[]')).not.toContain('alias_cap_new');
+
+    // 配额内的别名仍正常写入（另一个新安装，未预置配额行）
+    expect((await postOne('alias-cap-aaa-4000-8000-aaaaaaaaaaa3', 'alias_cap_later'))!.status).toBe('recorded');
+    await post({
+      installation_id: 'alias-cap-aaa-4000-8000-aaaaaaaaaaa3',
+      reports: [report('alias_cap_extra', { x_user_id: '777' })],
+    });
+    const later = await env.DB.prepare('SELECT aliases FROM accounts WHERE handle = ?1')
+      .bind('alias_cap_old')
+      .first<{ aliases: string }>();
+    expect(JSON.parse(later?.aliases ?? '[]')).toContain('alias_cap_extra');
   });
 });
 

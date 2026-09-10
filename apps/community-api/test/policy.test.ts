@@ -26,6 +26,8 @@ describe('policy yaml ↔ code constants', () => {
     expect(yaml).toContain(`daily_rescue_base: ${POLICY.rescueDailyLimit}`);
     expect(yaml).toContain(`daily_min: ${POLICY.minDailyLimit}`);
     expect(yaml).toContain(`max_batch: ${POLICY.maxBatch}`);
+    expect(yaml).toContain(`daily_ip_report_limit: ${POLICY.dailyIpReportLimit}`);
+    expect(yaml).toContain(`daily_alias_cap: ${POLICY.aliasesPerDay}`);
   });
 
   it('trust values match', () => {

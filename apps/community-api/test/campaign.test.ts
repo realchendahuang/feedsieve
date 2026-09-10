@@ -30,7 +30,7 @@ async function report(
   const body = (await res.json()) as {
     results: { status: string; error?: string }[];
   };
-  return body.results[0];
+  return body.results[0]!;
 }
 
 /** 3 个独立安装上报同一 handle → 自动升 candidate，进快照 */
@@ -59,7 +59,7 @@ async function publishAndGetEntry(handle: string): Promise<Entry | undefined> {
   const body = (await (
     await worker.fetch(
       new Request(
-        `${ORIGIN}/v1/snapshots/${latest.snapshot_version}/${latest.files[0].path}`,
+        `${ORIGIN}/v1/snapshots/${latest.snapshot_version}/${latest.files[0]!.path}`,
       ),
       env,
     )

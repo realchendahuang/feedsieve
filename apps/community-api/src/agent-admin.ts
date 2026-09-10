@@ -45,7 +45,7 @@ async function timingSafeEqual(a: string, b: string): Promise<boolean> {
   if (ba.length !== bb.length) return false;
   let diff = 0;
   for (let index = 0; index < ba.length; index += 1) {
-    diff |= ba[index] ^ bb[index];
+    diff |= (ba[index] ?? 0) ^ (bb[index] ?? 0);
   }
   return diff === 0;
 }
@@ -60,7 +60,9 @@ export async function agentKeyIdentity(
   for (const pair of configured.split(',')) {
     const match = pair.trim().match(AGENT_KEY_PAIR);
     if (!match) continue;
-    const [, id, secret] = match;
+    const id = match[1];
+    const secret = match[2];
+    if (!id || !secret) continue;
     if (await timingSafeEqual(provided, secret)) return id;
   }
   return null;

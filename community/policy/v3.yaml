@@ -38,6 +38,8 @@ limits:
   daily_rescue_base: 50
   daily_min: 10
   max_batch: 50
+  daily_ip_report_limit: 200
+  daily_alias_cap: 10
 
 principles:
   - one_final_blocklist

@@ -180,3 +180,69 @@ describe('active labels（每安装每账号只保留最后判断）', () => {
     expect(await account('old_handle')).toMatchObject({ report_count: 1 });
   });
 });
+
+describe('撤回每日配额', () => {
+  it('达到每日撤回上限后返回 429，未触顶的撤回不受影响', async () => {
+    const installationId = 'retract-cap-0001-aaaaaaaa';
+    const handle = 'retract_cap';
+    await post('/v1/reports', {
+      installation_id: installationId,
+      reports: [{ handle, reason: 'bot_spam' }],
+    });
+
+    // 预置：当日配额已用满
+    const installHash = await hashInstallationId(env.INSTALLATION_SALT, installationId);
+    const today = new Date().toISOString().slice(0, 10);
+    await env.DB.prepare(
+      `INSERT INTO installations (id, first_seen_at, last_seen_at, retracts_day, retracts_today)
+       VALUES (?1, ?2, ?2, ?3, 50)
+       ON CONFLICT(id) DO UPDATE SET retracts_day = excluded.retracts_day, retracts_today = 50`,
+    )
+      .bind(installHash, Math.floor(Date.now() / 1000), today)
+      .run();
+
+    const capped = await worker.fetch(
+      new Request(`${ORIGIN}/v1/labels/retract`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ installation_id: installationId, handles: [handle] }),
+      }),
+      env,
+    );
+    expect(capped.status).toBe(429);
+    expect(((await capped.json()) as Record<string, unknown>).error).toBe('rate_limited');
+    // 拒绝时不落撤回：标签仍在
+    const label = await env.DB.prepare(
+      'SELECT 1 AS present FROM active_labels WHERE installation_id = ?1 AND handle = ?2',
+    )
+      .bind(installHash, handle)
+      .first();
+    expect(label).not.toBeNull();
+
+    // 重置配额后同一撤回成功
+    await env.DB.prepare('UPDATE installations SET retracts_today = 0 WHERE id = ?1')
+      .bind(installHash)
+      .run();
+    const ok = await post('/v1/labels/retract', { installation_id: installationId, handles: [handle] });
+    expect(ok.results).toEqual([{ handle, status: 'retracted' }]);
+  });
+
+  it('对无标签 handle 的空撤回不消耗配额（重试幂等）', async () => {
+    const installationId = 'retract-cap-0002-bbbbbbbb';
+    await env.DB.prepare(
+      'INSERT INTO installations (id, first_seen_at, last_seen_at, retracts_day, retracts_today) VALUES (?1, ?2, ?2, ?3, ?4)',
+    )
+      .bind(
+        await hashInstallationId(env.INSTALLATION_SALT, installationId),
+        Math.floor(Date.now() / 1000),
+        new Date().toISOString().slice(0, 10),
+        50,
+      )
+      .run();
+    const res = await post('/v1/labels/retract', {
+      installation_id: installationId,
+      handles: ['never_reported'],
+    });
+    expect(res.results).toEqual([{ handle: 'never_reported', status: 'absent' }]);
+  });
+});

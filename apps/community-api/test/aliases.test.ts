@@ -43,7 +43,7 @@ describe('aliases (rename tracking)', () => {
     const res = await postReport('aaaaaaa1-0000-4000-8000-aaaaaaaaaaa4', 'spam_new', '888');
     expect(res.status).toBe(200);
     const body = (await res.json()) as { results: { status: string }[] };
-    expect(body.results[0].status).toBe('recorded');
+    expect(body.results[0]!.status).toBe('recorded');
 
     // 票记在正主身上；新 handle 进别名；不产生新的独立账号
     const after = await accountRow('spam_old');
@@ -54,6 +54,6 @@ describe('aliases (rename tracking)', () => {
     // 同一安装再报新 handle：对正主去重
     const dup = await postReport('aaaaaaa1-0000-4000-8000-aaaaaaaaaaa4', 'spam_new', '888');
     const dupBody = (await dup.json()) as { results: { status: string }[] };
-    expect(dupBody.results[0].status).toBe('duplicate');
+    expect(dupBody.results[0]!.status).toBe('duplicate');
   });
 });

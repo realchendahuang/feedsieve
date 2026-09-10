@@ -78,7 +78,7 @@ describe('agent maintenance API', () => {
       .bind('agent_new_user')
       .all<{ actor_email: string; action: string }>();
     expect(audit.results.length).toBeGreaterThan(0);
-    expect(audit.results[0].actor_email).toBe('agent:ops');
+    expect(audit.results[0]!.actor_email).toBe('agent:ops');
   });
 
   it('路径 handle 与 body.handle 不一致 → 400，不落库', async () => {

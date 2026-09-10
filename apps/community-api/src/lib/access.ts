@@ -2,11 +2,24 @@ import { createRemoteJWKSet, jwtVerify } from 'jose';
 
 export interface AccessIdentity { email: string }
 
+// 每请求重建 createRemoteJWKSet 会丢掉 jose 的密钥缓存（每次管理请求都打
+// 一次远端 JWKS 拉取/校验）。按 URL 记忆化，进程内共享同一套密钥缓存。
+const jwksByUri = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
+
+function remoteJwks(url: string): ReturnType<typeof createRemoteJWKSet> {
+  let jwks = jwksByUri.get(url);
+  if (!jwks) {
+    jwks = createRemoteJWKSet(new URL(url));
+    jwksByUri.set(url, jwks);
+  }
+  return jwks;
+}
+
 export async function verifyAccess(request: Request, env: Cloudflare.Env): Promise<AccessIdentity | null> {
   const token = request.headers.get('Cf-Access-Jwt-Assertion');
   if (!token || !env.ACCESS_AUD || !env.ACCESS_JWKS_URL) return null;
   try {
-    const jwks = createRemoteJWKSet(new URL(env.ACCESS_JWKS_URL));
+    const jwks = remoteJwks(env.ACCESS_JWKS_URL);
     const result = await jwtVerify(token, jwks, {
       audience: env.ACCESS_AUD,
       // Cloudflare Access 只以 RS256/ES256 签发；显式钉死算法，防 alg 混淆

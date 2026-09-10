@@ -176,3 +176,67 @@ describe('管理后台 Access 中间件（HTTP 层）', () => {
     expect(response.status).toBe(401);
   });
 });
+
+describe('管理端 CSRF 防线（POST）', () => {
+  // 有效身份 + 通过 CSRF 门槛的最小探针：/api/admin/accounts 空对象体 →
+  // 到达处理器后 400 invalid_handle；只要不是 403/415/401 即证明两道门都放行了。
+  async function adminPost(headers: Record<string, string>, envOverride?: Cloudflare.Env): Promise<Response> {
+    return worker.fetch(
+      new Request(`${ADMIN_ORIGIN}/api/admin/accounts`, {
+        method: 'POST',
+        headers,
+        body: '{}',
+      }),
+      envOverride ?? env,
+    );
+  }
+
+  it('跨站 Origin 的 POST 被拒绝（403），即使带了有效 Access JWT', async () => {
+    const response = await adminPost({
+      'Cf-Access-Jwt-Assertion': fixture!.token,
+      origin: 'https://evil.example',
+      'content-type': 'application/json',
+    });
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: 'cross_origin_admin_post' });
+  });
+
+  it('无 Origin 且非 JSON content-type（text/plain 简单请求）被拒绝（415）', async () => {
+    const response = await worker.fetch(
+      new Request(`${ADMIN_ORIGIN}/api/admin/accounts`, {
+        method: 'POST',
+        headers: { 'Cf-Access-Jwt-Assertion': fixture!.token, 'content-type': 'text/plain' },
+        body: '{}',
+      }),
+      env,
+    );
+    expect(response.status).toBe(415);
+    expect(await response.json()).toEqual({ error: 'json_content_type_required' });
+  });
+
+  it('无 Origin + JSON content-type（脚本客户端）：CSRF 门放行，进入 Access 校验', async () => {
+    const response = await adminPost({ 'content-type': 'application/json' });
+    // 无 token → Access 401（说明已穿过 CSRF 门）；若被 CSRF 拦截会是 415
+    expect(response.status).toBe(401);
+  });
+
+  it('管理域名 Origin + 有效 JWT：CSRF 门与 Access 校验都放行（到达处理器 400）', async () => {
+    const response = await adminPost({
+      'Cf-Access-Jwt-Assertion': fixture!.token,
+      origin: ADMIN_ORIGIN,
+      'content-type': 'application/json',
+    });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'invalid_handle' });
+  });
+
+  it('GET 不受 CSRF 门影响（保持原有 401/200 语义）', async () => {
+    const response = await worker.fetch(
+      new Request(`${ADMIN_ORIGIN}/api/admin/me`, {
+        headers: { 'Cf-Access-Jwt-Assertion': fixture!.token },
+      }),
+      env,
+    );
+    expect(response.status).toBe(200);
+  });
+});

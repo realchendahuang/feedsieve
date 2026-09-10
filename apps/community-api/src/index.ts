@@ -76,7 +76,7 @@ function staticAssetRequest(request: Request): Request {
   return request;
 }
 
-type AdminContext = Context<{ Bindings: Cloudflare.Env; Variables: { maintainerEmail: string } }>;
+type AdminContext = Context<{ Bindings: Cloudflare.Env; Variables: { maintainerEmail: string; agentIdentity: string } }>;
 
 /** 词库工作区变更后立即重发公开词库：保存即生效，维护者无需再手动发布。 */
 async function republishKeywords(c: AdminContext, extra: Record<string, unknown> = {}): Promise<Response> {
@@ -92,7 +92,7 @@ async function republishKeywords(c: AdminContext, extra: Record<string, unknown>
 }
 
 export function createApp() {
-  const app = new Hono<{ Bindings: Cloudflare.Env; Variables: { maintainerEmail: string } }>();
+  const app = new Hono<{ Bindings: Cloudflare.Env; Variables: { maintainerEmail: string; agentIdentity: string } }>();
 
   // 扩展 content script 会跨域 POST，必须放行预检
   app.use('*', cors());
@@ -116,7 +116,7 @@ export function createApp() {
 
   app.post('/v1/reports', async (c) => {
     const body = await c.req.json().catch(() => undefined);
-    const result = await processReportBatch(c.env, body);
+    const result = await processReportBatch(c.env, body, c.req.header('cf-connecting-ip'));
     if (!result.ok) {
       return c.json({ error: result.error }, result.httpStatus);
     }
@@ -138,6 +138,25 @@ export function createApp() {
   // React 管理端使用 Cloudflare Access 身份；此路由永远不接受旧的 Bearer 凭据。
   app.use('/api/admin/*', async (c, next) => {
     if (!isAdminHost(c.req.raw, c.env)) return c.json({ error: 'not_found' }, 404);
+    // CSRF 防线：Access 身份是边缘按会话 Cookie 注入的，跨站简单 POST
+    // （无预检的 text/plain body）会带着维护者的有效会话到达这里，而
+    // Hono 的 c.req.json() 不看 content-type。浏览器发起的 POST 一定带
+    // Origin：Origin 存在但不等于管理域名 → 直接拒绝；无 Origin 的
+    // 非浏览器客户端（curl/脚本）必须声明 application/json。
+    if (c.req.method === 'POST') {
+      const configured = c.env.ADMIN_HOST?.trim().toLowerCase();
+      const origin = c.req.header('origin');
+      if (origin) {
+        if (!configured || origin.toLowerCase() !== `https://${configured}`) {
+          return c.json({ error: 'cross_origin_admin_post' }, 403);
+        }
+      } else {
+        const contentType = (c.req.header('content-type') ?? '').split(';')[0]?.trim().toLowerCase();
+        if (contentType !== 'application/json') {
+          return c.json({ error: 'json_content_type_required' }, 415);
+        }
+      }
+    }
     const identity = await verifyAccess(c.req.raw, c.env);
     if (!identity) return c.json({ error: 'access_required' }, 401);
     c.set('maintainerEmail', identity.email);
@@ -326,20 +345,20 @@ export function createApp() {
   // Agent 维护通道：X-Agent-Key 鉴权（AGENT_API_KEYS，见 agent-admin.ts）。
   // 覆盖线上全部可管理数据：维护者名单 / 词库分类与规则 / 发布与回滚 / 审计 / 资产清单。
   // 不暴露社区票原始数据、安装数据或人工后台会话。
-  const agentGuard = async (c: Context): Promise<string | Response> => {
+  // 统一中间件守卫：新增路由时不再依赖逐个手挂 guard，防漏防护。
+  app.use('/api/agent/*', async (c, next) => {
     const identity = await agentKeyIdentity(c.env, c.req.header('x-agent-key'));
-    return identity ?? c.json({ error: 'invalid_agent_key' }, 401);
-  };
+    if (!identity) return c.json({ error: 'invalid_agent_key' }, 401);
+    c.set('agentIdentity', identity);
+    await next();
+  });
 
   app.get('/api/agent/entries', async (c) => {
-    const guard = await agentGuard(c);
-    if (typeof guard !== 'string') return guard;
     return c.json({ entries: await listAgentMaintainerEntries(c.env) });
   });
 
   app.put('/api/agent/entries/:handle', async (c) => {
-    const guard = await agentGuard(c);
-    if (typeof guard !== 'string') return guard;
+    const guard = c.get('agentIdentity');
     const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
     if (!body || typeof body !== 'object') {
       return c.json({ error: 'invalid_body' }, 400);
@@ -354,8 +373,7 @@ export function createApp() {
   });
 
   app.delete('/api/agent/entries/:handle', async (c) => {
-    const guard = await agentGuard(c);
-    if (typeof guard !== 'string') return guard;
+    const guard = c.get('agentIdentity');
     const result = await removeAgentMaintainerEntry(
       c.env,
       `agent:${guard}`,
@@ -366,21 +384,17 @@ export function createApp() {
 
   // 全量重算 accounts 计票与分类（admin/候选池与快照推理口径对齐；幂等维护操作）
   app.post('/api/agent/recompute-categories', async (c) => {
-    const guard = await agentGuard(c);
-    if (typeof guard !== 'string') return guard;
+    const guard = c.get('agentIdentity');
     return c.json(await recomputeAllAccountCategories(c.env, `agent:${guard}`));
   });
 
   // --- 词库（关键词名单）---
   app.get('/api/agent/keywords', async (c) => {
-    const guard = await agentGuard(c);
-    if (typeof guard !== 'string') return guard;
     return c.json(await listAgentKeywords(c.env));
   });
 
   app.put('/api/agent/keywords/packs/:id', async (c) => {
-    const guard = await agentGuard(c);
-    if (typeof guard !== 'string') return guard;
+    const guard = c.get('agentIdentity');
     const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
     if (!body || typeof body !== 'object') return c.json({ error: 'invalid_body' }, 400);
     if (body.id !== c.req.param('id')) return c.json({ error: 'handle_mismatch' }, 400);
@@ -389,15 +403,13 @@ export function createApp() {
   });
 
   app.delete('/api/agent/keywords/packs/:id', async (c) => {
-    const guard = await agentGuard(c);
-    if (typeof guard !== 'string') return guard;
+    const guard = c.get('agentIdentity');
     const result = await removeAgentKeyword(c.env, `agent:${guard}`, 'packs', c.req.param('id'));
     return result.ok ? c.json(result) : c.json({ error: result.error }, 400);
   });
 
   app.put('/api/agent/keywords/rules/:id', async (c) => {
-    const guard = await agentGuard(c);
-    if (typeof guard !== 'string') return guard;
+    const guard = c.get('agentIdentity');
     const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
     if (!body || typeof body !== 'object') return c.json({ error: 'invalid_body' }, 400);
     if (body.id !== c.req.param('id')) return c.json({ error: 'handle_mismatch' }, 400);
@@ -406,15 +418,13 @@ export function createApp() {
   });
 
   app.delete('/api/agent/keywords/rules/:id', async (c) => {
-    const guard = await agentGuard(c);
-    if (typeof guard !== 'string') return guard;
+    const guard = c.get('agentIdentity');
     const result = await removeAgentKeyword(c.env, `agent:${guard}`, 'rules', c.req.param('id'));
     return result.ok ? c.json(result) : c.json({ error: result.error }, 400);
   });
 
   app.post('/api/agent/keywords/publish', async (c) => {
-    const guard = await agentGuard(c);
-    if (typeof guard !== 'string') return guard;
+    const guard = c.get('agentIdentity');
     try {
       return c.json(await publishAgentKeywords(c.env, `agent:${guard}`));
     } catch (error) {
@@ -423,21 +433,16 @@ export function createApp() {
   });
 
   app.post('/api/agent/keywords/import', async (c) => {
-    const guard = await agentGuard(c);
-    if (typeof guard !== 'string') return guard;
     return c.json(await importAgentKeywordCatalog(c.env));
   });
 
   // --- 发布记录 / 回滚 / 审计 / 状态 / 资产 ---
   app.get('/api/agent/releases', async (c) => {
-    const guard = await agentGuard(c);
-    if (typeof guard !== 'string') return guard;
     return c.json({ releases: await listAgentReleases(c.env) });
   });
 
   app.post('/api/agent/releases/:id/rollback', async (c) => {
-    const guard = await agentGuard(c);
-    if (typeof guard !== 'string') return guard;
+    const guard = c.get('agentIdentity');
     const id = Number(c.req.param('id'));
     if (!Number.isInteger(id)) return c.json({ error: 'invalid_release_id' }, 400);
     const result = await rollbackAgentRelease(c.env, `agent:${guard}`, id);
@@ -445,21 +450,15 @@ export function createApp() {
   });
 
   app.get('/api/agent/audit', async (c) => {
-    const guard = await agentGuard(c);
-    if (typeof guard !== 'string') return guard;
     const limit = Number(c.req.query('limit') ?? 50);
     return c.json({ audit: await listAgentAudit(c.env, Number.isFinite(limit) ? limit : 50) });
   });
 
   app.get('/api/agent/status', async (c) => {
-    const guard = await agentGuard(c);
-    if (typeof guard !== 'string') return guard;
     return c.json(await agentStatus(c.env));
   });
 
   app.get('/api/agent/assets', async (c) => {
-    const guard = await agentGuard(c);
-    if (typeof guard !== 'string') return guard;
     const prefix = c.req.query('prefix') || null;
     return c.json(await listAgentAssets(c.env, prefix));
   });
@@ -667,7 +666,10 @@ export function createApp() {
   app.notFound((c) => c.json({ error: 'not_found' }, 404));
 
   app.onError((error, c) => {
-    console.error('[community-api]', error);
+    // 不打整个 error 对象：D1/nodemailer 错误消息可能嵌入绑定值（邮箱等敏感数据）
+    const name = error instanceof Error ? error.name : 'Error';
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[community-api] ${c.req.method} ${c.req.path} -> 500 ${name}: ${message}`);
     return c.json({ error: 'internal_error' }, 500);
   });
 
@@ -702,9 +704,12 @@ async function scheduledAutoPublish(env: Cloudflare.Env): Promise<void> {
   }
 }
 
+// 路由表与中间件链只构建一次；每请求重建纯属浪费 CPU（env 每次调用传入）。
+const app = createApp();
+
 export default {
   fetch(request, env) {
-    return createApp().fetch(request, env);
+    return app.fetch(request, env);
   },
   async scheduled(_controller, env) {
     await scheduledAutoPublish(env);

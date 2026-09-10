@@ -20,3 +20,12 @@ export async function hashInstallationId(
   }
   return sha256Hex(`${salt}:${installationId}`);
 }
+
+// IP 哈希：独立域前缀（与安装哈希不交叉），同样的 fail-closed 盐检查。
+// 原始 IP 绝不落库（0001 隐私红线）。
+export async function hashIp(salt: string, ip: string): Promise<string> {
+  if (typeof salt !== 'string' || salt.length < 16) {
+    throw new Error('installation_salt_missing');
+  }
+  return sha256Hex(`ip:${salt}:${ip}`);
+}

@@ -94,7 +94,7 @@ describe('snapshot pipeline', () => {
     const result = await generateSnapshot(env, 0, { bypassDailyOnce: true });
     const { snapshot_version, files } = result.manifest as unknown as Manifest;
     expect(snapshot_version).toMatch(/^\d{4}\.\d{2}\.\d{2}\.\d{1,4}$/);
-    expect(files[0].entries).toBe(0);
+    expect(files[0]!.entries).toBe(0);
 
     const latest = await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), env);
     expect(latest.status).toBe(200);
@@ -145,7 +145,7 @@ describe('snapshot pipeline', () => {
 
     expect(body.schema_version).toBe(2);
     expect(body.entries).toHaveLength(1);
-    const entry = body.entries[0];
+    const entry = body.entries[0]!;
     expect(entry.handle).toBe('cand_user');
     expect(entry).not.toHaveProperty('status');
     expect(entry.sources).toEqual(['community']);
@@ -159,7 +159,7 @@ describe('snapshot pipeline', () => {
     const latest = (await (
       await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), env)
     ).json()) as Manifest;
-    expect(await sha256HexOf(bodyText)).toBe(latest.files[0].sha256);
+    expect(await sha256HexOf(bodyText)).toBe(latest.files[0]!.sha256);
     expect(fileRes.headers.get('cache-control')).toContain('immutable');
 
     const yamlRes = await worker.fetch(new Request(`${ORIGIN}/v1/blocklist/latest.yaml`), env);
@@ -227,16 +227,16 @@ describe('snapshot pipeline', () => {
       'vvvvvvvv-3004-4004-8000-vvvvvvvvvvvv',
       'vvvvvvvv-3005-4005-8000-vvvvvvvvvvvv',
     ];
-    await report(installs[0], 'verified_user');
+    await report(installs[0]!, 'verified_user');
     for (const id of installs) await rescue(id, 'verified_user');
 
     // blocked_user：3 个独立安装拉黑 -> 净票 3 -> 黑名单 entries
     for (const id of installs.slice(0, 3)) await report(id, 'blocked_user_2');
 
     // contending_user：1 拉黑 + 2 抢救 -> 净票 -1，|净票| < 3 -> 两边都不进
-    await report(installs[3], 'contending_user');
-    await rescue(installs[0], 'contending_user');
-    await rescue(installs[1], 'contending_user');
+    await report(installs[3]!, 'contending_user');
+    await rescue(installs[0]!, 'contending_user');
+    await rescue(installs[1]!, 'contending_user');
 
     await generateSnapshot(env, 0, { bypassDailyOnce: true });
     const res = await worker.fetch(
@@ -288,7 +288,7 @@ describe('snapshot pipeline', () => {
       'wwwwwwww-4003-4003-8000-wwwwwwwwwwww',
       'wwwwwwww-4004-4004-8000-wwwwwwwwwwww',
     ];
-    await report(ids[0], 'rescue_user');
+    await report(ids[0]!, 'rescue_user');
     for (const id of ids) await rescue(id, 'rescue_user');
 
     const second = (await generateSnapshot(env, 0, { bypassDailyOnce: true })).manifest as unknown as Manifest;

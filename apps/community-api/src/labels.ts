@@ -6,6 +6,8 @@ import { syncConsensusEvents, type ConsensusTransition } from './leaderboard';
 import { validateRescue } from './lib/validate';
 
 const MAX_LABEL_BATCH = 50;
+/** 单安装每日撤回上限：报告/撤回无限对拍会反复打脏快照与榜单聚合 */
+const RETRACT_DAILY_LIMIT = 50;
 // D1 batch 单次调用与单条查询的绑定参数上限一致，按 100 分片。
 const D1_CHUNK = 100;
 
@@ -178,7 +180,7 @@ export interface RetractResult {
 }
 
 export type RetractBatchResult =
-  { ok: true; results: RetractResult[] } | { ok: false; httpStatus: 400 | 413; error: string };
+  { ok: true; results: RetractResult[] } | { ok: false; httpStatus: 400 | 413 | 429; error: string };
 
 /** 本地名单删除后撤回当前票；原始审计证据不删除。 */
 export async function processRetractionBatch(
@@ -205,8 +207,12 @@ export async function processRetractionBatch(
   }
 
   const identity = await installationHash(env, installationId);
+  const today = new Date().toISOString().slice(0, 10);
+  const now = Math.floor(Date.now() / 1000);
+
   const results: RetractResult[] = [];
   const refreshingHandles: string[] = [];
+  const validatedHandles: string[] = [];
   for (const raw of b.handles) {
     const validated = validateRescue({ handle: raw });
     if (!validated.ok) {
@@ -217,6 +223,50 @@ export async function processRetractionBatch(
       });
       continue;
     }
+    validatedHandles.push(validated.handle);
+  }
+
+  // 每日撤回配额：只统计当前仍持有本安装有效标签的 handle（重试幂等，
+  // 对不存在的标签反复撤回不消耗配额）。条件 UPSERT 本身即门禁。
+  let quotaUnits = 0;
+  if (validatedHandles.length > 0) {
+    const active = await env.DB.prepare(
+      `SELECT COUNT(DISTINCT handle) AS n FROM active_labels
+       WHERE installation_id = ?1
+         AND handle IN (${validatedHandles.map((_, index) => `?${index + 2}`).join(', ')})`,
+    )
+      .bind(identity.hash, ...validatedHandles)
+      .first<{ n: number }>();
+    quotaUnits = active?.n ?? 0;
+  }
+  if (quotaUnits > 0) {
+    const reserved = await env.DB.prepare(
+      `INSERT INTO installations (id, first_seen_at, last_seen_at, retracts_day, retracts_today)
+       VALUES (?1, ?2, ?2, ?3, ?4)
+       ON CONFLICT(id) DO UPDATE SET
+         last_seen_at = excluded.last_seen_at,
+         retracts_day = excluded.retracts_day,
+         retracts_today = CASE
+           WHEN installations.retracts_day = excluded.retracts_day
+             THEN installations.retracts_today + excluded.retracts_today
+           ELSE excluded.retracts_today
+         END
+       WHERE (
+         CASE
+           WHEN installations.retracts_day = excluded.retracts_day THEN installations.retracts_today
+           ELSE 0
+         END
+         + excluded.retracts_today
+       ) <= ?5`,
+    )
+      .bind(identity.hash, now, today, quotaUnits, RETRACT_DAILY_LIMIT)
+      .run();
+    if ((reserved.meta.changes ?? 0) === 0) {
+      return { ok: false, httpStatus: 429, error: 'rate_limited' };
+    }
+  }
+
+  for (const validatedHandle of validatedHandles) {
     const known = await env.DB.prepare(
       `SELECT a.handle
        FROM accounts a
@@ -225,21 +275,21 @@ export async function processRetractionBatch(
        ORDER BY CASE WHEN a.handle = ?1 THEN 0 ELSE 1 END
        LIMIT 1`,
     )
-      .bind(validated.handle)
+      .bind(validatedHandle)
       .first<{ handle: string }>();
-    const canonical = known?.handle ?? validated.handle;
+    const canonical = known?.handle ?? validatedHandle;
     const deletion = await env.DB.prepare(
       `DELETE FROM active_labels
        WHERE installation_id = ?1 AND (handle = ?2 OR handle = ?3)`,
     )
-      .bind(identity.hash, validated.handle, canonical)
+      .bind(identity.hash, validatedHandle, canonical)
       .run();
     if ((deletion.meta.changes ?? 0) === 0) {
-      results.push({ handle: validated.handle, status: 'absent' });
+      results.push({ handle: validatedHandle, status: 'absent' });
       continue;
     }
-    refreshingHandles.push(canonical, validated.handle);
-    results.push({ handle: validated.handle, status: 'retracted' });
+    refreshingHandles.push(canonical, validatedHandle);
+    results.push({ handle: validatedHandle, status: 'retracted' });
   }
   // 批量收敛计数：单账号逐次刷新在批量撤回时会把 D1 调用放大几十倍
   await refreshAccountsFromLabels(env, refreshingHandles);

@@ -120,4 +120,51 @@ describe('猎手档案：邮箱验证码解锁', () => {
     });
     expect(res.status).toBe(429);
   });
+
+  it('生产环境未配置邮件通道：绝不返回 dev_code（503 mail_unconfigured）', async () => {
+    const res = await worker.fetch(
+      new Request(`${ORIGIN}/v1/player/bind-email`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          installation_id: 'player-prod-ffffff',
+          email: 'prod-guard@example.com',
+        }),
+      }),
+      { ...env, WORKER_ENV: 'production' },
+    );
+    expect(res.status).toBe(503);
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body.error).toBe('mail_unconfigured');
+    expect(body.dev_code).toBeUndefined();
+    // 同一邮箱在非生产环境仍走本地自测降级（dev_code 只限开发）
+    const dev = await post('/v1/player/bind-email', {
+      installation_id: 'player-prod-ffffff',
+      email: 'prod-guard@example.com',
+    });
+    expect(dev.json.dev_code).toMatch(/^\d{6}$/);
+  });
+
+  it('同一安装换邮箱无限发码被按安装限额拦住（每小时 10 封）', async () => {
+    const installer = 'installer-bomb-ffffff';
+    for (let i = 1; i <= 10; i++) {
+      const res = await post('/v1/player/bind-email', {
+        installation_id: installer,
+        email: `bomb-${i}@example.com`,
+      });
+      expect(res.status).toBe(200);
+    }
+    const res = await post('/v1/player/bind-email', {
+      installation_id: installer,
+      email: 'bomb-11@example.com',
+    });
+    expect(res.status).toBe(429);
+    expect(res.json.error).toBe('too_many_code_requests');
+    // 换一个安装不受影响
+    const other = await post('/v1/player/bind-email', {
+      installation_id: 'installer-bomb-2ffffff',
+      email: 'bomb-11@example.com',
+    });
+    expect(other.status).toBe(200);
+  });
 });

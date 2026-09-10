@@ -28,6 +28,8 @@ export const PLAYER = {
   sendsPerHour: 3,
   displayNameMax: 16,
   bioMax: 60,
+  /** 同一安装每小时最多发码次数（防换邮箱轰炸邮件通道） */
+  sendsPerInstallerHour: 10,
 } as const;
 
 /** 按账号域推断常见服务商的 SMTP 端点（省得手填 host/port） */
@@ -133,9 +135,9 @@ export function normalizeEmail(raw: string): string {
   const local = email.slice(0, at);
   const domain = email.slice(at + 1);
   if (domain === 'gmail.com' || domain === 'googlemail.com') {
-    return `${local.split('+')[0].replaceAll('.', '')}@gmail.com`;
+    return `${(local.split('+')[0] ?? '').replaceAll('.', '')}@gmail.com`;
   }
-  return `${local.split('+')[0]}@${domain}`;
+  return `${local.split('+')[0] ?? ''}@${domain}`;
 }
 
 export async function hashEmail(salt: string, email: string): Promise<string> {
@@ -153,12 +155,12 @@ export function isValidEmail(value: unknown): value is string {
   return typeof value === 'string' && value.length <= 254 && EMAIL_PATTERN.test(value);
 }
 
-type PlayerResult<T> = { ok: true; value: T } | { ok: false; httpStatus: 400 | 403 | 429; error: string };
+type PlayerResult<T> = { ok: true; value: T } | { ok: false; httpStatus: 400 | 403 | 429 | 503; error: string };
 
 function generateCode(): string {
   const buffer = new Uint32Array(1);
   crypto.getRandomValues(buffer);
-  return String(buffer[0] % 1_000_000).padStart(6, '0');
+  return String((buffer[0] ?? 0) % 1_000_000).padStart(6, '0');
 }
 
 async function codeHash(salt: string, emailHash: string, code: string): Promise<string> {
@@ -191,6 +193,30 @@ export async function bindEmail(
     return { ok: false, httpStatus: 429, error: 'too_many_code_requests' };
   }
 
+  // 换邮箱无限发码的轰炸防线：同一安装滑动 1 小时窗口内也有发送上限。
+  // 与单邮箱限频同模式：条件 UPSERT 本身即门禁，并发请求无法同时通过。
+  const installerReserved = await env.DB.batch([
+    env.DB.prepare(
+      `INSERT INTO email_send_usage (installer_hash, window_start, send_count)
+       VALUES (?1, ?2, 1)
+       ON CONFLICT(installer_hash) DO UPDATE SET
+         send_count = CASE
+           WHEN email_send_usage.window_start > ?3 THEN email_send_usage.send_count + 1
+           ELSE 1
+         END,
+         window_start = excluded.window_start
+       WHERE (
+         CASE WHEN email_send_usage.window_start > ?3 THEN email_send_usage.send_count ELSE 0 END + 1
+       ) <= ?4`,
+    )
+      .bind(installHash, now, now - 3600, PLAYER.sendsPerInstallerHour),
+    // 顺带清理早已过期的计数行，避免表无界增长（48h 前的窗口必然结束）
+    env.DB.prepare('DELETE FROM email_send_usage WHERE window_start < ?1').bind(now - 172_800),
+  ]);
+  if ((installerReserved[0]?.meta.changes ?? 0) === 0) {
+    return { ok: false, httpStatus: 429, error: 'too_many_code_requests' };
+  }
+
   const code = generateCode();
   await env.DB.prepare(
     `INSERT INTO email_codes (email_hash, installer_hash, code_hash, attempts, send_count, created_at, expires_at)
@@ -218,7 +244,16 @@ export async function bindEmail(
     subject: 'FeedSieve 验证码',
     text: `验证码 ${code}，10 分钟内有效。`,
   });
-  return { ok: true, value: sent ? { sent: true } : { sent: false, dev_code: code } };
+  if (!sent) {
+    // 生产部署忘配邮件通道时，绝不能把验证码回给调用方（否则任何人可验证
+    // 任意邮箱）；明确报错让部署侧暴露配置问题。
+    if (env.WORKER_ENV === 'production') {
+      return { ok: false, httpStatus: 503, error: 'mail_unconfigured' };
+    }
+    // 仅限非生产环境的本地自测降级：验证码只在 HTTP 响应里回显。
+    return { ok: true, value: { sent: false, dev_code: code } };
+  }
+  return { ok: true, value: { sent: true } };
 }
 
 export async function verifyEmail(
@@ -257,11 +292,17 @@ export async function verifyEmail(
     return { ok: false, httpStatus: 400, error: 'invalid_or_expired_code' };
   }
   if ((await codeHash(env.INSTALLATION_SALT, emailHash, code)) !== row.code_hash) {
-    await env.DB.prepare(
-      'UPDATE email_codes SET attempts = attempts + 1 WHERE email_hash = ?1',
+    // 错码计数必须原子递增：并发错猜不能共享同一份 attempts 读数把
+    // 5 次上限翻倍。条件 UPDATE 抢不到（changes = 0，已达上限）→ 锁定。
+    const bumped = await env.DB.prepare(
+      'UPDATE email_codes SET attempts = attempts + 1 WHERE email_hash = ?1 AND attempts < ?2',
     )
-      .bind(emailHash)
+      .bind(emailHash, PLAYER.codeMaxAttempts)
       .run();
+    if ((bumped.meta.changes ?? 0) === 0) {
+      await env.DB.prepare('DELETE FROM email_codes WHERE email_hash = ?1').bind(emailHash).run();
+      return { ok: false, httpStatus: 429, error: 'too_many_attempts' };
+    }
     return { ok: false, httpStatus: 400, error: 'invalid_or_expired_code' };
   }
 

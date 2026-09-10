@@ -1,4 +1,5 @@
 import { validateReport, type ValidReport } from './lib/validate';
+import { hashIp } from './lib/hash';
 import { installationHash, refreshAccountsFromLabels, setActiveLabel } from './labels';
 
 // Phase D 会把阈值搬进 policy 文件/端点；先集中放这里
@@ -12,6 +13,8 @@ export const POLICY = {
   trustDecay: 0.1,
   trustFloor: 0.2,
   maxBatch: 50, // 单请求条数上限
+  dailyIpReportLimit: 200, // 单 IP（CF-Connecting-IP 加盐哈希）每日上报上限：安装自报 ID 不可信，防止无限换 ID 绕过单安装配额
+  aliasesPerDay: 10, // 单安装每日别名（换号追踪）写入上限：超出后静默跳过，票仍计入正主
 } as const;
 
 /** 信任分作用于每日限额：低信任被收紧，但永不归零 */
@@ -33,6 +36,8 @@ export function publicPolicy() {
       daily_rescue_base: POLICY.rescueDailyLimit,
       daily_min: POLICY.minDailyLimit,
       max_batch: POLICY.maxBatch,
+      daily_ip_report_limit: POLICY.dailyIpReportLimit,
+      daily_alias_cap: POLICY.aliasesPerDay,
     },
     reporter_trust: {
       default: 1,
@@ -68,6 +73,7 @@ function nowSeconds(): number {
 export async function processReportBatch(
   env: Cloudflare.Env,
   body: unknown,
+  clientIp?: string | null,
 ): Promise<ProcessBatchResult> {
   if (typeof body !== 'object' || body === null) {
     return { ok: false, httpStatus: 400, error: 'invalid_json_body' };
@@ -127,7 +133,7 @@ export async function processReportBatch(
     `SELECT handle FROM active_labels
      WHERE installation_id = ?1
        AND label = 'blocked'
-       AND handle IN (${uniqueHandles.map(() => '?').join(', ')})`,
+       AND handle IN (${uniqueHandles.map((_, index) => `?${index + 2}`).join(', ')})`,
   )
     .bind(installHash, ...uniqueHandles)
     .all<{ handle: string }>();
@@ -139,6 +145,32 @@ export async function processReportBatch(
   // both pass the limit check. The conditional UPSERT makes the reservation
   // itself the gate.
   if (quotaUnits > 0) {
+    // IP 级 Sybil 防线：安装 ID 是客户端自报的，无限换 ID 就能无限领配额。
+    // IP 不一样可信（NAT 共享），上限放宽到单安装配额的 2 倍，只挡量产垃圾。
+    // 隐私：只存加盐哈希，原始 IP 不落库。
+    if (clientIp) {
+      const ipHash = await hashIp(env.INSTALLATION_SALT, clientIp.trim());
+      const ipReserved = await env.DB.prepare(
+        `INSERT INTO ip_usage (ip_hash, day, reports_today)
+         VALUES (?1, ?2, ?3)
+         ON CONFLICT(ip_hash) DO UPDATE SET
+           day = excluded.day,
+           reports_today = CASE
+             WHEN ip_usage.day = excluded.day THEN ip_usage.reports_today + excluded.reports_today
+             ELSE excluded.reports_today
+           END
+         WHERE (
+           CASE WHEN ip_usage.day = excluded.day THEN ip_usage.reports_today ELSE 0 END
+           + excluded.reports_today
+         ) <= ?4`,
+      )
+        .bind(ipHash, today, quotaUnits, POLICY.dailyIpReportLimit)
+        .run();
+      if ((ipReserved.meta.changes ?? 0) === 0) {
+        return { ok: false, httpStatus: 429, error: 'rate_limited' };
+      }
+    }
+
     const reserved = await env.DB.prepare(
       `INSERT INTO installations (id, first_seen_at, last_seen_at, reports_day, reports_today)
        VALUES (?1, ?2, ?2, ?3, ?4)
@@ -210,10 +242,34 @@ export async function processReportBatch(
         canonical = known.handle;
         const aliases = JSON.parse(known.aliases) as string[];
         if (!aliases.includes(r.handle)) {
-          aliases.push(r.handle);
-          await env.DB.prepare('UPDATE accounts SET aliases = ?2 WHERE handle = ?1')
-            .bind(known.handle, JSON.stringify(aliases))
+          // 别名写入有每日配额（静默跳过，不阻塞上报）：防止利用自报
+          // x_user_id 无限制造别名污染快照。票仍计入正主，只是不记新别名。
+          const aliasReserved = await env.DB.prepare(
+            `INSERT INTO installations (id, first_seen_at, last_seen_at, aliases_day, aliases_today)
+             VALUES (?1, ?2, ?2, ?3, 1)
+             ON CONFLICT(id) DO UPDATE SET
+               aliases_day = excluded.aliases_day,
+               aliases_today = CASE
+                 WHEN installations.aliases_day = excluded.aliases_day
+                   THEN installations.aliases_today + 1
+                 ELSE 1
+               END
+             WHERE (
+               CASE
+                 WHEN installations.aliases_day = excluded.aliases_day THEN installations.aliases_today
+                 ELSE 0
+               END
+               + 1
+             ) <= ?4`,
+          )
+            .bind(installHash, now, today, POLICY.aliasesPerDay)
             .run();
+          if ((aliasReserved.meta.changes ?? 0) > 0) {
+            aliases.push(r.handle);
+            await env.DB.prepare('UPDATE accounts SET aliases = ?2 WHERE handle = ?1')
+              .bind(known.handle, JSON.stringify(aliases))
+              .run();
+          }
         }
       }
     }
@@ -247,7 +303,8 @@ export async function processReportBatch(
       )
       .run();
     const labelChanged = await setActiveLabel(env, installHash, canonical, 'blocked', now);
-    results[item.resultIndex].status = labelChanged ? 'recorded' : 'duplicate';
+    // resultIndex 与 results 一同构造，下标必然有效。
+    results[item.resultIndex]!.status = labelChanged ? 'recorded' : 'duplicate';
     touchedHandles.set(canonical, { ...r, handle: canonical });
   }
 

@@ -130,36 +130,40 @@ function clusterCampaigns(
   const result = new Map<string, { entryId: string; size: number }>();
 
   for (let i = 0; i < fps.length; i++) {
-    if (visitedFp.has(fps[i])) {
+    const fp = fps[i];
+    if (fp === undefined || visitedFp.has(fp)) {
       continue;
     }
     // 当前簇：从本指纹出发，把彼此距离 <= 阈值的指纹的账号并入
     // （传递归簇：变体链 A-B-C，A 近 B、B 近 C 算一簇）
-    const clusterFps = new Set<string>([fps[i]]);
-    const clusterAccounts = new Set<string>(fpAccounts.get(fps[i])!);
-    visitedFp.add(fps[i]);
+    const clusterFps = new Set<string>([fp]);
+    const clusterAccounts = new Set<string>(fpAccounts.get(fp) ?? []);
+    visitedFp.add(fp);
     for (let j = i + 1; j < fps.length; j++) {
-      if (visitedFp.has(fps[j])) {
+      const candidate = fps[j];
+      if (candidate === undefined || visitedFp.has(candidate)) {
         continue;
       }
-      const near = [...clusterFps].some((f) => hamming(f, fps[j]) <= SIMHASH_HAMMING_THRESHOLD);
+      const near = [...clusterFps].some((f) => hamming(f, candidate) <= SIMHASH_HAMMING_THRESHOLD);
       if (near) {
-        clusterFps.add(fps[j]);
-        for (const h of fpAccounts.get(fps[j])!) {
+        clusterFps.add(candidate);
+        for (const h of fpAccounts.get(candidate) ?? []) {
           clusterAccounts.add(h);
         }
-        visitedFp.add(fps[j]);
+        visitedFp.add(candidate);
       }
     }
     if (clusterAccounts.size < MIN_CAMPAIGN_ACCOUNTS) {
       continue;
     }
     // 代表条目：簇内 report_count 最高（并列取 handle 字典序）
-    const entryId = [...clusterAccounts].sort((a, b) => {
+    const sortedAccounts = [...clusterAccounts].sort((a, b) => {
       const ra = reportCounts.get(a) ?? 0;
       const rb = reportCounts.get(b) ?? 0;
       return rb - ra || a.localeCompare(b);
-    })[0];
+    });
+    const entryId = sortedAccounts[0];
+    if (entryId === undefined) continue;
     for (const account of clusterAccounts) {
       result.set(account, { entryId, size: clusterAccounts.size });
     }
@@ -519,7 +523,8 @@ export async function generateSnapshot(
   const whitelistHandles = new Set(whitelist.map((entry) => entry.handle));
   if (whitelistHandles.size > 0) {
     for (let i = entries.length - 1; i >= 0; i--) {
-      if (whitelistHandles.has(entries[i].handle)) entries.splice(i, 1);
+      const entry = entries[i];
+      if (entry && whitelistHandles.has(entry.handle)) entries.splice(i, 1);
     }
   }
   entries.sort((a, b) => a.handle.localeCompare(b.handle));

@@ -57,7 +57,7 @@ describe('POST /v1/rescues', () => {
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { results: { status: string }[] };
-    expect(body.results[0].status).toBe('recorded');
+    expect(body.results[0]!.status).toBe('recorded');
 
     const row = await accountRow('rescue_me_user');
     expect(row?.rescue_count).toBe(1);
@@ -71,14 +71,14 @@ describe('POST /v1/rescues', () => {
         (await (
           await postRescues({ installation_id: id, rescues: [{ handle: 'rescue_dup_user' }] })
         ).json()) as { results: { status: string }[] }
-      ).results[0].status,
+      ).results[0]!.status,
     ).toBe('recorded');
     expect(
       (
         (await (
           await postRescues({ installation_id: id, rescues: [{ handle: 'rescue_dup_user' }] })
         ).json()) as { results: { status: string }[] }
-      ).results[0].status,
+      ).results[0]!.status,
     ).toBe('duplicate');
 
     const unknown = (await (
@@ -87,7 +87,7 @@ describe('POST /v1/rescues', () => {
         rescues: [{ handle: 'never_listed' }],
       })
     ).json()) as { results: { status: string }[] };
-    expect(unknown.results[0].status).toBe('unknown');
+    expect(unknown.results[0]!.status).toBe('unknown');
   });
 
   it('stores rule-level evidence for heuristic false positives without creating an account', async () => {
@@ -106,7 +106,7 @@ describe('POST /v1/rescues', () => {
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { results: { status: string }[] };
-    expect(body.results[0].status).toBe('unknown');
+    expect(body.results[0]!.status).toBe('unknown');
 
     const feedback = await env.DB.prepare(
       `SELECT detection_source, rule_id, detection_reason, client_version
@@ -225,7 +225,7 @@ describe('rescues 配额（原子条件 UPSERT）', () => {
       rescues: [{ handle: '@quota_done' }],
     });
     expect(retry.status).toBe(200);
-    expect(((await retry.json()) as { results: { status: string }[] }).results[0].status).toBe(
+    expect(((await retry.json()) as { results: { status: string }[] })!.results[0]!.status).toBe(
       'duplicate',
     );
 

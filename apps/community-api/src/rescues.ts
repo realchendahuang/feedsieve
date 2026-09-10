@@ -103,7 +103,7 @@ export async function processRescueBatch(
     `SELECT handle FROM active_labels
      WHERE installation_id = ?1
        AND label = 'allowed'
-       AND handle IN (${uniqueHandles.map(() => '?').join(', ')})`,
+       AND handle IN (${uniqueHandles.map((_, index) => `?${index + 2}`).join(', ')})`,
   )
     .bind(installHash, ...uniqueHandles)
     .all<{ handle: string }>();
@@ -191,7 +191,8 @@ export async function processRescueBatch(
 
     const labelChanged = await setActiveLabel(env, installHash, canonical, 'allowed', now);
     if (!labelChanged) {
-      results[item.resultIndex].status = 'duplicate';
+      // resultIndex 与 results 一同构造，下标必然有效。
+      results[item.resultIndex]!.status = 'duplicate';
       continue;
     }
     refreshingHandles.push(canonical);
@@ -202,7 +203,7 @@ export async function processRescueBatch(
   for (const [resultIndex, canonical] of existsCheckIndexes) {
     if (!existingHandles.has(canonical)) {
       // 名单里没有这个账号：负标签仍保存在 active_labels，后续一旦有正票建档便立即生效。
-      results[resultIndex].status = 'unknown';
+      results[resultIndex]!.status = 'unknown';
     }
   }
 

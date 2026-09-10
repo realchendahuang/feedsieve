@@ -2,7 +2,7 @@ import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 import worker from '../src/index';
 import { hashInstallationId } from '../src/lib/hash';
-import { settleDueSeasons } from '../src/leaderboard';
+import { getLeaderboard, markLeaderboardDirty, settleDueSeasons } from '../src/leaderboard';
 
 const ORIGIN = 'https://api.example.com';
 
@@ -82,6 +82,16 @@ async function leaderboard(body: Record<string, unknown> = {}): Promise<Leaderbo
   return (await res.json()) as LeaderboardResponse;
 }
 
+/** 重算节流（防滥用）会让脏标记最多陈旧 5 分钟；需要立即可见新票的用例先老化节流键 */
+async function expireRecomputeThrottle(): Promise<void> {
+  await env.DB.prepare(
+    `INSERT INTO meta (key, value) VALUES ('leaderboard_last_recompute_at', ?1)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+  )
+    .bind(String(Math.floor(Date.now() / 1000) - 600))
+    .run();
+}
+
 describe('打野排位赛 /v1/leaderboard', () => {
   it('三票确认击杀：击杀 +1、首杀 +1，匿名猎手名 = 哈希前缀', async () => {
     await report('hunter-a-0001-ffffff', 'wild_1');
@@ -106,6 +116,7 @@ describe('打野排位赛 /v1/leaderboard', () => {
   });
 
   it('翻案（误标票反超）：击杀清零、原票转为误伤扣分', async () => {
+    await expireRecomputeThrottle();
     await report('fp-a-0001-ffffff', 'fp_1');
     await report('fp-b-0002-ffffff', 'fp_1');
     await report('fp-c-0003-ffffff', 'fp_1');
@@ -115,6 +126,7 @@ describe('打野排位赛 /v1/leaderboard', () => {
     expect(before.rows.find((row) => row.id === hashA.slice(0, 12))!.kills).toBe(1);
 
     // 三个安装都改判抢救 → rescue_count 反超，账号跌出 strong
+    await expireRecomputeThrottle();
     await rescue('fp-a-0001-ffffff', 'fp_1');
     await rescue('fp-b-0002-ffffff', 'fp_1');
     await rescue('fp-c-0003-ffffff', 'fp_1');
@@ -128,6 +140,7 @@ describe('打野排位赛 /v1/leaderboard', () => {
   });
 
   it('维护者白名单一票否决：命中白名单的票按误伤计', async () => {
+    await expireRecomputeThrottle();
     await report('wl-a-0001-ffffff', 'wl_1');
     await report('wl-b-0002-ffffff', 'wl_1');
     await report('wl-c-0003-ffffff', 'wl_1');
@@ -148,6 +161,7 @@ describe('打野排位赛 /v1/leaderboard', () => {
   });
 
   it('me 定位：installation_id 换算哈希前缀，返回自己的排名行', async () => {
+    await expireRecomputeThrottle();
     await report('me-a-0001-ffffff', 'me_1');
     await report('me-b-0002-ffffff', 'me_1');
     await report('me-c-0003-ffffff', 'me_1');
@@ -205,5 +219,34 @@ describe('打野排位赛 /v1/leaderboard', () => {
         .first<{ title: string | null }>();
       expect(row!.title).toBe('猎黄人');
     }
+  });
+});
+
+describe('榜单重算节流（防公开端点驱动重算滥用）', () => {
+  it('节流窗口内脏标记不触发全量重算；窗口过后恢复', async () => {
+    // 首次读取：冷启动必须聚合并写缓存
+    const first = await getLeaderboard(env);
+    expect(first.rows.length).toBeGreaterThanOrEqual(0);
+
+    // 制造票面变更 + 脏标记
+    await report('throttle-aaaa-4000-8000-aaaaaaaaaaa1', 'throttle_user');
+    await markLeaderboardDirty(env);
+    const second = await getLeaderboard(env);
+    // 节流窗口内：直接回陈旧缓存，未重算
+    expect(second.computed_at).toBe(first.computed_at);
+    expect(second.rows.find((row) => row.id.includes('throttle'))).toBeUndefined();
+
+    // 把上次重算时间拨回窗口之外 → 恢复重算
+    const past = Math.floor(Date.now() / 1000) - 600;
+    await env.DB.prepare(
+      `INSERT INTO meta (key, value) VALUES ('leaderboard_last_recompute_at', ?1)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+    )
+      .bind(String(past))
+      .run();
+    const third = await getLeaderboard(env);
+    expect(third.computed_at).toBeGreaterThanOrEqual(first.computed_at);
+    // 节流期间被压住的票面变更（throttle_user）此刻计入榜单行数
+    expect(third.rows.length).toBeGreaterThan(first.rows.length);
   });
 });

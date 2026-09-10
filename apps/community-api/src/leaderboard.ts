@@ -29,6 +29,8 @@ export const LEADERBOARD = {
   topSize: 200,
   /** 缓存最大新鲜期（秒）；脏标记立即重算，否则最多陈旧这么久 */
   cacheMaxAgeSeconds: 90,
+  /** 全量聚合最小间隔（秒）：脏标记被刷屏时榜单最多陈旧这么久，换取确定性的 CPU 上限 */
+  minRecomputeIntervalSeconds: 300,
 } as const;
 
 export interface SeasonWindow {
@@ -83,6 +85,8 @@ const D1_CHUNK = 100;
 
 const DIRTY_KEY = 'leaderboard_dirty';
 const CACHE_KEY = 'leaderboard_cache';
+/** 上次全量聚合时间（meta）；节流窗口内即便脏标记已置也不重算，防重算滥用 */
+const LAST_RECOMPUTE_KEY = 'leaderboard_last_recompute_at';
 
 export async function markLeaderboardDirty(env: Cloudflare.Env): Promise<void> {
   await env.DB.prepare(
@@ -311,9 +315,10 @@ async function aggregateLeaderboard(
 export async function getLeaderboard(env: Cloudflare.Env): Promise<LeaderboardData> {
   const season = await ensureCurrentSeason(env);
   const now = Math.floor(Date.now() / 1000);
-  const [dirtyRow, cacheRow] = await Promise.all([
+  const [dirtyRow, cacheRow, lastRecomputeRow] = await Promise.all([
     env.DB.prepare('SELECT value FROM meta WHERE key = ?1').bind(DIRTY_KEY).first<{ value: string }>(),
     env.DB.prepare('SELECT value FROM meta WHERE key = ?1').bind(CACHE_KEY).first<{ value: string }>(),
+    env.DB.prepare('SELECT value FROM meta WHERE key = ?1').bind(LAST_RECOMPUTE_KEY).first<{ value: string }>(),
   ]);
 
   let cache = parseCache(cacheRow?.value);
@@ -325,14 +330,33 @@ export async function getLeaderboard(env: Cloudflare.Env): Promise<LeaderboardDa
     return cache;
   }
 
+  // 节流：/v1/leaderboard 是公开端点，脏标记可以被客户端投票不断刷新，
+  // 无节流时攻击者可用恒定重算驱动全表聚合。最小聚合间隔独立于脏标记，
+  // 窗口内即使脏也回陈旧缓存（冷启动无缓存、或赛季已切换时例外，必须算）。
+  const lastRecompute = Number(lastRecomputeRow?.value ?? 0);
+  if (
+    cache != null &&
+    cache.season.id === season.id &&
+    Number.isFinite(lastRecompute) &&
+    now - lastRecompute < LEADERBOARD.minRecomputeIntervalSeconds
+  ) {
+    return cache;
+  }
+
   const { rows } = await aggregateLeaderboard(env, season);
   cache = { computed_at: now, season, rows, last_season: await lastSettledSeason(env) };
-  await env.DB.prepare(
-    `INSERT INTO meta (key, value) VALUES (?1, ?2)
-     ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
-  )
-    .bind(CACHE_KEY, JSON.stringify(cache))
-    .run();
+  await env.DB.batch([
+    env.DB.prepare(
+      `INSERT INTO meta (key, value) VALUES (?1, ?2)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+    )
+      .bind(CACHE_KEY, JSON.stringify(cache)),
+    env.DB.prepare(
+      `INSERT INTO meta (key, value) VALUES (?1, ?2)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+    )
+      .bind(LAST_RECOMPUTE_KEY, String(now)),
+  ]);
   if (dirtyRow != null) await clearLeaderboardDirty(env, dirtyRow.value);
   return cache;
 }
