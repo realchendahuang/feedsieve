@@ -5,6 +5,8 @@
  * content script 热重载或浏览器重启后仍能看到进度并显式恢复。
  */
 
+import { normalizeStrictHandle, sanitizeXUserId } from './xhr-bridge-guard';
+
 export type PersistentBlockQueueSource = 'page-batch' | 'community-batch';
 export type PersistentBlockQueueStatus = 'running' | 'paused' | 'completed' | 'cancelled';
 export type PersistentBlockTaskStatus = 'pending' | 'running' | 'success' | 'failed' | 'cancelled';
@@ -78,6 +80,7 @@ function normalizeQueue(value: unknown): PersistentBlockQueueState | null {
     )
       ? (task.status as PersistentBlockTaskStatus)
       : 'pending';
+    const xUserId = sanitizeXUserId(task.xUserId);
     tasks.push({
       handle,
       category: task.category,
@@ -100,7 +103,8 @@ function normalizeQueue(value: unknown): PersistentBlockQueueState | null {
           }
         : {}),
       ...(typeof task.communityVote === 'boolean' ? { communityVote: task.communityVote } : {}),
-      ...(typeof task.xUserId === 'string' ? { xUserId: task.xUserId } : {}),
+      // 存储态里的 id 同样过严格形态校验：入队/反序列化双闸（见 sanitizeQueueItem）
+      ...(xUserId ? { xUserId } : {}),
       // UI 继续读 failureCode；runner 写入 lastErrorCode，failed 任务归一化补一份
       ...(task.status === 'failed' && typeof task.lastErrorCode === 'string'
         ? { failureCode: task.lastErrorCode }
@@ -131,6 +135,43 @@ function normalizeQueue(value: unknown): PersistentBlockQueueState | null {
 export async function getPersistentBlockQueue(): Promise<PersistentBlockQueueState | null> {
   const result = await browser.storage.local.get(STORAGE_KEY);
   return normalizeQueue(result[STORAGE_KEY]);
+}
+
+/**
+ * 消息通道入队前的最小形态校验（review F1/F6）：消息可由其它扩展上下文发出，
+ * 形态不合法（handle 非严格形态 / id 非纯数字 / category 缺失）的条目整条丢弃。
+ */
+export function sanitizeQueueItem(
+  item: unknown,
+): { handle: string; xUserId?: string; category: string } | null {
+  if (!item || typeof item !== 'object') return null;
+  const raw = item as Record<string, unknown>;
+  const handle = normalizeStrictHandle(raw.handle);
+  if (!handle || typeof raw.category !== 'string' || raw.category.length === 0) return null;
+  const xUserId = sanitizeXUserId(raw.xUserId);
+  return { handle, ...(xUserId ? { xUserId } : {}), category: raw.category };
+}
+
+export type QueueResumeDecision = 'adopt' | 'already-running';
+
+/**
+ * resume 是否应该在本 tab 启动 runner（review F3：跨 tab 双执行防御）。
+ *
+ * 心跳（QUEUE_HEARTBEAT_KEY，owner 每 3s 写一次）新鲜 = 有其它 tab 正在执行：
+ * 此时本 tab 只应返回 already-running，绝不把 owner 的 running 任务重置为
+ * pending 再开第二个 runner（否则同一任务双执行、写状态互踩）。
+ */
+export function decideQueueResume(
+  status: string,
+  heartbeatAt: unknown,
+  now: number,
+  ttlMs: number,
+  ownedByThisTab: boolean,
+): QueueResumeDecision {
+  if (status !== 'running' || ownedByThisTab) return 'adopt';
+  return typeof heartbeatAt === 'number' && Number.isFinite(heartbeatAt) && now - heartbeatAt < ttlMs
+    ? 'already-running'
+    : 'adopt';
 }
 
 export async function setPersistentBlockQueue(state: PersistentBlockQueueState): Promise<void> {

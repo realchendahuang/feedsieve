@@ -76,21 +76,6 @@ export default defineContentScript({
     // ---------- XHR 钩子（PureTwitter 同款，覆盖仍走 XHR 的端点） ----------
     const xhrProto = XMLHttpRequest.prototype;
     const origSend = xhrProto.send;
-    const origSetHeader = xhrProto.setRequestHeader;
-
-    xhrProto.setRequestHeader = function (this: XMLHttpRequest, name: string, value: string) {
-      // 网页端发请求必带 authorization 头；顺手捕获留给未来需要时使用
-      if (name === 'authorization' && value) {
-        try {
-          document.dispatchEvent(
-            new CustomEvent('feedsieve:auth-header', { bubbles: true, detail: '1' }),
-          );
-        } catch {
-          // 忽略
-        }
-      }
-      return origSetHeader.apply(this, [name, value] as never);
-    };
 
     xhrProto.send = function (this: XMLHttpRequest, ...args: unknown[]) {
       this.addEventListener('load', () => {

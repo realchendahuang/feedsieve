@@ -61,10 +61,13 @@ import {
 } from '../src/lib/following-allowlist';
 import {
   createPersistentBlockQueue,
+  decideQueueResume,
   getPersistentBlockQueue,
+  sanitizeQueueItem,
   setPersistentBlockQueue,
   type PersistentBlockQueueState,
 } from '../src/lib/block-queue-store';
+import { sanitizeBridgePayload, STRICT_HANDLE_RE } from '../src/lib/xhr-bridge-guard';
 import {
   currentAccountKey,
   DEFAULT_PRESET,
@@ -186,6 +189,8 @@ export default defineContentScript({
     let keywordCatalog: KeywordPackCatalog = BUNDLED_KEYWORD_PACK_CATALOG;
     let runningFollowingSync: Promise<void> | null = null;
     let runningPersistentQueue: Promise<void> | null = null;
+    /** 本 tab 是否正在持有持久队列 runner（resume 双跑防御用，见 runPersistentQueue） */
+    let ownsPersistentQueueHere = false;
 
     ensureStyles();
     refreshAllowCache();
@@ -269,7 +274,14 @@ export default defineContentScript({
         return startFollowingFullSync();
       }
       if (type === 'feedsieve:community-block-start' && Array.isArray(msg?.items)) {
-        return startPersistentQueue('community-batch', msg.items, msg.targetTabId);
+        // 消息通道可跨上下文伪造/携带畸形条目（review F1/F6）：逐条严格校验后才入队
+        const items = (msg.items as unknown[])
+          .map(sanitizeQueueItem)
+          .filter((item): item is NonNullable<typeof item> => item !== null);
+        if (items.length === 0) {
+          return { status: 'error', error: 'invalid-items', id: '', count: 0 };
+        }
+        return startPersistentQueue('community-batch', items, msg.targetTabId);
       }
       if (type === 'feedsieve:capabilities') {
         // popup 用：当前 X 会话 / Block 接口 / 解析 / 扫描的能力快照（非破坏性观测）
@@ -309,67 +321,54 @@ export default defineContentScript({
       // 注意：桥 dispatch 在共享的 document 上；window 是各 world 独立的，监听 window 收不到
       document.addEventListener('feedsieve:xhr-items', (event) => {
         try {
-          const parsed = JSON.parse((event as CustomEvent<string>).detail) as ParsedApiData;
-          if (!parsed || !Array.isArray(parsed.matchedEndpoints)) {
+          // 事件通道可被页面内任意脚本伪造（review F1）：先过严格形态消毒，
+          // 非法条目整条丢弃，只消费校验过的基本类型字段（见 xhr-bridge-guard.ts）。
+          const sanitized = sanitizeBridgePayload(
+            JSON.parse((event as CustomEvent<string>).detail),
+          );
+          if (!sanitized) {
             return;
           }
-          const idEntries: Array<{ handle: string; xUserId: string }> = [];
-          const followedEntries: Array<{ handle: string; xUserId?: string }> = [];
-          for (const tweet of parsed.tweets ?? []) {
-            if (tweet.author.xUserId) {
-              idEntries.push({ handle: tweet.author.handle, xUserId: tweet.author.xUserId });
-            }
-            if (tweet.author.following === true) {
-              followedEntries.push({
-                handle: tweet.author.handle,
-                ...(tweet.author.xUserId ? { xUserId: tweet.author.xUserId } : {}),
-              });
-            }
-            if (tweet.author.bio) {
-              const handle = tweet.author.handle.toLowerCase();
-              if (bioCache.get(handle) !== tweet.author.bio) {
-                bioCache.set(handle, tweet.author.bio);
-                if (bioCache.size > BIO_CACHE_MAX) {
-                  // 近似 LRU：Map 保插入序，挤掉最早入缓存的一条
-                  const oldest = bioCache.keys().next().value;
-                  if (oldest !== undefined) bioCache.delete(oldest);
-                }
-                dirtyHandles.add(handle);
+          for (const { handle, bio } of sanitized.bios) {
+            if (bioCache.get(handle) !== bio) {
+              bioCache.set(handle, bio);
+              if (bioCache.size > BIO_CACHE_MAX) {
+                // 近似 LRU：Map 保插入序，挤掉最早入缓存的一条
+                const oldest = bioCache.keys().next().value;
+                if (oldest !== undefined) bioCache.delete(oldest);
               }
+              dirtyHandles.add(handle);
             }
           }
-          for (const member of parsed.listMembers ?? []) {
-            idEntries.push({ handle: member.handle, xUserId: member.xUserId });
-          }
-          for (const followed of parsed.following ?? []) {
-            followedEntries.push(followed);
-            if (followed.xUserId) {
-              idEntries.push({ handle: followed.handle, xUserId: followed.xUserId });
-            }
-          }
-          if (parsed.selfHandle) {
+          if (sanitized.selfHandle) {
             // 同步本地缓存（先于存储落盘，让后续扫描立即豁免自己的帖子）；
             // 切换账号时清理旧账号帖子的标注装饰。
-            const normalizedSelf = parsed.selfHandle.trim().replace(/^@+/, '').toLowerCase();
-            if (selfHandle !== normalizedSelf) {
-              selfHandle = normalizedSelf;
-              resetPageDecorationsForHandles(new Set([normalizedSelf]));
+            if (selfHandle !== sanitized.selfHandle) {
+              selfHandle = sanitized.selfHandle;
+              resetPageDecorationsForHandles(new Set([sanitized.selfHandle]));
             }
-            void setSelfHandle(parsed.selfHandle);
+            void setSelfHandle(sanitized.selfHandle);
           }
-          const isFollowingPage = parsed.matchedEndpoints.includes('Following');
           // Timeline 里明确带 following=true 的作者可即时加入保护；完整 Following
           // 分页必须只写 draft，直到所有 cursor 结束才原子替换，避免失败留下半截名单。
-          if (followedEntries.length > 0 && !isFollowingPage) {
-            void upsertFollowingAccounts(followedEntries).catch(() => {
+          if (sanitized.followedEntries.length > 0 && !sanitized.isFollowingPage) {
+            void upsertFollowingAccounts(sanitized.followedEntries).catch(() => {
               // 本地关注保护写入失败不影响 X 页面
             });
           }
-          if (isFollowingPage) {
-            void handleFollowingSyncPage(parsed);
+          if (sanitized.isFollowingPage) {
+            void handleFollowingSyncPage({
+              tweets: [],
+              promoted: [],
+              listMembers: [],
+              following: sanitized.following,
+              ...(sanitized.followingCursor ? { followingCursor: sanitized.followingCursor } : {}),
+              ...(sanitized.sourceUrl ? { sourceUrl: sanitized.sourceUrl } : {}),
+              matchedEndpoints: ['Following'],
+            });
           }
-          if (idEntries.length > 0) {
-            void saveUserIds(idEntries).catch(() => {
+          if (sanitized.idEntries.length > 0) {
+            void saveUserIds(sanitized.idEntries).catch(() => {
               // 存储失败不阻塞浏览；下次同账号出现会重试
             });
           }
@@ -963,18 +962,33 @@ export default defineContentScript({
       if (officialPause.destructive_actions_disabled) {
         return { ok: false, code: 'kill_switch' };
       }
-      let xUserId: string | undefined | null = item.xUserId ?? (await getUserId(item.handle));
+      // 拉黑目标必须严格合法：handle 是唯一指向真实账号的坐标，畸形输入宁可拒绝
+      const handle = item.handle.trim().replace(/^@+/, '').toLowerCase();
+      if (!STRICT_HANDLE_RE.test(handle)) {
+        return { ok: false, code: 'invalid-handle' };
+      }
+      // 缓存 id 信任策略（review F1b/F4）：缓存/快照的 handle↔id 对可被页面伪造
+      // 或因服务端数据错误而错位（签名只保完整性不保正确性）。detection / community
+      // 来源的破坏性动作一律不信缓存 id，执行期按 handle 现解析（队列节奏 ~1s/block，
+      // 多一次 UserByScreenName 可接受）；解析失败宁可拒发，绝不用可疑 id 打 block API。
+      // 手动输入（manual-*）保留缓存优先：用户明确指向的是 handle，行为与 v0.8 前一致。
+      const trustCachedId =
+        options.origin === undefined ||
+        ['manual-spam', 'manual-personal'].includes(options.origin);
+      let xUserId: string | undefined | null = trustCachedId
+        ? (item.xUserId ?? (await getUserId(handle)))
+        : undefined;
       if (!xUserId) {
-        const resolved = await resolveUserIdByHandle(item.handle);
+        const resolved = await resolveUserIdByHandle(handle);
         if (resolved.ok) {
           xUserId = resolved.xUserId;
-          void saveUserIds([{ handle: item.handle, xUserId }]).catch(() => {
+          void saveUserIds([{ handle, xUserId }]).catch(() => {
             // 回填失败不影响本次拉黑
           });
         } else {
           // 解析失败如实归类：「账号已不存在」与「限流/网络」分开，后者交给队列退避重试
           console.warn(
-            `[FeedSieve] resolve @${item.handle} failed:`,
+            `[FeedSieve] resolve @${handle} failed:`,
             resolved.code,
             resolved.statusCode ?? '',
           );
@@ -997,7 +1011,7 @@ export default defineContentScript({
         };
       }
       // 记账（撤销入口的数据源）+ 本地统计
-      await markBlocked(item.handle, xUserId, {
+      await markBlocked(handle, xUserId, {
         category: item.category,
         ...item.evidence,
         ...(options.origin ? { origin: options.origin } : {}),
@@ -1014,7 +1028,7 @@ export default defineContentScript({
       // 摩擦设计：拉黑成功即自动贡献社区（无弹窗；全局开关在 contributeBlocks 内判断）
       if (options.communityVote !== false && !options.deferContribution) {
         contributeBlocks([
-          { handle: item.handle, xUserId, category: item.category, ...item.evidence },
+          { handle, xUserId, category: item.category, ...item.evidence },
         ]);
       }
       return { ok: true };
@@ -1284,11 +1298,6 @@ export default defineContentScript({
      * 队列执行在 content script 内；页面刷新会中断正在发出的请求。
      * 只有确认 owner tab 已消失（心跳停摆）才把孤儿 running 状态降为 paused，
      * 避免误伤其它 tab 正在执行的队列、也避免 popup 误报「仍在运行」。
-     */
-    /**
-     * 队列执行在 content script 内；页面刷新会中断正在发出的请求。
-     * 只有确认 owner tab 已消失（心跳停摆）才把孤儿 running 状态降为 paused，
-     * 避免误伤其它 tab 正在执行的队列、也避免 popup 误报「仍在运行」。
      *
      * allowReschedule 仅启动调用为真：owner 恰好在心跳窗口内刷新时，靠
      * 「新页面启动必然重新走本函数」覆盖，定时复查本身不再自续，避免常驻轮询。
@@ -1317,6 +1326,17 @@ export default defineContentScript({
     async function resumePersistentQueue(): Promise<{ status: string }> {
       const state = await getPersistentBlockQueue();
       if (!state) return { status: 'absent' };
+      // 跨 tab 双执行防御（review F3）：resume 消息由 popup 路由到活动 tab。
+      // 若其它 tab 的 runner 心跳新鲜，本 tab 绝不能把 owner 的 running 任务
+      // 重置为 pending 再开第二个 runner（同一任务双执行、写状态互踩）。
+      const heartbeat = (await browser.storage.local.get(QUEUE_HEARTBEAT_KEY))[QUEUE_HEARTBEAT_KEY];
+      if (
+        decideQueueResume(state.status, heartbeat, Date.now(), QUEUE_HEARTBEAT_TTL_MS, ownsPersistentQueueHere) ===
+        'already-running'
+      ) {
+        // 队列确实在跑（别的 tab）：对 popup 返回 running（协议语义不变），但不启动
+        return { status: 'running' };
+      }
       state.status = 'running';
       // 额度用尽的暂停由用户显式放行：本轮不再因额度停队（友情提醒模式）。
       // 其它暂停原因（认证失效 / 429 风暴 / 手动）不解除额度门控语义。
@@ -1373,6 +1393,9 @@ export default defineContentScript({
 
     async function runPersistentQueue(): Promise<void> {
       if (runningPersistentQueue) return runningPersistentQueue;
+      // 本 tab 持有 runner 期间为真：resume 防双跑判定（decideQueueResume）用它区分
+      // 「我在跑」与「其它 tab 在跑」（review F3）。
+      ownsPersistentQueueHere = true;
       // 心跳：owner tab 每 3s 写一次。其它 tab 启动时凭「心跳是否新鲜」区分
       // 真孤儿（owner 已刷新/关闭）与「我只是新开了一个 tab」（见 pauseOrphanedPersistentQueue）。
       const beat = (): void => {
@@ -1387,6 +1410,7 @@ export default defineContentScript({
       runningPersistentQueue = executePersistentQueue().finally(() => {
         window.clearInterval(heartbeat);
         runningPersistentQueue = null;
+        ownsPersistentQueueHere = false;
       });
       return runningPersistentQueue;
     }
@@ -1524,8 +1548,6 @@ function ensureStyles(): void {
     .fs-actions { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
     /* 次操作组：抢救 / 误标？（低频治理，弱化） */
     .fs-actions-soft { gap: 4px; }
-    .fs-pick { display: flex; align-items: center; gap: 4px; white-space: nowrap; cursor: pointer; user-select: none; }
-    .fs-pick input { accent-color: #d97706; cursor: pointer; }
     .fs-block-now {
       min-width: 34px;
       padding: 2.5px 8px;

@@ -4,6 +4,7 @@ import {
   getPersistentBlockQueue,
   setPersistentBlockQueue,
 } from './block-queue-store';
+import { decideQueueResume, sanitizeQueueItem } from './block-queue-store';
 
 let storage: Record<string, unknown>;
 
@@ -195,5 +196,72 @@ describe('持久化拉黑队列', () => {
         }),
       ]),
     );
+  });
+
+  it('消息入队前严格校验：畸形 handle / 非数字 id / 缺 category 整条丢弃', () => {
+    expect(sanitizeQueueItem({ handle: '@Good_User', xUserId: '12345', category: 'bot_spam' })).toEqual({
+      handle: 'good_user',
+      xUserId: '12345',
+      category: 'bot_spam',
+    });
+    expect(sanitizeQueueItem({ handle: 'ok_handle', category: 'other' })).toEqual({
+      handle: 'ok_handle',
+      category: 'other',
+    });
+    // handle 非法形态：16+ 位、含非法字符、非字符串、空
+    expect(sanitizeQueueItem({ handle: 'a'.repeat(16), category: 'other' })).toBeNull();
+    expect(sanitizeQueueItem({ handle: 'bad handle!', category: 'other' })).toBeNull();
+    expect(sanitizeQueueItem({ handle: 123, category: 'other' })).toBeNull();
+    expect(sanitizeQueueItem({ handle: '', category: 'other' })).toBeNull();
+    // id 非纯数字 → 丢弃 id（条目仍可用，id 在执行期现解析）
+    expect(sanitizeQueueItem({ handle: 'ok', xUserId: 'abc123', category: 'other' })).toEqual({
+      handle: 'ok',
+      category: 'other',
+    });
+    // category 缺失 / 非字符串 / 空串
+    expect(sanitizeQueueItem({ handle: 'ok' })).toBeNull();
+    expect(sanitizeQueueItem({ handle: 'ok', category: 7 })).toBeNull();
+    expect(sanitizeQueueItem({ handle: 'ok', category: '' })).toBeNull();
+    // 非对象
+    expect(sanitizeQueueItem(null)).toBeNull();
+    expect(sanitizeQueueItem('spam')).toBeNull();
+  });
+
+  it('存储态里的畸形 xUserId 反序列化时被剔除', async () => {
+    storage.persistentBlockQueueV1 = {
+      id: 'forged-queue',
+      source: 'community-batch',
+      status: 'paused',
+      createdAt: 1,
+      updatedAt: 2,
+      tasks: [{ handle: 'ok', xUserId: 'DROP TABLE', category: 'other', status: 'pending' }],
+    };
+    const restored = await getPersistentBlockQueue();
+    expect(restored?.tasks[0]).toMatchObject({ handle: 'ok' });
+    expect(restored?.tasks[0]).not.toHaveProperty('xUserId');
+  });
+
+  describe('decideQueueResume（跨 tab 双跑防御）', () => {
+    const NOW = 1_000_000;
+    const TTL = 15_000;
+
+    it('状态非 running：本 tab 直接接管', () => {
+      expect(decideQueueResume('paused', NOW, NOW, TTL, false)).toBe('adopt');
+      expect(decideQueueResume('completed', undefined, NOW, TTL, false)).toBe('adopt');
+    });
+
+    it('running + 本 tab 持有 runner：接管（runPersistentQueue 的现有 running guard 兜底）', () => {
+      expect(decideQueueResume('running', NOW - 1000, NOW, TTL, true)).toBe('adopt');
+    });
+
+    it('running + 心跳新鲜 + 非本 tab：拒绝启动第二个 runner', () => {
+      expect(decideQueueResume('running', NOW - 3000, NOW, TTL, false)).toBe('already-running');
+    });
+
+    it('running + 心跳过期/缺失 + 非本 tab：真孤儿，接管', () => {
+      expect(decideQueueResume('running', NOW - 16_000, NOW, TTL, false)).toBe('adopt');
+      expect(decideQueueResume('running', undefined, NOW, TTL, false)).toBe('adopt');
+      expect(decideQueueResume('running', 'forged', NOW, TTL, false)).toBe('adopt');
+    });
   });
 });

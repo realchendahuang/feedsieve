@@ -2,6 +2,7 @@ import { useId, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import type { MarkStrength } from '@feedsieve/community-lists';
 import type { AllowlistItem } from '../../../src/lib/allowlist';
+import { normalizeStrictHandle } from '../../../src/lib/xhr-bridge-guard';
 import { localizedDetectionReason, UI_COPY, type UiLanguage } from '../../../src/lib/i18n';
 
 export type AppIconName = 'clean' | 'lists' | 'settings' | 'refresh' | 'shield' | 'detect';
@@ -179,7 +180,17 @@ export interface CommunityMeta {
 }
 
 export function asPageMarkedList(value: unknown): PageMarkedItem[] {
-  return Array.isArray(value) ? (value as PageMarkedItem[]) : [];
+  if (!Array.isArray(value)) return [];
+  // 内部通道但仍过最小形态校验：畸形条目静默丢弃，避免渲染成 @undefined（review F6）
+  const items: PageMarkedItem[] = [];
+  for (const entry of value) {
+    if (!entry || typeof entry !== 'object') continue;
+    const raw = entry as Record<string, unknown>;
+    const handle = normalizeStrictHandle(raw.handle);
+    if (!handle || typeof raw.category !== 'string' || typeof raw.reason !== 'string') continue;
+    items.push({ handle, category: raw.category, reason: raw.reason });
+  }
+  return items;
 }
 
 export function formatDate(timestamp: number, language: UiLanguage): string {

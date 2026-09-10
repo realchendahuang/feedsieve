@@ -5,6 +5,8 @@
  * chrome.storage.local 持久化。
  */
 
+import { enqueueStorageWrite } from './storage-mutex';
+
 export interface BlockedAccount {
   handle: string;
   xUserId?: string;
@@ -44,73 +46,83 @@ export async function getBlockedAccounts(): Promise<BlockedAccount[]> {
   return Array.isArray(value) ? (value as BlockedAccount[]) : [];
 }
 
-/** 记账（幂等）：已存在则不动 blockedAt，保留首次拉黑时间。 */
+/** 记账（幂等）：已存在则不动 blockedAt，保留首次拉黑时间。
+ *
+ * 整个读-改-写走 storage 写互斥：单条拉黑与队列拉黑可并发完成，无互斥时
+ * 两个调用会读到同一数组，后写者覆盖前写者，丢撤销记录（review F2）。
+ */
 export async function markBlocked(
   handle: string,
   xUserId?: string,
   evidence?: BlockedAccountEvidence,
 ): Promise<void> {
-  const normalized = normalize(handle);
-  if (!normalized) {
-    return;
-  }
-  const accounts = await getBlockedAccounts();
-  const existing = accounts.find((a) => a.handle === normalized);
-  if (existing) {
-    let changed = false;
-    if (!existing.xUserId && xUserId) {
-      existing.xUserId = xUserId;
-      changed = true;
+  return enqueueStorageWrite(async () => {
+    const normalized = normalize(handle);
+    if (!normalized) {
+      return;
     }
-    if (evidence) {
-      existing.category = evidence.category;
-      existing.contentFingerprint = evidence.contentFingerprint;
-      existing.linkDomains = evidence.linkDomains;
-      existing.detectionSource = evidence.detectionSource ?? existing.detectionSource;
-      existing.origin = evidence.origin ?? existing.origin;
-      existing.communityVote = evidence.communityVote ?? existing.communityVote;
-      existing.batchId = evidence.batchId ?? existing.batchId;
-      changed = true;
+    const accounts = await getBlockedAccounts();
+    const existing = accounts.find((a) => a.handle === normalized);
+    if (existing) {
+      let changed = false;
+      if (!existing.xUserId && xUserId) {
+        existing.xUserId = xUserId;
+        changed = true;
+      }
+      if (evidence) {
+        existing.category = evidence.category;
+        existing.contentFingerprint = evidence.contentFingerprint;
+        existing.linkDomains = evidence.linkDomains;
+        existing.detectionSource = evidence.detectionSource ?? existing.detectionSource;
+        existing.origin = evidence.origin ?? existing.origin;
+        existing.communityVote = evidence.communityVote ?? existing.communityVote;
+        existing.batchId = evidence.batchId ?? existing.batchId;
+        changed = true;
+      }
+      if (changed) {
+        await browser.storage.local.set({ [STORAGE_KEY]: accounts });
+      }
+      return;
     }
-    if (changed) {
-      await browser.storage.local.set({ [STORAGE_KEY]: accounts });
-    }
-    return;
-  }
-  accounts.push({
-    handle: normalized,
-    ...(xUserId ? { xUserId } : {}),
-    ...(evidence?.category ? { category: evidence.category } : {}),
-    ...(evidence?.contentFingerprint ? { contentFingerprint: evidence.contentFingerprint } : {}),
-    ...(evidence?.linkDomains?.length ? { linkDomains: evidence.linkDomains } : {}),
-    ...(evidence?.detectionSource ? { detectionSource: evidence.detectionSource } : {}),
-    ...(evidence?.origin ? { origin: evidence.origin } : {}),
-    ...(typeof evidence?.communityVote === 'boolean'
-      ? { communityVote: evidence.communityVote }
-      : {}),
-    ...(evidence?.batchId ? { batchId: evidence.batchId } : {}),
-    blockedAt: Date.now(),
+    accounts.push({
+      handle: normalized,
+      ...(xUserId ? { xUserId } : {}),
+      ...(evidence?.category ? { category: evidence.category } : {}),
+      ...(evidence?.contentFingerprint ? { contentFingerprint: evidence.contentFingerprint } : {}),
+      ...(evidence?.linkDomains?.length ? { linkDomains: evidence.linkDomains } : {}),
+      ...(evidence?.detectionSource ? { detectionSource: evidence.detectionSource } : {}),
+      ...(evidence?.origin ? { origin: evidence.origin } : {}),
+      ...(typeof evidence?.communityVote === 'boolean'
+        ? { communityVote: evidence.communityVote }
+        : {}),
+      ...(evidence?.batchId ? { batchId: evidence.batchId } : {}),
+      blockedAt: Date.now(),
+    });
+    await browser.storage.local.set({ [STORAGE_KEY]: accounts });
   });
-  await browser.storage.local.set({ [STORAGE_KEY]: accounts });
 }
 
-/** 撤销成功后移除记录。幂等。 */
+/** 撤销成功后移除记录。幂等。整个读-改-写走 storage 写互斥（同 markBlocked）。 */
 export async function removeBlockedAccount(handle: string): Promise<void> {
-  const normalized = normalize(handle);
-  const remaining = (await getBlockedAccounts()).filter((a) => a.handle !== normalized);
-  await browser.storage.local.set({ [STORAGE_KEY]: remaining });
+  return enqueueStorageWrite(async () => {
+    const normalized = normalize(handle);
+    const remaining = (await getBlockedAccounts()).filter((a) => a.handle !== normalized);
+    await browser.storage.local.set({ [STORAGE_KEY]: remaining });
+  });
 }
 
-/** 批量原位更新（存量分类升级等治理用）；有变更才写盘，返回变更条数。 */
+/** 批量原位更新（存量分类升级等治理用）；有变更才写盘，返回变更条数。整个读-改-写走 storage 写互斥。 */
 export async function mutateBlockedAccounts(
   mutate: (accounts: BlockedAccount[]) => number,
 ): Promise<number> {
-  const accounts = await getBlockedAccounts();
-  const changed = mutate(accounts);
-  if (changed > 0) {
-    await browser.storage.local.set({ [STORAGE_KEY]: accounts });
-  }
-  return changed;
+  return enqueueStorageWrite(async () => {
+    const accounts = await getBlockedAccounts();
+    const changed = mutate(accounts);
+    if (changed > 0) {
+      await browser.storage.local.set({ [STORAGE_KEY]: accounts });
+    }
+    return changed;
+  });
 }
 
 /** 订阅变化（popup 实时刷新）。返回解绑函数。 */
