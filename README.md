@@ -32,7 +32,7 @@
   ·
   <a href="PRIVACY.md">隐私政策</a>
   ·
-  <a href="https://feedsieve.chendahuang.com">官网</a>
+  <a href="https://feedsieve.win">官网</a>
 </p>
 
 <p align="center">
