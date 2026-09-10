@@ -1,13 +1,7 @@
-export const REPORT_REASONS = [
-  'bot_spam',
-  'copy_paste',
-  'ai_slop',
-  'advertising',
-  'adult_gray_traffic',
-  'scam_phishing',
-  'engagement_bait',
-  'other',
-] as const;
+import { CATEGORIES, HANDLE_INPUT_RE } from '@feedsieve/shared';
+
+// 分类词表唯一权威源在 @feedsieve/shared（客户端/服务端/后台共用）；这里保留历史导出名。
+export const REPORT_REASONS = CATEGORIES;
 
 export type ReportReason = (typeof REPORT_REASONS)[number];
 
@@ -24,7 +18,7 @@ export interface ValidReport {
   detectionSource: string | null;
 }
 
-const HANDLE_RE = /^@?([A-Za-z0-9_]{1,15})$/;
+const HANDLE_RE = HANDLE_INPUT_RE; // 共享正则（与 admin 表单、extension 手动输入同源）
 const USER_ID_RE = /^\d{1,20}$/;
 const POST_ID_RE = /^\d{1,25}$/;
 /** 与 packages/detector 的 fingerprintText 输出格式对应：16 位小写十六进制 */

@@ -38,6 +38,9 @@ importers:
 
   apps/admin:
     dependencies:
+      '@feedsieve/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@hookform/resolvers':
         specifier: ^5.9.1
         version: 5.9.1(@standard-schema/spec@1.1.0)(react-hook-form@7.87.0(react@19.2.8))(zod@4.4.3)
@@ -108,6 +111,9 @@ importers:
       '@feedsieve/community-lists':
         specifier: workspace:*
         version: link:../../packages/community-lists
+      '@feedsieve/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       hono:
         specifier: ^4.13.5
         version: 4.13.5
@@ -145,6 +151,9 @@ importers:
       '@feedsieve/detector':
         specifier: workspace:*
         version: link:../../packages/detector
+      '@feedsieve/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@feedsieve/x-adapter':
         specifier: workspace:*
         version: link:../../packages/x-adapter
@@ -188,6 +197,12 @@ importers:
       '@types/node':
         specifier: ^26.4.1
         version: 26.4.1
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/shared:
+    devDependencies:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
