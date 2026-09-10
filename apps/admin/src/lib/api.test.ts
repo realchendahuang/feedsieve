@@ -45,4 +45,16 @@ describe('管理端 API 错误处理', () => {
     const error = await getDashboard().catch((value: unknown) => value);
     expect(errorText(error)).toBe('管理端暂时不可用，请刷新后重试');
   });
+
+  it('200 但响应结构漂移时按 invalid_response 拒绝，不静默渲染空值', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ unexpected: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    const error = await getDashboard().catch((value: unknown) => value);
+    expect(errorText(error)).toBe('管理端暂时不可用，请刷新后重试');
+  });
 });

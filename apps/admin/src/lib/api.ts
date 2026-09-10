@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 export interface Dashboard {
   /** 社区净票达标数（进入公开名单的来源之一） */
   community_listed: number;
@@ -126,10 +128,136 @@ export interface VerifiedResponse {
   }>;
 }
 
-export const getVerified = (params: { q?: string } = {}) =>
-  request<VerifiedResponse>(`/verified${params.q ? `?q=${encodeURIComponent(params.q)}` : ''}`);
+/**
+ * 响应结构运行时校验：服务端字段漂移（改名/类型变化）应当在数据进 UI 之前
+ * 被拒绝为 invalid_response，而不是静默渲染成 —。仅覆盖主要读取端点；
+ * 写操作响应字段少且 UI 已有降级路径，不逐一建模。
+ */
+const dashboardSchema = z.object({
+  community_listed: z.number(),
+  community_candidates: z.number(),
+  maintainer_entries: z.number(),
+  public_entries: z.number(),
+  false_positive_feedback: z.number(),
+  reports_last_24h: z.number(),
+  active_installations_last_24h: z.number(),
+  snapshot_version: z.string().nullable(),
+  snapshot_generated_at: z.number().nullable(),
+  snapshot_lag_seconds: z.number().nullable(),
+});
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+const communityCandidateSchema = z.object({
+  handle: z.string(),
+  x_user_id: z.string().nullable(),
+  category: z.string(),
+  status: z.string(),
+  report_count: z.number(),
+  rescue_count: z.number(),
+  net_votes: z.number(),
+  blocked_installs: z.number(),
+  allowed_installs: z.number(),
+  fingerprints: z.number(),
+  domains: z.number(),
+  sources: z.array(z.string()),
+  first_report_at: z.number(),
+  updated_at: z.number(),
+});
+const communityCandidatesSchema = z.object({
+  entries: z.array(communityCandidateSchema),
+  next_cursor: z.string().nullable(),
+  categories: z.array(z.string()),
+});
+
+const accountEntrySchema = z.object({
+  handle: z.string(),
+  x_user_id: z.string().nullable(),
+  category: z.string(),
+  note: z.string(),
+  evidence_post_id: z.string().nullable(),
+  active: z.boolean(),
+  created_at: z.number(),
+  updated_at: z.number(),
+});
+const accountsSchema = z.object({
+  entries: z.array(accountEntrySchema),
+  categories: z.array(z.string()),
+});
+
+const keywordPackSchema = z.object({
+  id: z.string(),
+  name_zh: z.string(),
+  name_en: z.string(),
+  description_zh: z.string(),
+  description_en: z.string(),
+  source_refs: z.array(z.string()),
+  active: z.boolean(),
+  created_at: z.number(),
+  updated_at: z.number(),
+});
+const keywordRuleSchema = z.object({
+  id: z.string(),
+  pack_id: z.string(),
+  phrase: z.string(),
+  terms: z.array(z.string()).nullable(),
+  max_gap: z.number().nullable(),
+  active: z.boolean(),
+  created_at: z.number(),
+  updated_at: z.number(),
+});
+const keywordsSchema = z.object({
+  packs: z.array(keywordPackSchema),
+  rules: z.array(keywordRuleSchema),
+});
+
+const feedbackSchema = z.object({
+  summary: z.array(
+    z.object({
+      detection_source: z.string(),
+      rule_id: z.string(),
+      count: z.number(),
+    }),
+  ),
+  feedback: z.array(
+    z.object({
+      handle: z.string(),
+      detection_source: z.string().nullable(),
+      rule_id: z.string().nullable(),
+      detection_reason: z.string().nullable(),
+      client_version: z.string().nullable(),
+      created_at: z.number(),
+      category: z.string().nullable(),
+      status: z.string().nullable(),
+      report_count: z.number().nullable(),
+      rescue_count: z.number().nullable(),
+    }),
+  ),
+});
+
+const releaseSchema = z.object({
+  id: z.number(),
+  kind: z.enum(['accounts', 'keywords']),
+  version: z.string(),
+  actor_email: z.string(),
+  detail: z.record(z.string(), z.unknown()),
+  created_at: z.number(),
+});
+const releasesSchema = z.object({ releases: z.array(releaseSchema) });
+
+const verifiedEntrySchema = z.object({
+  handle: z.string(),
+  x_user_id: z.string().nullable(),
+  report_count: z.number(),
+  rescue_count: z.number(),
+  net_votes: z.number(),
+  updated_at: z.number(),
+});
+const verifiedSchema = z.object({ entries: z.array(verifiedEntrySchema) });
+
+async function request<T>(
+  path: string,
+  init: RequestInit = {},
+  schema?: z.ZodType<T>,
+): Promise<T> {
   const headers = new Headers(init.headers);
   if (init.body) headers.set('content-type', 'application/json');
   const response = await fetch(`/api/admin${path}`, {
@@ -154,6 +282,13 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
   if (!body) {
     throw new Error('invalid_response');
+  }
+  if (schema) {
+    const parsed = schema.safeParse(body);
+    if (!parsed.success) {
+      throw new Error('invalid_response');
+    }
+    return parsed.data;
   }
   return body as T;
 }
@@ -186,8 +321,14 @@ export interface RuleInput {
   max_gap?: number;
 }
 
-export const getDashboard = () => request<Dashboard>('/dashboard');
-export const getAccounts = () => request<AccountsResponse>('/accounts');
+export const getVerified = (params: { q?: string } = {}) =>
+  request<VerifiedResponse>(
+    `/verified${params.q ? `?q=${encodeURIComponent(params.q)}` : ''}`,
+    {},
+    verifiedSchema,
+  );
+export const getDashboard = () => request<Dashboard>('/dashboard', {}, dashboardSchema);
+export const getAccounts = () => request<AccountsResponse>('/accounts', {}, accountsSchema);
 export const getCommunityCandidates = (params: {
   net?: string;
   q?: string;
@@ -202,11 +343,16 @@ export const getCommunityCandidates = (params: {
   if (params.cursor) search.set('cursor', params.cursor);
   if (params.limit) search.set('limit', String(params.limit));
   const query = search.toString();
-  return request<CommunityCandidatesResponse>(`/community-accounts${query ? `?${query}` : ''}`);
+  return request<CommunityCandidatesResponse>(
+    `/community-accounts${query ? `?${query}` : ''}`,
+    {},
+    communityCandidatesSchema,
+  );
 };
-export const getKeywords = () => request<KeywordsResponse>('/keywords');
-export const getFeedback = () => request<FeedbackResponse>('/feedback');
-export const getReleases = async () => (await request<{ releases: Release[] }>('/releases')).releases;
+export const getKeywords = () => request<KeywordsResponse>('/keywords', {}, keywordsSchema);
+export const getFeedback = () => request<FeedbackResponse>('/feedback', {}, feedbackSchema);
+export const getReleases = async () =>
+  (await request<{ releases: Release[] }>('/releases', {}, releasesSchema)).releases;
 export const getMe = () => request<{ email: string }>('/me');
 
 export const importKeywordCatalog = () =>

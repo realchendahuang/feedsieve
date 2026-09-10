@@ -5,6 +5,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { useSearch } from '@tanstack/react-router';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import { HANDLE_INPUT_RE } from '@feedsieve/shared';
 import { Plus, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -39,7 +40,7 @@ import { getAccounts, removeAccount, saveAccount, type AccountEntry } from '../l
 import { errorText } from '../lib/errors';
 
 const accountSchema = z.object({
-  handle: z.string().refine((value) => /^@?[a-zA-Z0-9_]{1,15}$/.test(value.trim()), '账号格式不正确'),
+  handle: z.string().refine((value) => HANDLE_INPUT_RE.test(value.trim()), '账号格式不正确'),
   category: z.string().min(1, '选择分类'),
   x_user_id: z.string(),
   evidence_post_id: z.string(),
