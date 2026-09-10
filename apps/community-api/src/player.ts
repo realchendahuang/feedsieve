@@ -65,13 +65,14 @@ export async function sendMail(env: Cloudflare.Env, message: MailMessage): Promi
   const from = env.MAIL_FROM?.trim() || env.SMTP_FROM?.trim();
   if (emailService && typeof emailService.send === 'function' && from) {
     try {
-      const result = await emailService.send({
+      await emailService.send({
         to: message.to,
         from,
         subject: message.subject,
         text: message.text,
       });
-      return Boolean(result?.messageId);
+      // send 不抛错即受理（部分版本响应不含 messageId，不以此判失败）
+      return true;
     } catch (error) {
       console.error('[community-api] email-service send failed:', error);
     }
