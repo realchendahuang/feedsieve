@@ -7,19 +7,10 @@
 
 import type { DailyStat } from './daily-stats';
 import { categoryLabel, type UiLanguage } from './i18n';
+import { CATEGORIES as CATEGORY_ORDER } from '@feedsieve/shared';
 
 /** 贡献分类 -> 战报里的中文标签（与社区分类一一对应，2-4 字） */
-/** 分类明细按固定顺序输出（确定性文案，测试可断言） */
-const CATEGORY_ORDER = [
-  'bot_spam',
-  'copy_paste',
-  'ai_slop',
-  'advertising',
-  'adult_gray_traffic',
-  'scam_phishing',
-  'engagement_bait',
-  'other',
-];
+/** 分类明细按固定顺序输出（确定性文案，测试可断言）；顺序权威源在 @feedsieve/shared */
 
 /**
  * 生成战报文案。示例：

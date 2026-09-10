@@ -1,4 +1,5 @@
 import { mayMatchEndpoint, parseXApiResponse } from '@feedsieve/x-adapter';
+import { createParseThrottle } from '../src/lib/xhr-bridge-guard';
 
 /**
  * 网络桥（MAIN world）—— 机制来自 PureTwitter（docs/research/PURETWITTER_MECHANISM.md）。
@@ -31,10 +32,19 @@ export default defineContentScript({
       }
     }
 
+    // 时间线解析节流：只降被动滚动时的高频轮询开销，不影响其它端点（见 guard 模块注释）
+    const parseThrottle = createParseThrottle();
+
     function inspect(url: string, body: unknown): void {
       try {
+        // 节流窗口内的重复时间线轮询直接跳过（只降开销，不影响正确性）
+        if (!parseThrottle.allow(url)) {
+          return;
+        }
         const parsed = parseXApiResponse(url, body);
         if (parsed.matchedEndpoints.length > 0) {
+          // 只有真正解析过才 mark，否则窗口永不解除
+          parseThrottle.mark(url);
           emit({ ...parsed, sourceUrl: url });
         }
       } catch {

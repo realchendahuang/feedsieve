@@ -5,14 +5,10 @@ import {
   contextFromPath,
   extractFeedItem,
   noteTimelineHealth,
-  parseXApiResponse,
   readCapabilities,
-  readCsrfToken,
   resolveUserIdByHandle,
   runNativeAction,
   tweetSelectors,
-  X_WEB_BEARER,
-  type ParsedApiData,
 } from '@feedsieve/x-adapter';
 import { getBlockedAccounts, markBlocked, subscribeBlocked } from '../src/lib/blocked-accounts';
 import { bumpStat } from '../src/lib/local-stats';
@@ -45,28 +41,26 @@ import { getCommunitySettings } from '../src/lib/community-store';
 import { runDetectionPipeline, type BlockEvidence } from '../src/lib/detection-pipeline';
 import { recordDetection } from '../src/lib/detection-log';
 import {
-  clearFollowingSyncDraft,
   getFollowingAllowlist,
-  getFollowingSyncDraft,
-  getFollowingSyncState,
   getSelfHandle,
   removeFollowingAccount,
-  replaceFollowingAccounts,
-  setFollowingSyncDraft,
-  setFollowingSyncState,
   setSelfHandle,
   subscribeFollowingAllowlist,
   subscribeSelfHandle,
   upsertFollowingAccounts,
 } from '../src/lib/following-allowlist';
+import { createFollowingSync } from '../src/lib/following-sync';
 import {
   createPersistentBlockQueue,
-  decideQueueResume,
   getPersistentBlockQueue,
   sanitizeQueueItem,
   setPersistentBlockQueue,
   type PersistentBlockQueueState,
 } from '../src/lib/block-queue-store';
+import {
+  createQueueSupervisor,
+  QUEUE_HEARTBEAT_KEY,
+} from '../src/lib/queue-supervisor';
 import { sanitizeBridgePayload, STRICT_HANDLE_RE } from '../src/lib/xhr-bridge-guard';
 import {
   currentAccountKey,
@@ -187,10 +181,24 @@ export default defineContentScript({
     /** 用户词与官方可配置词库：只给人工确认黄框，必须由用户点击才会拉黑。 */
     let keywordHeuristics: ReturnType<typeof createKeywordHeuristics> = [];
     let keywordCatalog: KeywordPackCatalog = BUNDLED_KEYWORD_PACK_CATALOG;
-    let runningFollowingSync: Promise<void> | null = null;
-    let runningPersistentQueue: Promise<void> | null = null;
-    /** 本 tab 是否正在持有持久队列 runner（resume 双跑防御用，见 runPersistentQueue） */
-    let ownsPersistentQueueHere = false;
+    // 持久队列生命周期（心跳 / resume 双跑防御 / 孤儿降级）收敛到 queue-supervisor：
+    // 状态机纯函数可单测，这里只注入存储适配与真实执行体。
+    const queueSupervisor = createQueueSupervisor({
+      load: getPersistentBlockQueue,
+      save: (state) => setPersistentBlockQueue(state as PersistentBlockQueueState),
+      readHeartbeat: async () => {
+        const result = await browser.storage.local.get(QUEUE_HEARTBEAT_KEY);
+        return result[QUEUE_HEARTBEAT_KEY];
+      },
+      writeHeartbeat: (at) => {
+        void browser.storage.local.set({ [QUEUE_HEARTBEAT_KEY]: at }).catch(() => {
+          // 心跳写失败不打断队列
+        });
+      },
+      runExecutor: () => executePersistentQueue(),
+    });
+    // Following 全量同步（分页循环 / draft 原子替换）收敛到 following-sync。
+    const followingSync = createFollowingSync();
 
     ensureStyles();
     refreshAllowCache();
@@ -229,7 +237,7 @@ export default defineContentScript({
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') requestKeywordPackSync();
     });
-    void pauseOrphanedPersistentQueue(true);
+    void queueSupervisor.pauseOrphaned(true);
 
     /**
      * popup「一键拉黑 / 一键撤销」入口：这里执行需要页面会话的原生操作，
@@ -271,7 +279,7 @@ export default defineContentScript({
         return runManualSpamBlock(msg.handle);
       }
       if (type === 'feedsieve:following-sync-start') {
-        return startFollowingFullSync();
+        return followingSync.start();
       }
       if (type === 'feedsieve:community-block-start' && Array.isArray(msg?.items)) {
         // 消息通道可跨上下文伪造/携带畸形条目（review F1/F6）：逐条严格校验后才入队
@@ -288,13 +296,13 @@ export default defineContentScript({
         return Promise.resolve(readCapabilities());
       }
       if (type === 'feedsieve:block-queue-resume') {
-        return resumePersistentQueue();
+        return queueSupervisor.resume();
       }
       if (type === 'feedsieve:block-queue-pause') {
-        return updatePersistentQueueStatus('paused');
+        return queueSupervisor.pauseByUser();
       }
       if (type === 'feedsieve:block-queue-cancel') {
-        return cancelPersistentQueue();
+        return queueSupervisor.cancel();
       }
       return undefined;
     });
@@ -357,7 +365,7 @@ export default defineContentScript({
             });
           }
           if (sanitized.isFollowingPage) {
-            void handleFollowingSyncPage({
+            void followingSync.onPage({
               tweets: [],
               promoted: [],
               listMembers: [],
@@ -1086,181 +1094,6 @@ export default defineContentScript({
       }
     }
 
-    async function startFollowingFullSync(): Promise<
-      { status: 'navigating'; url: string } | { status: 'error'; error: string }
-    > {
-      const selfHandle = await getSelfHandle();
-      if (!selfHandle) {
-        return { status: 'error', error: 'self_handle_unknown' };
-      }
-      const now = Date.now();
-      await clearFollowingSyncDraft();
-      await setFollowingSyncState({
-        status: 'waiting',
-        collected: 0,
-        startedAt: now,
-        updatedAt: now,
-      });
-      const url = `https://x.com/${selfHandle}/following`;
-      // 用户显式点了同步；进入 X 自己的关注页触发首页 GraphQL，
-      // 之后由 handleFollowingSyncPage 使用 cursor 继续分页。
-      location.assign(url);
-      return { status: 'navigating', url };
-    }
-
-    async function handleFollowingSyncPage(parsed: ParsedApiData): Promise<void> {
-      const syncState = await getFollowingSyncState();
-      if (syncState.status !== 'waiting' && syncState.status !== 'running') return;
-      if (Date.now() - syncState.updatedAt > 60_000) {
-        await setFollowingSyncState({
-          ...syncState,
-          status: 'error',
-          updatedAt: Date.now(),
-          error: 'following_sync_interrupted',
-        });
-        return;
-      }
-      if (runningFollowingSync) return runningFollowingSync;
-      runningFollowingSync = continueFollowingSync(parsed).finally(() => {
-        runningFollowingSync = null;
-      });
-      return runningFollowingSync;
-    }
-
-    async function continueFollowingSync(firstPage: ParsedApiData): Promise<void> {
-      const started = await getFollowingSyncState();
-      const startedAt = started.startedAt ?? Date.now();
-      let draft = await getFollowingSyncDraft();
-      const byHandle = new Map(draft.map((item) => [item.handle, item]));
-      const addPage = (page: ParsedApiData): number => {
-        const sizeBefore = byHandle.size;
-        for (const account of page.following ?? []) {
-          const handle = account.handle.trim().replace(/^@+/, '').toLowerCase();
-          if (!handle) continue;
-          const existing = byHandle.get(handle);
-          byHandle.set(handle, {
-            handle,
-            ...(account.xUserId || existing?.xUserId
-              ? { xUserId: account.xUserId ?? existing?.xUserId }
-              : {}),
-          });
-        }
-        return byHandle.size - sizeBefore;
-      };
-
-      try {
-        let page = firstPage;
-        let sourceUrl = page.sourceUrl;
-        const seenCursors = new Set<string>();
-        let consecutivePagesWithoutNewAccounts = 0;
-        let reachedSafetyLimit = true;
-        for (let pageNumber = 0; pageNumber < 1000; pageNumber++) {
-          const added = addPage(page);
-          consecutivePagesWithoutNewAccounts =
-            added === 0 ? consecutivePagesWithoutNewAccounts + 1 : 0;
-          draft = [...byHandle.values()];
-          await setFollowingSyncDraft(draft);
-          await setFollowingSyncState({
-            status: 'running',
-            collected: draft.length,
-            startedAt,
-            updatedAt: Date.now(),
-          });
-
-          // X 的 Following 时间线到末尾后仍会继续发只含导航 cursor 的空页；
-          // 连续空页才是稳定终止信号，单个空页仍允许跨越时间线间隙。
-          if (consecutivePagesWithoutNewAccounts >= 3) {
-            reachedSafetyLimit = false;
-            break;
-          }
-
-          const cursor = page.followingCursor;
-          if (!cursor) {
-            reachedSafetyLimit = false;
-            break;
-          }
-          if (!sourceUrl || seenCursors.has(cursor)) {
-            throw new Error(!sourceUrl ? 'following_source_url_missing' : 'following_cursor_loop');
-          }
-          seenCursors.add(cursor);
-          await sleep(650);
-          page = await fetchFollowingPage(sourceUrl, cursor);
-          sourceUrl = page.sourceUrl ?? sourceUrl;
-        }
-
-        if (reachedSafetyLimit) {
-          throw new Error('following_page_limit_reached');
-        }
-
-        const complete = [...byHandle.values()];
-        await replaceFollowingAccounts(complete);
-        await clearFollowingSyncDraft();
-        await setFollowingSyncState({
-          status: 'complete',
-          collected: complete.length,
-          startedAt,
-          updatedAt: Date.now(),
-        });
-      } catch (error) {
-        await setFollowingSyncState({
-          status: 'error',
-          collected: byHandle.size,
-          startedAt,
-          updatedAt: Date.now(),
-          error: error instanceof Error ? error.message : 'following_sync_failed',
-        });
-      }
-    }
-
-    async function fetchFollowingPage(sourceUrl: string, cursor: string): Promise<ParsedApiData> {
-      const csrf = readCsrfToken();
-      if (!csrf) throw new Error('missing_csrf');
-      const url = new URL(sourceUrl);
-      const rawVariables = url.searchParams.get('variables');
-      if (!rawVariables) throw new Error('following_variables_missing');
-      const variables = JSON.parse(rawVariables) as Record<string, unknown>;
-      variables.cursor = cursor;
-      url.searchParams.set('variables', JSON.stringify(variables));
-      for (let attempt = 0; attempt < 2; attempt++) {
-        const controller = new AbortController();
-        const timeout = window.setTimeout(() => controller.abort(), 15_000);
-        try {
-          const response = await fetch(url.toString(), {
-            method: 'GET',
-            credentials: 'include',
-            signal: controller.signal,
-            headers: {
-              Authorization: X_WEB_BEARER,
-              'X-Twitter-Auth-Type': 'OAuth2Session',
-              'X-Twitter-Active-User': 'yes',
-              'X-Csrf-Token': csrf,
-            },
-          });
-          if (!response.ok) {
-            if (attempt === 0 && (response.status === 429 || response.status >= 500)) {
-              await sleep(1200);
-              continue;
-            }
-            throw new Error(`following_http_${response.status}`);
-          }
-          const page = parseXApiResponse(url.toString(), await response.json());
-          return { ...page, sourceUrl: url.toString() };
-        } catch (error) {
-          if (attempt === 0 && (error as { name?: string })?.name === 'AbortError') {
-            await sleep(1200);
-            continue;
-          }
-          if ((error as { name?: string })?.name === 'AbortError') {
-            throw new Error('following_request_timeout', { cause: error });
-          }
-          throw error;
-        } finally {
-          window.clearTimeout(timeout);
-        }
-      }
-      throw new Error('following_request_failed');
-    }
-
     async function startPersistentQueue(
       source: 'page-batch' | 'community-batch',
       items: Array<{
@@ -1290,7 +1123,7 @@ export default defineContentScript({
         return !allowCache.has(handle) && !followingCache.has(handle) && !blockedCache.has(handle);
       });
       const state = await createPersistentBlockQueue(source, filtered, { targetTabId });
-      void runPersistentQueue();
+      void queueSupervisor.run();
       return { status: 'started', id: state.id, count: state.tasks.length };
     }
 
@@ -1302,119 +1135,6 @@ export default defineContentScript({
      * allowReschedule 仅启动调用为真：owner 恰好在心跳窗口内刷新时，靠
      * 「新页面启动必然重新走本函数」覆盖，定时复查本身不再自续，避免常驻轮询。
      */
-    async function pauseOrphanedPersistentQueue(allowReschedule = false): Promise<void> {
-      const state = await getPersistentBlockQueue();
-      if (!state || state.status !== 'running') return;
-      const heartbeat = (await browser.storage.local.get(QUEUE_HEARTBEAT_KEY))[QUEUE_HEARTBEAT_KEY];
-      if (typeof heartbeat === 'number' && Date.now() - heartbeat < QUEUE_HEARTBEAT_TTL_MS) {
-        // 心跳新鲜 = owner 大概率活着（比如我只是新开的 tab）。但 owner 也可能
-        // 恰好此刻刷新/关闭（心跳还没过期）：启动路径延迟到过期后再复查一次。
-        if (allowReschedule) {
-          window.setTimeout(() => {
-            void pauseOrphanedPersistentQueue(false);
-          }, QUEUE_HEARTBEAT_TTL_MS + 1_000);
-        }
-        return;
-      }
-      state.status = 'paused';
-      for (const task of state.tasks) {
-        if (task.status === 'running') task.status = 'pending';
-      }
-      await setPersistentBlockQueue(state);
-    }
-
-    async function resumePersistentQueue(): Promise<{ status: string }> {
-      const state = await getPersistentBlockQueue();
-      if (!state) return { status: 'absent' };
-      // 跨 tab 双执行防御（review F3）：resume 消息由 popup 路由到活动 tab。
-      // 若其它 tab 的 runner 心跳新鲜，本 tab 绝不能把 owner 的 running 任务
-      // 重置为 pending 再开第二个 runner（同一任务双执行、写状态互踩）。
-      const heartbeat = (await browser.storage.local.get(QUEUE_HEARTBEAT_KEY))[QUEUE_HEARTBEAT_KEY];
-      if (
-        decideQueueResume(state.status, heartbeat, Date.now(), QUEUE_HEARTBEAT_TTL_MS, ownsPersistentQueueHere) ===
-        'already-running'
-      ) {
-        // 队列确实在跑（别的 tab）：对 popup 返回 running（协议语义不变），但不启动
-        return { status: 'running' };
-      }
-      state.status = 'running';
-      // 额度用尽的暂停由用户显式放行：本轮不再因额度停队（友情提醒模式）。
-      // 其它暂停原因（认证失效 / 429 风暴 / 手动）不解除额度门控语义。
-      if (state.pauseReason === 'quota_exhausted') {
-        state.quotaOverride = true;
-      }
-      delete state.pauseReason;
-      for (const task of state.tasks) {
-        if (task.status === 'running') task.status = 'pending';
-        // 用户显式 resume：清掉退避计时，立即重试
-        if (task.status === 'pending') {
-          delete task.retryAt;
-          delete task.retryAfterMs;
-        }
-        // 旧版本遗留的 retryable failed 任务（升级前已判死）也放回 pending
-        if (
-          task.status === 'failed' &&
-          ['rate_limited', 'auth_required', 'missing_csrf', 'network_error', 'kill_switch'].includes(
-            task.failureCode ?? '',
-          )
-        ) {
-          task.status = 'pending';
-          delete task.failureCode;
-          delete task.retryAt;
-          delete task.retryAfterMs;
-        }
-      }
-      await setPersistentBlockQueue(state);
-      void runPersistentQueue();
-      return { status: 'running' };
-    }
-
-    async function updatePersistentQueueStatus(
-      status: 'paused',
-    ): Promise<{ status: 'paused' | 'absent' }> {
-      const state = await getPersistentBlockQueue();
-      if (!state) return { status: 'absent' };
-      state.status = status;
-      state.pauseReason = 'user';
-      await setPersistentBlockQueue(state);
-      return { status };
-    }
-
-    async function cancelPersistentQueue(): Promise<{ status: 'cancelled' | 'absent' }> {
-      const state = await getPersistentBlockQueue();
-      if (!state) return { status: 'absent' };
-      state.status = 'cancelled';
-      for (const task of state.tasks) {
-        if (task.status === 'pending' || task.status === 'running') task.status = 'cancelled';
-      }
-      await setPersistentBlockQueue(state);
-      return { status: 'cancelled' };
-    }
-
-    async function runPersistentQueue(): Promise<void> {
-      if (runningPersistentQueue) return runningPersistentQueue;
-      // 本 tab 持有 runner 期间为真：resume 防双跑判定（decideQueueResume）用它区分
-      // 「我在跑」与「其它 tab 在跑」（review F3）。
-      ownsPersistentQueueHere = true;
-      // 心跳：owner tab 每 3s 写一次。其它 tab 启动时凭「心跳是否新鲜」区分
-      // 真孤儿（owner 已刷新/关闭）与「我只是新开了一个 tab」（见 pauseOrphanedPersistentQueue）。
-      const beat = (): void => {
-        void browser.storage.local
-          .set({ [QUEUE_HEARTBEAT_KEY]: Date.now() })
-          .catch(() => {
-            // 心跳写失败不打断队列
-          });
-      };
-      beat();
-      const heartbeat = window.setInterval(beat, 3000);
-      runningPersistentQueue = executePersistentQueue().finally(() => {
-        window.clearInterval(heartbeat);
-        runningPersistentQueue = null;
-        ownsPersistentQueueHere = false;
-      });
-      return runningPersistentQueue;
-    }
-
     async function executePersistentQueue(): Promise<void> {
       // 状态迁移、失败分类、自适应节奏全部收敛到 packages/block-queue 的唯一 runner；
       // 本函数只注入「持久化适配器 + 真实 Block 动作」，不再维护第二套循环语义。
@@ -1494,18 +1214,12 @@ export default defineContentScript({
 /** bio 内存缓存上限（每页会话），防止超长会话无界增长。 */
 const BIO_CACHE_MAX = 2000;
 
-/** 队列 owner 心跳键与新鲜度阈值：运行中每 3s 写一次，超时视为 owner 已消失。 */
-const QUEUE_HEARTBEAT_KEY = 'blockQueueHeartbeatAt';
-const QUEUE_HEARTBEAT_TTL_MS = 15_000;
 
 /** 安全档位缓存：每次账本读取时刷新，供 successPaceMs 同步注入（runner 的 pace 是同步函数）。 */
 let safetyPresetCache: SafetyPreset = DEFAULT_PRESET;
 /** 连续 429 计数：达到阈值升级为 rate_limit_storm（收缩当日预算 + 整队暂停）。 */
 let consecutiveRateLimited = 0;
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function ensureStyles(): void {
   if (document.getElementById(STYLE_ELEMENT_ID)) {

@@ -1,4 +1,11 @@
+import { categoryLabel as sharedCategoryLabel } from '@feedsieve/shared';
+
 export type UiLanguage = 'zh' | 'en';
+
+// 分类标签唯一权威源在 @feedsieve/shared；此处保留 i18n 签名与回退语义（未知分类回退原始串）。
+export function categoryLabel(category: string, language: UiLanguage): string {
+  return sharedCategoryLabel(category, language);
+}
 
 const LANGUAGE_KEY = 'uiLanguage';
 
@@ -437,33 +444,7 @@ export function subscribeUiLanguage(onChange: (language: UiLanguage) => void): (
     );
 }
 
-const CATEGORY_LABELS: Record<UiLanguage, Record<string, string>> = {
-  zh: {
-    bot_spam: '机器人',
-    copy_paste: '重复刷屏',
-    ai_slop: 'AI 垃圾',
-    advertising: '广告号',
-    adult_gray_traffic: '色情引流',
-    scam_phishing: '诈骗',
-    engagement_bait: '互动钓鱼',
-    // 统计桶语境：分类为 other 的拉黑仍是垃圾账号（未细分），不再显示「其他」
-    other: '垃圾账号',
-  },
-  en: {
-    bot_spam: 'Bots',
-    copy_paste: 'Copy-paste',
-    ai_slop: 'AI spam',
-    advertising: 'Ads',
-    adult_gray_traffic: 'Adult bait',
-    scam_phishing: 'Scams',
-    engagement_bait: 'Engagement bait',
-    other: 'Spam',
-  },
-};
-
-export function categoryLabel(category: string, language: UiLanguage): string {
-  return CATEGORY_LABELS[language][category] ?? category;
-}
+// （分类标签已收敛到 @feedsieve/shared，见文件头部 categoryLabel 委托）
 
 export function localizedDetectionReason(
   language: UiLanguage,

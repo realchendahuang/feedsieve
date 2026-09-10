@@ -160,3 +160,74 @@ describe('sanitizeBridgePayload', () => {
     expect(out?.followedEntries).toEqual([]);
   });
 });
+
+// ---------- 时间线解析节流 ----------
+
+import {
+  createParseThrottle,
+  TIMELINE_PARSE_THROTTLE_MS,
+  timelineParseThrottleKey,
+} from './xhr-bridge-guard';
+
+describe('timelineParseThrottleKey', () => {
+  it('只命中两个首页时间线端点；其它端点（含 Following / TweetDetail）不节流', () => {
+    expect(timelineParseThrottleKey('https://x.com/i/api/graphql/x/HomeTimeline?variables=1')).toBe(
+      'HomeTimeline',
+    );
+    expect(
+      timelineParseThrottleKey('https://x.com/i/api/graphql/x/HomeLatestTimeline?variables=1'),
+    ).toBe('HomeLatestTimeline');
+    expect(timelineParseThrottleKey('https://x.com/i/api/graphql/x/Following?variables=1')).toBeNull();
+    expect(timelineParseThrottleKey('https://x.com/i/api/graphql/x/TweetDetail?variables=1')).toBeNull();
+    expect(timelineParseThrottleKey('https://x.com/i/api/graphql/x/UserByScreenName?variables=1')).toBeNull();
+  });
+});
+
+describe('createParseThrottle', () => {
+  it('同端点窗口内拒绝、窗口外放行；首次恒放行', () => {
+    let clock = 0;
+    const throttle = createParseThrottle({ now: () => clock });
+    const homeUrl = 'https://x.com/i/api/graphql/x/HomeTimeline?variables=a';
+    expect(throttle.allow(homeUrl)).toBe(true); // 首次
+    throttle.mark(homeUrl);
+    clock = TIMELINE_PARSE_THROTTLE_MS - 1;
+    expect(throttle.allow(homeUrl)).toBe(false); // 窗口内
+    clock = TIMELINE_PARSE_THROTTLE_MS;
+    expect(throttle.allow(homeUrl)).toBe(true); // 窗口外
+  });
+
+  it('两个端点各自独立计数', () => {
+    let clock = 0;
+    const throttle = createParseThrottle({ now: () => clock });
+    throttle.mark('https://x.com/i/api/graphql/x/HomeTimeline?variables=a');
+    clock = TIMELINE_PARSE_THROTTLE_MS - 1;
+    // HomeLatestTimeline 从未 mark：独立计数，仍放行
+    expect(throttle.allow('https://x.com/i/api/graphql/x/HomeLatestTimeline?variables=a')).toBe(
+      true,
+    );
+    throttle.mark('https://x.com/i/api/graphql/x/HomeLatestTimeline?variables=a');
+    expect(throttle.allow('https://x.com/i/api/graphql/x/HomeLatestTimeline?b')).toBe(false);
+    expect(throttle.allow('https://x.com/i/api/graphql/x/HomeTimeline?b')).toBe(false);
+    clock = TIMELINE_PARSE_THROTTLE_MS * 2; // 两个端点的 mark 时刻（0 与 999）都已过期
+    expect(throttle.allow('https://x.com/i/api/graphql/x/HomeLatestTimeline?b')).toBe(true);
+    expect(throttle.allow('https://x.com/i/api/graphql/x/HomeTimeline?b')).toBe(true);
+  });
+
+  it('非时间线端点恒放行且 mark 不写入', () => {
+    const throttle = createParseThrottle({ now: () => 0 });
+    const url = 'https://x.com/i/api/graphql/x/Following?variables=a';
+    expect(throttle.allow(url)).toBe(true);
+    throttle.mark(url);
+    expect(throttle.allow(url)).toBe(true);
+  });
+
+  it('只有真正解析过才 mark：未 mark 时窗口不推进', () => {
+    let clock = 0;
+    const throttle = createParseThrottle({ now: () => clock });
+    const url = 'https://x.com/i/api/graphql/x/HomeTimeline?variables=a';
+    expect(throttle.allow(url)).toBe(true);
+    // 没调 mark（比如解析抛错）：时钟推进后仍放行
+    clock = TIMELINE_PARSE_THROTTLE_MS - 1;
+    expect(throttle.allow(url)).toBe(true);
+  });
+});

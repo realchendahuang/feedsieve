@@ -30,6 +30,64 @@ export function sanitizeXUserId(value: unknown): string | undefined {
   return typeof value === 'string' && X_USER_ID_RE.test(value) ? value : undefined;
 }
 
+// ---------- 时间线解析节流（性能，不涉及正确性） ----------
+
+/**
+ * X 会自动轮询首页时间线（HomeTimeline / HomeLatestTimeline），被动滚动时
+ * 每次响应都在页面主线程整包 JSON.parse + 遍历，是扩展在 x.com 上最大的
+ * 常驻开销。对这两个端点做按端点名的最小间隔节流：间隔内的重复响应直接
+ * 跳过解析。
+ *
+ * 只降开销、不保关键数据：跳过的响应多半是同一批推文的重复轮询；即使恰好
+ * 夹带新作者，黄框标注走 DOM、拉黑按 handle 现解析（blockOne 信任策略），
+ * rest_id 缓存会在下一次未节流的解析里补齐。
+ *
+ * 明确不节流的端点：Following（分页 650ms 一页，跳页会断 cursor 链）、
+ * TweetDetail / ListMembers / AccountSettings（低频单发，节流无收益还可能
+ * 丢关键数据）。
+ */
+const THROTTLED_TIMELINE_ENDPOINTS = ['HomeTimeline', 'HomeLatestTimeline'] as const;
+
+/** 同一端点两次解析的最小间隔（ms）。 */
+export const TIMELINE_PARSE_THROTTLE_MS = 1000;
+
+/** 该 URL 是否属于被节流的时间线端点；返回节流键（端点名）或 null（不节流）。 */
+export function timelineParseThrottleKey(url: string): string | null {
+  for (const key of THROTTLED_TIMELINE_ENDPOINTS) {
+    if (url.includes(key)) return key;
+  }
+  return null;
+}
+
+export interface ParseThrottle {
+  /** 该响应是否应被解析（节流窗口外 / 非时间线端点恒为 true）。 */
+  allow(url: string, at?: number): boolean;
+  /** 记录一次实际解析（只有真正解析过才 mark，否则节流永远不解除）。 */
+  mark(url: string, at?: number): void;
+}
+
+/** 按端点名的解析节流器；now 可注入便于单测。 */
+export function createParseThrottle(
+  options: { intervalMs?: number; now?: () => number } = {},
+): ParseThrottle {
+  const intervalMs = options.intervalMs ?? TIMELINE_PARSE_THROTTLE_MS;
+  const now = options.now ?? (() => Date.now());
+  const lastParseAt = new Map<string, number>();
+  return {
+    allow(url: string, at: number = now()): boolean {
+      const key = timelineParseThrottleKey(url);
+      if (!key) return true;
+      const last = lastParseAt.get(key);
+      return last === undefined || at - last >= intervalMs;
+    },
+    mark(url: string, at: number = now()): void {
+      const key = timelineParseThrottleKey(url);
+      if (!key) return;
+      lastParseAt.set(key, at);
+    },
+  };
+}
+
 export interface SanitizedBridgeData {
   /** handle -> rest_id 入库条目（全部通过严格校验） */
   idEntries: Array<{ handle: string; xUserId: string }>;

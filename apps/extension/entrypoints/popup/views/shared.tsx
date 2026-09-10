@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import type { MarkStrength } from '@feedsieve/community-lists';
 import type { AllowlistItem } from '../../../src/lib/allowlist';
 import { normalizeStrictHandle } from '../../../src/lib/xhr-bridge-guard';
-import { localizedDetectionReason, UI_COPY, type UiLanguage } from '../../../src/lib/i18n';
+import { localizedDetectionReason, type UiLanguage } from '../../../src/lib/i18n';
+import { formatAgo as sharedFormatAgo } from '@feedsieve/shared';
 
 export type AppIconName = 'clean' | 'lists' | 'settings' | 'refresh' | 'shield' | 'detect';
 
@@ -201,13 +202,9 @@ export function formatDate(timestamp: number, language: UiLanguage): string {
 }
 
 export function formatAgo(timestamp: number, language: UiLanguage): string {
-  const t = UI_COPY[language];
-  const minutes = Math.floor((Date.now() - timestamp) / 60000);
-  if (minutes < 1) return t.justNow;
-  if (minutes < 60) return t.minutesAgo(minutes);
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return t.hoursAgo(hours);
-  return t.daysAgo(Math.floor(hours / 24));
+  // 语义与文案收敛到 @feedsieve/shared（Unix 秒）；此处的毫秒时间戳签名保留，调用方零改动。
+  // 边界等价性见 packages/shared/src/shared.test.ts 的「毫秒时间戳语义等价」用例。
+  return sharedFormatAgo(Math.floor(timestamp / 1000), language);
 }
 
 export function allowlistReason(item: AllowlistItem, language: UiLanguage): string | undefined {
