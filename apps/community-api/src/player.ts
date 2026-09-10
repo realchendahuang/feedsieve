@@ -1,14 +1,25 @@
 /**
- * 出站邮件三层降级：
- * 1. SMTP 直连（SMTP_USER/SMTP_PASS，nodemailer 走 Workers TCP socket；
- *    host/port 未配时按账号域推断常见服务商）——推荐，用户只填两个 secret。
- * 2. MAIL_WEBHOOK_URL（POST {to, subject, text} 的通用 webhook 契约），
- *    部署侧接任意自有出口。
- * 3. 都未配置 → 返回 false，调用方降级 dev_code（仅限本地开发自测）。
+ * 出站邮件四层降级：
+ * 1. Cloudflare Email Service（send_email binding，`EMAIL.send()`）——域名在
+ *    面板 onboarding 后可直接发任意收件人，零外部凭证；发件地址走 MAIL_FROM。
+ * 2. SMTP 直连（SMTP_USER/SMTP_PASS，nodemailer 走 Workers TCP socket；
+ *    host/port 未配时按账号域推断常见服务商）。
+ * 3. MAIL_WEBHOOK_URL（POST {to, subject, text} 的通用 webhook 契约）。
+ * 4. 都未配置 → 返回 false，调用方降级 dev_code（仅限本地开发自测）。
  */
 
 import { sha256Hex } from './lib/hash';
 import { markLeaderboardDirty } from './leaderboard';
+
+interface EmailServiceBinding {
+  send(message: {
+    to: string;
+    from: string;
+    subject: string;
+    text: string;
+    html?: string;
+  }): Promise<{ messageId?: string }>;
+}
 
 export const PLAYER = {
   codeTtlSeconds: 600,
@@ -49,6 +60,23 @@ export interface MailMessage {
 
 /** 网络失败不阻塞主流程——收不到码的用户可以重新发码。 */
 export async function sendMail(env: Cloudflare.Env, message: MailMessage): Promise<boolean> {
+  // 1. Cloudflare Email Service（send_email 绑定；发件域名需在面板 onboarding）
+  const emailService = (env as { EMAIL?: EmailServiceBinding }).EMAIL;
+  const from = env.MAIL_FROM?.trim() || env.SMTP_FROM?.trim();
+  if (emailService && typeof emailService.send === 'function' && from) {
+    try {
+      const result = await emailService.send({
+        to: message.to,
+        from,
+        subject: message.subject,
+        text: message.text,
+      });
+      return Boolean(result?.messageId);
+    } catch (error) {
+      console.error('[community-api] email-service send failed:', error);
+    }
+  }
+
   const smtpUser = env.SMTP_USER?.trim();
   const smtpPass = env.SMTP_PASS;
   if (smtpUser && smtpPass) {

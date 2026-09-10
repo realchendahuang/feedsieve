@@ -9,6 +9,10 @@
   // nodejs_compat：nodemailer 走 Workers 出站 socket 直连 SMTP 发验证码
   // （未配置 SMTP_* 时不加载，不影响既有路径）
   "compatibility_flags": ["nodejs_compat"],
+  // Cloudflare Email Service 发送绑定加在 gitignored 的 wrangler.local.jsonc
+  // （部署侧配置）："send_email": [{ "name": "EMAIL", "remote": true }]。
+  // 发信域名需在面板 Email Sending > Onboard Domain；发件地址走 MAIL_FROM。
+  // 不放公开配置：remote 绑定会让 vitest 起远程会话，需要账号选择。
   "observability": { "enabled": true },
   // Workers Cache：公开只读端点（快照 latest / 版本化文件 / 词库）按各自的
   // Cache-Control 在边缘缓存，命中时不再执行 Worker（不碰 D1/R2）。
