@@ -11,18 +11,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -48,6 +38,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { LoadError, Loading, PageHeader } from '../components/layout';
+import { ConfirmDialog } from '../components/confirm-dialog';
 import {
   getKeywords,
   importKeywordCatalog,
@@ -535,26 +526,19 @@ export function KeywordsPage() {
         onOpenChange={(open) => setRuleEditor((prev) => ({ ...prev, open }))}
         onSubmit={(values) => saveRuleMutation.mutate(values)}
       />
-      <AlertDialog open={removing !== null} onOpenChange={(open) => !open && setRemoving(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {removing?.kind === 'pack' ? `移除分类「${removing.label}」？` : `移除规则「${removing?.label}」？`}
-            </AlertDialogTitle>
-            <AlertDialogDescription>移除立即生效，公开词库同步更新。</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              className={buttonVariants({ variant: 'destructive' })}
-              disabled={removeMutation.isPending}
-              onClick={() => removing && removeMutation.mutate(removing)}
-            >
-              移除
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={removing !== null}
+        onOpenChange={(open) => !open && setRemoving(null)}
+        title={
+          removing?.kind === 'pack'
+            ? `移除分类「${removing.label}」？`
+            : `移除规则「${removing?.label}」？`
+        }
+        description="移除立即生效，公开词库同步更新。"
+        actionLabel="移除"
+        pending={removeMutation.isPending}
+        onAction={() => removing && removeMutation.mutate(removing)}
+      />
     </section>
   );
 }

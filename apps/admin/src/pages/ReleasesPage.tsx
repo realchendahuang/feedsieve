@@ -1,17 +1,7 @@
 import React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   Table,
@@ -22,6 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { LoadError, Loading, PageHeader } from '../components/layout';
+import { ConfirmDialog } from '../components/confirm-dialog';
 import { getReleases, rollbackRelease, type Release } from '../lib/api';
 import { errorText } from '../lib/errors';
 
@@ -92,24 +83,15 @@ export function ReleasesPage() {
           </Table>
         </div>
       )}
-      <AlertDialog open={pending !== null} onOpenChange={(open) => !open && setPending(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>回退到 {pending?.version ?? ''}？</AlertDialogTitle>
-            <AlertDialogDescription>恢复到该版本，并生成一条新记录。</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              className={buttonVariants({ variant: 'destructive' })}
-              disabled={rollbackMutation.isPending}
-              onClick={() => pending && rollbackMutation.mutate(pending)}
-            >
-              回退
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={pending !== null}
+        onOpenChange={(open) => !open && setPending(null)}
+        title={`回退到 ${pending?.version ?? ''}？`}
+        description="恢复到该版本，并生成一条新记录。"
+        actionLabel="回退"
+        pending={rollbackMutation.isPending}
+        onAction={() => pending && rollbackMutation.mutate(pending)}
+      />
     </section>
   );
 }

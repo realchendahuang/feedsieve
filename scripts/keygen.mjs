@@ -21,8 +21,9 @@ const spki = publicKey.export({ type: 'spki', format: 'der' });
 const publicKeyB64 = spki.subarray(spki.length - 32).toString('base64');
 
 const keyFile = fileURLToPath(new URL('../.secrets/signing-key.pkcs8.base64', import.meta.url));
-await mkdir(new URL('../.secrets/', import.meta.url), { recursive: true });
-await writeFile(keyFile, `${privateKeyB64}\n`);
+// 私钥是发布信任根：目录与文件都收紧权限（0700/0600），不给本机其他用户读的机会。
+await mkdir(new URL('../.secrets/', import.meta.url), { recursive: true, mode: 0o700 });
+await writeFile(keyFile, `${privateKeyB64}\n`, { mode: 0o600 });
 
 console.log(`key_id:       ${keyId}`);
 console.log(`public key:   ${publicKeyB64}`);

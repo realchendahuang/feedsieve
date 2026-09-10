@@ -7,17 +7,7 @@ import { z } from 'zod';
 import { toast } from 'sonner';
 import { Plus, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -44,6 +34,7 @@ import {
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { LoadError, Loading, PageHeader } from '../components/layout';
+import { ConfirmDialog } from '../components/confirm-dialog';
 import { getAccounts, removeAccount, saveAccount, type AccountEntry } from '../lib/api';
 import { errorText } from '../lib/errors';
 
@@ -329,45 +320,15 @@ export function AccountsPage() {
         onOpenChange={(open) => setEditor((prev) => ({ ...prev, open }))}
         onSubmit={(values) => saveMutation.mutate(values)}
       />
-      <ConfirmRemoval
-        removal={removing}
+      <ConfirmDialog
+        open={removing !== null}
+        onOpenChange={(open) => !open && setRemoving(null)}
+        title={`移除 @${removing?.handle ?? ''}？`}
+        description="移除立即生效，公开名单同步更新。"
+        actionLabel="移除"
         pending={removeMutation.isPending}
-        onRemove={(handle) => removeMutation.mutate(handle)}
-        onClose={() => setRemoving(null)}
+        onAction={() => removing && removeMutation.mutate(removing.handle)}
       />
     </section>
-  );
-}
-
-function ConfirmRemoval({
-  removal,
-  pending,
-  onRemove,
-  onClose,
-}: {
-  removal: AccountEntry | null;
-  pending: boolean;
-  onRemove: (handle: string) => void;
-  onClose: () => void;
-}) {
-  return (
-    <AlertDialog open={removal !== null} onOpenChange={(open) => !open && onClose()}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>移除 @{removal?.handle ?? ''}？</AlertDialogTitle>
-          <AlertDialogDescription>移除立即生效，公开名单同步更新。</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>取消</AlertDialogCancel>
-          <AlertDialogAction
-            className={buttonVariants({ variant: 'destructive' })}
-            disabled={pending}
-            onClick={() => removal && onRemove(removal.handle)}
-          >
-            移除
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
   );
 }

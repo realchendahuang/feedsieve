@@ -52,27 +52,26 @@ FeedItem   X Native UI                              │
 ```text
 apps/
   extension/               # WXT + React + Manifest V3
+  admin/                   # React 管理端（Cloudflare Access 身份，经 community-api 托管）
+  community-api/           # Cloudflare Workers + Hono + D1：Report / Rescue / Snapshot / 词库 / 管理端静态资源
 
 packages/
   detector/                # 识别标注（纯逻辑，与 X / 浏览器解耦）
   x-adapter/               # X Reader + Action Adapter
   block-queue/             # 持久化拉黑队列
-  community-client/        # 快照下载 / 缓存 / 校验
-  list-format/             # YAML / JSON / Schema
-  shared/
-
-services/
-  community-api/           # Report / Rescue / Score / Snapshot
+  community-lists/         # 快照 / 词库下载、验签、schema 校验（签名消息与各实现共用）
 
 community/
+  keyword-packs/           # 词库生成物 + 签名 manifest（扩展按 pack 下载）
   source/                  # 人类可读 YAML
   lists/                   # Extension 读取的 JSON
   policy/                  # 公开评分阈值
   schema/
-  changelog/
 
 fixtures/x/                # X DOM 回归测试
 ```
+
+> 规划中：`packages/shared`（跨端领域词表收敛）。E2E 层（Playwright）见 §14。
 
 ## 4. Browser Extension 上下文
 
@@ -293,9 +292,9 @@ X fixture HTML -> expected FeedItem
 
 X 内部 Block 接口使用 fixture 测试（Block / Unblock / 超时 / 语言回退），不在 CI 中真实 Block。
 
-### E2E
+### E2E（规划中）
 
-Playwright 加载 unpacked extension，使用本地 X-like fixture 页面：
+Playwright 加载 unpacked extension，使用本地 X-like fixture 页面（目前无 Playwright 依赖，E2E 尚未实施）：
 
 ```text
 render tweet -> detect -> 黄框标注 -> 加入待拉黑列表 -> queue 状态变化
@@ -321,7 +320,7 @@ render tweet -> detect -> 黄框标注 -> 加入待拉黑列表 -> queue 状态�
 - React
 - Manifest V3
 - Vitest
-- Playwright
+- Playwright（E2E，规划中）
 - Cloudflare Workers + Hono + D1
 - JSON Schema
 - YAML + deterministic JSON build

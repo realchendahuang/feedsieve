@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/table';
 import { LoadError, Loading, PageHeader } from '../components/layout';
 import { getCommunityCandidates } from '../lib/api';
+import { formatAgo } from '../lib/format';
 
 const NET_OPTIONS = [
   { value: 'all', label: '全部' },
@@ -40,14 +41,6 @@ const SOURCE_LABELS: Record<string, string> = {
   'builtin-list': '内置',
   ai: 'AI',
 };
-
-function formatAgo(unix: number): string {
-  const seconds = Math.max(0, Math.floor(Date.now() / 1000) - unix);
-  if (seconds < 60) return '刚刚';
-  if (seconds < 3600) return `${Math.floor(seconds / 60)} 分钟前`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)} 小时前`;
-  return `${Math.floor(seconds / 86400)} 天前`;
-}
 
 export function CommunityAccountsPage() {
   const navigate = useNavigate();

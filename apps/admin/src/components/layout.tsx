@@ -110,12 +110,21 @@ export function Loading({ rows = 3 }: { rows?: number }) {
 }
 
 export function LoadError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
+  // Access 会话过期（401）后重试 API 永远失败，需要整页重载走边缘登录。
+  const message = errorText(error);
+  const needsRelogin = message === 'access_required' || message === 'http_401';
   return (
     <div className="mt-6 flex flex-col items-start gap-3 rounded-xl border border-dashed border-destructive/40 bg-destructive/5 p-6 text-sm text-foreground">
-      <span className="font-medium text-destructive">{errorText(error)}</span>
-      <Button variant="outline" size="sm" onClick={onRetry} className="border-destructive/30 hover:bg-destructive/10">
-        重试
-      </Button>
+      <span className="font-medium text-destructive">{message}</span>
+      {needsRelogin ? (
+        <Button variant="outline" size="sm" onClick={() => window.location.reload()} className="border-destructive/30 hover:bg-destructive/10">
+          重新登录
+        </Button>
+      ) : (
+        <Button variant="outline" size="sm" onClick={onRetry} className="border-destructive/30 hover:bg-destructive/10">
+          重试
+        </Button>
+      )}
     </div>
   );
 }

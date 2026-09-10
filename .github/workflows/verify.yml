@@ -5,6 +5,10 @@ on:
   push:
     branches: [main]
 
+# 最小权限：本工作流只读仓库，不需要任何写权限。
+permissions:
+  contents: read
+
 # 只做仓库级验证门禁：lint / typecheck / 测试 / 构建 / 产物与依赖检查。
 # 发布打包（pack-store.sh）与签名私钥都在开发机，不进 CI。
 jobs:
@@ -14,8 +18,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 11.11.0
+        # 省略 version：action 默认读 package.json 的 packageManager 字段，避免两处漂移。
 
       - uses: actions/setup-node@v4
         with:

@@ -12,13 +12,7 @@ import {
 } from '@/components/ui/table';
 import { LoadError, Loading, PageHeader } from '../components/layout';
 import { getVerified } from '../lib/api';
-
-function formatAgo(unix: number): string {
-  const seconds = Math.max(0, Math.floor(Date.now() / 1000) - unix);
-  if (seconds < 3600) return `${Math.floor(seconds / 60)} 分钟前`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)} 小时前`;
-  return `${Math.floor(seconds / 86400)} 天前`;
-}
+import { formatAgo } from '../lib/format';
 
 /** 社区白名单（verified）：被验证为「误标正常」的账号，随签名快照下发。只读。 */
 export function VerifiedPage() {
@@ -52,7 +46,7 @@ export function VerifiedPage() {
         </div>
       </form>
 
-      {response.isLoading ? (
+      {response.isPending ? (
         <Loading />
       ) : response.isError ? (
         <LoadError error={response.error} onRetry={() => void response.refetch()} />

@@ -136,6 +136,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     ...init,
     headers,
     credentials: 'same-origin',
+    signal: AbortSignal.timeout(15_000),
   });
   // Access and local SPA fallbacks may return HTML for both error and success
   // responses. Decode once and keep parser/proxy details out of the UI.
@@ -155,6 +156,34 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new Error('invalid_response');
   }
   return body as T;
+}
+
+/** POST /accounts 请求体：handle 已归一化（无 @，小写）。 */
+export interface AccountInput {
+  handle: string;
+  category: string;
+  x_user_id: string | null;
+  evidence_post_id: string | null;
+  note: string;
+}
+
+/** POST /keywords/packs 请求体。 */
+export interface PackInput {
+  id?: string;
+  name_zh: string;
+  name_en: string;
+  description_zh: string;
+  description_en: string;
+  source_refs: string[];
+}
+
+/** POST /keywords/rules 请求体。 */
+export interface RuleInput {
+  id?: string;
+  pack_id: string;
+  phrase: string;
+  terms: string[];
+  max_gap?: number;
 }
 
 export const getDashboard = () => request<Dashboard>('/dashboard');
@@ -183,7 +212,7 @@ export const getMe = () => request<{ email: string }>('/me');
 export const importKeywordCatalog = () =>
   request<{ imported: boolean; packs: number; rules: number }>('/keywords/import', { method: 'POST' });
 // 保存/移除即发布：响应携带新版本号，界面不再有独立发布步骤。
-export const saveAccount = (body: Record<string, unknown>) =>
+export const saveAccount = (body: AccountInput) =>
   request<{ action: 'add' | 'update'; entry: AccountEntry; snapshot_version?: string }>('/accounts', {
     method: 'POST',
     body: JSON.stringify(body),
@@ -193,12 +222,12 @@ export const removeAccount = (handle: string) =>
     method: 'DELETE',
   });
 
-export const savePack = (body: Record<string, unknown>) =>
+export const savePack = (body: PackInput) =>
   request<{ id: string; version?: string | null }>('/keywords/packs', {
     method: 'POST',
     body: JSON.stringify(body),
   });
-export const saveRule = (body: Record<string, unknown>) =>
+export const saveRule = (body: RuleInput) =>
   request<{ id: string; version?: string | null }>('/keywords/rules', {
     method: 'POST',
     body: JSON.stringify(body),

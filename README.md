@@ -177,7 +177,7 @@ pnpm install
 git config core.hooksPath .githooks   # 启用 pre-push 本地质量门禁
 ```
 
-PR 与 push 由 GitHub Actions 验证（`.github/workflows/verify.yml`：lint / 词库校验 / typecheck / 测试 / 扩展构建 / 依赖审计）；pre-push 钩子保留 lint / typecheck / test / build（即 `pnpm verify`）作为提交前的本地门禁。贡献规范见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+PR 与 push 由 GitHub Actions 验证（`.github/workflows/verify.yml`：lint / 词库校验 / typecheck / 测试 / 扩展构建 / 依赖审计）；pre-push 钩子执行 `pnpm verify`（lint + 词库校验 + typecheck + 全部测试 + community-api workerd 测试 + 扩展构建）作为提交前的本地门禁。贡献规范见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## 本地开发
 
@@ -200,7 +200,7 @@ pnpm build:extension        # 构建扩展，产物在 apps/extension/.output/ch
 pnpm keyword-packs:build    # 由公开词库源构建官方词库 JSON
 ```
 
-技术栈：WXT · React 19 · TypeScript · Manifest V3 · Vitest · Playwright · Cloudflare Workers + Hono + D1 + R2。
+技术栈：WXT · React 19 · TypeScript · Manifest V3 · Vitest · Cloudflare Workers + Hono + D1 + R2（E2E 层 Playwright 规划中，尚未引入）。
 
 ## Star History
 

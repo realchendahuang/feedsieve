@@ -64,14 +64,20 @@ Community Backend
 ```text
 feedsieve/
 ├── apps/
-│   └── extension/
-│       ├── entrypoints/
-│       │   ├── background.ts
-│       │   ├── content.tsx
-│       │   ├── popup/
-│       │   └── options/
-│       ├── components/
-│       └── assets/
+│   ├── extension/
+│   │   ├── entrypoints/
+│   │   │   ├── background.ts
+│   │   │   ├── content.tsx
+│   │   │   ├── popup/
+│   │   │   └── options/
+│   │   ├── components/
+│   │   └── assets/
+│   ├── community-api/
+│   │   ├── src/                # Hono 路由 / 报票 / 快照 / 词库 / 管理端
+│   │   ├── test/
+│   │   └── migrations/
+│   └── admin/
+│       └── src/                # React 管理端（Cloudflare Access）
 │
 ├── packages/
 │   ├── detector/
@@ -93,40 +99,25 @@ feedsieve/
 │   │   ├── src/persistence/
 │   │   └── src/types.ts
 │   │
-│   ├── community-client/
-│   │   ├── src/downloader/
-│   │   ├── src/storage/
-│   │   ├── src/verifier/
-│   │   └── src/api/
-│   │
-│   ├── list-format/
-│   │   ├── src/schema/
-│   │   ├── src/parser/
-│   │   └── src/types.ts
-│   │
-│   └── shared/
-│       ├── src/events/
-│       ├── src/config/
-│       └── src/utils/
+│   ├── community-lists/
+│   │   ├── src/signing.ts      # Ed25519 验签 / 签名消息（各实现共用）
+│   │   ├── src/sync.ts         # 快照下载 / 缓存 / 防回滚
+│   │   ├── src/validate.ts     # schema 校验
+│   │   └── src/trusted-keys.ts # 内置发布者公钥
 │
-├── services/
-│   └── community-api/
-│       ├── src/routes/
-│       ├── src/scoring/
-│       ├── src/abuse/
-│       ├── src/db/
-│       └── migrations/
 │
 ├── community/
+│   ├── keyword-packs/
+│   │   ├── manifest.json       # 签名 manifest（build-keyword-packs.mjs 生成）
+│   │   └── official / source / adult-high-recall…
 │   ├── lists/
 │   │   ├── manifest.json
 │   │   ├── official.json
 │   │   └── blocklist.yaml
 │   ├── policy/
 │   │   └── v3.yaml
-│   ├── schema/
-│   │   └── account-list.schema.json
-│   └── changelog/
+│   └── schema/
+│       └── account-list.schema.json
 │
 ├── fixtures/
 │   └── x/
@@ -136,9 +127,12 @@ feedsieve/
 │       └── menus/
 │
 ├── scripts/
-│   ├── build-community-lists/
-│   ├── validate-community-lists/
-│   └── generate-checksums/
+│   ├── build-keyword-packs.mjs
+│   ├── publish-keyword-packs.sh
+│   ├── extract-keyword-candidates.mjs
+│   ├── signing-message.mjs
+│   ├── keygen.mjs
+│   └── verify.sh
 │
 ├── docs/
 └── .github/workflows/
@@ -148,7 +142,7 @@ feedsieve/
 
 - Extension: **WXT + TypeScript + React + Manifest V3**
 - Unit test: **Vitest**
-- E2E / fixture integration: **Playwright**
+- E2E / fixture integration: **Playwright**（规划中，尚未引入依赖）
 - Backend: **Cloudflare Workers + Hono + D1**
 - Snapshot distribution: GitHub raw / Release 起步，后续可加 R2 / CDN
 - Validation: JSON Schema + YAML parser
@@ -1143,7 +1137,7 @@ CI 不执行真实 Block。
 - cancel
 - 持久化恢复
 
-### Extension E2E
+### Extension E2E（规划中，尚未引入 Playwright 依赖）
 
 Playwright 加载 unpacked extension，使用本地 X-like fixture 页面测试：
 
@@ -1206,7 +1200,7 @@ Community list PR 的检查（validate / build / checksum / diff）后续以本�
 - packages/x-adapter
 - packages/block-queue
 - Vitest
-- Playwright fixtures
+- Playwright fixtures（规划中）
 
 验收：扩展能加载，x.com content script 能运行。
 

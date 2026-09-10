@@ -31,23 +31,23 @@ FeedSieve 不做成一个依赖 X API 的第三方客户端。
 apps/
   extension/
 
+apps/
+  extension/
+  admin/              # React 管理端
+  community-api/      # Cloudflare Workers + Hono + D1
+
 packages/
   detector/           # 识别标注（纯逻辑：名单 + 启发式）
   x-adapter/          # X Reader + Action Adapter
   block-queue/        # 持久化拉黑队列
-  community-client/   # 快照下载 / 缓存 / 校验
-  list-format/        # YAML / JSON / Schema
-  shared/
-
-services/
-  community-api/
+  community-lists/    # 快照 / 词库下载、验签、schema 校验
 
 community/
+  keyword-packs/      # 词库生成物 + 签名 manifest
   source/
   lists/
   policy/
   schema/
-  changelog/
 
 fixtures/x/
 scripts/
@@ -66,7 +66,7 @@ docs/
 - `packages/x-adapter`
 - `packages/block-queue`
 - Vitest
-- Playwright
+- Playwright（E2E，规划中）
 - ESLint / formatter / typecheck
 - 本地质量门禁（git pre-push 钩子：lint / typecheck / test / build）
 
