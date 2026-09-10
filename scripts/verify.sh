@@ -22,4 +22,8 @@ pnpm --filter @feedsieve/community-api test
 echo '==> build extension'
 pnpm build:extension
 
+echo '==> build and check Firefox extension'
+pnpm build:extension:firefox
+pnpm check:extension:firefox
+
 echo '==> all checks passed'

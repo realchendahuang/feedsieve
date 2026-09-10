@@ -38,6 +38,17 @@ FeedSieve（福滤娃）是 X（Twitter）扩展：黄框标注垃圾账号，�
 **4. 抢救票（显式动作）**
 你认为误伤并点击「抢救」时，上报 `handle`、可选 `x_user_id`、误标规则证据与安装 ID，并作为当前负标签计票。
 
+**5. 猎手档案（显式动作）**
+绑定邮箱时向官方 API 发送安装 ID 与邮箱；验证时发送邮箱与验证码。
+保存档案时发送安装 ID、显示名与简介，供社区档案与榜单使用。
+面板也会使用已有安装 ID 查询自己的档案与排名。这些请求不受「名单上传」开关控制。
+
+### Firefox 安装授权
+
+Firefox 版本在安装时声明网站内容、网站活动、个人身份信息和认证信息的传输。
+这些类型覆盖社区名单投票、X 原生操作和可选使用的猎手档案功能；安装授权不会自动绑定邮箱或创建公开档案。
+「名单上传」仍可在设置中关闭。Firefox 桌面版最低为 140，Android 最低为 142，以使用内置的数据传输授权提示。
+
 ### 服务器保存什么
 
 官方 API（部署于 Cloudflare Workers + D1）保存：handle、x_user_id、分类、指纹、外链域名、误标来源/规则/理由、当前黑白标签、加盐哈希后的安装 ID、时间。不保存 IP、原始安装 ID、Cookie、任何 X 凭证。
@@ -84,6 +95,17 @@ Only if this device has contributed before, opening the popup queries your cumul
 
 **4. Rescue votes (explicit action)**
 Clicking rescue on a wrongly marked account reports its `handle`, optional `x_user_id`, rule evidence, and installation ID as a current negative label.
+
+**5. Hunter profile (explicit action)**
+Binding an email sends the installation ID and email to the official API; verification sends the email and verification code.
+Saving a profile sends the installation ID, display name, and bio for the community profile and leaderboard.
+The popup also uses an existing installation ID to query your profile and ranking. These requests are independent of the List uploads toggle.
+
+### Firefox installation consent
+
+The Firefox build declares transmission of website content, website activity, personally identifying information, and authentication information at installation.
+These categories cover community votes, native X actions, and the hunter profile features that users may choose to use; installation consent does not bind an email or create a public profile automatically.
+List uploads can still be disabled in Settings. Firefox desktop 140 or Android 142 is required for the built-in data transmission consent prompt.
 
 ### What the server stores
 

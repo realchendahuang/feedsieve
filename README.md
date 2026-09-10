@@ -67,6 +67,12 @@
 
 其他 Chromium 浏览器（Edge / Brave 等）可用后两种方式加载。
 
+Firefox 桌面版 140+：在仓库目录执行 `pnpm install --frozen-lockfile` 和
+`pnpm build:extension:firefox`，然后在 `about:debugging#/runtime/this-firefox` 中点击
+「临时载入附加组件」，选择 `apps/extension/.output/firefox-mv3/manifest.json`。
+临时安装会在 Firefox 重启后移除。正式安装需要维护者向 AMO 提交并获得签名；
+构建、测试、上架步骤及 Mozilla 官方教程见 [Firefox 支持与发布](docs/FIREFOX.md)。
+
 ## 使用教程
 
 1. **装好即用** — 打开 [x.com](https://x.com) 正常刷。高置信垃圾账号会被**黄框**标出，下方一行显示理由与操作按钮，不隐藏任何内容。

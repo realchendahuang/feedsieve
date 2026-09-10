@@ -43,5 +43,10 @@ jobs:
       - name: Build extension (wxt)
         run: pnpm build:extension
 
+      - name: Build and check Firefox extension
+        run: |
+          pnpm build:extension:firefox
+          pnpm check:extension:firefox
+
       - name: Dependency audit
         run: pnpm audit --audit-level high
