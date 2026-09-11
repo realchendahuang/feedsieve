@@ -25,7 +25,9 @@ import {
   type PersonalConfigParseError,
 } from '../../../src/lib/settings/personal-config';
 import { setUiLanguage, UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
+import { fetchHunterProfile, type HunterProfileState } from '../../../src/lib/community/hunter';
 import { HelpIcon, STRENGTH_LABELS, STRENGTH_HINTS } from './shared';
+import HunterProfileModal from './HunterProfile';
 
 interface PersonalConfigPreviewState {
   merge: PersonalConfigImportResult;
@@ -66,11 +68,14 @@ export default function SettingsView({
   const [personalConfigMessage, setPersonalConfigMessage] = useState<string | null>(null);
   const [personalConfigError, setPersonalConfigError] = useState<string | null>(null);
   const [personalConfigBusy, setPersonalConfigBusy] = useState(false);
+  const [hunterProfile, setHunterProfile] = useState<HunterProfileState | null>(null);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   useEffect(() => {
     void getInstallationId().then(setInstallId);
     void getKeywordRuleSettings().then(setKeywordRules);
     void getKeywordPackCatalog().then(setKeywordCatalog);
+    void fetchHunterProfile().then(setHunterProfile);
     const unsubs = [subscribeKeywordRules(setKeywordRules), subscribeKeywordPackCatalog(setKeywordCatalog)];
     return () => unsubs.forEach((unsub) => unsub());
   }, []);
@@ -311,6 +316,23 @@ export default function SettingsView({
               </span>
             </label>
 
+            <button
+              type="button"
+              className="setting-row"
+              onClick={() => setProfileModalOpen(true)}
+            >
+              <span className="setting-copy">
+                <strong>
+                  {t.hunterProfileLabel} <HelpIcon text={t.hunterClaimHelp} />
+                </strong>
+              </span>
+              <span className="install-id-value">
+                {hunterProfile?.email_verified
+                  ? hunterProfile.display_name || t.hunterSection
+                  : t.hunterNotClaimed}
+              </span>
+            </button>
+
             <div className="setting-row">
               <span className="setting-copy">
                 <strong>{t.manualSync}</strong>
@@ -549,6 +571,16 @@ export default function SettingsView({
           </div>
         ) : null}
       </section>
+
+      <HunterProfileModal
+        language={language}
+        open={profileModalOpen}
+        notify={notify}
+        onClose={() => setProfileModalOpen(false)}
+        onChanged={() => {
+          void fetchHunterProfile().then(setHunterProfile);
+        }}
+      />
     </div>
   );
 }

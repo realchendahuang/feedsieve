@@ -2651,6 +2651,17 @@ input:focus-visible + span {
   width: 100%;
 }
 
+/* 榜行 bio（设置页「个人资料」编辑的一句话介绍，打野榜展示） */
+.hunter-row-bio {
+  display: block;
+  color: var(--fs-muted);
+  font-size: 11.5px;
+  line-height: 1.45;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* 认领身份弹窗：fixed 相对弹窗壳（560×600）定位，不用 vw/vh */
 .hunter-modal-overlay {
   position: fixed;

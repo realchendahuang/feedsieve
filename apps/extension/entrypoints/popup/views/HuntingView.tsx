@@ -17,7 +17,6 @@ import {
   type HunterBoardRow,
 } from '../../../src/lib/community/hunter';
 import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
-import HunterProfile from './HunterProfile';
 
 /**
  * 打野 tab（一级入口）：我的战报 + 周榜速览 + 猎手档案。
@@ -25,10 +24,9 @@ import HunterProfile from './HunterProfile';
  */
 export default function HuntingView({
   language,
-  notify,
 }: {
   language: UiLanguage;
-  notify: (message: string | null) => void;
+  notify?: (message: string | null) => void;
 }) {
   const t = UI_COPY[language];
   const [todayBlocked, setTodayBlocked] = useState<number | null>(null);
@@ -139,8 +137,6 @@ export default function HuntingView({
           <div className="hunter-board-empty">{t.hunterLoadFailed}</div>
         )}
       </section>
-
-      <HunterProfile language={language} notify={notify} />
     </>
   );
 }
@@ -188,6 +184,7 @@ function BoardRow({
           {row.title ? <span className="hunter-title-badge">{row.title}</span> : null}
           {row.name}
         </span>
+        {row.bio ? <span className="hunter-row-bio">{row.bio}</span> : null}
         {row.x_handle ? (
           <button
             type="button"

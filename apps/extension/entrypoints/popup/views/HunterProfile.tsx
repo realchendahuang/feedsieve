@@ -7,12 +7,12 @@ import {
   type HunterProfileState,
 } from '../../../src/lib/community/hunter';
 import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
-import { AppIcon, HelpIcon } from './shared';
+import { AppIcon } from './shared';
 
 /**
- * 猎手档案（打野 tab 页）：默认匿名上榜，「认领身份」走弹窗完成邮箱验证
- * （一次性绑定，之后免登录）；已验证后档案编辑平铺在卡内。
- * 无密码无会话——安装 ID 即凭证。
+ * 个人资料弹窗（设置页入口）：未验证 = 邮箱认领（验证码一次性绑定）；
+ * 已验证 = 编辑昵称 / 一句话简介 / X handle，保存即上新榜（打野榜展示 bio）。
+ * 无密码无会话——安装 ID 即凭证，绑定后免登录。
  */
 function bindErrorText(t: (typeof UI_COPY)[UiLanguage], error: string): string {
   switch (error) {
@@ -31,16 +31,22 @@ function bindErrorText(t: (typeof UI_COPY)[UiLanguage], error: string): string {
   }
 }
 
-export default function HunterProfile({
+export default function HunterProfileModal({
   language,
+  open,
   notify,
+  onClose,
+  onChanged,
 }: {
   language: UiLanguage;
+  open: boolean;
   notify: (message: string | null) => void;
+  onClose: () => void;
+  /** 档案变化（绑定/保存）后回调，父级可刷新列表行展示 */
+  onChanged?: () => void;
 }) {
   const t = UI_COPY[language];
   const [profile, setProfile] = useState<HunterProfileState | null>(null);
-  const [claimOpen, setClaimOpen] = useState(false);
   const [stage, setStage] = useState<'email' | 'code'>('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -50,6 +56,7 @@ export default function HunterProfile({
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    if (!open) return;
     void fetchHunterProfile().then((value) => {
       if (!value) return;
       setProfile(value);
@@ -57,20 +64,18 @@ export default function HunterProfile({
       setBio(value.bio ?? '');
       setXHandle(value.x_handle ?? '');
     });
-  }, []);
-
-  useEffect(() => {
-    if (!claimOpen) return;
     const onKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') closeClaim();
+      if (event.key === 'Escape') close();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [claimOpen]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- close 仅用 setState，无需入 deps
+  }, [open]);
 
-  function closeClaim(): void {
-    setClaimOpen(false);
+  function close(): void {
+    onClose();
     setStage('email');
+    setCode('');
   }
 
   async function sendCode(): Promise<void> {
@@ -103,8 +108,8 @@ export default function HunterProfile({
         return;
       }
       setProfile(await fetchHunterProfile());
-      closeClaim();
       notify(t.hunterVerified);
+      onChanged?.();
     } finally {
       setBusy(false);
     }
@@ -119,132 +124,99 @@ export default function HunterProfile({
       const result = await saveHunterProfile(name.trim(), bio.trim(), handle);
       notify(result.ok ? t.hunterProfileSaved : result.invalid ? t.hunterXHandleInvalid : t.hunterError);
       if (result.ok) setProfile(await fetchHunterProfile());
+      onChanged?.();
     } finally {
       setBusy(false);
     }
   }
 
+  if (!open) return null;
   const verified = profile?.email_verified ?? false;
   return (
-    <>
-      <section className="settings-card">
-        <div className="settings-card-head">
+    <div className="hunter-modal-overlay" onClick={close}>
+      <div
+        className="hunter-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={verified ? t.hunterSection : t.hunterClaimTitle}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="hunter-modal-head">
           <h2>{verified ? t.hunterSection : t.hunterClaimTitle}</h2>
-          {verified ? null : <HelpIcon text={t.hunterClaimHelp} />}
+          <button type="button" className="square-action" onClick={close} aria-label={t.hunterClose}>
+            <AppIcon name="x" size={18} />
+          </button>
         </div>
         {verified ? (
-          <div className="settings-fields">
-            <label className="setting-row">
-              <span className="setting-copy">
-                <strong>{t.hunterDisplayName}</strong>
-              </span>
-              <input
-                type="text"
-                value={name}
-                maxLength={16}
-                placeholder={t.hunterDisplayName}
-                onChange={(event) => setName(event.target.value)}
-              />
-            </label>
-            <label className="setting-row">
-              <span className="setting-copy">
-                <strong>{t.hunterBio}</strong>
-              </span>
-              <input
-                type="text"
-                value={bio}
-                maxLength={60}
-                placeholder={t.hunterBio}
-                onChange={(event) => setBio(event.target.value)}
-              />
-            </label>
-            <label className="setting-row">
-              <span className="setting-copy">
-                <strong>{t.hunterXHandle}</strong>
-              </span>
-              <input
-                type="text"
-                value={xHandle}
-                maxLength={15}
-                placeholder={t.hunterXHandle}
-                onChange={(event) => setXHandle(event.target.value)}
-              />
-            </label>
-            <button type="button" className="primary-action hunter-primary" onClick={() => void save()} disabled={busy}>
+          <>
+            <input
+              type="text"
+              value={name}
+              maxLength={16}
+              placeholder={t.hunterDisplayName}
+              onChange={(event) => setName(event.target.value)}
+            />
+            <input
+              type="text"
+              value={bio}
+              maxLength={60}
+              placeholder={t.hunterBio}
+              onChange={(event) => setBio(event.target.value)}
+            />
+            <input
+              type="text"
+              value={xHandle}
+              maxLength={15}
+              placeholder={t.hunterXHandle}
+              onChange={(event) => setXHandle(event.target.value)}
+            />
+            <button type="button" className="primary-action" onClick={() => void save()} disabled={busy}>
               {t.hunterSave}
             </button>
-          </div>
+          </>
+        ) : stage === 'email' ? (
+          <>
+            <input
+              type="email"
+              value={email}
+              placeholder={t.hunterEmailPlaceholder}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+            <button
+              type="button"
+              className="primary-action"
+              onClick={() => void sendCode()}
+              disabled={busy || !email.trim()}
+            >
+              {t.hunterSendCode}
+            </button>
+          </>
         ) : (
-          <button
-            type="button"
-            className="primary-action hunter-primary"
-            onClick={() => setClaimOpen(true)}
-          >
-            {t.hunterClaimStart}
-          </button>
+          <>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={code}
+              maxLength={6}
+              placeholder={t.hunterCodePlaceholder}
+              onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
+            />
+            <button type="button" className="primary-action" onClick={() => void verify()} disabled={busy}>
+              {t.hunterVerify}
+            </button>
+            <button
+              type="button"
+              className="text-action"
+              onClick={() => {
+                setStage('email');
+                setCode('');
+              }}
+            >
+              {t.hunterChangeEmail}
+            </button>
+          </>
         )}
-      </section>
-
-      {claimOpen ? (
-        <div className="hunter-modal-overlay" onClick={closeClaim}>
-          <div
-            className="hunter-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-label={t.hunterClaimTitle}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="hunter-modal-head">
-              <h2>{t.hunterClaimTitle}</h2>
-              <button type="button" className="square-action" onClick={closeClaim} aria-label={t.hunterClose}>
-                <AppIcon name="x" size={18} />
-              </button>
-            </div>
-            {stage === 'email' ? (
-              <>
-                <input
-                  type="email"
-                  value={email}
-                  placeholder={t.hunterEmailPlaceholder}
-                  onChange={(event) => setEmail(event.target.value)}
-                />
-                <button
-                  type="button"
-                  className="primary-action"
-                  onClick={() => void sendCode()}
-                  disabled={busy || !email.trim()}
-                >
-                  {t.hunterSendCode}
-                </button>
-              </>
-            ) : (
-              <>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={code}
-                  maxLength={6}
-                  placeholder={t.hunterCodePlaceholder}
-                  onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
-                />
-                <button type="button" className="primary-action" onClick={() => void verify()} disabled={busy}>
-                  {t.hunterVerify}
-                </button>
-                <button
-                  type="button"
-                  className="text-action"
-                  onClick={() => {
-                    setStage('email');
-                    setCode('');
-                  }}
-                >
-                  {t.hunterChangeEmail}
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      ) : null}
-    </>
+      </div>
+    </div>
   );
 }
