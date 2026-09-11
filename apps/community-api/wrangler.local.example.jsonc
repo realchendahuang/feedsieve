@@ -19,7 +19,8 @@
     { "pattern": "admin.your-api.example.com", "custom_domain": true }
   ],
   "vars": {
-    "ADMIN_HOST": "admin.your-api.example.com"
+    // 多域名逗号分隔（SITE_HOST 同理）：域名迁移期把旧域与新域并列，旧客户端不断链
+    "ADMIN_HOST": "admin.your-api.example.com,admin.your-old-domain.example.com"
   },
   "d1_databases": [
     {

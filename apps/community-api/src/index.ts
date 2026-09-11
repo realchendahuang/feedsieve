@@ -83,10 +83,15 @@ import {
   SNAPSHOT_PACK,
 } from './snapshot';
 
-/** 注意：默认值返回 false —— 未配置对应主机名时，对应域名一律不生效。 */
+/**
+ * 注意：默认值返回 false —— 未配置对应主机名时，对应域名一律不生效。
+ * 值支持 CSV 多域名：域名迁移期把保底旧域与统一后的新域并列，旧客户端不断链。
+ */
 function isConfiguredHost(request: Request, env: Cloudflare.Env, variable: 'ADMIN_HOST' | 'SITE_HOST'): boolean {
   const configured = env[variable]?.trim().toLowerCase();
-  return Boolean(configured) && new URL(request.url).hostname.toLowerCase() === configured;
+  if (!configured) return false;
+  const hostname = new URL(request.url).hostname.toLowerCase();
+  return configured.split(',').some((host) => host.trim() && host.trim() === hostname);
 }
 
 function isAdminHost(request: Request, env: Cloudflare.Env): boolean {
