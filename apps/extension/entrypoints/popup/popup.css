@@ -2635,3 +2635,52 @@ input:focus-visible + span {
 .hunter-primary {
   width: 100%;
 }
+
+/* 认领身份弹窗：fixed 相对弹窗壳（560×600）定位，不用 vw/vh */
+.hunter-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(24, 24, 27, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 60;
+}
+
+.hunter-modal {
+  width: 320px;
+  padding: 16px;
+  background: var(--fs-surface);
+  border: 1px solid var(--fs-line);
+  border-radius: var(--fs-radius-lg);
+  box-shadow: var(--fs-shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hunter-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hunter-modal-head h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.hunter-modal input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--fs-line-strong);
+  border-radius: var(--fs-radius-md);
+  background: none;
+  font: inherit;
+  color: inherit;
+}
+
+.hunter-modal .text-action {
+  align-self: center;
+}

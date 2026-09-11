@@ -7,11 +7,12 @@ import {
   type HunterProfileState,
 } from '../../../src/lib/community/hunter';
 import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
-import { HelpIcon } from './shared';
+import { AppIcon, HelpIcon } from './shared';
 
 /**
- * 猎手档案（打野 tab 页）：默认匿名上榜，验证一次邮箱解锁自定义昵称 / 简介 /
- * X handle（一次性绑定，之后免登录）。无密码无会话——安装 ID 即凭证。
+ * 猎手档案（打野 tab 页）：默认匿名上榜，「认领身份」走弹窗完成邮箱验证
+ * （一次性绑定，之后免登录）；已验证后档案编辑平铺在卡内。
+ * 无密码无会话——安装 ID 即凭证。
  */
 function bindErrorText(t: (typeof UI_COPY)[UiLanguage], error: string): string {
   switch (error) {
@@ -39,6 +40,7 @@ export default function HunterProfile({
 }) {
   const t = UI_COPY[language];
   const [profile, setProfile] = useState<HunterProfileState | null>(null);
+  const [claimOpen, setClaimOpen] = useState(false);
   const [stage, setStage] = useState<'email' | 'code'>('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -56,6 +58,20 @@ export default function HunterProfile({
       setXHandle(value.x_handle ?? '');
     });
   }, []);
+
+  useEffect(() => {
+    if (!claimOpen) return;
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') closeClaim();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [claimOpen]);
+
+  function closeClaim(): void {
+    setClaimOpen(false);
+    setStage('email');
+  }
 
   async function sendCode(): Promise<void> {
     if (!email.trim() || busy) return;
@@ -87,6 +103,7 @@ export default function HunterProfile({
         return;
       }
       setProfile(await fetchHunterProfile());
+      closeClaim();
       notify(t.hunterVerified);
     } finally {
       setBusy(false);
@@ -109,14 +126,14 @@ export default function HunterProfile({
 
   const verified = profile?.email_verified ?? false;
   return (
-    <section className="settings-card">
-      <div className="settings-card-head">
-        <h2>{verified ? t.hunterSection : t.hunterClaimTitle}</h2>
-        {verified ? null : <HelpIcon text={t.hunterClaimHelp} />}
-      </div>
-      <div className="settings-fields">
+    <>
+      <section className="settings-card">
+        <div className="settings-card-head">
+          <h2>{verified ? t.hunterSection : t.hunterClaimTitle}</h2>
+          {verified ? null : <HelpIcon text={t.hunterClaimHelp} />}
+        </div>
         {verified ? (
-          <>
+          <div className="settings-fields">
             <label className="setting-row">
               <span className="setting-copy">
                 <strong>{t.hunterDisplayName}</strong>
@@ -156,54 +173,78 @@ export default function HunterProfile({
             <button type="button" className="primary-action hunter-primary" onClick={() => void save()} disabled={busy}>
               {t.hunterSave}
             </button>
-          </>
-        ) : stage === 'email' ? (
-          <>
-            <div className="setting-block">
-              <input
-                type="email"
-                value={email}
-                placeholder={t.hunterEmailPlaceholder}
-                onChange={(event) => setEmail(event.target.value)}
-              />
-            </div>
-            <button
-              type="button"
-              className="primary-action hunter-primary"
-              onClick={() => void sendCode()}
-              disabled={busy || !email.trim()}
-            >
-              {t.hunterSendCode}
-            </button>
-          </>
+          </div>
         ) : (
-          <>
-            <div className="setting-block">
-              <input
-                type="text"
-                inputMode="numeric"
-                value={code}
-                maxLength={6}
-                placeholder={t.hunterCodePlaceholder}
-                onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
-              />
-            </div>
-            <button type="button" className="primary-action hunter-primary" onClick={() => void verify()} disabled={busy}>
-              {t.hunterVerify}
-            </button>
-            <button
-              type="button"
-              className="text-action"
-              onClick={() => {
-                setStage('email');
-                setCode('');
-              }}
-            >
-              {t.hunterChangeEmail}
-            </button>
-          </>
+          <button
+            type="button"
+            className="primary-action hunter-primary"
+            onClick={() => setClaimOpen(true)}
+          >
+            {t.hunterClaimStart}
+          </button>
         )}
-      </div>
-    </section>
+      </section>
+
+      {claimOpen ? (
+        <div className="hunter-modal-overlay" onClick={closeClaim}>
+          <div
+            className="hunter-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t.hunterClaimTitle}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="hunter-modal-head">
+              <h2>{t.hunterClaimTitle}</h2>
+              <button type="button" className="square-action" onClick={closeClaim} aria-label={t.hunterClose}>
+                <AppIcon name="x" size={18} />
+              </button>
+            </div>
+            {stage === 'email' ? (
+              <>
+                <input
+                  type="email"
+                  value={email}
+                  placeholder={t.hunterEmailPlaceholder}
+                  onChange={(event) => setEmail(event.target.value)}
+                />
+                <button
+                  type="button"
+                  className="primary-action"
+                  onClick={() => void sendCode()}
+                  disabled={busy || !email.trim()}
+                >
+                  {t.hunterSendCode}
+                </button>
+              </>
+            ) : (
+              <>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={code}
+                  maxLength={6}
+                  placeholder={t.hunterCodePlaceholder}
+                  onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
+                />
+                <button type="button" className="primary-action" onClick={() => void verify()} disabled={busy}>
+                  {t.hunterVerify}
+                </button>
+                <button
+                  type="button"
+                  className="text-action"
+                  onClick={() => {
+                    setStage('email');
+                    setCode('');
+                  }}
+                >
+                  {t.hunterChangeEmail}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }
