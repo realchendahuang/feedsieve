@@ -298,21 +298,6 @@ export default function SettingsView({
                 ))}
               </div>
             </div>
-
-            <div className="setting-row manual-sync-row">
-              <span className="setting-copy">
-                <strong>{t.manualSync}</strong>
-                <HelpIcon text={t.manualSyncHint} />
-              </span>
-              <button
-                type="button"
-                className={`secondary-inline${manualSyncing ? ' is-spinning' : ''}`}
-                disabled={manualSyncing}
-                onClick={() => void syncAllNow()}
-              >
-                {manualSyncing ? t.processing : t.manualSyncAction}
-              </button>
-            </div>
           </div>
         ) : (
           <div className="loading-list settings-loading" aria-hidden="true">
@@ -344,6 +329,21 @@ export default function SettingsView({
                 <span aria-hidden="true" />
               </span>
             </label>
+
+            <div className="setting-row manual-sync-row">
+              <span className="setting-copy">
+                <strong>{t.manualSync}</strong>
+                <HelpIcon text={t.manualSyncHint} />
+              </span>
+              <button
+                type="button"
+                className={`secondary-inline${manualSyncing ? ' is-spinning' : ''}`}
+                disabled={manualSyncing}
+                onClick={() => void syncAllNow()}
+              >
+                {manualSyncing ? t.processing : t.manualSyncAction}
+              </button>
+            </div>
 
             <div className="settings-meta-row">
               {contribution && (contribution.reports > 0 || contribution.rescues > 0) ? (
@@ -534,50 +534,60 @@ export default function SettingsView({
         ) : null}
       </section>
 
-      <section className="settings-card language-card">
-        <div className="setting-row static-row">
-          <span className="setting-copy">
-            <strong>{t.languageSetting}</strong>
-          </span>
-          <div className="language-control" role="group" aria-label={t.language}>
-            <button
-              type="button"
-              className={language === 'zh' ? 'is-selected' : ''}
-              aria-pressed={language === 'zh'}
-              onClick={() => void selectLanguage('zh')}
-            >
-              中文
-            </button>
-            <button
-              type="button"
-              className={language === 'en' ? 'is-selected' : ''}
-              aria-pressed={language === 'en'}
-              onClick={() => void selectLanguage('en')}
-            >
-              EN
-            </button>
-          </div>
+      <section className="settings-card general-card">
+        <div className="settings-card-head">
+          <h2>{t.generalSettings}</h2>
         </div>
-      </section>
-
-      <section className="settings-card about-card">
-        <div className="setting-row static-row">
-          <span className="setting-copy">
-            <strong>{t.aboutLinks}</strong>
-          </span>
-          <div className="about-links">
-            <a
-              href="https://github.com/realchendahuang/feedsieve"
-              target="_blank"
-              rel="noreferrer noopener"
-            >
-              {t.githubLink}
-            </a>
-            <a href="https://feedsieve.win" target="_blank" rel="noreferrer noopener">
-              {t.officialSiteLink}
-            </a>
+        {community ? (
+          <div className="settings-fields">
+            <div className="setting-row static-row">
+              <span className="setting-copy">
+                <strong>{t.languageSetting}</strong>
+              </span>
+              <div className="language-control" role="group" aria-label={t.language}>
+                <button
+                  type="button"
+                  className={language === 'zh' ? 'is-selected' : ''}
+                  aria-pressed={language === 'zh'}
+                  onClick={() => void selectLanguage('zh')}
+                >
+                  中文
+                </button>
+                <button
+                  type="button"
+                  className={language === 'en' ? 'is-selected' : ''}
+                  aria-pressed={language === 'en'}
+                  onClick={() => void selectLanguage('en')}
+                >
+                  EN
+                </button>
+              </div>
+            </div>
+            <div className="setting-row static-row">
+              <span className="setting-copy">
+                <strong>{t.aboutLinks}</strong>
+              </span>
+              <div className="about-links">
+                <a
+                  href="https://github.com/realchendahuang/feedsieve"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  {t.githubLink}
+                </a>
+                <a href="https://feedsieve.win" target="_blank" rel="noreferrer noopener">
+                  {t.officialSiteLink}
+                </a>
+              </div>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="loading-list settings-loading" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+        )}
       </section>
     </div>
   );
