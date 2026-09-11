@@ -11,6 +11,7 @@ import {
   remainingQuota,
   rolloverBudget,
   SAFETY_PRESETS,
+  setSafetyBudgetOverride,
   shouldPauseForQuota,
   usedInWindow,
   type SafetyLedger,
@@ -25,6 +26,9 @@ beforeEach(() => {
       local: {
         get: vi.fn(async (key: string) => ({ [key]: storage[key] })),
         set: vi.fn(async (patch: Record<string, unknown>) => Object.assign(storage, patch)),
+        remove: vi.fn(async (key: string) => {
+          delete storage[key];
+        }),
       },
       onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
     },
@@ -104,7 +108,7 @@ describe('block-safety 安全账本', () => {
     ).toMatchObject({
       accountKey: 'acc-1',
       preset: 'balanced', // 未知档位回退
-      dailyLimit: 800, // 超硬顶收敛
+      dailyLimit: 5000, // 用户自定预算无硬顶，不再收敛到 800
       events: [NOW - HOUR_MS * 30, NOW], // 非数字剔除；窗口过滤在使用时（trimEvents）做
     });
   });
@@ -167,28 +171,71 @@ describe('block-safety 安全账本', () => {
     expect(ledger.budget).toBe(0);
   });
 
-  it('回补封顶 HARD_LIMIT_MAX，且次数从信号日之后重新起算', () => {
-    const base: SafetyLedger = {
+  it('回补：预算存档仅封顶；未参保收则无限爬升', () => {
+    const fuse: SafetyLedger = {
       accountKey: 'acc-1',
       preset: 'balanced',
-      dailyLimit: 400,
+      dailyLimit: 800,
+      budget_cap: 800,
       budget: 780,
       cleanStreak: CLEAN_STREAK_FOR_RECOVERY,
       events: [],
       lastCleanDay: '2026-09-01',
       updatedAt: dayMs(2026, 9, 1),
     };
-    // 780 + 50 → 800 封顶
-    expect(rolloverBudget(base, dayMs(2026, 9, 2)).budget).toBe(800);
-    // 已封顶后不再增长
-    expect(rolloverBudget({ ...base, budget: 800 }, dayMs(2026, 9, 2)).budget).toBe(800);
+    // 780 + 50 → 800 封顶（上限 = 保险丝）
+    expect(rolloverBudget(fuse, dayMs(2026, 9, 2)).budget).toBe(800);
+    expect(rolloverBudget({ ...fuse, budget: 800 }, dayMs(2026, 9, 2)).budget).toBe(800);
+
+    // 未设保险丝：不封顶，一路爬升（800 + 50 也继续涨）
+    const adaptive: SafetyLedger = { ...fuse, budget_cap: undefined };
+    expect(rolloverBudget(adaptive, dayMs(2026, 9, 2)).budget).toBe(830);
+    expect(rolloverBudget({ ...adaptive, dailyLimit: 400 }, dayMs(2026, 9, 2)).budget).toBe(830);
+    // 没保险丝的用户预算再低也不回填 dailyLimit 的短板
+    expect(rolloverBudget({ ...adaptive, dailyLimit: 600, budget: 1500 }, dayMs(2026, 9, 2)).budget).toBe(1550);
+
     // 信号后 redo streak：信号日从 0 重新计
-    const signaled = applySignal(base, 'rate_limit_storm', dayMs(2026, 9, 2));
+    const signaled = applySignal(fuse, 'rate_limit_storm', dayMs(2026, 9, 2));
     expect(signaled.budget).toBe(390);
     expect(signaled.cleanStreak).toBe(0);
     const nextDay = rolloverBudget(signaled, dayMs(2026, 9, 3));
     expect(nextDay.cleanStreak).toBe(1);
     expect(nextDay.budget).toBe(390);
+  });
+
+  it('用户自定预算 override：未被信号收缩时跟随新值；被收缩时保持惩罚等回补', async () => {
+    await setSafetyBudgetOverride(1200);
+    // 新账号直接以自定义值起步
+    const fresh = await loadSafetyLedger('acc-1');
+    expect(fresh.dailyLimit).toBe(1200);
+    expect(fresh.budget).toBe(1200);
+
+    // 已有账本未被收缩：预算跟随
+    storage.blockSafetyBudgetV1 = { dailyLimit: 600 };
+    const raised = await loadSafetyLedger('acc-1');
+    expect(raised.dailyLimit).toBe(600);
+    expect(raised.budget).toBe(600);
+
+    // 被信号收缩过的账本（风暴砍半 600→300）：提高上限不清惩罚，只改 dailyLimit
+    storage.blockSafetyBudgetV1 = { dailyLimit: 600 };
+    await loadSafetyLedger('acc-1');
+    await persistSignal('acc-1', 'rate_limit_storm', NOW);
+    storage.blockSafetyBudgetV1 = { dailyLimit: 1500 };
+    const shrunk = await loadSafetyLedger('acc-1');
+    expect(shrunk.dailyLimit).toBe(1500);
+    expect(shrunk.budget).toBe(300);
+  });
+
+  it('清空保险丝：恢复自适应（无 budget_cap），新账号回到档位起点', async () => {
+    await setSafetyBudgetOverride(1200);
+    await loadSafetyLedger('acc-1');
+    storage.blockSafetyBudgetV1 = { dailyLimit: 1200 };
+    await expect(setSafetyBudgetOverride(null)).resolves.toBeNull();
+    expect(storage.blockSafetyBudgetV1).toBeUndefined();
+    const fresh = await loadSafetyLedger('acc-2');
+    expect(fresh.dailyLimit).toBe(400);
+    expect(fresh.budget).toBe(400);
+    expect(fresh.budget_cap).toBeUndefined();
   });
 
   it('PR1 存量账本（无 budget 字段）无缝升级：预算 = 档位基线', async () => {

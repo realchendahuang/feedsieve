@@ -23,6 +23,12 @@ import {
   type PersonalConfigImportResult,
   type PersonalConfigParseError,
 } from '../../../src/lib/settings/personal-config';
+import {
+  DEFAULT_PRESET,
+  getSafetyBudgetOverride,
+  SAFETY_PRESETS,
+  setSafetyBudgetOverride,
+} from '../../../src/lib/queue/block-safety';
 import { setUiLanguage, UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
 import { HelpIcon, STRENGTH_LABELS, STRENGTH_HINTS } from './shared';
 
@@ -64,6 +70,14 @@ export default function SettingsView({
   const [personalConfigMessage, setPersonalConfigMessage] = useState<string | null>(null);
   const [personalConfigError, setPersonalConfigError] = useState<string | null>(null);
   const [personalConfigBusy, setPersonalConfigBusy] = useState(false);
+  // 用户自定日预算：null = 还没从 storage 读到；'' 允许临时输入态，失焦校验
+  const [budgetDraft, setBudgetDraft] = useState<string | null>(null);
+
+  useEffect(() => {
+    void getSafetyBudgetOverride().then((value) =>
+      setBudgetDraft(String(value ?? SAFETY_PRESETS[DEFAULT_PRESET].dailyLimit)),
+    );
+  }, []);
 
   useEffect(() => {
     void getKeywordRuleSettings().then(setKeywordRules);
@@ -84,6 +98,36 @@ export default function SettingsView({
     if (!localOnly) {
       await browser.runtime.sendMessage({ type: 'feedsieve:labels-sync' }).catch(() => undefined);
     }
+  }
+
+  /**
+   * 日预算 = 用户意外的保险丝：数字生效，清空恢复默认自适应（不封顶爬升）。
+   * 超出最激进档的数字额外给一句直白的后果提示，说一次，不拦着。
+   */
+  async function commitBudget(): Promise<void> {
+    if (budgetDraft == null) return;
+    const trimmed = budgetDraft.trim();
+    if (trimmed.length === 0) {
+      await setSafetyBudgetOverride(null);
+      setBudgetDraft(String(SAFETY_PRESETS[DEFAULT_PRESET].dailyLimit));
+      notify(t.budgetAdaptive);
+      return;
+    }
+    const value = Math.round(Number(trimmed));
+    if (!Number.isFinite(value) || value < 1) {
+      notify(t.budgetInvalid);
+      setBudgetDraft(
+        String((await getSafetyBudgetOverride()) ?? SAFETY_PRESETS[DEFAULT_PRESET].dailyLimit),
+      );
+      return;
+    }
+    await setSafetyBudgetOverride(value);
+    setBudgetDraft(String(value));
+    notify(
+      value > SAFETY_PRESETS.aggressive.dailyLimit
+        ? t.budgetHighRisk(value)
+        : t.budgetUpdated(value),
+    );
   }
 
   function personalConfigErrorMessage(error: PersonalConfigParseError): string {
@@ -297,6 +341,32 @@ export default function SettingsView({
                 <span aria-hidden="true" />
               </span>
             </label>
+
+            <div className="setting-row">
+              <span className="setting-copy">
+                <strong>
+                  {t.dailyBudget} <HelpIcon text={t.dailyBudgetHint} />
+                </strong>
+              </span>
+              <span className="budget-inline">
+                <input
+                  type="number"
+                  min={1}
+                  inputMode="numeric"
+                  aria-label={t.dailyBudget}
+                  value={budgetDraft ?? ''}
+                  placeholder={budgetDraft == null ? '…' : undefined}
+                  onChange={(event) => setBudgetDraft(event.target.value)}
+                  onBlur={() => void commitBudget()}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.currentTarget.blur();
+                    }
+                  }}
+                  className="budget-input"
+                />
+              </span>
+            </div>
 
             <div className="setting-row">
               <span className="setting-copy">

@@ -39,13 +39,18 @@ export const SAFETY_PRESETS: Record<SafetyPreset, SafetyPresetConfig> = {
 
 export const SAFETY_PRESET_ORDER: SafetyPreset[] = ['conservative', 'balanced', 'aggressive'];
 export const DEFAULT_PRESET: SafetyPreset = 'balanced';
-/** 设置页自定义日上限的硬顶；到顶文案改为「自行承担风控」。 */
+/**
+ * 用户自定日预算没有上限：想设多大设多大，风险自负（设置页只给一句话提示）。
+ * 这个常量只是「无自定义时」各档位起点之外的口径展示兜底，不再是任何闸门。
+ */
 export const HARD_LIMIT_MAX = 800;
+/** 用户自定义预算的 storage 键（全局偏好，不分账号；账本本身分账号）。 */
+const BUDGET_OVERRIDE_KEY = 'blockSafetyBudgetV1';
 /** 滚动窗口：24 小时（不用本地日历日，避免 23:50 打满、00:10 再打一轮的连续爆发）。 */
 export const SAFETY_WINDOW_MS = 24 * 60 * 60 * 1000;
 /** 连续无风控信号达到该自然日后，预算开始逐日回补。 */
 export const CLEAN_STREAK_FOR_RECOVERY = 3;
-/** 每个干净自然日的预算回补量，封顶 HARD_LIMIT_MAX。 */
+/** 每个干净自然日的预算回补量；封顶只在用户设了保险丝（budget_cap）时生效。 */
 export const RECOVERY_STEP_PER_DAY = 50;
 /** 连续 429 达到该次数后升级为 rate_limit_storm（收缩预算 + 整队暂停）。 */
 export const RATE_LIMIT_STORM_THRESHOLD = 3;
@@ -59,11 +64,15 @@ export const FALLBACK_ACCOUNT_KEY = 'no-account';
  */
 export type SafetySignal = 'rate_limit_storm' | 'auth_required' | 'challenge';
 
-export interface SafetyLedger {
-  accountKey: string;
+export interface SafetyLedger {  accountKey: string;
   preset: SafetyPreset;
   /** 档位预算起点（50–800 可调，PR3 设置页）；不是固定闸门 */
   dailyLimit: number;
+  /**
+   * 用户自定的回补封顶（保险丝）。缺省 = 不封顶：干净账号预算一路自动爬升，
+   * X 的真实风控（429 / 锁号）就是天花板。设了保险丝则回补到该值为止。
+   */
+  budget_cap?: number;
   /** 当前生效预算（≤ HARD_LIMIT_MAX）：信号收缩、连续无信号逐日回补 */
   budget: number;
   /** 连续无风控信号的自然日数（信号日清零，跨日 +1） */
@@ -156,8 +165,8 @@ export function applySignal(
 
 /**
  * 跨日回补：每个无信号自然日 cleanStreak +1；连续 CLEAN_STREAK_FOR_RECOVERY 天
- * 无信号后每天 +RECOVERY_STEP_PER_DAY，直到 HARD_LIMIT_MAX。信号日只标记不清零。
- * 同一天多次调用幂等（lastCleanDay 做闸）。
+ * 无信号后每天 +RECOVERY_STEP_PER_DAY，直到用户自定的预算值（dailyLimit）。
+ * 信号日只标记不清零。同一天多次调用幂等（lastCleanDay 做闸）。
  */
 export function rolloverBudget(ledger: SafetyLedger, now: number): SafetyLedger {
   const day = dayKey(now);
@@ -168,11 +177,33 @@ export function rolloverBudget(ledger: SafetyLedger, now: number): SafetyLedger 
     return { ...ledger, lastCleanDay: day };
   }
   const cleanStreak = ledger.cleanStreak + 1;
+  // 保险丝（budget_cap）在才封顶；没设就一路爬升，X 的真实接受度是天花板
+  const cap = ledger.budget_cap ?? Number.POSITIVE_INFINITY;
   const budget =
     cleanStreak >= CLEAN_STREAK_FOR_RECOVERY
-      ? Math.min(ledger.budget + RECOVERY_STEP_PER_DAY, HARD_LIMIT_MAX)
+      ? Math.min(ledger.budget + RECOVERY_STEP_PER_DAY, cap)
       : ledger.budget;
   return { ...ledger, cleanStreak, budget, lastCleanDay: day, updatedAt: now };
+}
+
+/**
+ * 用户自定预算（保险丝，无硬顶）。应用规则：
+ * - dailyLimit 与 budget_cap 都改成用户值；
+ * - budget 只在「未被风控信号收缩」（即等于旧 dailyLimit）时跟随新值；
+ * - 已被收缩的 budget 保持原样——提高上限不等于清掉风控惩罚，等逐日回补。
+ */
+export function applyBudgetOverride(ledger: SafetyLedger, override: number): SafetyLedger {
+  if (ledger.dailyLimit === override && ledger.budget_cap === override) {
+    return ledger;
+  }
+  const shrunk = ledger.budget < ledger.dailyLimit;
+  return {
+    ...ledger,
+    dailyLimit: override,
+    budget_cap: override,
+    budget: shrunk ? Math.min(ledger.budget, override) : override,
+    updatedAt: Date.now(),
+  };
 }
 
 /** 成功后相邻间隔：base + jitter 内抖动，避免固定节拍器被 X 的规律自动化识别。 */
@@ -193,7 +224,7 @@ export function normalizeLedger(value: unknown): SafetyLedger | null {
     ? (raw.preset as SafetyPreset)
     : DEFAULT_PRESET;
   const dailyLimit = Number.isFinite(raw.dailyLimit)
-    ? Math.min(Math.max(Math.round(raw.dailyLimit as number), 1), HARD_LIMIT_MAX)
+    ? Math.max(1, Math.round(raw.dailyLimit as number))
     : SAFETY_PRESETS[preset].dailyLimit;
   const events = Array.isArray(raw.events)
     ? raw.events
@@ -207,11 +238,15 @@ export function normalizeLedger(value: unknown): SafetyLedger | null {
     dailyLimit,
     // PR1 存量账本没有 budget：无缝升级为以档位基线起步
     budget: Number.isFinite(raw.budget)
-      ? Math.min(Math.max(Math.round(raw.budget as number), 0), HARD_LIMIT_MAX)
+      ? Math.max(0, Math.round(raw.budget as number))
       : dailyLimit,
     cleanStreak:
       Number.isFinite(raw.cleanStreak) ? Math.max(0, Math.round(raw.cleanStreak as number)) : 0,
     events,
+    // 保险丝缺省即不封顶（存量账本没有这字段 → 纯自适应，行为等同升级）
+    ...(Number.isFinite(raw.budget_cap)
+      ? { budget_cap: Math.max(1, Math.round(raw.budget_cap as number)) }
+      : {}),
     ...(typeof raw.lastSignalDay === 'string' ? { lastSignalDay: raw.lastSignalDay } : {}),
     ...(typeof raw.lastCleanDay === 'string' ? { lastCleanDay: raw.lastCleanDay } : {}),
     ...(typeof raw.lastPausedReason === 'string' ? { lastPausedReason: raw.lastPausedReason } : {}),
@@ -246,6 +281,38 @@ async function readStore(): Promise<SafetyLedgerStore | null> {
   return normalizeStore(stored[STORAGE_KEY]);
 }
 
+function normalizeBudgetOverride(value: unknown): number | null {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(parsed)) return null;
+  return Math.max(1, Math.round(parsed));
+}
+
+async function readBudgetOverride(): Promise<number | null> {
+  const stored = await browser.storage.local.get(BUDGET_OVERRIDE_KEY);
+  const raw = (stored[BUDGET_OVERRIDE_KEY] as { dailyLimit?: unknown } | undefined)?.dailyLimit;
+  return normalizeBudgetOverride(raw);
+}
+
+/** 当前生效保险丝 = 用户自定义值；未设置过为 null（默认不封顶，纯自适应爬升）。 */
+export async function getSafetyBudgetOverride(): Promise<number | null> {
+  return readBudgetOverride();
+}
+
+/**
+ * 我说了算的日预算（保险丝）：设置页任意整数（≥1），无上限。写入 override 存储，
+ * 现存账本在下次 loadSafetyLedger 时套用（未被信号收缩的预算跟随新值）。
+ * 传 null 恢复默认自适应（无封顶，爬升由 X 的真实接受度决定）。
+ */
+export async function setSafetyBudgetOverride(value: number | null): Promise<number | null> {
+  if (value == null) {
+    await browser.storage.local.remove(BUDGET_OVERRIDE_KEY);
+    return null;
+  }
+  const dailyLimit = Math.max(1, Math.round(value));
+  await browser.storage.local.set({ [BUDGET_OVERRIDE_KEY]: { dailyLimit } });
+  return dailyLimit;
+}
+
 async function writeStore(next: SafetyLedgerStore): Promise<void> {
   await browser.storage.local.set({ [STORAGE_KEY]: next });
 }
@@ -271,19 +338,29 @@ function enqueueLedgerWrite<T>(operation: () => Promise<T>): Promise<T> {
  */
 export async function loadSafetyLedger(accountKey?: string | null): Promise<SafetyLedger> {
   const store = await readStore();
+  const override = await readBudgetOverride();
   const now = Date.now();
   if (!accountKey) {
     const fallback = store
       ? store.ledgers[store.activeAccountKey]
       : freshLedger(FALLBACK_ACCOUNT_KEY);
-    return rolloverBudget(fallback ?? freshLedger(FALLBACK_ACCOUNT_KEY), now);
+    let ledger = rolloverBudget(fallback ?? freshLedger(FALLBACK_ACCOUNT_KEY), now);
+    if (override != null) {
+      ledger = applyBudgetOverride(ledger, override);
+    }
+    return ledger;
   }
   const existing = store?.ledgers[accountKey];
   if (existing) {
-    const next = rolloverBudget(existing, now);
+    let next = rolloverBudget(existing, now);
+    const overrideChanged = override != null && next.dailyLimit !== override;
+    if (overrideChanged) {
+      next = applyBudgetOverride(next, override);
+    }
     const changed =
       next.budget !== existing.budget ||
       next.cleanStreak !== existing.cleanStreak ||
+      next.dailyLimit !== existing.dailyLimit ||
       next.lastCleanDay !== existing.lastCleanDay;
     if (changed || (store && store.activeAccountKey !== accountKey)) {
       await writeStore({
@@ -294,10 +371,13 @@ export async function loadSafetyLedger(accountKey?: string | null): Promise<Safe
     }
     return next;
   }
-  const next = freshLedger(accountKey);
-  const ledgers = store ? { ...store.ledgers, [accountKey]: next } : { [accountKey]: next };
+  let fresh = freshLedger(accountKey);
+  if (override != null) {
+    fresh = applyBudgetOverride(fresh, override);
+  }
+  const ledgers = store ? { ...store.ledgers, [accountKey]: fresh } : { [accountKey]: fresh };
   await writeStore({ activeAccountKey: accountKey, ledgers });
-  return next;
+  return fresh;
 }
 
 /** 记一笔成功的破坏性写操作（block/unblock 都算）。accountKey 拿不到时退化为匿名账本。 */
