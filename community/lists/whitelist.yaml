@@ -10,203 +10,398 @@
 #      （快照按「当日一版」节流，白名单变化也会触发新版本）
 #
 # entries 字段：
-#   handle    必填。@ 后面的用户名（@ 可带可不带，脚本自动归一为小写）
-#   note      必填。为什么这个账号值得豁免（会随快照公开）
-#   x_user_id 选填。账号数字 ID，能填则填（改名前仍可识别）
+#   handle      必填。@ 后面的用户名（@ 可带可不带，脚本自动归一为小写）
+#   note        必填。博主简介/为什么值得豁免（会随快照公开），短简介也收
+#   name        选填。显示昵称（快照里展示用）
+#   avatar_url  选填。X 公开头像 URL（pbs.twimg.com），快照里展示用
+#   x_user_id   选填。账号数字 ID，能填则填（改名前仍可识别）
 schema_version: 1
-updated_at: "2026-09-12T00:00:00.000Z"
 entries:
   - handle: 01wu1
-    note: "KOSX Impact 计划成员 子扬：01 年小镇做题家 | Physics | 3 年 AI 产品经理🌍 做过单日流水 2000+ 的项目 | 亲自跑过从需求到收入的全过程🏂 探索普通年轻人如何抓住 AI 机会，做产品、赚到第一桶金💰 记录并还原实操，公开真实复盘💎"
+    name: "子扬"
+    avatar_url: "https://pbs.twimg.com/profile_images/2091489690289582081/ikenwR2o_400x400.jpg"
+    note: "01 年小镇做题家 | Physics | 3 年 AI 产品经理🌍 做过单日流水 2000+ 的项目 | 亲自跑过从需求到收入的全过程🏂 探索普通年轻人如何抓住 AI 机会，做产品、赚到第一桶金💰 记录并还原实操，公开真实复盘💎"
   - handle: 03aier
-    note: "KOSX Impact 计划成员 逐风03：03男大 | 来X混口饭吃|Al-Native Builder 数学人 | all in AI|web3入局者|美股 🤖KOSX社群实习生| https://t.co/3sBo78Y9Zo 目标财富自由"
+    name: "逐风03"
+    avatar_url: "https://pbs.twimg.com/profile_images/2074118561086464000/6i1BpYQX_400x400.jpg"
+    note: "03男大 | 来X混口饭吃|Al-Native Builder 数学人 | all in AI|web3入局者|美股 🤖KOSX社群实习生| https://t.co/3sBo78Y9Zo 目标财富自由"
   - handle: 2038277897zheng
-    note: "KOSX Impact 计划成员 Yuze：06年大学生｜美股｜web3｜crypto｜X增长 人生感悟｜长期主义｜延时满足"
+    name: "Yuze"
+    avatar_url: "https://pbs.twimg.com/profile_images/2055949149070323712/I-gP6R0h_400x400.jpg"
+    note: "06年大学生｜美股｜web3｜crypto｜X增长 人生感悟｜长期主义｜延时满足"
   - handle: 369serena
-    note: "KOSX Impact 计划成员 Serena 木瓜：➡️ AI 应用+工具分享 · Codex 赋能 🎓裸辞专业户 · 记录普通人如何拿回人生的主动权 🤖 CGS Agency KOL 运营 · 全球 KOL 资源"
+    name: "Serena 木瓜"
+    avatar_url: "https://pbs.twimg.com/profile_images/2014165849188495360/r8DM6qHC_400x400.jpg"
+    note: "➡️ AI 应用+工具分享 · Codex 赋能 🎓裸辞专业户 · 记录普通人如何拿回人生的主动权 🤖 CGS Agency KOL 运营 · 全球 KOL 资源"
   - handle: 8kkjw6
-    note: "KOSX Impact 计划成员 七七：大二北京计算机系"
+    name: "七七"
+    avatar_url: "https://pbs.twimg.com/profile_images/2093534918173409280/io_NCWuF_400x400.jpg"
+    note: "大二北京计算机系"
   - handle: adrianpunk115
-    note: "KOSX Impact 计划成员 Adrian Punk：AI视觉/AI小白教程 3个月挣了8位数 中科大管理学硕士｜Punk系列Skills 作者 🎁First Check发起人 和 @ai_xiaomu @rwayne 一起帮助更多新人被看见助力成长"
+    name: "Adrian Punk"
+    avatar_url: "https://pbs.twimg.com/profile_images/2074416007964495872/6dxqrywF_400x400.jpg"
+    note: "AI视觉/AI小白教程 3个月挣了8位数 中科大管理学硕士｜Punk系列Skills 作者 🎁First Check发起人 和 @ai_xiaomu @rwayne 一起帮助更多新人被看见助力成长"
   - handle: agentbuff_dev
-    note: "KOSX Impact 计划成员 AgentBuff：🚢 SaaS Going Global | Architect | Hands-on AI Practitioner | https://t.co/xHf81GJAwW 🎺 Slogan: Explore the Infinite Possibilities of AI"
+    name: "AgentBuff"
+    avatar_url: "https://pbs.twimg.com/profile_images/2088064528986808320/mfdCF0pH_400x400.jpg"
+    note: "🚢 SaaS Going Global | Architect | Hands-on AI Practitioner | https://t.co/xHf81GJAwW 🎺 Slogan: Explore the Infinite Possibilities of AI"
   - handle: ai_jacksaku
-    note: "KOSX Impact 计划成员 阿川 | AI thinking：马斯克研究所合作伙伴@MuskPapa_x @razzhood 前大厂多面手｜AI 专业搞钱玩家｜3天万粉第一人 关注 AI 产品&工具、AI商业化、AI企业转型 所有的项目经历和思考都发在这里"
+    name: "阿川 | AI thinking"
+    avatar_url: "https://pbs.twimg.com/profile_images/2019055126607253504/ixViRCYk_400x400.jpg"
+    note: "马斯克研究所合作伙伴@MuskPapa_x @razzhood 前大厂多面手｜AI 专业搞钱玩家｜3天万粉第一人 关注 AI 产品&工具、AI商业化、AI企业转型 所有的项目经历和思考都发在这里"
   - handle: ai_suxiaole
-    note: "KOSX Impact 计划成员 苏乐：💡 AI 没那么复杂，🤖 在职大厂架构师(XWise插件作者)，长期实践 AI，💰 分享 AI 工具、赚钱案例和效率技巧，📌 每天替你测试 AI，帮你少走很多弯路"
+    name: "苏乐"
+    avatar_url: "https://pbs.twimg.com/profile_images/2054407349440303104/vwh9uWQu_400x400.jpg"
+    note: "💡 AI 没那么复杂，🤖 在职大厂架构师(XWise插件作者)，长期实践 AI，💰 分享 AI 工具、赚钱案例和效率技巧，📌 每天替你测试 AI，帮你少走很多弯路"
   - handle: ai_xiaomu
-    note: "KOSX Impact 计划成员 黄小木：👨‍💻 前大厂T11，来X记录OPC 之路。 💼 分享本地模型 & FDE 案例 & 知识库 & GEO 。 🎁 First Check发起人 & X增长工作流作者(开源)，和 @rwayne @AdrianPunk115一起帮助更多新人被看见。"
+    name: "黄小木"
+    avatar_url: "https://pbs.twimg.com/profile_images/2076716603392323584/v9BMuoo__400x400.jpg"
+    note: "👨‍💻 前大厂T11，来X记录OPC 之路。 💼 分享本地模型 & FDE 案例 & 知识库 & GEO 。 🎁 First Check发起人 & X增长工作流作者(开源)，和 @rwayne @AdrianPunk115一起帮助更多新人被看见。"
   - handle: alexchou_x
-    note: "KOSX Impact 计划成员 Alex Chou：🧑🏻‍💻 产品经理｜健康顾问｜ENFJ ☄️ 分享思考｜遇见有趣的人和事 🎬 无限进步｜探索 AI 时代新的转机"
+    name: "Alex Chou"
+    avatar_url: "https://pbs.twimg.com/profile_images/2075126356124577792/mXzvJ-D7_400x400.jpg"
+    note: "🧑🏻‍💻 产品经理｜健康顾问｜ENFJ ☄️ 分享思考｜遇见有趣的人和事 🎬 无限进步｜探索 AI 时代新的转机"
   - handle: ally_foe
-    note: "KOSX Impact 计划成员 Foe Ally：前4A广告创意|前互联网大厂低 P|一米七中英双语主持人|爱讲脱口秀写点小烂梗 Al+美股+Crypto 研究认知、科技与资本的交汇点 真的都是自己写的，防走丢抖音：Allyorfoe"
+    name: "Foe Ally"
+    avatar_url: "https://pbs.twimg.com/profile_images/2064636052435017728/K3-l_WrK_400x400.jpg"
+    note: "前4A广告创意|前互联网大厂低 P|一米七中英双语主持人|爱讲脱口秀写点小烂梗 Al+美股+Crypto 研究认知、科技与资本的交汇点 真的都是自己写的，防走丢抖音：Allyorfoe"
   - handle: anion_ex
-    note: "KOSX Impact 计划成员 anionex：hi, I'm anionex: https://t.co/hNwjgURrHU (18k⭐) full-stack | AI native | top 0.01% github developer sharing insights on open source & AI:) 顺便分享一些可能有用/有趣的东西～"
+    name: "anionex"
+    avatar_url: "https://pbs.twimg.com/profile_images/1726949602950328320/0QaKm7ot_400x400.jpg"
+    note: "hi, I'm anionex: https://t.co/hNwjgURrHU (18k⭐) full-stack | AI native | top 0.01% github developer sharing insights on open source & AI:) 顺便分享一些可能有用/有趣的东西～"
   - handle: ansyn_07
-    note: "KOSX Impact 计划成员 安寻Ansyn_log：07｜长期主义｜AI × 自媒体｜AI Workflow Builder Building in Public｜Intern @ https://t.co/Ay48fUk8L0"
+    name: "安寻Ansyn_log"
+    avatar_url: "https://pbs.twimg.com/profile_images/2049117868470751232/KCpqFeeP_400x400.jpg"
+    note: "07｜长期主义｜AI × 自媒体｜AI Workflow Builder Building in Public｜Intern @ https://t.co/Ay48fUk8L0"
   - handle: aomyying
-    note: "KOSX Impact 计划成员 Aomyying（小A本人）：💡 自媒体连续创业者｜用AI做好产品，用自媒体讲好故事｜Her Name成员｜学好英语终身受益 只分享真实体验感受｜用历史验证规律｜探索人性｜回归天道"
+    name: "Aomyying（小A本人）"
+    avatar_url: "https://pbs.twimg.com/profile_images/2047513061481934848/RICk72zG_400x400.jpg"
+    note: "💡 自媒体连续创业者｜用AI做好产品，用自媒体讲好故事｜Her Name成员｜学好英语终身受益 只分享真实体验感受｜用历史验证规律｜探索人性｜回归天道"
   - handle: averiox007
-    note: "KOSX Impact 计划成员 Lokii.：web3丨链上丨https://t.co/7VipsoVgG6丨ENTJ 工科05 专注：财富杠杆｜人性关系｜真相探索 目标：财富自由+情感自由的数字游民"
+    name: "Lokii."
+    avatar_url: "https://pbs.twimg.com/profile_images/2061852686195253248/R9dOZhUd_400x400.jpg"
+    note: "web3丨链上丨https://t.co/7VipsoVgG6丨ENTJ 工科05 专注：财富杠杆｜人性关系｜真相探索 目标：财富自由+情感自由的数字游民"
   - handle: benzye1988
-    note: "KOSX Impact 计划成员 奔驰哥：股票交易员，懂点税的事 坚持跟踪市场，理解市场 投资可以犯错，但不要被打垮"
+    name: "奔驰哥"
+    avatar_url: "https://pbs.twimg.com/profile_images/1808705527482081280/wvTDUz8b_400x400.jpg"
+    note: "股票交易员，懂点税的事 坚持跟踪市场，理解市场 投资可以犯错，但不要被打垮"
   - handle: bketck
-    note: "KOSX Impact 计划成员 Station Cat：codex重度使用者 🚀 赛鹏搞笑者🧑‍💻 Creator 欢迎同频的人一起聊天 https://t.co/IQBk5drQmU"
+    name: "Station Cat"
+    avatar_url: "https://pbs.twimg.com/profile_images/1892489460589199360/UR_E0ZJA_400x400.jpg"
+    note: "codex重度使用者 🚀 赛鹏搞笑者🧑‍💻 Creator 欢迎同频的人一起聊天 https://t.co/IQBk5drQmU"
   - handle: calvinnotes
-    note: "KOSX Impact 计划成员 Calvin：AI-Native Builder / cloud architect / learning in public DCA enjoyer 🚀"
+    name: "Calvin"
+    avatar_url: "https://pbs.twimg.com/profile_images/2068630338021330944/HnI-yoWZ_400x400.jpg"
+    note: "AI-Native Builder / cloud architect / learning in public DCA enjoyer 🚀"
   - handle: cgnot996
-    note: "KOSX Impact 计划成员 铁柱AGI：开源 Grok App 作者 ｜马斯克得不到的男人 Grok Bot 野生推广大使（正在申请 SpaceX AI 官方大使中）"
+    name: "铁柱AGI"
+    avatar_url: "https://pbs.twimg.com/profile_images/1997889886058348544/I3DNAJ91_400x400.jpg"
+    note: "开源 Grok App 作者 ｜马斯克得不到的男人 Grok Bot 野生推广大使（正在申请 SpaceX AI 官方大使中）"
   - handle: changqinghanbot
-    note: "KOSX Impact 计划成员 长卿寒：-05 在读大学生|长期主义 -AI × web3×内容 -分享碎碎念|社会观察|人性博弈 -vibe coding 生产玩具中"
+    name: "长卿寒"
+    avatar_url: "https://pbs.twimg.com/profile_images/2093764944026288128/K6O0nTMq_400x400.jpg"
+    note: "-05 在读大学生|长期主义 -AI × web3×内容 -分享碎碎念|社会观察|人性博弈 -vibe coding 生产玩具中"
   - handle: chenkunhu00111
-    note: "KOSX Impact 计划成员 兔子舞的奇思妙想y：🎓 985经济学本硕，前投行业务主管； 🚀 从做题家到公众号的头部情感博主； 📊 有超400名学员及1000+小时1v1咨询经验； 💬 欢迎私信你的情感问题，免费获取一次诊断； 🔑 内部社群有门槛，情感学习请加工作微信。"
+    name: "兔子舞的奇思妙想y"
+    avatar_url: "https://pbs.twimg.com/profile_images/2097236350521282560/egHxfFnU_400x400.jpg"
+    note: "🎓 985经济学本硕，前投行业务主管； 🚀 从做题家到公众号的头部情感博主； 📊 有超400名学员及1000+小时1v1咨询经验； 💬 欢迎私信你的情感问题，免费获取一次诊断； 🔑 内部社群有门槛，情感学习请加工作微信。"
   - handle: chenshuoai
-    note: "KOSX Impact 计划成员 陈硕KAI：🌏WE30七代目 🎬探寻在ai 时代下的财富自由之路🌐了解我：https://t.co/lGtm3GhpRf | 微信： Chenshuo8886669（备注来意）|耍学tg：https://t.co/MRxsJR2KFD | 目前聚焦ai | 支线：跨境| YouTube （ 数亿播放）| Crypto（8位数）"
+    name: "陈硕KAI"
+    avatar_url: "https://pbs.twimg.com/profile_images/2086788104967581696/dbHJ3lqY_400x400.jpg"
+    note: "🌏WE30七代目 🎬探寻在ai 时代下的财富自由之路🌐了解我：https://t.co/lGtm3GhpRf | 微信： Chenshuo8886669（备注来意）|耍学tg：https://t.co/MRxsJR2KFD | 目前聚焦ai | 支线：跨境| YouTube （ 数亿播放）| Crypto（8位数）"
   - handle: chilljccu
-    note: "KOSX Impact 计划成员 Chill / AI：08/web3/AI小手子 掌握流量的King 搭建职业道路ing wx:Qyx-0510"
+    name: "Chill / AI"
+    avatar_url: "https://pbs.twimg.com/profile_images/2091160004896428032/XLEzXCPL_400x400.jpg"
+    note: "08/web3/AI小手子 掌握流量的King 搭建职业道路ing wx:Qyx-0510"
   - handle: clara_j_0529
-    note: "KOSX Impact 计划成员 六水六水：04 | 个人IP打造沉淀中 从市场营销/心理/传播学研究自媒体 好产品是聪明人用笨功夫做出来的 jiamiaomiao029@gmail.com"
+    name: "六水六水"
+    avatar_url: "https://pbs.twimg.com/profile_images/2069684464746389504/ACyTDSKq_400x400.jpg"
+    note: "04 | 个人IP打造沉淀中 从市场营销/心理/传播学研究自媒体 好产品是聪明人用笨功夫做出来的 jiamiaomiao029@gmail.com"
   - handle: cxjwin
-    note: "KOSX Impact 计划成员 码良：🔧 月薪 1800 厂弟 → 大厂 iOS Tech Lead 🌍 大厂真实观察 · AI 工具实测 📄 转码上岸真实路径，见置顶 🎯 目标 1 万粉"
+    name: "码良"
+    avatar_url: "https://pbs.twimg.com/profile_images/2086535099420704768/VSCxzZBA_400x400.jpg"
+    note: "🔧 月薪 1800 厂弟 → 大厂 iOS Tech Lead 🌍 大厂真实观察 · AI 工具实测 📄 转码上岸真实路径，见置顶 🎯 目标 1 万粉"
   - handle: cy_chase_ai
-    note: "KOSX Impact 计划成员 承越.Chase：🧑‍💻 资深工程师 / PM / 团队Owner / AI玩家 ⚡ 聊高效方法论、Vibe Coding、超级个体成长"
+    name: "承越.Chase"
+    avatar_url: "https://pbs.twimg.com/profile_images/2061461409679155200/5GsfDzXQ_400x400.jpg"
+    note: "🧑‍💻 资深工程师 / PM / 团队Owner / AI玩家 ⚡ 聊高效方法论、Vibe Coding、超级个体成长"
   - handle: darkmirror_n
-    note: "KOSX Impact 计划成员 Lucidity：📈9年A股投资经验，从10W本金做到A8 🛹网球3.5+｜长距离滑板亚洲第二｜滑板马拉松全球第六 ✨分享缠论知识心得，拆解交易与人性 🩵长文分享干货，短推记录生活"
+    name: "Lucidity"
+    avatar_url: "https://pbs.twimg.com/profile_images/2086646039675805696/Z4c4bHQp_400x400.jpg"
+    note: "📈9年A股投资经验，从10W本金做到A8 🛹网球3.5+｜长距离滑板亚洲第二｜滑板马拉松全球第六 ✨分享缠论知识心得，拆解交易与人性 🩵长文分享干货，短推记录生活"
   - handle: dashen_wang
-    note: "KOSX Impact 计划成员 AI最严厉的父亲：马斯克研究所合作伙伴 @MuskPapa_x @razzhood 当AGI睁开眼睛的那一刻，人类的存在便失去了所有意义 构架散人。 反编译 / 站群 / 量化 / Agent,二十年自学。 现在只带 Agent 干活,不雇人。"
+    name: "AI最严厉的父亲"
+    avatar_url: "https://pbs.twimg.com/profile_images/2025512788534448128/RVb6JJiL_400x400.jpg"
+    note: "马斯克研究所合作伙伴 @MuskPapa_x @razzhood 当AGI睁开眼睛的那一刻，人类的存在便失去了所有意义 构架散人。 反编译 / 站群 / 量化 / Agent,二十年自学。 现在只带 Agent 干活,不雇人。"
   - handle: davidlin449854
-    note: "KOSX Impact 计划成员 David Lin 🐑：🐑 一只用AI探索未来的懒羊 高尔夫行业从业者⛳️｜7年运动产业经验🏋️ 朋友圈× 运动健康 ×商业思考× 分享美食 Building In Public｜Foodie🍽️"
+    name: "David Lin 🐑"
+    avatar_url: "https://pbs.twimg.com/profile_images/2097765463732469760/f2Wrun-8_400x400.jpg"
+    note: "🐑 一只用AI探索未来的懒羊 高尔夫行业从业者⛳️｜7年运动产业经验🏋️ 朋友圈× 运动健康 ×商业思考× 分享美食 Building In Public｜Foodie🍽️"
   - handle: dingwenlei1
-    note: "KOSX Impact 计划成员 @老丁和他的AI伙伴"
+    name: "老丁和他的AI伙伴"
+    avatar_url: "https://pbs.twimg.com/profile_images/2081619880173015040/yTqgs0-g_400x400.jpg"
+    note: "KOSX Impact 计划成员"
   - handle: dollyw73878
-    note: "KOSX Impact 计划成员 高佬：AI｜自媒体｜英语学习｜个人成长 持续试错，慢慢升级 分享日常，喜欢交朋友，一起交流"
+    name: "高佬"
+    avatar_url: "https://pbs.twimg.com/profile_images/2071550539964518400/brH1HBDI_400x400.jpg"
+    note: "AI｜自媒体｜英语学习｜个人成长 持续试错，慢慢升级 分享日常，喜欢交朋友，一起交流"
   - handle: echo6718
-    note: "KOSX Impact 计划成员 Echo：🖥计算机本科在读，正在冲击研究生 🕹分享个人生活学习中的看法与想法 ❤️尝试嵌入式硬件与ai结合 努力让自己在未来有实力能在桌上"
+    name: "Echo"
+    avatar_url: "https://pbs.twimg.com/profile_images/2077602532768309249/GngQMTbk_400x400.jpg"
+    note: "🖥计算机本科在读，正在冲击研究生 🕹分享个人生活学习中的看法与想法 ❤️尝试嵌入式硬件与ai结合 努力让自己在未来有实力能在桌上"
   - handle: edison_aware
-    note: "KOSX Impact 计划成员 Edison：前鹅厂程序员后因为垃圾梦想去搞科研 现在是大学青年教师，偶尔上课，经常折腾 同时是 https://t.co/76bxADA601 创新战略顾问 AI｜技术｜副业｜一些不成熟的思考 Build 点有用的，也 Build 点没用的"
+    name: "Edison"
+    avatar_url: "https://pbs.twimg.com/profile_images/2072151503960444928/BG9XQ4YE_400x400.jpg"
+    note: "前鹅厂程序员后因为垃圾梦想去搞科研 现在是大学青年教师，偶尔上课，经常折腾 同时是 https://t.co/76bxADA601 创新战略顾问 AI｜技术｜副业｜一些不成熟的思考 Build 点有用的，也 Build 点没用的"
   - handle: erwinwu000
-    note: "KOSX Impact 计划成员 Erwin：🎓PolyU PhDing | 💻ex Alibaba & Shopee AI Builder丨AI x Design Researcher Building https://t.co/vIXs3fnuld"
+    name: "Erwin"
+    avatar_url: "https://pbs.twimg.com/profile_images/2077329662649511936/BATq9_PG_400x400.jpg"
+    note: "🎓PolyU PhDing | 💻ex Alibaba & Shopee AI Builder丨AI x Design Researcher Building https://t.co/vIXs3fnuld"
   - handle: eugeniasususu
-    note: "KOSX Impact 计划成员 Eugenia吃了吗：00后AI野生学习者｜🇭🇰上市公司打工人 不知名社会观察员｜前🧪天坑人➡️AI社群运营 分享香港🇭🇰职场｜AI工具｜跨界成长 边学边做 顺便认识有趣的人👾"
+    name: "Eugenia吃了吗"
+    avatar_url: "https://pbs.twimg.com/profile_images/2081592550872555520/fi9ptFbo_400x400.jpg"
+    note: "00后AI野生学习者｜🇭🇰上市公司打工人 不知名社会观察员｜前🧪天坑人➡️AI社群运营 分享香港🇭🇰职场｜AI工具｜跨界成长 边学边做 顺便认识有趣的人👾"
   - handle: funx1001
-    note: "KOSX Impact 计划成员 yee：04|广州|探索者 目标：每个月被动收入1w+！ 2026！ai+创业进行中！闲鱼一个月营业额2.2w，积累60位客户 专业AI代充，高利息稳定理财探索.KOSX.AI"
+    name: "yee"
+    avatar_url: "https://pbs.twimg.com/profile_images/1916772051568005120/nxtJ6oRp_400x400.jpg"
+    note: "04|广州|探索者 目标：每个月被动收入1w+！ 2026！ai+创业进行中！闲鱼一个月营业额2.2w，积累60位客户 专业AI代充，高利息稳定理财探索.KOSX.AI"
   - handle: fxmqs
-    note: "KOSX Impact 计划成员 风雪漫千山：一个在持续提升品味的老登。"
+    name: "风雪漫千山"
+    avatar_url: "https://pbs.twimg.com/profile_images/2054900209965273088/RsQ_Eywo_400x400.jpg"
+    note: "一个在持续提升品味的老登。"
   - handle: haifeng1974
-    note: "KOSX Impact 计划成员 Micky💯：Haifeng | Brand Designer & Creative Director Building brands, IP & visual systems with AI. 东方美学 × Global Design × AI Creativity Shanghai / China"
+    name: "Micky💯"
+    avatar_url: "https://pbs.twimg.com/profile_images/2097012427066109952/AR_k8Qt7_400x400.jpg"
+    note: "Haifeng | Brand Designer & Creative Director Building brands, IP & visual systems with AI. 东方美学 × Global Design × AI Creativity Shanghai / China"
   - handle: halou168
-    note: "KOSX Impact 计划成员 哈咯Halou：我叫哈咯，努力学习web3和美股投资当中，希望可以与大家分享我的心得，努力Build Ai and web3，个人观点不代表投资建议。投资美股上Backpack🎒（返佣30％，联系我请你喝奶茶）"
+    name: "哈咯Halou"
+    avatar_url: "https://pbs.twimg.com/profile_images/2074513382481506304/PaJlvrU-_400x400.jpg"
+    note: "我叫哈咯，努力学习web3和美股投资当中，希望可以与大家分享我的心得，努力Build Ai and web3，个人观点不代表投资建议。投资美股上Backpack🎒（返佣30％，联系我请你喝奶茶）"
   - handle: hh681hh
-    note: "KOSX Impact 计划成员 Hh：16岁在校经济独立｜我在https://t.co/6t84uKXaBB很想你 一直在做一件事：如何靠一部手机赚钱 22年推特其他赛道万粉博主（帐号被盗） 跨境电商｜AI ｜交易 ｜内容 梦想数字游民 财富自由"
+    name: "Hh"
+    avatar_url: "https://pbs.twimg.com/profile_images/2053503484159553536/xeJ0ood3_400x400.jpg"
+    note: "16岁在校经济独立｜我在https://t.co/6t84uKXaBB很想你 一直在做一件事：如何靠一部手机赚钱 22年推特其他赛道万粉博主（帐号被盗） 跨境电商｜AI ｜交易 ｜内容 梦想数字游民 财富自由"
   - handle: hunlan77
-    note: "KOSX Impact 计划成员 魂蓝：SISSYSTARS品牌主理人。 致力于做一家全球服务跨性别群体的综合服务平台。"
+    name: "魂蓝"
+    avatar_url: "https://pbs.twimg.com/profile_images/1521340222574784513/ctLLoyF9_400x400.jpg"
+    note: "SISSYSTARS品牌主理人。 致力于做一家全球服务跨性别群体的综合服务平台。"
   - handle: isnail
-    note: "KOSX Impact 计划成员 蜗牛King 👑：AI、自媒体 公众号创作者 一个项目3个月7位数 专注自媒体和小项目实践 持续分享，每天进步一点点"
+    name: "蜗牛King 👑"
+    avatar_url: "https://pbs.twimg.com/profile_images/2006754379890593792/rZQ06k6__400x400.jpg"
+    note: "AI、自媒体 公众号创作者 一个项目3个月7位数 专注自媒体和小项目实践 持续分享，每天进步一点点"
   - handle: jack_fluxai
-    note: "KOSX Impact 计划成员 Jack Flux：Al-Native Builder | https://t.co/sYBqHfcAIG 外企制造业工程师在AI浪潮里重新寻找人生可能 分享AI实战经验、工作流和Agent 偶尔讲讲段子，个人感悟"
+    name: "Jack Flux"
+    avatar_url: "https://pbs.twimg.com/profile_images/2072156359542607872/SHqIRvOY_400x400.jpg"
+    note: "Al-Native Builder | https://t.co/sYBqHfcAIG 外企制造业工程师在AI浪潮里重新寻找人生可能 分享AI实战经验、工作流和Agent 偶尔讲讲段子，个人感悟"
   - handle: jackywine
-    note: "KOSX Impact 计划成员 Jackywine：Obsidian VIP | PromptEngineer | 深入学习 OpenAI Anthropic 以及国产大模型 其实不过 是工作之余分享 AI、设计、产品的普通纯小白网友罢了 ✈️ https://t.co/HRpOru3LUj 列表https://t.co/Jyj3HMNTsZ"
+    name: "Jackywine"
+    avatar_url: "https://pbs.twimg.com/profile_images/1805875520430915586/x3t_sQdd_400x400.jpg"
+    note: "Obsidian VIP | PromptEngineer | 深入学习 OpenAI Anthropic 以及国产大模型 其实不过 是工作之余分享 AI、设计、产品的普通纯小白网友罢了 ✈️ https://t.co/HRpOru3LUj 列表https://t.co/Jyj3HMNTsZ"
   - handle: januslixxx23
-    note: "KOSX Impact 计划成员 Janus Li：1️⃣分享影视产业 摄影摄像 2️⃣AI 结合自媒体从0-1 3️⃣策划作品集 4️⃣可帮助打光&摄影摄像指导"
+    name: "Janus Li"
+    avatar_url: "https://pbs.twimg.com/profile_images/2063295359208787968/1DjebzaV_400x400.jpg"
+    note: "1️⃣分享影视产业 摄影摄像 2️⃣AI 结合自媒体从0-1 3️⃣策划作品集 4️⃣可帮助打光&摄影摄像指导"
   - handle: jarvis11x
-    note: "KOSX Impact 计划成员 Jarvis｜AI 商业实验室：0 技术经验小白，用 AI 做产品、搞流量、跑商业闭环 AI Coding / SEO / GEO / 工具实测 / 真实数据 公开 AI 商业实验，让更多普通人看到 AI 的可能性"
+    name: "Jarvis｜AI 商业实验室"
+    avatar_url: "https://pbs.twimg.com/profile_images/2090977927965933568/S_kOnxUi_400x400.jpg"
+    note: "0 技术经验小白，用 AI 做产品、搞流量、跑商业闭环 AI Coding / SEO / GEO / 工具实测 / 真实数据 公开 AI 商业实验，让更多普通人看到 AI 的可能性"
   - handle: jask_don
-    note: "KOSX Impact 计划成员 Jask：A true writer is building a legend"
+    name: "Jask"
+    avatar_url: "https://pbs.twimg.com/profile_images/1917112031523835905/WHpfZ38u_400x400.jpg"
+    note: "A true writer is building a legend"
   - handle: jasper_wei1
-    note: "KOSX Impact 计划成员 Jasper Wei：00后天坑专业｜AI innovation consult｜https://t.co/9JNkOobIdf 分享AI、投资、商业、人生思考"
+    name: "Jasper Wei"
+    avatar_url: "https://pbs.twimg.com/profile_images/2071144538731884545/eQtKOweW_400x400.jpg"
+    note: "00后天坑专业｜AI innovation consult｜https://t.co/9JNkOobIdf 分享AI、投资、商业、人生思考"
   - handle: jiefubtc
-    note: "KOSX Impact 计划成员 解夫🔶｜Crypto：独立交易员｜威科夫交易 看流动性、风险偏好、关键位置和失效点 个人笔记，不构成投资建议；每一条推文，都是写给未来的信 寄语：独立思考，为认知买单，正心以中，修身以和。📈"
+    name: "解夫🔶｜Crypto"
+    avatar_url: "https://pbs.twimg.com/profile_images/2076647724846370816/ndWtbf0J_400x400.jpg"
+    note: "独立交易员｜威科夫交易 看流动性、风险偏好、关键位置和失效点 个人笔记，不构成投资建议；每一条推文，都是写给未来的信 寄语：独立思考，为认知买单，正心以中，修身以和。📈"
   - handle: jingqing_z16832
-    note: "KOSX Impact 计划成员 威廉不是王子：40岁退休老登，贪财好色，俗人一个 前跨境电商职业经理人：从事亚马逊、Temu、shien、Lazada等 正在重新学习这个世界：AI × Web3 × 投资 美股 / 加密 / 产业趋势 / 偶尔胡思乱想 不荐股，只记录一个普通人的长期主义"
+    name: "威廉不是王子"
+    avatar_url: "https://pbs.twimg.com/profile_images/2097742796937715712/4m7pkHyp_400x400.jpg"
+    note: "40岁退休老登，贪财好色，俗人一个 前跨境电商职业经理人：从事亚马逊、Temu、shien、Lazada等 正在重新学习这个世界：AI × Web3 × 投资 美股 / 加密 / 产业趋势 / 偶尔胡思乱想 不荐股，只记录一个普通人的长期主义"
   - handle: jonathanfwu
-    note: "KOSX Impact 计划成员 Jonathan Wu：05 | 边走，边想，边构建自己。 探索 AI、web3， 分享投资、阅读、生活，以及那些突然冒出来的想法 Stay humble."
+    name: "Jonathan Wu"
+    avatar_url: "https://pbs.twimg.com/profile_images/2096202283977768960/fihoT84E_400x400.jpg"
+    note: "05 | 边走，边想，边构建自己。 探索 AI、web3， 分享投资、阅读、生活，以及那些突然冒出来的想法 Stay humble."
   - handle: jxjx2081310
-    note: "KOSX Impact 计划成员 Zh1x1an Q：💯不上班能搞啥？ |感悟 | 情感 | 认知"
+    name: "Zh1x1an Q"
+    avatar_url: "https://pbs.twimg.com/profile_images/2097585326101536768/EwPqDM2p_400x400.jpg"
+    note: "💯不上班能搞啥？ |感悟 | 情感 | 认知"
   - handle: kekeya88
-    note: "KOSX Impact 计划成员 可可鸭：医学生在读/web3入门/AI探索者/理财小白 🤖https://t.co/MwaurZ1Z82 Community Growth Operator ｜ 搞钱研究所💰 坚定的半导体持有者！ 商务合作直接私信 个人网站：https://t.co/QRQM24587p @hhdhhd02009235"
+    name: "可可鸭"
+    avatar_url: "https://pbs.twimg.com/profile_images/1943531622743097344/frvI5TWb_400x400.jpg"
+    note: "医学生在读/web3入门/AI探索者/理财小白 🤖https://t.co/MwaurZ1Z82 Community Growth Operator ｜ 搞钱研究所💰 坚定的半导体持有者！ 商务合作直接私信 个人网站：https://t.co/QRQM24587p @hhdhhd02009235"
   - handle: king1818888
-    note: "KOSX Impact 计划成员 Kimberly：AI-Native Builder | https://t.co/axPl7LLyeW Building agents & data-driven finance 做系统 · 写工作流，把 AI 真正落地 Web3 | AI 美股港股 Bitget 返佣：https://t.co/uU3QmBTqry"
+    name: "Kimberly"
+    avatar_url: "https://pbs.twimg.com/profile_images/2084265366667374592/d2IhNMep_400x400.jpg"
+    note: "AI-Native Builder | https://t.co/axPl7LLyeW Building agents & data-driven finance 做系统 · 写工作流，把 AI 真正落地 Web3 | AI 美股港股 Bitget 返佣：https://t.co/uU3QmBTqry"
   - handle: kkkm2238
-    note: "KOSX Impact 计划成员 K：06年大学生 专注AI应用、Agent、商业模式 分享日常、行业观察与投资思考 记录长期主义，不构成投资建议"
+    name: "K"
+    avatar_url: "https://pbs.twimg.com/profile_images/2071865394797678592/3bPhaqKT_400x400.jpg"
+    note: "06年大学生 专注AI应用、Agent、商业模式 分享日常、行业观察与投资思考 记录长期主义，不构成投资建议"
   - handle: kosxai
-    note: "KOSX Impact 计划成员 KOSX：https://t.co/HAzqEPxVGa｜把事情做成的创造者网络 AI 实战 · 内容增长 · 真实项目 连接创作者、创业者与行业伙伴 Build Something Real."
+    name: "KOSX"
+    avatar_url: "https://pbs.twimg.com/profile_images/2094642222067236864/cGxQQYfy_400x400.jpg"
+    note: "https://t.co/HAzqEPxVGa｜把事情做成的创造者网络 AI 实战 · 内容增长 · 真实项目 连接创作者、创业者与行业伙伴 Build Something Real."
   - handle: li665508li
-    note: "KOSX Impact 计划成员 Yuvi：佐助未必有我帅"
+    name: "Yuvi"
+    avatar_url: "https://pbs.twimg.com/profile_images/2036027607808905217/RqaWpvw5_400x400.jpg"
+    note: "佐助未必有我帅"
   - handle: liangshuang2026
-    note: "KOSX Impact 计划成员 梁爽withyou^^：上海准大一｜INTJ｜野心家 能动性+养成系=无限可能！ AI Generalist（Incubating…）in https://t.co/wz5w3BBVF7 记录从 0 开始学习 AI、交易、Web3"
+    name: "梁爽withyou^^"
+    avatar_url: "https://pbs.twimg.com/profile_images/2067912768154677248/3TPFGG64_400x400.jpg"
+    note: "上海准大一｜INTJ｜野心家 能动性+养成系=无限可能！ AI Generalist（Incubating…）in https://t.co/wz5w3BBVF7 记录从 0 开始学习 AI、交易、Web3"
   - handle: liuchan41094685
-    note: "KOSX Impact 计划成员 阿牛：武汉线下AI沙龙主理人，研究普通人从0到1AI淘金，AI产品探索中"
+    name: "阿牛"
+    avatar_url: "https://pbs.twimg.com/profile_images/2096614803729240064/9jvYc18h_400x400.jpg"
+    note: "武汉线下AI沙龙主理人，研究普通人从0到1AI淘金，AI产品探索中"
   - handle: masionww
-    note: "KOSX Impact 计划成员 FUFU：AI PM｜AI 内容创作者｜Vibe Coding 实践者｜ AI 生图 × Skill 开发 × AI 工作流 × 独立产品 商业合作TG/VX：@MasionWW AI订阅渠道：https://t.co/9vXAmWwhRF"
+    name: "FUFU"
+    avatar_url: "https://pbs.twimg.com/profile_images/2094354573507063808/l7pM_Whs_400x400.jpg"
+    note: "AI PM｜AI 内容创作者｜Vibe Coding 实践者｜ AI 生图 × Skill 开发 × AI 工作流 × 独立产品 商业合作TG/VX：@MasionWW AI订阅渠道：https://t.co/9vXAmWwhRF"
   - handle: mickty
-    note: "KOSX Impact 计划成员 @mickty"
+    name: "mickty"
+    avatar_url: "https://pbs.twimg.com/profile_images/1473340902/Gros_d_gat_de_vinaigre_400x400.jpg"
+    note: "KOSX Impact 计划成员"
   - handle: mikelammm
-    note: "KOSX Impact 计划成员 Mike Lam：90后/ENFP/ex-香港上市公司猎头/ex- Marketing Lead 创业中💰投资实业餐饮ing，AI项目开发和落地 AI社群🏠「https://t.co/RIFO9UzY0m」｜AI Operation Lead 创业记录和经验分享，欢迎各行业对搞钱和创业感兴趣的朋友，很乐意分享我的经验和资源，希望可以一起create sth new"
+    name: "Mike Lam"
+    avatar_url: "https://pbs.twimg.com/profile_images/2077419409417867264/e2pA3CdA_400x400.jpg"
+    note: "90后/ENFP/ex-香港上市公司猎头/ex- Marketing Lead 创业中💰投资实业餐饮ing，AI项目开发和落地 AI社群🏠「https://t.co/RIFO9UzY0m」｜AI Operation Lead 创业记录和经验分享，欢迎各行业对搞钱和创业感兴趣的朋友，很乐意分享我的经验和资源，希望可以一起create sth new"
   - handle: mm_options
-    note: "KOSX Impact 计划成员 𝑴𝒂𝒊𝑴𝒂𝒊 𝑺𝑷𝑿 🍟：🦁 𝑺𝒐𝒇𝒕𝒘𝒂𝒓𝒆 𝑬𝒏𝒈𝒊𝒏𝒆𝒆𝒓 🍟 𝑺𝑷𝑿 𝑶𝒑𝒕𝒊𝒐𝒏𝒔 𝑷𝒍𝒂𝒚𝒆𝒓"
+    name: "𝑴𝒂𝒊𝑴𝒂𝒊 𝑺𝑷𝑿 🍟"
+    avatar_url: "https://pbs.twimg.com/profile_images/2056679994940907520/yb_3ERSX_400x400.jpg"
+    note: "🦁 𝑺𝒐𝒇𝒕𝒘𝒂𝒓𝒆 𝑬𝒏𝒈𝒊𝒏𝒆𝒆𝒓 🍟 𝑺𝑷𝑿 𝑶𝒑𝒕𝒊𝒐𝒏𝒔 𝑷𝒍𝒂𝒚𝒆𝒓"
   - handle: mooninai
-    note: "KOSX Impact 计划成员 MoonInAI：AI Builder ｜00后潮汕人｜千问办公大使｜https://t.co/P056O6becR 开源skill全网转发量破万，努力靠认知用AI变现七位数，正在用AI为一百个传统行业赋能（寻找共创伙伴中）"
+    name: "MoonInAI"
+    avatar_url: "https://pbs.twimg.com/profile_images/2052045490984763397/urz5VBZW_400x400.jpg"
+    note: "AI Builder ｜00后潮汕人｜千问办公大使｜https://t.co/P056O6becR 开源skill全网转发量破万，努力靠认知用AI变现七位数，正在用AI为一百个传统行业赋能（寻找共创伙伴中）"
   - handle: ned_us
-    note: "KOSX Impact 计划成员 Ned：记录自己的美股。 只发定投和持仓，不荐股、不带单。 月投纳指，计划投十年。"
+    name: "Ned"
+    avatar_url: "https://pbs.twimg.com/profile_images/2096133383307120641/AvvuiuG7_400x400.jpg"
+    note: "记录自己的美股。 只发定投和持仓，不荐股、不带单。 月投纳指，计划投十年。"
   - handle: neverofmeyzc
-    note: "KOSX Impact 计划成员 Never：大厂运营，懂产品、营销 独立观察美股、宏观与流动性 也写普通人怎么用时间当杠杆 少预测，多框架。不喊单，不贩卖确定性 专业交流 DM → https://t.co/DscTeBKIrX 粉丝群：https://t.co/vvtURipTx1"
+    name: "Never"
+    avatar_url: "https://pbs.twimg.com/profile_images/2015019006940577792/0DcqQ4n7_400x400.jpg"
+    note: "大厂运营，懂产品、营销 独立观察美股、宏观与流动性 也写普通人怎么用时间当杠杆 少预测，多框架。不喊单，不贩卖确定性 专业交流 DM → https://t.co/DscTeBKIrX 粉丝群：https://t.co/vvtURipTx1"
   - handle: nian_tu41685
-    note: "KOSX Impact 计划成员 动帧格：央媒打工人转型中，拿 AI 当外挂的超级个体。 现役媒体人 / 野生 Vibe Coder / 还写点小说。 在这里分享：AI 赋能工作与生活实操、捣鼓的小程序、以及一些日常影像。"
+    name: "动帧格"
+    avatar_url: "https://pbs.twimg.com/profile_images/2095890230368976896/vl0G6soC_400x400.jpg"
+    note: "央媒打工人转型中，拿 AI 当外挂的超级个体。 现役媒体人 / 野生 Vibe Coder / 还写点小说。 在这里分享：AI 赋能工作与生活实操、捣鼓的小程序、以及一些日常影像。"
   - handle: noahduck283
-    note: "KOSX Impact 计划成员 诺鸭船长3：🚢AI实战& 数字基建& 出海指南 💗每天捞点好东西，也写一点想说的 🌌不止 AI，不止 X，目标星辰大海 🏝️带你在信息的海洋找到陆地～"
+    name: "诺鸭船长3"
+    avatar_url: "https://pbs.twimg.com/profile_images/2035372542819696640/v_5bHa9Z_400x400.jpg"
+    note: "🚢AI实战& 数字基建& 出海指南 💗每天捞点好东西，也写一点想说的 🌌不止 AI，不止 X，目标星辰大海 🏝️带你在信息的海洋找到陆地～"
   - handle: passenger0522
-    note: "KOSX Impact 计划成员 Passenger0522：01 年英语专业文科生的 AI 自救手册：跨境创业中。分享 Codex 实战、AI 工具流、跨境提效和真实踩坑。"
+    name: "Passenger0522"
+    avatar_url: "https://pbs.twimg.com/profile_images/1999468801776320515/jF0Iz6_j_400x400.jpg"
+    note: "01 年英语专业文科生的 AI 自救手册：跨境创业中。分享 Codex 实战、AI 工具流、跨境提效和真实踩坑。"
   - handle: realchenchenluo
-    note: "KOSX Impact 计划成员 @chen chen"
+    name: "chen chen"
+    avatar_url: "https://pbs.twimg.com/profile_images/1984481158663716868/7wdIE2ED_400x400.jpg"
+    note: "KOSX Impact 计划成员"
   - handle: realchendahuang
-    note: "KOSX Impact 计划成员 陈大黄：现在｜KOSX @kosxai 华东创业与独立开发负责人｜宁波 AI 科技公司合伙人 赛道｜Indie Hacker｜前 AI 产品经理｜产品洞察/段子手 在做｜FlareMo 笔记｜FeedSieve X 清理｜Cherina Pod 双语播客"
+    name: "陈大黄"
+    avatar_url: "https://pbs.twimg.com/profile_images/2066350826617282560/9WSzwx4A_400x400.jpg"
+    note: "现在｜KOSX @kosxai 华东创业与独立开发负责人｜宁波 AI 科技公司合伙人 赛道｜Indie Hacker｜前 AI 产品经理｜产品洞察/段子手 在做｜FlareMo 笔记｜FeedSieve X 清理｜Cherina Pod 双语播客"
   - handle: ringodontpanic
-    note: "KOSX Impact 计划成员 Ringo：05 持续创业者｜投资交易｜AI｜Web3｜艺术与爱｜杂谈 🚀建模 健身 建仓🫶Don’t panic. 🪨像西西弗斯一样，让我们一起推石头"
+    name: "Ringo"
+    avatar_url: "https://pbs.twimg.com/profile_images/2096114389237784576/jFgvOy9s_400x400.jpg"
+    note: "05 持续创业者｜投资交易｜AI｜Web3｜艺术与爱｜杂谈 🚀建模 健身 建仓🫶Don’t panic. 🪨像西西弗斯一样，让我们一起推石头"
   - handle: rollingsirius
-    note: "KOSX Impact 计划成员 Sirius：产品经理，前腾讯 关注 AI 产品、投资研究和个人决策系统 正在构建可复用的投研 Skill、账户面板和自动化工作流"
+    name: "Sirius"
+    avatar_url: "https://pbs.twimg.com/profile_images/1763026642346147840/xYtGrnuU_400x400.jpg"
+    note: "产品经理，前腾讯 关注 AI 产品、投资研究和个人决策系统 正在构建可复用的投研 Skill、账户面板和自动化工作流"
   - handle: rwayne
-    note: "KOSX Impact 计划成员 Roland.W：🇦🇺PhD ing @UQ_News | 医学与经济学 创造知识，创造价值 AIPC玩家，AI知识库 & GEO & 本地模型 🎁中文区First Check发起人 和 @ai_xiaomu @AdrianPunk115 一起帮助更多新人被看见"
+    name: "Roland.W"
+    avatar_url: "https://pbs.twimg.com/profile_images/1911955967505219584/mbOS-TVy_400x400.jpg"
+    note: "🇦🇺PhD ing @UQ_News | 医学与经济学 创造知识，创造价值 AIPC玩家，AI知识库 & GEO & 本地模型 🎁中文区First Check发起人 和 @ai_xiaomu @AdrianPunk115 一起帮助更多新人被看见"
   - handle: scarletkc_
-    note: "KOSX Impact 计划成员 KC：Indie developer building games & open-source tools Sharing AI news, model impressions, and opinions Occasional thoughts on life"
+    name: "KC"
+    avatar_url: "https://pbs.twimg.com/profile_images/2059328812463304704/BXaYGP9k_400x400.jpg"
+    note: "Indie developer building games & open-source tools Sharing AI news, model impressions, and opinions Occasional thoughts on life"
   - handle: shancha103
-    note: "KOSX Impact 计划成员 山茶：hello，我是山茶，在出海建站🀄️，在这里分享我做网站的过程，以及网站拆解学习过程 公众号：shanchaAI"
+    name: "山茶"
+    avatar_url: "https://pbs.twimg.com/profile_images/1910508617406861312/4x-NC7Ek_400x400.jpg"
+    note: "hello，我是山茶，在出海建站🀄️，在这里分享我做网站的过程，以及网站拆解学习过程 公众号：shanchaAI"
   - handle: shuton_leon
-    note: "KOSX Impact 计划成员 书童：📈美股 & 虚拟货币头号韭菜 📍个人开发者 & 内容创作者 🔥分享日常，爱运动爱吃爱旅行"
+    name: "书童"
+    avatar_url: "https://pbs.twimg.com/profile_images/2046862881329991680/WZ6q4OEb_400x400.jpg"
+    note: "📈美股 & 虚拟货币头号韭菜 📍个人开发者 & 内容创作者 🔥分享日常，爱运动爱吃爱旅行"
   - handle: silasandowen
-    note: "KOSX Impact 计划成员 silasOwen：币圈商城，不必出金，选购你想要的商品！欢迎垂询！ Telegram:https://t.co/tfol2H8csd https://t.co/TSGEkGdmrz"
+    name: "silasOwen"
+    avatar_url: "https://pbs.twimg.com/profile_images/2090350371172700160/_yAOvy93_400x400.jpg"
+    note: "币圈商城，不必出金，选购你想要的商品！欢迎垂询！ Telegram:https://t.co/tfol2H8csd https://t.co/TSGEkGdmrz"
   - handle: sisymithus
-    note: "KOSX Impact 计划成员 西西米修斯：Tesla重仓｜100万美元实盘｜10年AI投资策略 前大厂十年｜硅谷到欧洲｜现居新加坡 深度调研｜图形科学｜职场｜搞钱 海外生存｜认真聊聊🇸🇬这座岛"
+    name: "西西米修斯"
+    avatar_url: "https://pbs.twimg.com/profile_images/2077881453002858496/N2B6K-Cv_400x400.jpg"
+    note: "Tesla重仓｜100万美元实盘｜10年AI投资策略 前大厂十年｜硅谷到欧洲｜现居新加坡 深度调研｜图形科学｜职场｜搞钱 海外生存｜认真聊聊🇸🇬这座岛"
   - handle: skavenps1
-    note: "KOSX Impact 计划成员 平凡的蛙里奥：一个认识到自己平凡的人 TG：https://t.co/XL1MUpCDX2"
+    name: "平凡的蛙里奥"
+    avatar_url: "https://pbs.twimg.com/profile_images/2088290825449152512/0SYemNz3_400x400.jpg"
+    note: "一个认识到自己平凡的人 TG：https://t.co/XL1MUpCDX2"
   - handle: song66546656
-    note: "KOSX Impact 计划成员 送姜：日均10小时睡王 06年在读大学生 小学四年级开始做自媒体 有疑问评论 / 付费咨询 合作请私信"
+    name: "送姜"
+    avatar_url: "https://pbs.twimg.com/profile_images/1982443595735977984/tZ4FhYA4_400x400.jpg"
+    note: "日均10小时睡王 06年在读大学生 小学四年级开始做自媒体 有疑问评论 / 付费咨询 合作请私信"
   - handle: statiocat
-    note: "KOSX Impact 计划成员 Station Cat：AI × Indie Hacking × Digital Life 分享 AI、软件开发、产品实验和互联网观察 Building things, sharing progress 🐱🐙 欢迎同频的人一起聊天"
+    name: "Station Cat"
+    avatar_url: "https://pbs.twimg.com/profile_images/2095353127147085824/pTq5gIc2_400x400.jpg"
+    note: "AI × Indie Hacking × Digital Life 分享 AI、软件开发、产品实验和互联网观察 Building things, sharing progress 🐱🐙 欢迎同频的人一起聊天"
   - handle: sukiea1008
-    note: "KOSX Impact 计划成员 Su：https://t.co/YBpvCw9AvN ｜华东地区文旅与产业创新负责人 https://t.co/ZgvJnTKLnQ｜审美、工具 个人网页👇｜关注实用、审美与真实构建的产品人"
+    name: "Su"
+    avatar_url: "https://pbs.twimg.com/profile_images/2070191168848269312/gQ6X5dcH_400x400.jpg"
+    note: "https://t.co/YBpvCw9AvN ｜华东地区文旅与产业创新负责人 https://t.co/ZgvJnTKLnQ｜审美、工具 个人网页👇｜关注实用、审美与真实构建的产品人"
   - handle: superwang
-    note: "KOSX Impact 计划成员 邪恶大薯条：半退休设计公司负责人丨 https://t.co/gidW3Vdx8V AI｜crypto 副业SaaS相关 正在研究不出卖劳动力的财富来源 TG：https://t.co/25ftl7rWGO"
+    name: "邪恶大薯条"
+    avatar_url: "https://pbs.twimg.com/profile_images/2063546052222046208/-jKEz9LV_400x400.jpg"
+    note: "半退休设计公司负责人丨 https://t.co/gidW3Vdx8V AI｜crypto 副业SaaS相关 正在研究不出卖劳动力的财富来源 TG：https://t.co/25ftl7rWGO"
   - handle: tsoiiiiioooyeye
-    note: "KOSX Impact 计划成员 Jasper：No limits in the sky. Money never sleeps. The world is my playground. https://t.co/9ilP0XDTP8"
+    name: "Jasper"
+    avatar_url: "https://pbs.twimg.com/profile_images/2061062255236788224/XpD-7LqA_400x400.jpg"
+    note: "No limits in the sky. Money never sleeps. The world is my playground. https://t.co/9ilP0XDTP8"
   - handle: vegas_liu
-    note: "KOSX Impact 计划成员 Vegas Liu：香港上市公司 AI 转型负责人｜个人投资研究 美股长期投资｜宏观周期｜长期复利 关注 AI Infra、AI 一级项目与资产定价｜https://t.co/4j100wwhfx Premium+｜六字真言创始人 | X上面第一个BOSS直聘"
+    name: "Vegas Liu"
+    avatar_url: "https://pbs.twimg.com/profile_images/2069048666036523009/Kqvg97AJ_400x400.jpg"
+    note: "香港上市公司 AI 转型负责人｜个人投资研究 美股长期投资｜宏观周期｜长期复利 关注 AI Infra、AI 一级项目与资产定价｜https://t.co/4j100wwhfx Premium+｜六字真言创始人 | X上面第一个BOSS直聘"
   - handle: wangdakealien
-    note: "KOSX Impact 计划成员 王大可Alien：07｜ENTP｜前CCHOer，生化交叉｜独立思考 羽毛球省男单前八｜AI✖️自媒体｜Web3小白 kosx社群https://t.co/82NDMvFL4G｜📮wangdakealien@gmail.com I approach，I transform."
+    name: "王大可Alien"
+    avatar_url: "https://pbs.twimg.com/profile_images/2096935228388601856/nbiLcny4_400x400.jpg"
+    note: "07｜ENTP｜前CCHOer，生化交叉｜独立思考 羽毛球省男单前八｜AI✖️自媒体｜Web3小白 kosx社群https://t.co/82NDMvFL4G｜📮wangdakealien@gmail.com I approach，I transform."
   - handle: wangdefou
-    note: "KOSX Impact 计划成员 得否：🦁 X文科生搞AI第一人，ENTJ-A 🫵 政企创孵中心导师，人社部人工智能训练师，企业AI转型顾问 💰 搞OPC两个月收入6位数，目标7位数 🎨 X封面图生成器作者 https://t.co/3K081pNXAP 🌍 日常分享AI、工具、生活"
+    name: "得否"
+    avatar_url: "https://pbs.twimg.com/profile_images/1893575129038282753/rqoiJGHo_400x400.jpg"
+    note: "🦁 X文科生搞AI第一人，ENTJ-A 🫵 政企创孵中心导师，人社部人工智能训练师，企业AI转型顾问 💰 搞OPC两个月收入6位数，目标7位数 🎨 X封面图生成器作者 https://t.co/3K081pNXAP 🌍 日常分享AI、工具、生活"
   - handle: weichen_ink
-    note: "KOSX Impact 计划成员 微尘印记：内容创作者的「 超级工具箱 」 欢迎订阅我的 Youtube 频道 ⬇️"
+    name: "微尘印记"
+    avatar_url: "https://pbs.twimg.com/profile_images/2086808745024385024/IIPRW1J3_400x400.jpg"
+    note: "内容创作者的「 超级工具箱 」 欢迎订阅我的 Youtube 频道 ⬇️"
   - handle: xchatgcp
-    note: "KOSX Impact 计划成员 Lennox：十年技术专家｜大数据 & 人工智能 现任大中华区谷歌FDE｜专注AI模型研究 解决方案 用数据驱动未来，用AI重塑世界 联系https://t.co/UiUflEPXwm"
+    name: "Lennox"
+    avatar_url: "https://pbs.twimg.com/profile_images/1945337236209201152/1IWdJvvp_400x400.jpg"
+    note: "十年技术专家｜大数据 & 人工智能 现任大中华区谷歌FDE｜专注AI模型研究 解决方案 用数据驱动未来，用AI重塑世界 联系https://t.co/UiUflEPXwm"
   - handle: xingyao47854
-    note: "KOSX Impact 计划成员 小财鱼：https://t.co/d75cfcrcgn|分享AI经验，使用案例，学习健身日常。 养成系二战生，见证从研零到研一的跨越。 AI小店|https://t.co/AezetsS9DJ OKX20%手续费减免|https://t.co/MdN1fy1vjD"
+    name: "小财鱼"
+    avatar_url: "https://pbs.twimg.com/profile_images/2077607114965651456/Jnsf1GdR_400x400.jpg"
+    note: "https://t.co/d75cfcrcgn|分享AI经验，使用案例，学习健身日常。 养成系二战生，见证从研零到研一的跨越。 AI小店|https://t.co/AezetsS9DJ OKX20%手续费减免|https://t.co/MdN1fy1vjD"
   - handle: xueyu1125
-    note: "KOSX Impact 计划成员 雪瑜：🤖 AI Builder | 程序员 | AI 工具实践 🎮 游戏服务器开发 | Steam游戏收集控 🚀 专注美股 | 纳斯达克信仰者 🥳 热爱生活 | 偶尔写段子"
+    name: "雪瑜"
+    avatar_url: "https://pbs.twimg.com/profile_images/2062953182725369856/fUW2qZNZ_400x400.jpg"
+    note: "🤖 AI Builder | 程序员 | AI 工具实践 🎮 游戏服务器开发 | Steam游戏收集控 🚀 专注美股 | 纳斯达克信仰者 🥳 热爱生活 | 偶尔写段子"
   - handle: yanxi
-    note: "KOSX Impact 计划成员 阎曦：互联网老兵"
+    name: "阎曦"
+    avatar_url: "https://pbs.twimg.com/profile_images/46494372/ac_400x400.jpg"
+    note: "互联网老兵"
   - handle: yifanxu_ephai
-    note: "KOSX Impact 计划成员 Yifan Xu：🇨🇦 CS @UofT · 🇸🇬 MSAI dropout @NTUsg Living in 🇨🇳 🤖 Creator Ephemeral AI Lab | Agent Infra Foundation 📦 Author, Ephemeral Sandbox"
+    name: "Yifan Xu"
+    avatar_url: "https://pbs.twimg.com/profile_images/2086091150700711936/YHkMTIg__400x400.jpg"
+    note: "🇨🇦 CS @UofT · 🇸🇬 MSAI dropout @NTUsg Living in 🇨🇳 🤖 Creator Ephemeral AI Lab | Agent Infra Foundation 📦 Author, Ephemeral Sandbox"
   - handle: zhengyifan12345
-    note: "KOSX Impact 计划成员 ZhengYiFan：06 | 大三 🎓 | 深圳读大学 家乡潮汕 小红书电商五位数 热爱vibecoding AI产品与出海努力尝试中…"
+    name: "ZhengYiFan"
+    avatar_url: "https://pbs.twimg.com/profile_images/2025181602033041409/i_s3_8Uz_400x400.jpg"
+    note: "06 | 大三 🎓 | 深圳读大学 家乡潮汕 小红书电商五位数 热爱vibecoding AI产品与出海努力尝试中…"
   - handle: zwzw3888
-    note: "KOSX Impact 计划成员 林志伟：AI 产品的独立开发者 赔过钱、踩过坑，公开记录从 0 到 1 的全过程 最新作品：英语精听工具（开发中）"
+    name: "林志伟"
+    avatar_url: "https://pbs.twimg.com/profile_images/2068844409786155008/XYy4pA7V_400x400.jpg"
+    note: "AI 产品的独立开发者 赔过钱、踩过坑，公开记录从 0 到 1 的全过程 最新作品：英语精听工具（开发中）"

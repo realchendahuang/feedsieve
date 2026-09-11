@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { CommunityEntry } from '@feedsieve/community-lists';
+import type { CommunityEntry, WhitelistEntry } from '@feedsieve/community-lists';
 import { getBlockedAccounts, subscribeBlocked, type BlockedAccount } from '../../../src/lib/community/blocked-accounts';
 import {
   addAllowlist,
@@ -66,6 +66,8 @@ interface ListsViewProps {
   refreshPageMarked: () => Promise<void>;
   pauseDestructive: boolean;
   communityEntries: CommunityEntry[];
+  /** 推荐白名单（快照 whitelist 段下调）：只读展示，含维护者背书理由 note */
+  recommendList: WhitelistEntry[];
 }
 
 export default function ListsView({
@@ -75,6 +77,7 @@ export default function ListsView({
   refreshPageMarked,
   pauseDestructive,
   communityEntries,
+  recommendList,
 }: ListsViewProps) {
   const t = UI_COPY[language];
   const [listView, setListView] = useState<ListView>(initialListView);
@@ -97,6 +100,8 @@ export default function ListsView({
   const [safety, setSafety] = useState<SafetyLedger | null>(null);
   // 社区名单排序：默认票数多→少，可切字母序
   const [sortMode, setSortMode] = useState<'votes' | 'alpha'>('votes');
+  // 推荐白名单默认收起：只有一行标题，点开才铺账号列表
+  const [showRecommended, setShowRecommended] = useState(false);
 
   async function runManualBlock(): Promise<void> {
     const handle = normalizeManualInput(manualHandle);
@@ -630,6 +635,66 @@ export default function ListsView({
                 <p>{t.allowlistEmpty}</p>
               </div>
             )}
+
+            {/* 推荐白名单：维护者在 GitHub 公开背书、随快照下发的一票豁免；只读，无本地操作 */}
+            <div className="recommend-list-head">
+              <button
+                type="button"
+                className="recommend-list-toggle"
+                aria-expanded={showRecommended}
+                onClick={() => setShowRecommended((value) => !value)}
+              >
+                <span className="account-meta">{t.recommendListTitle}</span>
+                <em className="account-meta">{recommendList.length}</em>
+              </button>
+            </div>
+            {showRecommended ? (
+              recommendList.length > 0 ? (
+                <ul className="recommend-card-list">
+                  {recommendList.map((entry, index) => (
+                    <li
+                      key={entry.handle}
+                      className="recommend-card"
+                      style={{ animationDelay: `${Math.min(index, 20) * 40}ms` }}
+                    >
+                      {entry.avatar_url ? (
+                        <img
+                          className="recommend-avatar"
+                          src={entry.avatar_url}
+                          alt=""
+                          loading="lazy"
+                          draggable={false}
+                          onError={(event) => {
+                            event.currentTarget.style.display = 'none';
+                            const letter =
+                              event.currentTarget.nextElementSibling as HTMLElement | null;
+                            if (letter) letter.style.display = '';
+                          }}
+                        />
+                      ) : null}
+                      <span
+                        className="recommend-avatar-fallback is-safe"
+                        aria-hidden="true"
+                        style={entry.avatar_url ? { display: 'none' } : undefined}
+                      >
+                        {(entry.name || entry.handle).slice(0, 1).toUpperCase()}
+                      </span>
+                      <div className="recommend-info">
+                        <span className="recommend-name" title={entry.name ? `@${entry.handle}` : undefined}>
+                          {entry.name || `@${entry.handle}`}
+                        </span>
+                        {entry.name ? <span className="recommend-handle">@{entry.handle}</span> : null}
+                        <span className="recommend-note" title={entry.note}>
+                          {entry.note}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="account-meta">{t.recommendListEmpty}</p>
+              )
+            ) : null}
           </>
         ) : (
           <>

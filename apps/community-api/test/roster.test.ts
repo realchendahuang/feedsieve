@@ -61,7 +61,7 @@ describe('GET /v1/roster/latest（官网名单公示）', () => {
     expect(await res.json()).toEqual({ error: 'no_snapshot' });
   });
 
-  it('黑名单、维护者白名单与社区抢救（verified）全部进入公示面', async () => {
+  it('黑名单、推荐白名单与社区抢救（verified）全部进入公示面', async () => {
     // 社区黑名单条目：净票达标（3 票），外加一条证据帖与一个外链域名
     for (let i = 1; i <= 3; i++) await report(`roster-000${i}-4000-8000-aaaaaaaaaaaa`, 'spam_user');
     await report('roster-0004-4000-8000-aaaaaaaaaaaa', 'spam_user', {
@@ -75,9 +75,9 @@ describe('GET /v1/roster/latest（官网名单公示）', () => {
     // 社区抢救条目（verified）：先有一次误标票建行，再凑抢救净票 >= 3
     await report('roster-1000-4000-8000-bbbbbbbbbbbb', 'rescued_user');
     for (let i = 1; i <= 4; i++) await rescue(`roster-100${i}-4000-8000-bbbbbbbbbbbb`, 'rescued_user');
-    // 维护者白名单（博主宣言）
+    // 推荐白名单（博主宣言）
     await env.DB.prepare(MAINTAINER_WHITELIST_UPSERT_SQL)
-      .bind('good_user', null, '本人宣言：不刷屏不引流', Math.floor(Date.now() / 1000))
+      .bind('good_user', null, null, null, '本人宣言：不刷屏不引流', Math.floor(Date.now() / 1000))
       .run();
 
     await generateSnapshot(env, 0, { bypassDailyOnce: true });

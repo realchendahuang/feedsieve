@@ -597,7 +597,7 @@ describe('parseSnapshotBody: verified（社区白名单）', () => {
   });
 });
 
-describe('parseSnapshotBody: whitelist（公开白名单）', () => {
+describe('parseSnapshotBody: whitelist（推荐白名单）', () => {
   function bodyWithWhitelist(whitelist: unknown, entries: unknown[] = []): string {
     return JSON.stringify({
       schema_version: 2,
@@ -611,6 +611,8 @@ describe('parseSnapshotBody: whitelist（公开白名单）', () => {
   const validEntry = {
     handle: 'vouched_user',
     x_user_id: '1234567890',
+    name: null,
+    avatar_url: null,
     note: '误标申诉已核实：知名反诈骗博主',
     added_at: '2026-09-08T00:00:00Z',
   };

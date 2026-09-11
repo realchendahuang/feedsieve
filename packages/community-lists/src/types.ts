@@ -70,10 +70,10 @@ export interface SnapshotBody {
    */
   verified?: VerifiedEntry[];
   /**
-   * 公开白名单（whitelist，可选）：维护者在 GitHub 维护 whitelist.yaml，
+   * 推荐白名单（whitelist，可选）：维护者在 GitHub 维护 whitelist.yaml，
    * 发布脚本同步进服务端后随快照下发。一票否决，优先级最高——
    * 任何检测来源（社区名单 / 指纹 / 域名 / 词库）都不得标注或拉黑。
-   * 与 verified 独立成段：verified 是社区抢救票合意，whitelist 是维护者公开背书。
+   * 与 verified 独立成段：verified 是社区抢救票合意，whitelist 是维护者公开背书（推荐白名单）。
    * 旧版客户端忽略此字段（手写校验不拒绝未知顶层字段）。
    */
   whitelist?: WhitelistEntry[];
@@ -109,13 +109,17 @@ export interface VerifiedEntry {
 }
 
 /**
- * 公开白名单条目（whitelist）：维护者公开背书的「正常账号」。
+ * 推荐白名单条目（whitelist）：维护者公开背书的「正常账号」。
  * 不带票数语义（不是指控对象也不是合意对象），带入册说明（note）用于公开问责。
  */
 export interface WhitelistEntry {
   handle: string;
   x_user_id: string | null;
-  /** 入册说明（公开：为什么这个账号值得豁免） */
+  /** 展示昵称（公开；选填） */
+  name: string | null;
+  /** X 公开头像 URL（pbs.twimg.com；选填，卡片展示用） */
+  avatar_url: string | null;
+  /** 入册说明（公开：为什么这个账号值得豁免 / 博主简介） */
   note: string;
   /** 入册时间（ISO） */
   added_at: string;

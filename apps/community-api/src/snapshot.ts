@@ -387,13 +387,15 @@ export async function generateSnapshot(
     updated_at: new Date(row.updated_at * 1000).toISOString(),
   }));
 
-  // 公开白名单（whitelist）：维护者在 GitHub 维护 whitelist.yaml，发布脚本同步进
+  // 推荐白名单（whitelist）：维护者在 GitHub 维护 whitelist.yaml，发布脚本同步进
   // maintainer_whitelist 表。与 verified 独立成段——verified 是社区抢救票合意，
   // whitelist 是维护者公开背书；两者在客户端都一票否决（任何检测来源不得标注）。
   const maintainedWhitelist = await listMaintainerWhitelist(env);
   const whitelist: WhitelistEntry[] = maintainedWhitelist.map((row) => ({
     handle: row.handle,
     x_user_id: row.x_user_id,
+    name: row.name,
+    avatar_url: row.avatar_url,
     note: row.note,
     added_at: new Date(row.created_at * 1000).toISOString(),
   }));

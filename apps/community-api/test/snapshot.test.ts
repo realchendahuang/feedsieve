@@ -306,7 +306,7 @@ describe('snapshot pipeline', () => {
     expect(body.verified?.map((entry) => entry.handle)).toContain('rescue_user');
   });
 
-  it('whitelist（公开白名单）：维护者条目进独立段，命中账号从黑名单 entries 让位', async () => {
+  it('whitelist（推荐白名单）：维护者条目进独立段，命中账号从黑名单 entries 让位', async () => {
     const installs = [
       'vvvvvvvv-3001-4001-8000-vvvvvvvvvvvv',
       'vvvvvvvv-3002-4002-8000-vvvvvvvvvvvv',
@@ -315,7 +315,7 @@ describe('snapshot pipeline', () => {
     // 同账号虽有 3 个黑票（单独看会进黑名单），白名单一票否决 -> 进 whitelist 段、不进 entries
     for (const id of installs) await report(id, 'vouched_user');
     await env.DB.prepare(MAINTAINER_WHITELIST_UPSERT_SQL)
-      .bind('vouched_user', null, '误标申诉已核实：知名反诈骗博主', Date.now())
+      .bind('vouched_user', null, null, null, '误标申诉已核实：知名反诈骗博主', Date.now())
       .run();
 
     await generateSnapshot(env, 0, { bypassDailyOnce: true });
@@ -348,7 +348,7 @@ describe('snapshot pipeline', () => {
   it('whitelist 变化会 mint 新版本而不是复用旧 body', async () => {
     const first = (await generateSnapshot(env, 0, { bypassDailyOnce: true })).manifest as unknown as Manifest;
     await env.DB.prepare(MAINTAINER_WHITELIST_UPSERT_SQL)
-      .bind('second_vouch', '1234567890', '第二个公开白名单账号', Date.now())
+      .bind('second_vouch', '1234567890', null, null, '第二个推荐白名单账号', Date.now())
       .run();
 
     const second = (await generateSnapshot(env, 0, { bypassDailyOnce: true })).manifest as unknown as Manifest;

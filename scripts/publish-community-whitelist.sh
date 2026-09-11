@@ -41,9 +41,9 @@ HANDLE_RE = re.compile(r'^[A-Za-z0-9_]{1,15}$')
 USER_ID_RE = re.compile(r'^\d{1,20}$')
 
 lines = open(source_file, encoding='utf-8').read().splitlines()
-entries = []            # 解析出的条目 [{handle, note, x_user_id, line}]
+entries = []            # 解析出的条目 [{handle, note, name, avatar_url, x_user_id, line}]
 cur = None              # 正在构建的条目
-expect = None           # 当前条目下一个待吸收字段：'note' -> 'x_user_id' -> None
+expect = None           # 当前条目下一个待吸收字段：'note' -> 'name' -> 'avatar_url' -> 'x_user_id' -> None
 in_entries = False
 errors = []
 
@@ -68,23 +68,27 @@ for lineno, raw in enumerate(lines, start=1):
         cur = {
             'handle': stripped[len('- handle:'):].strip().strip('"\'').lstrip('@'),
             'note': '',
+            'name': None,
+            'avatar_url': None,
             'x_user_id': None,
             'line': lineno,
         }
         entries.append(cur)
-        expect = 'note'
+        expect = 'name'
         continue
     if cur is not None and expect and stripped.startswith(f'{expect}:'):
         value = stripped[len(f'{expect}:'):].strip().strip('"\'')
         if expect == 'note':
             cur['note'] = value
         elif value:
-            cur['x_user_id'] = value
-        # 字段顺序固定 note -> x_user_id；x_user_id 吸收完后不再接收条目内字段
-        expect = None if expect == 'x_user_id' else 'x_user_id'
+            cur[expect] = value
+        # 字段顺序固定 handle -> name -> avatar_url -> note -> x_user_id；吸收完后不再接收条目内字段
+        order = ['name', 'avatar_url', 'note', 'x_user_id']
+        idx = order.index(expect)
+        expect = order[idx + 1] if idx + 1 < len(order) else None
         continue
     if cur is not None and not cur['note']:
-        fail(cur['line'], f'条目 {cur["handle"]!r} 缺少 note（字段顺序: - handle: / note: / x_user_id:）')
+        fail(cur['line'], f'条目 {cur["handle"]!r} 缺少 note（字段顺序: - handle: / name: / avatar_url: / note: / x_user_id:）')
         cur = None
         expect = None
     fail(lineno, f'期望新的 "- handle:" 条目，实际 {stripped!r}')
@@ -103,6 +107,10 @@ for entry in entries:
         fail(entry['line'], f'note 需 4-240 字（当前 {len(entry["note"])}）')
     if entry['x_user_id'] is not None and not USER_ID_RE.match(entry['x_user_id']):
         fail(entry['line'], f'x_user_id 非法: {entry["x_user_id"]!r}')
+    if entry['name'] is not None and not 1 <= len(entry['name']) <= 40:
+        fail(entry['line'], f'name 需 1-40 字: {entry["name"]!r}')
+    if entry['avatar_url'] is not None and not entry['avatar_url'].startswith('https://pbs.twimg.com/profile_images/'):
+        fail(entry['line'], f'avatar_url 必须是 pbs.twimg.com 公开头像: {entry["avatar_url"]!r}')
 
 if errors:
     for error in errors:
@@ -131,12 +139,19 @@ out = [
 for entry in entries:
     handle = entry['handle'].lower()
     note = entry['note'].replace("'", "''")
+    name = (entry['name'] or '').replace("'", "''")
+    avatar_url = (entry['avatar_url'] or '').replace("'", "''")
     x_user_id = entry['x_user_id'] or ''
+    name_sql = 'NULL' if not name else "'" + name + "'"
+    avatar_sql = 'NULL' if not avatar_url else "'" + avatar_url + "'"
     out.append(
-        f"INSERT INTO maintainer_whitelist (handle, x_user_id, note, active, created_at, updated_at) "
-        f"VALUES ('{handle}', {'NULL' if not x_user_id else f"'{x_user_id}'"}, '{note}', 1, {now}, {now}) "
+        f"INSERT INTO maintainer_whitelist (handle, x_user_id, name, avatar_url, note, active, created_at, updated_at) "
+        f"VALUES ('{handle}', {'NULL' if not x_user_id else f"'{x_user_id}'"}, "
+        f"{name_sql}, {avatar_sql}, '{note}', 1, {now}, {now}) "
         f"ON CONFLICT(handle) DO UPDATE SET "
         f"x_user_id = COALESCE(excluded.x_user_id, maintainer_whitelist.x_user_id), "
+        f"name = COALESCE(excluded.name, maintainer_whitelist.name), "
+        f"avatar_url = COALESCE(excluded.avatar_url, maintainer_whitelist.avatar_url), "
         f"note = excluded.note, active = 1, updated_at = excluded.updated_at;",
     )
     out.append(

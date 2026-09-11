@@ -864,7 +864,7 @@ describe('popup App 渲染冒烟', () => {
     expect(rootEl.textContent).not.toContain('知名科普博主');
 
     await act(async () => toggle?.click());
-    const reasonLine = rootEl.querySelector<HTMLElement>('.recommend-list-head + .manage-list .account-reason');
+    const reasonLine = rootEl.querySelector<HTMLElement>('.recommend-list-head + .recommend-card-list .recommend-note');
     expect(reasonLine?.textContent).toBe('知名科普博主，多次被模板误标，复核为正常账号');
     expect(reasonLine?.getAttribute('title')).toBe('知名科普博主，多次被模板误标，复核为正常账号');
   });

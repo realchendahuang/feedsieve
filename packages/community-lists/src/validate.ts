@@ -227,7 +227,7 @@ function parseVerifiedList(raw: unknown): VerifiedEntry[] | null {
 }
 
 /**
- * 公开白名单（whitelist）：维护者公开背书的账号。豁免 = 撤销检测，
+ * 推荐白名单（whitelist）：维护者公开背书的账号。豁免 = 撤销检测，
  * 防呆口径与 verified 一致——畸形条目整份拒绝（保持 last-known-good）。
  */
 function validateWhitelistEntry(item: unknown): WhitelistEntry | null {
@@ -252,9 +252,26 @@ function validateWhitelistEntry(item: unknown): WhitelistEntry | null {
   ) {
     return null;
   }
+  if (
+    w.name !== null &&
+    w.name !== undefined &&
+    (typeof w.name !== 'string' || w.name.length === 0 || w.name.length > 40)
+  ) {
+    return null;
+  }
+  if (
+    w.avatar_url !== null &&
+    w.avatar_url !== undefined &&
+    (typeof w.avatar_url !== 'string' ||
+      !w.avatar_url.startsWith('https://pbs.twimg.com/profile_images/'))
+  ) {
+    return null;
+  }
   return {
     handle: (w.handle as string).toLowerCase(),
     x_user_id: typeof w.x_user_id === 'string' ? w.x_user_id : null,
+    name: typeof w.name === 'string' ? w.name : null,
+    avatar_url: typeof w.avatar_url === 'string' ? w.avatar_url : null,
     note: (w.note as string).trim(),
     added_at: w.added_at as string,
   };
@@ -335,7 +352,7 @@ export function parseSnapshotBody(text: string): ParseResult<SnapshotBody> {
     }
   }
 
-  // 公开白名单（可选字段，kill_switch 先例）：畸形整份拒绝保持 last-known-good。
+  // 推荐白名单（可选字段，kill_switch 先例）：畸形整份拒绝保持 last-known-good。
   // handle 不得与黑名单 entries 重复（服务端已保证，此处为防御性兜底）。
   const whitelist = parseWhitelistList(s.whitelist);
   if (s.whitelist !== undefined && whitelist === null) {
