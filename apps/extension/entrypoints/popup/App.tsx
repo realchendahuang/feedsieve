@@ -182,6 +182,13 @@ export default function App() {
     void sendToXPage(PAGE_MARKED_MESSAGE)
       .then((result) => setPageMarked(asPageMarkedList(result)))
       .catch(() => setPageMarked([]));
+    // content script 在黄框集合变化时广播；popup 开着就自动跟进，刷新只剩兜底用途
+    const onPageMarkedUpdated = (message: unknown): void => {
+      if ((message as { type?: string } | null)?.type === 'feedsieve:page-marked-updated') {
+        void refreshPageMarked();
+      }
+    };
+    browser.runtime.onMessage.addListener(onPageMarkedUpdated);
     const unsubs = [
       subscribeUiLanguage(setLanguage),
       subscribeBlocked(setBlocked),
@@ -199,8 +206,11 @@ export default function App() {
           .catch(() => undefined);
       }),
     ];
-    return () => unsubs.forEach((unsub) => unsub());
-  }, [applyCommunitySnapshotState, sendToXPage]);
+    return () => {
+      browser.runtime.onMessage.removeListener(onPageMarkedUpdated);
+      unsubs.forEach((unsub) => unsub());
+    };
+  }, [applyCommunitySnapshotState, refreshPageMarked, sendToXPage]);
 
   useEffect(() => {
     document.documentElement.lang = language === 'zh' ? 'zh-CN' : 'en';

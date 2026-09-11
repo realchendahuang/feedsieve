@@ -297,20 +297,9 @@ export default function CleanView({
             </span>
             <p>{running ? t.processing : t.pageClean}</p>
             {!running ? (
-              <div className="clean-state-hint-group">
-                <button
-                  type="button"
-                  className="clean-state-action"
-                  disabled={refreshing}
-                  onClick={() => void handleRefresh()}
-                >
-                  <AppIcon name="refresh" size={12} className={refreshing ? 'is-spinning' : ''} />
-                  <span>{t.textRefresh}</span>
-                </button>
-                <span className="clean-state-hint" role="img" title={t.pageCleanHint}>
-                  !
-                </span>
-              </div>
+              <span className="clean-state-hint" role="img" title={t.pageCleanHint}>
+                !
+              </span>
             ) : null}
           </div>
         ) : (
@@ -472,15 +461,16 @@ export default function CleanView({
                     ? t.batchBlockSelected(pendingCount)
                     : `${t.blockPage} · ${pageCount}`}
             </button>
+            {/* 状态大按钮（与空状态绿色勾同尺寸）：有黄框 = 刷新，清爽 = 绿色勾，两态切换 */}
             <button
               type="button"
-              className={`square-action${refreshing ? ' is-spinning' : ''}`}
+              className={`status-action${pageCount === 0 ? ' state-clean' : ''}${refreshing ? ' is-spinning' : ''}`}
               aria-label={t.refreshPage}
               title={t.refreshPage}
               disabled={running || refreshing}
               onClick={() => void handleRefresh()}
             >
-              <AppIcon name="refresh" />
+              <AppIcon name={pageCount === 0 ? 'clean' : 'refresh'} size={22} />
             </button>
           </div>
         </div>

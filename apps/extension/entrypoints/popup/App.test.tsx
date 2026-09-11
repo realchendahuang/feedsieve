@@ -38,6 +38,7 @@ beforeEach(() => {
       sendMessage: tabSendMessage,
     },
     runtime: {
+      onMessage: { addListener: vi.fn(), removeListener: vi.fn() },
       sendMessage: runtimeSendMessage,
     },
   });
@@ -278,6 +279,7 @@ describe('popup App 渲染冒烟', () => {
           ]),
       },
       runtime: {
+        onMessage: { addListener: vi.fn(), removeListener: vi.fn() },
         sendMessage: vi.fn().mockResolvedValue({ status: 'up_to_date' }),
       },
     });
@@ -307,7 +309,7 @@ describe('popup App 渲染冒烟', () => {
         query: vi.fn().mockResolvedValue([{ id: 1, active: true, url: 'https://x.com/home' }]),
         sendMessage: tabSendMessage,
       },
-      runtime: { sendMessage: runtimeSendMessage },
+      runtime: { onMessage: { addListener: vi.fn(), removeListener: vi.fn() }, sendMessage: runtimeSendMessage },
     });
 
     const rootEl = renderApp();
@@ -363,7 +365,7 @@ describe('popup App 渲染冒烟', () => {
         ]),
         sendMessage: tabSendMessage,
       },
-      runtime: { sendMessage: runtimeSendMessage },
+      runtime: { onMessage: { addListener: vi.fn(), removeListener: vi.fn() }, sendMessage: runtimeSendMessage },
     });
 
     const rootEl = renderApp();
@@ -504,7 +506,7 @@ describe('popup App 渲染冒烟', () => {
         query: vi.fn().mockResolvedValue([{ id: 1, active: true, url: 'https://x.com/home' }]),
         sendMessage: tabSendMessage,
       },
-      runtime: { sendMessage: runtimeSendMessage },
+      runtime: { onMessage: { addListener: vi.fn(), removeListener: vi.fn() }, sendMessage: runtimeSendMessage },
     });
 
     const rootEl = renderApp();
@@ -540,7 +542,7 @@ describe('popup App 渲染冒烟', () => {
         query: vi.fn().mockResolvedValue([{ id: 1, active: true, url: 'https://x.com/home' }]),
         sendMessage: vi.fn().mockResolvedValue(caps),
       },
-      runtime: { sendMessage: runtimeSendMessage },
+      runtime: { onMessage: { addListener: vi.fn(), removeListener: vi.fn() }, sendMessage: runtimeSendMessage },
     });
 
     const rootEl = renderApp();
@@ -572,7 +574,7 @@ describe('popup App 渲染冒烟', () => {
           updatedAt: 0,
         }),
       },
-      runtime: { sendMessage: runtimeSendMessage },
+      runtime: { onMessage: { addListener: vi.fn(), removeListener: vi.fn() }, sendMessage: runtimeSendMessage },
     });
 
     const rootEl = renderApp();
@@ -611,7 +613,7 @@ describe('popup App 渲染冒烟', () => {
         query: vi.fn().mockResolvedValue([{ id: 1, active: true, url: 'https://x.com/home' }]),
         sendMessage: tabSendMessage,
       },
-      runtime: { sendMessage: runtimeSendMessage },
+      runtime: { onMessage: { addListener: vi.fn(), removeListener: vi.fn() }, sendMessage: runtimeSendMessage },
     });
 
     // 首屏：页面有 3 个黄框 → 按钮可用并带计数
@@ -687,7 +689,7 @@ describe('popup App 渲染冒烟', () => {
         query: vi.fn().mockResolvedValue([{ id: 1, active: true, url: 'https://x.com/home' }]),
         sendMessage: tabSendMessage,
       },
-      runtime: { sendMessage: runtimeSendMessage },
+      runtime: { onMessage: { addListener: vi.fn(), removeListener: vi.fn() }, sendMessage: runtimeSendMessage },
     });
 
     const rootEl = renderApp();
@@ -730,7 +732,7 @@ describe('popup App 渲染冒烟', () => {
         query: vi.fn().mockResolvedValue([{ id: 1, active: true, url: 'https://x.com/home' }]),
         sendMessage: tabSendMessage,
       },
-      runtime: { sendMessage: runtimeSendMessage },
+      runtime: { onMessage: { addListener: vi.fn(), removeListener: vi.fn() }, sendMessage: runtimeSendMessage },
     });
 
     const rootEl = renderApp();
@@ -786,7 +788,7 @@ describe('popup App 渲染冒烟', () => {
         query: vi.fn().mockResolvedValue([{ id: 1, active: true, url: 'https://x.com/search' }]),
         sendMessage: tabSendMessage,
       },
-      runtime: { sendMessage: runtimeSendMessage },
+      runtime: { onMessage: { addListener: vi.fn(), removeListener: vi.fn() }, sendMessage: runtimeSendMessage },
     });
 
     const rootEl = renderApp();
@@ -811,7 +813,7 @@ describe('popup App 渲染冒烟', () => {
         query: vi.fn().mockResolvedValue([{ id: 1, active: true, url: 'https://x.com/home' }]),
         sendMessage: tabSendMessage,
       },
-      runtime: { sendMessage: runtimeSendMessage },
+      runtime: { onMessage: { addListener: vi.fn(), removeListener: vi.fn() }, sendMessage: runtimeSendMessage },
     });
 
     tabSendMessage.mockImplementation(async (_tabId, msg) => {

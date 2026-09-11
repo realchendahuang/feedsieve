@@ -164,6 +164,19 @@ export default defineContentScript({
     const dirtyHandles = new Set<string>();
     /** 当前页面所有黄框账号（剔除已拉黑回显：它们已经在黑名单里） */
     const pageMarked = new Map<string, PageMarkedAccount>();
+    /** pageMarked 变化通知的防抖句柄：一次批扫描只发一条消息。 */
+    let notifyMarkedTimer: number | undefined;
+    /** 黄框集合变化后广播给扩展页；popup / 侧边栏开着时自动跟进，无需手动点刷新。 */
+    function notifyPageMarkedChanged(): void {
+      window.clearTimeout(notifyMarkedTimer);
+      notifyMarkedTimer = window.setTimeout(() => {
+        void browser.runtime
+          .sendMessage({ type: 'feedsieve:page-marked-updated', count: pageMarked.size })
+          .catch(() => {
+            // 扩展页没开着是常态，静默
+          });
+      }, 100);
+    }
     /** handle -> bio（XHR 桥提供，检测用；DOM 拿不到简介） */
     const bioCache = new Map<string, string>();
     /** 白名单缓存：一票否决，最高优先级 */
@@ -541,6 +554,7 @@ export default defineContentScript({
      */
     function resetPageDecorations(): void {
       pageMarked.clear();
+      notifyPageMarkedChanged();
       controller.reset();
       for (const cell of document.querySelectorAll(`[${MARK_ATTRIBUTE}]`)) {
         cell.removeAttribute(MARK_ATTRIBUTE);
@@ -574,6 +588,7 @@ export default defineContentScript({
         if (handlesWithPendingFeedback.has(match.handle)) continue;
         controller.dropSnapshot(match.article);
         pageMarked.delete(match.handle);
+        notifyPageMarkedChanged();
         articles.push(match.article);
         cells.add(match.cell);
       }
@@ -643,6 +658,7 @@ export default defineContentScript({
       if (blockedCache.has(handle)) {
         const cell = article.closest(tweetSelectors.timelineCell) ?? article;
         pageMarked.delete(handle);
+        notifyPageMarkedChanged();
         hideCellsSoon([cell], 0);
         return;
       }
@@ -835,6 +851,7 @@ export default defineContentScript({
           snippet: snippet?.trim() || undefined,
           displayName: displayName?.trim() || undefined,
         });
+        notifyPageMarkedChanged();
       }
       // 本地统计：每次新标注 +1（扫描快照保证每个 cell 只标一次）；
       // 已拉黑回显不是新发现，不计数
@@ -1095,6 +1112,7 @@ export default defineContentScript({
         if (outcome.ok) {
           button.textContent = '已拉黑 ✓';
           pageMarked.delete(handle);
+          notifyPageMarkedChanged();
           hideCellsSoon(collectCellsForHandle(handle));
         } else {
           // 如实反馈失败原因（auth_required / rate_limited / network_error…）
@@ -1225,6 +1243,7 @@ export default defineContentScript({
           // 队列侧页面副作用：移除黄框并隐藏该账号推文（对齐 X 原生拉黑行为）
           blockedCache.add(task.handle);
           pageMarked.delete(task.handle);
+          notifyPageMarkedChanged();
           hideCellsSoon(collectCellsForHandle(task.handle));
         },
       });

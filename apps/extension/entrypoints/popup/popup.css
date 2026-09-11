@@ -1260,28 +1260,6 @@ input:focus-visible + span {
   cursor: help;
 }
 
-.clean-state-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 2px;
-  padding: 3px 9px;
-  border-radius: 6px;
-  border: 1px dashed var(--fs-line-strong);
-  background: transparent;
-  color: var(--fs-muted);
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 120ms ease;
-}
-
-.clean-state-action:hover {
-  color: var(--fs-accent-strong);
-  border-color: var(--fs-accent);
-  background: var(--fs-accent-faint);
-}
-
 .clean-state-icon {
   width: 46px;
   height: 46px;
@@ -1340,7 +1318,7 @@ input:focus-visible + span {
 
 .primary-actions {
   display: grid;
-  grid-template-columns: 1fr 42px;
+  grid-template-columns: 1fr 46px;
   gap: 8px;
   margin-top: 12px;
 }
@@ -1395,7 +1373,50 @@ input:focus-visible + span {
 }
 
 .secondary-action:disabled,
+/* 底部状态大按钮：有黄框 = 刷新，页面清爽 = 绿色勾（与空状态图标同一视觉语言） */
+.status-action {
+  width: 46px;
+  height: 46px;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--fs-line-strong);
+  border-radius: 50%;
+  background: #ffffff;
+  color: var(--fs-ink-soft);
+  box-shadow: var(--fs-shadow-sm);
+  transition: all 140ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.status-action.state-clean {
+  border-color: #ffffff;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15), 0 4px 12px rgba(16, 185, 129, 0.22);
+}
+
+.status-action:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(245, 158, 11, 0.5);
+  background: #fffbeb;
+  color: #92400e;
+  box-shadow: 0 3px 8px rgba(245, 158, 11, 0.12);
+}
+
+.status-action.state-clean:hover:not(:disabled) {
+  border-color: #ffffff;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.2), 0 6px 16px rgba(16, 185, 129, 0.28);
+}
+
+.status-action:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
 .square-action:disabled,
+.status-action:disabled,
 .secondary-inline:disabled {
   cursor: not-allowed;
   opacity: 0.42;
@@ -1436,7 +1457,7 @@ input:focus-visible + span {
 }
 
 .square-action.is-spinning .app-icon,
-.clean-state-action:disabled .app-icon {
+.status-action.is-spinning .app-icon {
   animation: spin 900ms linear infinite;
 }
 
