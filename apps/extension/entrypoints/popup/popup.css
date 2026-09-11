@@ -2662,8 +2662,148 @@ input:focus-visible + span {
   white-space: nowrap;
 }
 
-/* 认领身份弹窗：fixed 相对弹窗壳（560×600）定位，不用 vw/vh */
-.hunter-modal-overlay {
+/* 「我的」页：个人英雄卡 + 二级设置 */
+.me-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.me-gear {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--fs-radius-sm);
+  background: none;
+  color: var(--fs-muted);
+  cursor: pointer;
+}
+
+.me-gear:hover {
+  background: var(--fs-accent-faint);
+  color: var(--fs-accent-strong);
+}
+
+.me-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.me-avatar {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.me-hero-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-top: 2px;
+}
+
+.me-name-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.me-name {
+  font-size: 15.5px;
+  font-weight: 750;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.me-bio {
+  color: var(--fs-ink-soft);
+  font-size: 12.5px;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.me-handle {
+  color: #1d9bf0;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.me-primary {
+  width: 100%;
+}
+
+.me-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.me-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 5px 10px;
+  border: 1px solid var(--fs-line);
+  border-radius: 999px;
+  background: var(--fs-canvas);
+  color: var(--fs-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.me-chip.ok {
+  border-color: rgba(21, 128, 61, 0.25);
+  background: var(--fs-success-soft);
+  color: var(--fs-success);
+}
+
+.me-chip .me-id-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+  color: inherit;
+}
+
+.me-chip[title]:hover {
+  border-color: var(--fs-line-strong);
+}
+
+.me-subhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px;
+}
+
+.me-back {
+  font-size: 13px;
+}
+
+/* 认领身份弹窗（保留旧结构）：fixed 相对弹窗壳（560×600）定位，不用 vw/vh */.hunter-modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(24, 24, 27, 0.45);

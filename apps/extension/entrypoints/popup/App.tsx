@@ -23,7 +23,7 @@ import {
 import CleanView from './views/CleanView';
 import ListsView from './views/ListsView';
 import KeywordsView from './views/KeywordsView';
-import SettingsView from './views/SettingsView';
+import MeView from './views/MeView';
 import HuntingView from './views/HuntingView';
 import {
   AppIcon,
@@ -340,7 +340,7 @@ export default function App() {
           <KeywordsView language={language} notify={notify} />
         ) : null}
         {view === 'settings' ? (
-          <SettingsView
+          <MeView
             language={language}
             notify={notify}
             community={community}
@@ -415,7 +415,7 @@ export default function App() {
           <span className="nav-icon-wrap">
             <AppIcon name="settings" />
           </span>
-          <span>{t.settings}</span>
+          <span>{t.settingsSub}</span>
         </button>
       </nav>
     </main>

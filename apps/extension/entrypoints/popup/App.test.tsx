@@ -174,7 +174,7 @@ describe('popup App 渲染冒烟', () => {
     expect(rootEl.textContent).toContain('清理');
     expect(rootEl.textContent).toContain('名单');
     expect(rootEl.textContent).toContain('关键词');
-    expect(rootEl.textContent).toContain('设置');
+    expect(rootEl.textContent).toContain('我的');
 
     await act(async () => buttonWithText(rootEl, '名单').click());
     expect(rootEl.textContent).toContain('社区');
@@ -201,7 +201,8 @@ describe('popup App 渲染冒烟', () => {
     await act(async () => adultTitle?.click());
     expect(rootEl.textContent).toContain('同城上门约炮');
 
-    await act(async () => buttonWithText(rootEl, '设置').click());
+    await act(async () => buttonWithText(rootEl, '我的').click());
+    await act(async () => (rootEl.querySelector('button[aria-label="设置"]') as HTMLButtonElement).click());
     expect(rootEl.textContent).toContain('页面标黄');
     await act(async () => buttonWithText(rootEl, 'EN').click());
     expect(rootEl.textContent).toContain('FeedSieve');
@@ -381,7 +382,8 @@ describe('popup App 渲染冒烟', () => {
   it('starts with community uploads enabled and exposes local-only as an opt-out', async () => {
     const rootEl = renderApp();
     await new Promise((resolve) => setTimeout(resolve, 150));
-    await act(async () => buttonWithText(rootEl, '设置').click());
+    await act(async () => buttonWithText(rootEl, '我的').click());
+    await act(async () => (rootEl.querySelector('button[aria-label="设置"]') as HTMLButtonElement).click());
     const row = [...rootEl.querySelectorAll<HTMLLabelElement>('label.setting-row')].find(
       (candidate) => candidate.textContent?.includes('仅本地运行'),
     );
@@ -400,7 +402,8 @@ describe('popup App 渲染冒烟', () => {
   it('previews a personal config before applying only local preference storage', async () => {
     const rootEl = renderApp();
     await new Promise((r) => setTimeout(r, 150));
-    await act(async () => buttonWithText(rootEl, '设置').click());
+    await act(async () => buttonWithText(rootEl, '我的').click());
+    await act(async () => (rootEl.querySelector('button[aria-label="设置"]') as HTMLButtonElement).click());
 
     expect(rootEl.textContent).toContain('备份与迁移');
     expect(rootEl.textContent).toContain('导出个人配置');
@@ -445,7 +448,8 @@ describe('popup App 渲染冒烟', () => {
   it('shows invalid-file feedback and can replace the scoped local configuration', async () => {
     const rootEl = renderApp();
     await new Promise((r) => setTimeout(r, 150));
-    await act(async () => buttonWithText(rootEl, '设置').click());
+    await act(async () => buttonWithText(rootEl, '我的').click());
+    await act(async () => (rootEl.querySelector('button[aria-label="设置"]') as HTMLButtonElement).click());
 
     const input = rootEl.querySelector<HTMLInputElement>('input[type="file"]');
     if (!input) throw new Error('personal config input not found');
@@ -474,7 +478,8 @@ describe('popup App 渲染冒烟', () => {
     get.mockResolvedValue({ uiLanguage: 'en' });
     const rootEl = renderApp();
     await new Promise((r) => setTimeout(r, 150));
-    await act(async () => buttonWithText(rootEl, 'Settings').click());
+    await act(async () => buttonWithText(rootEl, 'Me').click());
+    await act(async () => (rootEl.querySelector('button[aria-label="Settings"]') as HTMLButtonElement).click());
 
     expect(rootEl.textContent).toContain('Backup & migration');
     expect(rootEl.textContent).toContain('Export personal config');

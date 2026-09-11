@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { MARK_STRENGTHS, type MarkStrength } from '@feedsieve/community-lists';
-import { getInstallationId } from '../../../src/lib/community/contribute';
 import {
   getKeywordRuleSettings,
   replaceKeywordRuleSettings,
@@ -25,9 +24,7 @@ import {
   type PersonalConfigParseError,
 } from '../../../src/lib/settings/personal-config';
 import { setUiLanguage, UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
-import { fetchHunterProfile, type HunterProfileState } from '../../../src/lib/community/hunter';
 import { HelpIcon, STRENGTH_LABELS, STRENGTH_HINTS } from './shared';
-import HunterProfileModal from './HunterProfile';
 
 interface PersonalConfigPreviewState {
   merge: PersonalConfigImportResult;
@@ -57,7 +54,6 @@ export default function SettingsView({
   onSyncCommunity,
 }: SettingsViewProps) {
   const t = UI_COPY[language];
-  const [installId, setInstallId] = useState('');
   const [keywordRules, setKeywordRules] = useState<KeywordRuleSettings | null>(null);
   const [keywordCatalog, setKeywordCatalog] = useState<KeywordPackCatalog>(
     BUNDLED_KEYWORD_PACK_CATALOG,
@@ -68,14 +64,10 @@ export default function SettingsView({
   const [personalConfigMessage, setPersonalConfigMessage] = useState<string | null>(null);
   const [personalConfigError, setPersonalConfigError] = useState<string | null>(null);
   const [personalConfigBusy, setPersonalConfigBusy] = useState(false);
-  const [hunterProfile, setHunterProfile] = useState<HunterProfileState | null>(null);
-  const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   useEffect(() => {
-    void getInstallationId().then(setInstallId);
     void getKeywordRuleSettings().then(setKeywordRules);
     void getKeywordPackCatalog().then(setKeywordCatalog);
-    void fetchHunterProfile().then(setHunterProfile);
     const unsubs = [subscribeKeywordRules(setKeywordRules), subscribeKeywordPackCatalog(setKeywordCatalog)];
     return () => unsubs.forEach((unsub) => unsub());
   }, []);
@@ -91,16 +83,6 @@ export default function SettingsView({
     await onUpdateCommunity({ autoContribute: !localOnly });
     if (!localOnly) {
       await browser.runtime.sendMessage({ type: 'feedsieve:labels-sync' }).catch(() => undefined);
-    }
-  }
-
-  async function copyInstallationId(): Promise<void> {
-    try {
-      const id = await getInstallationId();
-      await navigator.clipboard.writeText(id);
-      notify(t.copiedId);
-    } catch {
-      notify(t.copyFailed);
     }
   }
 
@@ -316,23 +298,6 @@ export default function SettingsView({
               </span>
             </label>
 
-            <button
-              type="button"
-              className="setting-row"
-              onClick={() => setProfileModalOpen(true)}
-            >
-              <span className="setting-copy">
-                <strong>
-                  {t.hunterProfileLabel} <HelpIcon text={t.hunterClaimHelp} />
-                </strong>
-              </span>
-              <span className="install-id-value">
-                {hunterProfile?.email_verified
-                  ? hunterProfile.display_name || t.hunterSection
-                  : t.hunterNotClaimed}
-              </span>
-            </button>
-
             <div className="setting-row">
               <span className="setting-copy">
                 <strong>{t.manualSync}</strong>
@@ -423,17 +388,6 @@ export default function SettingsView({
             <span />
           </div>
         )}
-        <button
-          type="button"
-          className={`setting-row install-id-row${community ? '' : ' is-loading'}`}
-          title={installId}
-          onClick={() => void copyInstallationId()}
-        >
-          <span className="setting-copy">
-            <strong>{t.installIdLabel}</strong>
-          </span>
-          <span className="install-id-value">{installId ? installId : '…'}</span>
-        </button>
         <input
           ref={personalConfigInputRef}
           className="personal-config-file-input"
@@ -571,16 +525,6 @@ export default function SettingsView({
           </div>
         ) : null}
       </section>
-
-      <HunterProfileModal
-        language={language}
-        open={profileModalOpen}
-        notify={notify}
-        onClose={() => setProfileModalOpen(false)}
-        onChanged={() => {
-          void fetchHunterProfile().then(setHunterProfile);
-        }}
-      />
     </div>
   );
 }
