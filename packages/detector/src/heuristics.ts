@@ -8,6 +8,7 @@
  */
 
 import type { DetectInput } from './detect';
+import { detectorConfig } from './config';
 
 /** 单条启发式的命中结论。null 表示未命中。 */
 export interface HeuristicRule {
@@ -114,45 +115,11 @@ const WORD_SALAD_TOKEN_RE = /^[a-z]{2,12}$/;
 const WORD_SALAD_SYMBOL_RE = /^[\p{S}]{1,3}$/u;
 
 /**
- * 判定参数集中配置（计分制基座第一步：常量都在一处，便于下一轮整体搬进
- * 签名规则包做热更新——引擎（本文件的解释器代码）与证据（参数/语料）分离）。
+ * 判定参数全部取自 runtime 配置（packages/detector/src/config.ts）：
+ * 内置兜底在编译期不变，线上覆写随签名词库包下发后经 applyDetectorConfigOverride
+ * 原地热更（heuristics 只在规则执行时取值，无模块初始化顺序耦合）。
  */
-export const DETECTOR_CONFIG = {
-  /** 乱码批量号锚点：纯字母段 + 尾缀数字容忍许两征。 */
-  garbledHandle: {
-    /** 连续纯小写字母的最短段长（真人姓名上不设限或加数字尾缀都达不到）。 */
-    minLetterRun: 12,
-    /** 段尾允许的数字位数（ohbfwzyzopkkt2 型批次变体的最小修正面）。 */
-    trailingDigits: 2,
-    rareLetterCount: 2,
-    maxConsonantRun: 4,
-  },
-  /** 数字形态批量号锚点的子信号权重（求和制，阈下不成立）。 */
-  digitAnchorWeights: {
-    digitCluster5: 2,
-    alternation: 3,
-    digitRatio: 1,
-    minLength12: 1,
-    noVowelLetters: 2,
-    threshold: 3,
-  },
-  wordSalad: {
-    minTokens: 5,
-    maxTokens: 9,
-    /** 强证据：≥ strongMinWords 个英文词 + ≥1 个 emoji（经典单词沙拉）。 */
-    strongMinWords: 4,
-    /** 弱证据：只在组合层参与佐证，永不单独定案。 */
-    weakMinTokens: 4,
-    weakMinWords: 2,
-    weakMinSymbols: 2,
-    weakMaxTokens: 12,
-  },
-  combo: {
-    minNameEmoji: 2,
-  },
-} as const;
-
-const weakShapeConfig = DETECTOR_CONFIG.wordSalad;
+const weakShapeConfig = detectorConfig.wordSalad;
 /**
  * 黄推引流隐语佐证表。只收多字词与明确组合：
  * 单字「约」/「私」会误中「约稿」「私房菜」等正常昵称（2026-09-09 修正），
@@ -223,9 +190,12 @@ export function wordSaladShapeStrength(text: string): WordSaladStrength | null {
  */
 const WORD_SALAD_RARE_LETTER_RE = /[jqvxz]/g;
 const WORD_SALAD_VOWEL_RE = /[aeiou]/;
-const WORD_SALAD_DIGIT_SUFFIX_RE = new RegExp(
-  `^[a-z]{${DETECTOR_CONFIG.garbledHandle.minLetterRun},}\\d{0,${DETECTOR_CONFIG.garbledHandle.trailingDigits}}$`,
-);
+/** 尾缀形态按 live config 动态取值（参数可热更）：每次调用重建，量级可忽略。 */
+function digitSuffixPattern(): RegExp {
+  return new RegExp(
+    `^[a-z]{${detectorConfig.garbledHandle.minLetterRun},}\\d{0,${detectorConfig.garbledHandle.trailingDigits}}$`,
+  );
+}
 
 function maxConsonantRun(handle: string): number {
   let max = 0;
@@ -243,12 +213,12 @@ function maxConsonantRun(handle: string): number {
 
 function isGarbledBatchHandle(handle: string | undefined): boolean {
   const normalized = handle?.trim().replace(/^@+/, '').toLowerCase() ?? '';
-  if (!WORD_SALAD_DIGIT_SUFFIX_RE.test(normalized)) {
+  if (!digitSuffixPattern().test(normalized)) {
     return false;
   }
   const rare = normalized.match(WORD_SALAD_RARE_LETTER_RE)?.length ?? 0;
-  return rare >= DETECTOR_CONFIG.garbledHandle.rareLetterCount &&
-    maxConsonantRun(normalized) >= DETECTOR_CONFIG.garbledHandle.maxConsonantRun;
+  return rare >= detectorConfig.garbledHandle.rareLetterCount &&
+    maxConsonantRun(normalized) >= detectorConfig.garbledHandle.maxConsonantRun;
 }
 
 const wordSalad: HeuristicRule = {
@@ -383,7 +353,7 @@ export function isDigitPatternBatchHandle(handle: string | undefined): boolean {
     return false;
   }
   let suspicion = 0;
-  const w = DETECTOR_CONFIG.digitAnchorWeights;
+  const w = detectorConfig.digitAnchorWeights;
   const clusters = normalized.match(DIGIT_CLUSTER_RE) ?? [];
   if (Math.max(...clusters.map((d) => d.length)) >= 5) {
     suspicion += w.digitCluster5;
@@ -437,7 +407,7 @@ const weakSignalCombo: HeuristicRule = {
       }
     }
     const nameEmoji = countEmoji(input.displayName?.trim() ?? '');
-    if (nameEmoji >= DETECTOR_CONFIG.combo.minNameEmoji) {
+    if (nameEmoji >= detectorConfig.combo.minNameEmoji) {
       evidence.push(`装饰昵称（${nameEmoji} 个 emoji）`);
     }
     if (evidence.length === 0) {

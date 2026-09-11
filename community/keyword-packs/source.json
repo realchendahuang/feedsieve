@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "pack_version": "2026.09.11.4",
+  "pack_version": "2026.09.11.5",
   "generated_at": null,
   "packs": [
     {
@@ -2608,5 +2608,33 @@
         ]
       ]
     }
-  ]
+  ],
+  "detector_config": {
+    "garbledHandle": {
+      "minLetterRun": 12,
+      "trailingDigits": 2,
+      "rareLetterCount": 2,
+      "maxConsonantRun": 4
+    },
+    "digitAnchorWeights": {
+      "digitCluster5": 2,
+      "alternation": 3,
+      "digitRatio": 1,
+      "minLength12": 1,
+      "noVowelLetters": 2,
+      "threshold": 3
+    },
+    "wordSalad": {
+      "minTokens": 5,
+      "maxTokens": 9,
+      "strongMinWords": 4,
+      "weakMinTokens": 4,
+      "weakMinWords": 2,
+      "weakMinSymbols": 2,
+      "weakMaxTokens": 12
+    },
+    "combo": {
+      "minNameEmoji": 2
+    }
+  }
 }

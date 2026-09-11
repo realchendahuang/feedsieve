@@ -37,7 +37,7 @@ describe('远程关键词包契约', () => {
     expect(BUNDLED_KEYWORD_PACK_CATALOG.packs).toHaveLength(1);
     const [bundledPack] = BUNDLED_KEYWORD_PACK_CATALOG.packs;
     expect(bundledPack?.id).toBe('adult_gray_traffic');
-    expect(BUNDLED_KEYWORD_PACK_CATALOG.pack_version).toBe('2026.09.11.4');
+    expect(BUNDLED_KEYWORD_PACK_CATALOG.pack_version).toBe('2026.09.11.5');
     expect(
       BUNDLED_KEYWORD_PACK_CATALOG.packs.reduce((count, pack) => count + pack.rules.length, 0),
     ).toBe(632);
@@ -268,5 +268,31 @@ describe('关键字词库同步与发布者签名', () => {
       trustedKeys: key.trustedKeys,
     });
     expect(outcome).toEqual({ status: 'error', error: 'unknown_key' });
+  });
+});
+
+describe('detector_config 覆写契约', () => {
+  it('合法覆写并入 catalog；缺失时不携带（旧格式兼容）', () => {
+    const clean = parseKeywordPackCatalog(
+      JSON.parse(JSON.stringify({ ...BUNDLED_KEYWORD_PACK_CATALOG })),
+    );
+    expect(clean?.packs.length).toBe(1);
+    const withoutConfig = parseKeywordPackCatalog(
+      (() => {
+        const raw: Record<string, unknown> = JSON.parse(JSON.stringify(BUNDLED_KEYWORD_PACK_CATALOG));
+        delete raw.detector_config;
+        return raw;
+      })(),
+    );
+    expect(withoutConfig).not.toBeNull();
+    expect('detector_config' in withoutConfig!).toBe(false);
+  });
+
+  it('detector_config 非法（未知 key / 越界）时整包拒收', () => {
+    const base = JSON.parse(JSON.stringify(BUNDLED_KEYWORD_PACK_CATALOG)) as Record<string, unknown>;
+    base.detector_config = { combo: { unknownKey: 1 } };
+    expect(parseKeywordPackCatalog(base)).toBeNull();
+    base.detector_config = { wordSalad: { maxTokens: 999 } };
+    expect(parseKeywordPackCatalog(base)).toBeNull();
   });
 });

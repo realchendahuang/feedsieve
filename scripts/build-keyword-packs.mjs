@@ -182,12 +182,30 @@ function build(source) {
       rules,
     };
   });
+  const detectorConfig = buildDetectorConfig(source);
   return {
     schema_version: 1,
     pack_version: source.pack_version,
     generated_at: source.generated_at,
     packs,
+    ...(detectorConfig ? { detector_config: detectorConfig } : {}),
   };
+}
+
+/** 天级判定参数（乱码 handle / 词沙拉区间 / 组合门槛）随词库一起签名分发；可缺省。 */
+function buildDetectorConfig(source) {
+  if (source.detector_config === undefined) return null;
+  if (!source.detector_config || typeof source.detector_config !== 'object')
+    fail('detector_config');
+  for (const [section, values] of Object.entries(source.detector_config)) {
+    if (!values || typeof values !== 'object')
+      fail(`detector_config.${section}`);
+    for (const [key, value] of Object.entries(values)) {
+      if (typeof value !== 'number' || !Number.isInteger(value) || value < 0)
+        fail(`detector_config.${section}.${key} must be a non-negative integer`);
+    }
+  }
+  return source.detector_config;
 }
 
 const source = await hydrateRuleSources(JSON.parse(await readFile(sourcePath, 'utf8')));

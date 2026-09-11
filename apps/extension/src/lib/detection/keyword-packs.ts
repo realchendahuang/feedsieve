@@ -7,6 +7,10 @@ import {
   type ManifestSignature,
   type TrustedKey,
 } from '@feedsieve/community-lists';
+import {
+  applyDetectorConfigOverride,
+  validateDetectorConfigOverride,
+} from '@feedsieve/detector';
 import { API_BASE } from '../platform/api-base';
 
 export interface KeywordPackRule {
@@ -29,6 +33,8 @@ export interface KeywordPackCatalog {
   pack_version: string;
   generated_at: string | null;
   packs: KeywordPack[];
+  /** 天级判定参数（乱码 handle / 词沙拉区间 / 组合门槛），可选；随词库签名链下发。 */
+  detector_config?: Record<string, Record<string, number>>;
 }
 interface KeywordPackManifest {
   schema_version: 1;
@@ -155,19 +161,30 @@ export function parseKeywordPackCatalog(value: unknown): KeywordPackCatalog | nu
       rules,
     });
   }
-  return packs.length > 0
-    ? {
-        schema_version: 1,
-        pack_version: raw.pack_version,
-        generated_at: typeof raw.generated_at === 'string' ? raw.generated_at : null,
-        packs,
-      }
-    : null;
+  if (packs.length === 0) return null;
+  const base = {
+    schema_version: 1 as const,
+    pack_version: raw.pack_version,
+    generated_at: typeof raw.generated_at === 'string' ? raw.generated_at : null,
+    packs,
+  };
+  // config 段可选：出现即必须整体合法，否则整包拒收（宁可 builtin，也不半信）
+  if (raw.detector_config === undefined) return base;
+  if (validateDetectorConfigOverride(raw.detector_config)) {
+    return { ...base, detector_config: raw.detector_config as Record<string, Record<string, number>> };
+  }
+  return null;
+}
+
+/** 覆写 detector 运行时参数：config 段缺失/非法一律回退内置兜底。 */
+function syncDetectorOverride(catalog: KeywordPackCatalog | null): void {
+  void applyDetectorConfigOverride(catalog?.detector_config ?? null);
 }
 
 export const BUNDLED_KEYWORD_PACK_CATALOG = (() => {
   const parsed = parseKeywordPackCatalog(bundledCatalogJson);
   if (!parsed) throw new Error('invalid bundled keyword packs');
+  syncDetectorOverride(parsed);
   return parsed;
 })();
 function parseManifest(value: unknown): KeywordPackManifest | null {
@@ -240,11 +257,17 @@ function parseStored(value: unknown): StoredKeywordPackCatalog | null {
 export async function getKeywordPackCatalog(): Promise<KeywordPackCatalog> {
   void cleanupLegacyStorage();
   const stored = parseStored((await browser.storage.local.get(STORAGE_KEY))[STORAGE_KEY]);
-  if (!stored) return BUNDLED_KEYWORD_PACK_CATALOG;
+  if (!stored) {
+    syncDetectorOverride(BUNDLED_KEYWORD_PACK_CATALOG);
+    return BUNDLED_KEYWORD_PACK_CATALOG;
+  }
   try {
     const parsed = parseKeywordPackCatalog(JSON.parse(stored.body));
-    return parsed?.pack_version === stored.pack_version ? parsed : BUNDLED_KEYWORD_PACK_CATALOG;
+    if (parsed?.pack_version !== stored.pack_version) throw new Error('version mismatch');
+    syncDetectorOverride(parsed);
+    return parsed;
   } catch {
+    syncDetectorOverride(null);
     return BUNDLED_KEYWORD_PACK_CATALOG;
   }
 }
@@ -328,8 +351,9 @@ export async function syncKeywordPackCatalog(
       pack_version: catalog.pack_version,
       body,
       synced_at: Date.now(),
-    } satisfies StoredKeywordPackCatalog,
-  });
+      } satisfies StoredKeywordPackCatalog,
+    });
+  syncDetectorOverride(catalog);
   return { status: 'updated', version: catalog.pack_version };
 }
 export function subscribeKeywordPackCatalog(
