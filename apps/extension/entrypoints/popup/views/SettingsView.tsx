@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { MARK_STRENGTHS, type MarkStrength } from '@feedsieve/community-lists';
-import { getContributionStats, getInstallationId, type ContributionStats } from '../../../src/lib/community/contribute';
+import { getInstallationId } from '../../../src/lib/community/contribute';
 import {
   getKeywordRuleSettings,
   replaceKeywordRuleSettings,
@@ -55,7 +55,7 @@ export default function SettingsView({
   onSyncCommunity,
 }: SettingsViewProps) {
   const t = UI_COPY[language];
-  const [contribution, setContribution] = useState<ContributionStats | null>(null);
+  const [installId, setInstallId] = useState('');
   const [keywordRules, setKeywordRules] = useState<KeywordRuleSettings | null>(null);
   const [keywordCatalog, setKeywordCatalog] = useState<KeywordPackCatalog>(
     BUNDLED_KEYWORD_PACK_CATALOG,
@@ -68,7 +68,7 @@ export default function SettingsView({
   const [personalConfigBusy, setPersonalConfigBusy] = useState(false);
 
   useEffect(() => {
-    void getContributionStats().then(setContribution);
+    void getInstallationId().then(setInstallId);
     void getKeywordRuleSettings().then(setKeywordRules);
     void getKeywordPackCatalog().then(setKeywordCatalog);
     const unsubs = [subscribeKeywordRules(setKeywordRules), subscribeKeywordPackCatalog(setKeywordCatalog)];
@@ -86,7 +86,6 @@ export default function SettingsView({
     await onUpdateCommunity({ autoContribute: !localOnly });
     if (!localOnly) {
       await browser.runtime.sendMessage({ type: 'feedsieve:labels-sync' }).catch(() => undefined);
-      setContribution(await getContributionStats());
     }
   }
 
@@ -402,23 +401,17 @@ export default function SettingsView({
             <span />
           </div>
         )}
-        <div className="settings-meta-row">
-          {contribution && (contribution.reports > 0 || contribution.rescues > 0) ? (
-            <span className="contribution-chip">
-              {t.contribution(contribution.reports, contribution.rescues)}
-            </span>
-          ) : (
-            <span />
-          )}
-          <button
-            type="button"
-            className="text-action"
-            onClick={() => void copyInstallationId()}
-          >
-            {t.copyInstallationId}
-          </button>
-          <HelpIcon text={t.copyInstallationIdHint} />
-        </div>
+        <button
+          type="button"
+          className={`setting-row install-id-row${community ? '' : ' is-loading'}`}
+          title={installId}
+          onClick={() => void copyInstallationId()}
+        >
+          <span className="setting-copy">
+            <strong>{t.installIdLabel}</strong>
+          </span>
+          <span className="install-id-value">{installId ? installId : '…'}</span>
+        </button>
         <input
           ref={personalConfigInputRef}
           className="personal-config-file-input"

@@ -1075,8 +1075,7 @@ input:focus-visible + span {
   white-space: nowrap;
 }
 
-.category-chip,
-.contribution-chip {
+.category-chip {
   display: inline-flex;
   align-items: center;
   padding: 2px 7px;
@@ -1136,11 +1135,6 @@ input:focus-visible + span {
   border-color: rgba(234, 88, 12, 0.2);
 }
 
-.contribution-chip {
-  background: var(--fs-success-soft);
-  color: var(--fs-success);
-  border: 1px solid rgba(22, 163, 74, 0.2);
-}
 
 .account-reason,
 .account-meta {
@@ -2226,6 +2220,27 @@ input:focus-visible + span {
 .strength-control button.is-selected:first-child {
   background: var(--fs-accent-soft);
   color: #92400e;
+}
+
+/* 设置页安装 ID 行：等宽省略展示，点击整行复制 */
+.install-id-row {
+  min-height: 38px;
+  cursor: pointer;
+}
+
+.install-id-row .install-id-value {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fs-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.install-id-row:hover .install-id-value {
+  color: var(--fs-accent-strong);
 }
 
 .settings-meta-row {

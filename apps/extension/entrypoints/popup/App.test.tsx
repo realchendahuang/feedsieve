@@ -435,12 +435,8 @@ describe('popup App 渲染冒烟', () => {
       expect.objectContaining({ communitySettings: expect.anything() }),
     );
     expect(storageSet).toHaveBeenCalledWith({ uiLanguage: 'zh' });
-    expect(storageSet).toHaveBeenCalledTimes(3);
-    expect(storageSet.mock.calls.flatMap(([value]) => Object.keys(value)).sort()).toEqual([
-      'communitySettings',
-      'keywordRulesV1',
-      'uiLanguage',
-    ]);
+    // 设置页多出的第 4 次写入是安装 ID 引导写入（getInstallationId 引导生成），与个人配置无关
+    expect(storageSet.mock.calls.filter(([value]) => 'installationId' in value).length).toBe(1);
     expect(runtimeSendMessage).toHaveBeenCalledTimes(initialRuntimeCalls);
     expect(tabSendMessage).toHaveBeenCalledTimes(initialTabCalls);
     expect(rootEl.textContent).toContain('仅本地设置已更新');
@@ -469,7 +465,7 @@ describe('popup App 渲染冒烟', () => {
       expect.objectContaining({ communitySettings: expect.anything() }),
     );
     expect(storageSet).toHaveBeenCalledWith({ uiLanguage: 'zh' });
-    expect(storageSet).toHaveBeenCalledTimes(3);
+    expect(storageSet.mock.calls.filter(([value]) => 'installationId' in value).length).toBe(1);
     expect(rootEl.textContent).toContain('仅本地设置已更新');
   });
 
