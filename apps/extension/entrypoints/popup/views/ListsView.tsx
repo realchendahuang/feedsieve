@@ -465,16 +465,15 @@ export default function ListsView({
           </>
         ) : listView === 'blocked' ? (
           <>
+            {/* 头部结构与白名单统一：标题 → 输入行 → 分隔线 → 列表 */}
             <form
-              className="manual-block-form"
+              className="manual-block-form allow-add-form"
               onSubmit={(event) => {
                 event.preventDefault();
                 void runManualBlock();
               }}
             >
-              <label htmlFor="manual-spam-handle" className="sr-only">
-                {t.missedAccount}
-              </label>
+              <label htmlFor="manual-spam-handle">{t.missedAccount}</label>
               <div className="manual-block-row">
                 <input
                   id="manual-spam-handle"
