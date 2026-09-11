@@ -517,8 +517,11 @@ export function createApp() {
   });
   app.put('/api/agent/keywords/detector-config', async (c) => {
     const guard = c.get('agentIdentity');
-    const raw = (await c.req.json().catch(() => undefined)) as unknown;
-    const result = await writeAgentKeywordDetectorConfig(c.env, raw ?? null, `agent:${guard}`);
+    // 畸形 body 直接拒绝：静默等价清除会让一次手滑把参数打回内置
+    const result = await c.req.json().then(
+      (raw: unknown) => writeAgentKeywordDetectorConfig(c.env, raw ?? null, `agent:${guard}`),
+      () => ({ ok: false as const, error: 'invalid_body' }),
+    );
     return result.ok ? c.json(result) : c.json({ error: result.error }, 400);
   });
 
