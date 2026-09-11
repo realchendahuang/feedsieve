@@ -1,4 +1,5 @@
 import { installationHash } from './labels';
+import { hashInstallationId } from './lib/hash';
 
 /**
  * 关键词贡献：用户在关键词页显式把自己的自定义短语匿名提交给运营审阅。
@@ -8,8 +9,12 @@ import { installationHash } from './labels';
 
 const MAX_PHRASE_LENGTH = 80;
 const MAX_PHRASES_PER_REQUEST = 20;
+/** 网页匿名提交单次上限：页面上一次粘贴不能塞太多 */
+const MAX_WEB_PHRASES_PER_REQUEST = 10;
 /** 单安装每日提交上限：与自定义关键词 80 条上限对齐并留重试余量 */
 const MAX_PHRASES_PER_DAY = 40;
+/** 网页匿名（按 IP 哈希）每日上限：挡自动化脚本刷接口 */
+const MAX_WEB_PHRASES_PER_DAY = 5;
 
 export interface KeywordContributionResult {
   phrase: string;
@@ -21,8 +26,18 @@ export type ProcessKeywordContributionResult =
   | { ok: true; results: KeywordContributionResult[] }
   | { ok: false; httpStatus: 400 | 413 | 429; error: string };
 
+export interface ProcessKeywordContributionInput {
+  body: unknown;
+  /** 网页匿名提交者的 IP；扩展通道走 installation_id，网页通道必须有 IP。 */
+  ip: string | null;
+}
+
 function normPhrase(value: string): string {
-  return value.trim().normalize('NFKC').replace(/[\u200B-\u200D\uFEFF]/g, '').toLocaleLowerCase();
+  return value
+    .trim()
+    .normalize('NFKC')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .toLocaleLowerCase();
 }
 
 function validatedPhrase(raw: unknown): { display: string; norm: string } | { error: string } {
@@ -44,24 +59,38 @@ function nowSeconds(): number {
 
 export async function processKeywordContributions(
   env: Cloudflare.Env,
-  body: unknown,
+  { body, ip }: ProcessKeywordContributionInput,
 ): Promise<ProcessKeywordContributionResult> {
   if (typeof body !== 'object' || body === null) {
     return { ok: false, httpStatus: 400, error: 'invalid_json_body' };
   }
   const b = body as Record<string, unknown>;
-  const installationId = b.installation_id;
-  if (
-    typeof installationId !== 'string' ||
-    installationId.length < 8 ||
-    installationId.length > 128
-  ) {
-    return { ok: false, httpStatus: 400, error: 'invalid_installation_id' };
+  // 双通道：扩展带 installation_id（可信度较高、日额度宽）；网页匿名只认 IP（Salting hash），
+  // 每日额度收紧，防自动化脚本刷词库。
+  const isWebChannel = b.installation_id === undefined || b.installation_id === null;
+  const maxPhrasesPerRequest = isWebChannel ? MAX_WEB_PHRASES_PER_REQUEST : MAX_PHRASES_PER_REQUEST;
+  let submissionKey: string;
+  if (isWebChannel) {
+    if (typeof ip !== 'string' || ip.length === 0) {
+      return { ok: false, httpStatus: 400, error: 'ip_required_for_web_submission' };
+    }
+    // 与 reports 的 IP 哈希同盐同法：绝不存原始 IP。
+    submissionKey = `web-${await hashInstallationId(env.INSTALLATION_SALT, ip)}`;
+  } else {
+    const installationId = b.installation_id;
+    if (
+      typeof installationId !== 'string' ||
+      installationId.length < 8 ||
+      installationId.length > 128
+    ) {
+      return { ok: false, httpStatus: 400, error: 'invalid_installation_id' };
+    }
+    submissionKey = (await installationHash(env, installationId)).hash;
   }
   if (!Array.isArray(b.phrases) || b.phrases.length === 0) {
     return { ok: false, httpStatus: 400, error: 'phrases_must_be_non_empty_array' };
   }
-  if (b.phrases.length > MAX_PHRASES_PER_REQUEST) {
+  if (b.phrases.length > maxPhrasesPerRequest) {
     return { ok: false, httpStatus: 413, error: 'batch_too_large' };
   }
 
@@ -91,9 +120,9 @@ export async function processKeywordContributions(
     return { ok: true, results };
   }
 
-  const installHash = (await installationHash(env, installationId)).hash;
   const today = utcToday();
   const validNorms = valid.map((item) => item.norm);
+  const dailyLimit = isWebChannel ? MAX_WEB_PHRASES_PER_DAY : MAX_PHRASES_PER_DAY;
 
   // 客户端在网络超时后可能重试整个请求：与 rescues 一样，只有还没生效的提交
   // 才消耗每日额度；重复提交走主键幂等，不会把瞬时失败变成额度锁死。
@@ -104,7 +133,7 @@ export async function processKeywordContributions(
          WHERE installation_id = ?1
            AND norm_phrase IN (${validNorms.map((_, index) => `?${index + 2}`).join(', ')})`,
       )
-        .bind(installHash, ...validNorms)
+        .bind(submissionKey, ...validNorms)
         .all<{ norm_phrase: string }>()
     ).results.map((row) => row.norm_phrase),
   );
@@ -115,9 +144,9 @@ export async function processKeywordContributions(
        WHERE installation_id = ?1
          AND created_at > CAST(strftime('%s', ?2) AS INTEGER) - 86400`,
     )
-      .bind(installHash, today)
+      .bind(submissionKey, today)
       .first<{ used: number }>();
-    if ((used?.used ?? 0) + quotaUnits > MAX_PHRASES_PER_DAY) {
+    if ((used?.used ?? 0) + quotaUnits > dailyLimit) {
       return { ok: false, httpStatus: 429, error: 'rate_limited' };
     }
   }
@@ -130,7 +159,7 @@ export async function processKeywordContributions(
        ON CONFLICT(norm_phrase, installation_id) DO NOTHING`,
     ).bind(
       item.norm,
-      installHash,
+      submissionKey,
       item.phrase,
       typeof b.client_version === 'string' ? b.client_version.slice(0, 20) : null,
       nowSeconds(),
@@ -147,12 +176,12 @@ export async function processKeywordContributions(
   return { ok: true, results };
 }
 
-/** 运营审阅用：待审（new）列表。 */
+/** 运营审阅用：待审（new）列表，按归一化词聚合（同一词多个来源只占一行）。 */
 export interface KeywordContributionRow {
-  id: number;
   norm_phrase: string;
   display_phrase: string;
-  client_version: string | null;
+  /** 独立提交来源数（扩展安装 / 匿名 IP 计票不区分展示）。 */
+  reports: number;
   created_at: number;
 }
 
@@ -160,11 +189,47 @@ export async function listKeywordContributions(
   env: Cloudflare.Env,
 ): Promise<{ contributions: KeywordContributionRow[] }> {
   const rows = await env.DB.prepare(
-    `SELECT rowid AS id, norm_phrase, display_phrase, client_version, created_at
+    `SELECT norm_phrase, MIN(display_phrase) AS display_phrase, COUNT(*) AS reports,
+            MAX(created_at) AS last_created_at
      FROM keyword_contributions
      WHERE status = 'new'
-     ORDER BY created_at DESC
+     GROUP BY norm_phrase
+     ORDER BY last_created_at DESC
      LIMIT 200`,
-  ).all<KeywordContributionRow>();
-  return { contributions: rows.results };
+  ).all<{
+    norm_phrase: string;
+    display_phrase: string;
+    reports: number;
+    last_created_at: number;
+  }>();
+  return {
+    contributions: rows.results.map((row) => ({
+      norm_phrase: row.norm_phrase,
+      display_phrase: row.display_phrase,
+      reports: row.reports,
+      created_at: row.last_created_at,
+    })),
+  };
+}
+
+export type KeywordContributionDecision = 'admitted' | 'rejected';
+
+/**
+ * 运营审阅决定：按归一化词批量改状态。审阅只在后台进行，
+ * 'admitted' 表示已纳入官方词库，'rejected' 表示否决——都不改变快照与公共数据。
+ */
+export async function decideKeywordContributions(
+  env: Cloudflare.Env,
+  normPhrase: string,
+  decision: KeywordContributionDecision,
+  maintainerEmail: string,
+): Promise<{ changed: number }> {
+  const result = await env.DB.prepare(
+    `UPDATE keyword_contributions
+     SET status = ?1, decided_at = ?2, decided_by = ?3
+     WHERE norm_phrase = ?4 AND status = 'new'`,
+  )
+    .bind(decision, nowSeconds(), maintainerEmail, normPhrase)
+    .run();
+  return { changed: result.meta.changes ?? 0 };
 }

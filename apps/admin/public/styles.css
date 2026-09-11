@@ -15,8 +15,9 @@
 body {
   background: var(--bg);
   color: var(--fg);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
-    "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', sans-serif;
   line-height: 1.6;
   display: flex;
   flex-direction: column;
@@ -206,7 +207,7 @@ body.lists {
   --signal: #ffd60a;
   background: var(--paper);
   color: var(--ink);
-  font-family: "Helvetica Neue", "PingFang SC", "Noto Sans CJK SC", Arial, sans-serif;
+  font-family: 'Helvetica Neue', 'PingFang SC', 'Noto Sans CJK SC', Arial, sans-serif;
 }
 
 /* 胶囊浮动导航条 */
@@ -304,7 +305,10 @@ body.lists {
   cursor: pointer;
   white-space: nowrap;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    transform 0.15s;
 }
 
 .btn-primary:hover {
@@ -329,7 +333,10 @@ body.lists {
   font-size: 18px;
   line-height: 1;
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s, transform 0.15s;
+  transition:
+    border-color 0.15s,
+    color 0.15s,
+    transform 0.15s;
 }
 
 .icon-btn:hover {
@@ -361,7 +368,9 @@ body.lists {
   font-weight: 600;
   cursor: pointer;
   user-select: none;
-  transition: border-color 0.15s, color 0.15s;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
 }
 
 .disclaimer summary::-webkit-details-marker {
@@ -481,7 +490,7 @@ body.lists .hero {
 }
 
 .stat-card.spot::after {
-  content: "";
+  content: '';
   position: absolute;
   right: -24px;
   top: -24px;
@@ -547,7 +556,7 @@ body.lists .hero {
   color: var(--signal);
 }
 
-.panel-toolbar input[type="search"] {
+.panel-toolbar input[type='search'] {
   margin-left: auto;
   background: var(--soft);
   border: 1px solid var(--line);
@@ -560,7 +569,7 @@ body.lists .hero {
   transition: border-color 0.15s;
 }
 
-.panel-toolbar input[type="search"]:focus {
+.panel-toolbar input[type='search']:focus {
   outline: none;
   border-color: rgba(255, 214, 10, 0.4);
 }
@@ -662,6 +671,24 @@ a.handle:hover {
   padding: 40px 0;
 }
 
+/* 分页器 */
+.pager {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pager-label {
+  color: var(--fog);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.btn-ghost:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* 黑名单分页展开 */
 .more-row {
   display: flex;
@@ -679,7 +706,10 @@ a.handle:hover {
   font-weight: 600;
   padding: 9px 20px;
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s, transform 0.15s;
+  transition:
+    border-color 0.15s,
+    color 0.15s,
+    transform 0.15s;
 }
 
 .btn-ghost:hover {
@@ -716,9 +746,7 @@ a.handle:hover {
   align-items: center;
   gap: 12px;
   background: none;
-  border: none;
-  padding: 16px 18px;
-  cursor: pointer;
+  padding: 16px 18px 0;
   font-family: inherit;
   text-align: left;
 }
@@ -735,23 +763,33 @@ a.handle:hover {
   font-variant-numeric: tabular-nums;
 }
 
-.pack-arrow {
-  margin-left: auto;
-  color: var(--fog);
-  font-size: 12px;
-  transform: rotate(-90deg);
-}
-
-.pack-head.open .pack-arrow {
-  transform: rotate(0deg);
-}
-
-.pack-head.open .pack-arrow {
-  transform: rotate(0deg);
-}
-
 .pack-rules {
-  padding: 0 18px 16px;
+  padding: 10px 18px 16px;
+}
+
+/* 词库匿名贡献 */
+.kw-contribute {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 16px;
+  flex-wrap: wrap;
+}
+
+.kw-contribute input {
+  flex: 1 1 240px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--soft);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 14px;
+  padding: 10px 12px;
+}
+
+.kw-contribute .form-msg {
+  flex-basis: 100%;
+  margin: 0;
 }
 
 .pill-flow {
@@ -1041,7 +1079,9 @@ tr.detail-row td {
   gap: 2px;
   cursor: pointer;
   position: relative;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 }
 
 .kind-card:hover {
@@ -1068,8 +1108,8 @@ tr.detail-row td {
   font-size: 12.5px;
 }
 
-.apply-body input[type="text"],
-.apply-body input[type="email"],
+.apply-body input[type='text'],
+.apply-body input[type='email'],
 .apply-body textarea,
 .verify-row input {
   background: var(--soft);

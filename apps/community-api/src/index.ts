@@ -57,17 +57,16 @@ import {
 import { hunterPageHtml } from './hunter-page';
 import { guidePageHtml, homePageHtml, listsPageHtml } from './site-pages';
 import { LEADERBOARD, getLeaderboard, markLeaderboardDirty, settleDueSeasons } from './leaderboard';
-import {
-  bindEmail,
-  getProfile,
-  updateProfile,
-  verifyEmail,
-} from './player';
+import { bindEmail, getProfile, updateProfile, verifyEmail } from './player';
 import { MAINTAINER_CATEGORIES } from './maintainer-blocklist';
 import { processRetractionBatch } from './labels';
 import { POLICY, processReportBatch, publicPolicy } from './reports';
 import { processRescueBatch } from './rescues';
-import { listKeywordContributions, processKeywordContributions } from './keyword-contributions';
+import {
+  decideKeywordContributions,
+  listKeywordContributions,
+  processKeywordContributions,
+} from './keyword-contributions';
 import {
   buildKillSwitch,
   clearSnapshotDirty,
@@ -87,7 +86,11 @@ import {
  * 注意：默认值返回 false —— 未配置对应主机名时，对应域名一律不生效。
  * 值支持 CSV 多域名：域名迁移期把保底旧域与统一后的新域并列，旧客户端不断链。
  */
-function isConfiguredHost(request: Request, env: Cloudflare.Env, variable: 'ADMIN_HOST' | 'SITE_HOST'): boolean {
+function isConfiguredHost(
+  request: Request,
+  env: Cloudflare.Env,
+  variable: 'ADMIN_HOST' | 'SITE_HOST',
+): boolean {
   const configured = env[variable]?.trim().toLowerCase();
   if (!configured) return false;
   const hostname = new URL(request.url).hostname.toLowerCase();
@@ -109,10 +112,16 @@ function staticAssetRequest(request: Request): Request {
   return request;
 }
 
-type AdminContext = Context<{ Bindings: Cloudflare.Env; Variables: { maintainerEmail: string; agentIdentity: string } }>;
+type AdminContext = Context<{
+  Bindings: Cloudflare.Env;
+  Variables: { maintainerEmail: string; agentIdentity: string };
+}>;
 
 /** 词库工作区变更后立即重发公开词库：保存即生效，维护者无需再手动发布。 */
-async function republishKeywords(c: AdminContext, extra: Record<string, unknown> = {}): Promise<Response> {
+async function republishKeywords(
+  c: AdminContext,
+  extra: Record<string, unknown> = {},
+): Promise<Response> {
   try {
     const published = await publishAdminKeywords(c.env, c.get('maintainerEmail'));
     return c.json({ ...extra, version: published.version });
@@ -125,7 +134,10 @@ async function republishKeywords(c: AdminContext, extra: Record<string, unknown>
 }
 
 export function createApp() {
-  const app = new Hono<{ Bindings: Cloudflare.Env; Variables: { maintainerEmail: string; agentIdentity: string } }>();
+  const app = new Hono<{
+    Bindings: Cloudflare.Env;
+    Variables: { maintainerEmail: string; agentIdentity: string };
+  }>();
 
   // 扩展 content script 会跨域 POST，必须放行预检
   app.use('*', cors());
@@ -184,7 +196,10 @@ export function createApp() {
           return c.json({ error: 'cross_origin_admin_post' }, 403);
         }
       } else {
-        const contentType = (c.req.header('content-type') ?? '').split(';')[0]?.trim().toLowerCase();
+        const contentType = (c.req.header('content-type') ?? '')
+          .split(';')[0]
+          ?.trim()
+          .toLowerCase();
         if (contentType !== 'application/json') {
           return c.json({ error: 'json_content_type_required' }, 415);
         }
@@ -249,22 +264,42 @@ export function createApp() {
     const note = typeof body.note === 'string' ? body.note : null;
     const result = await decideApplication(c.env, id, decision, note, c.get('maintainerEmail'));
     if (!result.ok) return c.json({ error: result.error }, 400);
-    await recordAdminAudit(c.env, c.get('maintainerEmail'), 'application_decision', 'application', String(id), {
-      decision,
-      handle: typeof body.handle === 'string' ? body.handle : undefined,
-      kind: typeof body.kind === 'string' ? body.kind : undefined,
-    });
+    await recordAdminAudit(
+      c.env,
+      c.get('maintainerEmail'),
+      'application_decision',
+      'application',
+      String(id),
+      {
+        decision,
+        handle: typeof body.handle === 'string' ? body.handle : undefined,
+        kind: typeof body.kind === 'string' ? body.kind : undefined,
+      },
+    );
     return c.json({ changed: true });
   });
 
   app.post('/api/admin/accounts', async (c) => {
     const result = await saveAdminAccountDraft(c.env, await c.req.json().catch(() => undefined));
     if (!result.ok) return c.json({ error: result.error }, 400);
-    await recordAdminAudit(c.env, c.get('maintainerEmail'), `${result.action}_draft`, 'account', result.entry.handle);
+    await recordAdminAudit(
+      c.env,
+      c.get('maintainerEmail'),
+      `${result.action}_draft`,
+      'account',
+      result.entry.handle,
+    );
     // 保存即生效：草稿落库后立刻同步公开名单并生成快照，维护者无需再手动发布。
     try {
       const published = await publishAdminAccountDrafts(c.env, c.get('maintainerEmail'));
-      return c.json({ action: result.action, entry: result.entry, snapshot_version: published.snapshot_version }, 201);
+      return c.json(
+        {
+          action: result.action,
+          entry: result.entry,
+          snapshot_version: published.snapshot_version,
+        },
+        201,
+      );
     } catch (error) {
       return c.json({ error: error instanceof Error ? error.message : 'publish_failed' }, 500);
     }
@@ -273,7 +308,13 @@ export function createApp() {
     const result = await deactivateAdminAccountDraft(c.env, c.req.param('handle'));
     if (!result.ok) return c.json({ error: result.error }, 400);
     if (!result.changed) return c.json({ changed: false });
-    await recordAdminAudit(c.env, c.get('maintainerEmail'), 'remove_draft', 'account', c.req.param('handle'));
+    await recordAdminAudit(
+      c.env,
+      c.get('maintainerEmail'),
+      'remove_draft',
+      'account',
+      c.req.param('handle'),
+    );
     try {
       const published = await publishAdminAccountDrafts(c.env, c.get('maintainerEmail'));
       return c.json({ changed: true, snapshot_version: published.snapshot_version });
@@ -290,25 +331,67 @@ export function createApp() {
   });
 
   app.get('/api/admin/keywords', async (c) =>
-    c.json(await listAdminKeywords(c.env, {
-      q: c.req.query('q'),
-      packId: c.req.query('pack'),
-      limit: 1000,
-    })),
+    c.json(
+      await listAdminKeywords(c.env, {
+        q: c.req.query('q'),
+        packId: c.req.query('pack'),
+        limit: 1000,
+      }),
+    ),
   );
   // 用户主动贡献的关键词待审列表（0022 迁移）；审阅结果线下决定。
   app.get('/api/admin/keywords/contributions', async (c) =>
     c.json(await listKeywordContributions(c.env)),
   );
+  // 审阅决定：按归一化词批量 admitted / rejected，只改待审状态，不动公共数据。
+  app.post('/api/admin/keywords/contributions/decide', async (c) => {
+    const body = await c.req.json().catch(() => undefined);
+    if (typeof body !== 'object' || body === null) {
+      return c.json({ error: 'invalid_json_body' }, 400);
+    }
+    const b = body as Record<string, unknown>;
+    const normPhrase = b.norm_phrase;
+    const decision = b.decision;
+    if (typeof normPhrase !== 'string' || normPhrase.length === 0) {
+      return c.json({ error: 'invalid_norm_phrase' }, 400);
+    }
+    if (decision !== 'admitted' && decision !== 'rejected') {
+      return c.json({ error: 'invalid_decision' }, 400);
+    }
+    const result = await decideKeywordContributions(
+      c.env,
+      normPhrase,
+      decision,
+      c.get('maintainerEmail') ?? '',
+    );
+    await recordAdminAudit(
+      c.env,
+      c.get('maintainerEmail'),
+      decision,
+      'keyword_contribution',
+      normPhrase,
+      {
+        changed: result.changed,
+      },
+    );
+    return c.json(result);
+  });
   // 从 R2 公开词库导入维护者工作区是显式动作，不再挂在列表读取上。
   app.post('/api/admin/keywords/import', async (c) => {
     try {
       const result = await importKeywordCatalog(c.env);
       if (result.imported) {
-        await recordAdminAudit(c.env, c.get('maintainerEmail'), 'import', 'keyword_catalog', String(result.rules), {
-          packs: result.packs,
-          rules: result.rules,
-        });
+        await recordAdminAudit(
+          c.env,
+          c.get('maintainerEmail'),
+          'import',
+          'keyword_catalog',
+          String(result.rules),
+          {
+            packs: result.packs,
+            rules: result.rules,
+          },
+        );
       }
       return c.json(result);
     } catch (error) {
@@ -316,22 +399,40 @@ export function createApp() {
     }
   });
   app.post('/api/admin/keywords/packs', async (c) => {
-    const item = await saveAdminKeywordPack(c.env, await c.req.json().catch(() => undefined), c.get('maintainerEmail'));
+    const item = await saveAdminKeywordPack(
+      c.env,
+      await c.req.json().catch(() => undefined),
+      c.get('maintainerEmail'),
+    );
     if (!item) return c.json({ error: 'invalid_pack' }, 400);
     return republishKeywords(c, { id: item.id });
   });
   app.post('/api/admin/keywords/rules', async (c) => {
-    const item = await saveAdminKeywordRule(c.env, await c.req.json().catch(() => undefined), c.get('maintainerEmail'));
+    const item = await saveAdminKeywordRule(
+      c.env,
+      await c.req.json().catch(() => undefined),
+      c.get('maintainerEmail'),
+    );
     if (!item) return c.json({ error: 'invalid_rule' }, 400);
     return republishKeywords(c, { id: item.id });
   });
   app.delete('/api/admin/keywords/packs/:id', async (c) => {
-    const changed = await disableAdminKeyword(c.env, 'admin_keyword_packs', c.req.param('id'), c.get('maintainerEmail'));
+    const changed = await disableAdminKeyword(
+      c.env,
+      'admin_keyword_packs',
+      c.req.param('id'),
+      c.get('maintainerEmail'),
+    );
     if (!changed) return c.json({ changed: false });
     return republishKeywords(c, { changed });
   });
   app.delete('/api/admin/keywords/rules/:id', async (c) => {
-    const changed = await disableAdminKeyword(c.env, 'admin_keyword_rules', c.req.param('id'), c.get('maintainerEmail'));
+    const changed = await disableAdminKeyword(
+      c.env,
+      'admin_keyword_rules',
+      c.req.param('id'),
+      c.get('maintainerEmail'),
+    );
     if (!changed) return c.json({ changed: false });
     return republishKeywords(c, { changed });
   });
@@ -351,8 +452,7 @@ export function createApp() {
   });
   app.post('/api/admin/keywords/detector-config', async (c) => {
     const body = (await c.req.json().catch(() => undefined)) as
-      | { detector_config?: unknown }
-      | undefined;
+      { detector_config?: unknown } | undefined;
     const value = body?.detector_config;
     if (
       !body ||
@@ -468,11 +568,7 @@ export function createApp() {
 
   app.delete('/api/agent/entries/:handle', async (c) => {
     const guard = c.get('agentIdentity');
-    const result = await removeAgentMaintainerEntry(
-      c.env,
-      `agent:${guard}`,
-      c.req.param('handle'),
-    );
+    const result = await removeAgentMaintainerEntry(c.env, `agent:${guard}`, c.req.param('handle'));
     return result.ok ? c.json(result) : c.json({ error: result.error }, 400);
   });
 
@@ -645,14 +741,20 @@ export function createApp() {
     }
     await markSnapshotDirty(c.env);
     await markLeaderboardDirty(c.env);
-    return c.json({ results: result.results, snapshot_version: await getLatestSnapshotVersion(c.env) });
+    return c.json({
+      results: result.results,
+      snapshot_version: await getLatestSnapshotVersion(c.env),
+    });
   });
 
-  // 关键词贡献：用户在关键词页显式提交自定义短语给运营审阅入库。
-  // 短语是用户主动挑选的；不进快照，只出现在运营待审列表。
+  // 关键词贡献：扩展用户 / 官网访客显式提交短语给运营审阅入库。
+  // 短语主动挑选；不进快照，只出现在运营待审列表。
   app.post('/v1/keyword-contributions', async (c) => {
     const body = await c.req.json().catch(() => undefined);
-    const result = await processKeywordContributions(c.env, body);
+    const result = await processKeywordContributions(c.env, {
+      body,
+      ip: c.req.header('cf-connecting-ip') ?? null,
+    });
     if (!result.ok) {
       return c.json({ error: result.error }, result.httpStatus);
     }
@@ -667,7 +769,10 @@ export function createApp() {
     }
     await markSnapshotDirty(c.env);
     await markLeaderboardDirty(c.env);
-    return c.json({ results: result.results, snapshot_version: await getLatestSnapshotVersion(c.env) });
+    return c.json({
+      results: result.results,
+      snapshot_version: await getLatestSnapshotVersion(c.env),
+    });
   });
 
   // 公开政策：阈值不藏在后端黑箱里
@@ -689,7 +794,9 @@ export function createApp() {
       updated_at: data.computed_at,
       server_time: Math.floor(Date.now() / 1000),
       total: data.rows.length,
-      rows: data.rows.slice(0, LEADERBOARD.topSize).map((row, index) => trim({ ...row, rank: index + 1 })),
+      rows: data.rows
+        .slice(0, LEADERBOARD.topSize)
+        .map((row, index) => trim({ ...row, rank: index + 1 })),
       me: null,
       last_season: data.last_season ?? null,
     });
@@ -710,7 +817,10 @@ export function createApp() {
         b.installation_id.length >= 8 &&
         b.installation_id.length <= 128
       ) {
-        mePrefix = (await hashInstallationId(c.env.INSTALLATION_SALT, b.installation_id)).slice(0, 12);
+        mePrefix = (await hashInstallationId(c.env.INSTALLATION_SALT, b.installation_id)).slice(
+          0,
+          12,
+        );
       } else if (typeof b.me === 'string' && /^[0-9a-f]{12}$/.test(b.me)) {
         mePrefix = b.me;
       }
@@ -730,7 +840,9 @@ export function createApp() {
       server_time: Math.floor(Date.now() / 1000),
       /** 榜上总人数（缓存保存全量）；百分位 = 前端用 me.rank/total 换算 */
       total: data.rows.length,
-      rows: data.rows.slice(0, LEADERBOARD.topSize).map((row, index) => trim({ ...row, rank: index + 1 })),
+      rows: data.rows
+        .slice(0, LEADERBOARD.topSize)
+        .map((row, index) => trim({ ...row, rank: index + 1 })),
       me: me ? trim(me) : null,
       last_season: data.last_season ?? null,
     });

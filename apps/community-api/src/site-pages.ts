@@ -251,7 +251,11 @@ export function listsPageHtml(): string {
         <p class="empty" id="blacklist-empty" hidden>无匹配</p>
       </div>
       <div class="more-row">
-        <button class="btn-ghost" id="blacklist-more" type="button" hidden></button>
+        <div class="pager" id="blacklist-pager" hidden>
+          <button class="btn-ghost" id="blacklist-prev" type="button">上一页</button>
+          <span class="pager-label" id="blacklist-page"></span>
+          <button class="btn-ghost" id="blacklist-next" type="button">下一页</button>
+        </div>
       </div>
     </section>
 
@@ -275,6 +279,13 @@ export function listsPageHtml(): string {
           <tbody></tbody>
         </table>
         <p class="empty" id="verified-empty" hidden>暂无记录</p>
+        <div class="more-row">
+          <div class="pager" id="verified-pager" hidden>
+            <button class="btn-ghost" id="verified-prev" type="button">上一页</button>
+            <span class="pager-label" id="verified-page"></span>
+            <button class="btn-ghost" id="verified-next" type="button">下一页</button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -283,6 +294,11 @@ export function listsPageHtml(): string {
         <span class="panel-note" id="keywords-meta">加载中…</span>
         <input type="search" id="keywords-search" placeholder="搜词" aria-label="搜索词库规则" />
       </div>
+      <form class="kw-contribute" id="kw-contribute-form">
+        <input type="text" id="kw-contribute-input" placeholder="想加入词库的词，逗号分隔" maxlength="200" autocomplete="off" />
+        <button type="submit" class="btn-primary">提交</button>
+        <p class="form-msg" id="kw-contribute-msg" role="status"></p>
+      </form>
       <div class="pack-list" id="keywords-list"></div>
     </section>
 
@@ -362,6 +378,8 @@ export function listsPageHtml(): string {
         application_pending: '该账号已有申请在处理中',
         application_not_found: '没有待验证的申请',
         mail_unconfigured: '邮件通道未配置，暂无法提交',
+        batch_too_large: '一次最多提交 10 条',
+        rate_limited: '今日提交已达上限，明天再来',
         network: '网络错误，稍后再试',
       };
       function errorText(code) { return ERROR_TEXT[code] || ('提交失败（' + code + '）'); }
@@ -437,9 +455,12 @@ export function listsPageHtml(): string {
 
       /* --- 黑名单 / 白名单 / 抢救渲染 --- */
       var blacklistEntries = [];
-      var blacklistShowAll = false;
-      var BLACKLIST_PAGE = 100; // 默认渲染前 100 条，移动端不撑爆 DOM；搜索时全量
       var openedDetails = {}; // handle → 详情行展开状态
+      var BLACKLIST_PAGE_SIZE = 100; // 每页渲染 100 条，控住移动端 DOM；搜索时全量过滤再分页
+      var blacklistPage = 0;
+      var VERIFIED_PAGE_SIZE = 50;
+      var verifiedEntries = [];
+      var verifiedPage = 0;
       function detailRow(entry) {
         var tr = el('tr', 'detail-row');
         var td = el('td', 'detail-cell');
@@ -482,18 +503,35 @@ export function listsPageHtml(): string {
         return tr;
       }
 
+      function filteredPaged(entries, pageSize, page, query, key) {
+        var total = 0;
+        var rows = [];
+        for (var i = 0; i < entries.length; i++) {
+          var entry = entries[i];
+          if (query && entry[key].indexOf(query) === -1) continue;
+          if (Math.floor(total / pageSize) === page) rows.push(entry);
+          total++;
+        }
+        return { rows: rows, total: total };
+      }
+
+      function updatePager(state, hiddenId, prevId, labelId, nextId, pageSize) {
+        var pages = Math.ceil(state.total / pageSize);
+        var pager = document.getElementById(hiddenId);
+        pager.hidden = pages <= 1;
+        document.getElementById(labelId).textContent = '第 ' + (page + 1) + ' / ' + pages + ' 页 · ' + state.total + ' 条';
+        document.getElementById(prevId).disabled = page <= 0;
+        document.getElementById(nextId).disabled = page >= pages - 1;
+      }
+
       function renderBlacklist() {
         var tbody = document.querySelector('#blacklist-table tbody');
         tbody.textContent = '';
         var query = document.getElementById('blacklist-search').value.trim().toLowerCase().replace(/^@/, '');
-        var total = blacklistEntries.length;
-        var limit = (showAllBlacklist() || query) ? total : BLACKLIST_PAGE;
-        var shown = 0;
         blacklistEntries.sort(function (a, b) { return b.net_votes - a.net_votes; });
-        for (var i = 0; i < blacklistEntries.length && shown < limit; i++) {
-          var entry = blacklistEntries[i];
-          if (query && entry.handle.indexOf(query) === -1) continue;
-          shown++;
+        var state = filteredPaged(blacklistEntries, BLACKLIST_PAGE_SIZE, blacklistPage, query, 'handle');
+        for (var i = 0; i < state.rows.length; i++) {
+          var entry = state.rows[i];
           var tr = el('tr', 'main-row');
           var tdHandle = el('td');
           tdHandle.appendChild(handleLink(entry.handle));
@@ -516,17 +554,17 @@ export function listsPageHtml(): string {
             (entry.aliases && entry.aliases.length);
           if (expandable && openedDetails[entry.handle]) tbody.appendChild(detailRow(entry));
         }
-        document.getElementById('blacklist-empty').hidden = shown > 0;
+        document.getElementById('blacklist-empty').hidden = state.total > 0;
         var note = document.getElementById('blacklist-note');
-        note.hidden = !(query && shown > 0);
-        note.textContent = '匹配 ' + shown + ' 条';
-        var more = document.getElementById('blacklist-more');
-        more.hidden = !(shown < total && !query);
-        more.textContent = shown < total && !query ? '显示全部 ' + total + ' 条' : '';
+        note.hidden = !(query && state.total > 0);
+        note.textContent = '匹配 ' + state.total + ' 条';
+        updatePager(state, 'blacklist-pager', 'blacklist-prev', 'blacklist-page', 'blacklist-next', BLACKLIST_PAGE_SIZE);
       }
-      function showAllBlacklist() { return blacklistShowAll; }
-      document.getElementById('blacklist-more').addEventListener('click', function () {
-        blacklistShowAll = true;
+      document.getElementById('blacklist-prev').addEventListener('click', function () {
+        if (blacklistPage > 0) { blacklistPage--; renderBlacklist(); }
+      });
+      document.getElementById('blacklist-next').addEventListener('click', function () {
+        blacklistPage++;
         renderBlacklist();
       });
       document.querySelector('#blacklist-table').addEventListener('click', function (event) {
@@ -556,12 +594,13 @@ export function listsPageHtml(): string {
         document.getElementById('whitelist-empty').hidden = entries.length > 0;
       }
 
-      function renderVerified(entries) {
+      function renderVerified() {
         var tbody = document.querySelector('#verified-table tbody');
         tbody.textContent = '';
-        entries.sort(function (a, b) { return b.net_votes - a.net_votes; });
-        for (var i = 0; i < entries.length; i++) {
-          var entry = entries[i];
+        verifiedEntries.sort(function (a, b) { return b.net_votes - a.net_votes; });
+        var state = filteredPaged(verifiedEntries, VERIFIED_PAGE_SIZE, verifiedPage, null, 'handle');
+        for (var i = 0; i < state.rows.length; i++) {
+          var entry = state.rows[i];
           var tr = el('tr');
           var tdHandle = el('td');
           tdHandle.appendChild(handleLink(entry.handle));
@@ -572,8 +611,16 @@ export function listsPageHtml(): string {
           tr.appendChild(el('td', 'muted', fmtDate(entry.updated_at)));
           tbody.appendChild(tr);
         }
-        document.getElementById('verified-empty').hidden = entries.length > 0;
+        document.getElementById('verified-empty').hidden = state.total > 0;
+        updatePager(state, 'verified-pager', 'verified-prev', 'verified-page', 'verified-next', VERIFIED_PAGE_SIZE);
       }
+      document.getElementById('verified-prev').addEventListener('click', function () {
+        if (verifiedPage > 0) { verifiedPage--; renderVerified(); }
+      });
+      document.getElementById('verified-next').addEventListener('click', function () {
+        verifiedPage++;
+        renderVerified();
+      });
 
       fetch(API_BASE + '/v1/roster/latest')
         .then(function (res) { if (!res.ok) throw new Error('http_' + res.status); return res.json(); })
@@ -589,8 +636,12 @@ export function listsPageHtml(): string {
           blacklistEntries = data.blacklist.entries;
           renderBlacklist();
           renderWhitelist(data.whitelist.maintained);
-          renderVerified(data.whitelist.verified);
-          document.getElementById('blacklist-search').addEventListener('input', renderBlacklist);
+          verifiedEntries = data.whitelist.verified || [];
+          renderVerified();
+          document.getElementById('blacklist-search').addEventListener('input', function () {
+            blacklistPage = 0;
+            renderBlacklist();
+          });
         })
         .catch(function (error) {
           var meta = document.getElementById('roster-meta');
@@ -616,24 +667,15 @@ export function listsPageHtml(): string {
           }
           if (query && phrases.length === 0) continue;
           var card = el('div', 'pack-card');
-          var head = el('button', 'pack-head');
-          head.type = 'button';
+          var head = el('div', 'pack-head');
           head.appendChild(el('span', 'pack-name', pack.name && pack.name.zh ? pack.name.zh : pack.id));
           head.appendChild(el('span', 'pack-count', phrases.length ? phrases.length + ' 条' : (rules.length + ' 条')));
-          head.appendChild(el('span', 'pack-arrow', '▾'));
           card.appendChild(head);
-          var bodyWrap = el('div', 'pack-rules');
-          bodyWrap.hidden = true;
           var flow = el('div', 'pill-flow');
           for (var p = 0; p < phrases.length; p++) flow.appendChild(el('span', 'kw', phrases[p]));
+          var bodyWrap = el('div', 'pack-rules');
           bodyWrap.appendChild(flow);
           card.appendChild(bodyWrap);
-          if (query) bodyWrap.hidden = false; // 搜索命中自动展开
-          head.addEventListener('click', function () {
-            var b = this.nextElementSibling;
-            b.hidden = !b.hidden;
-            this.classList.toggle('open', !b.hidden);
-          });
           list.appendChild(card);
         }
         setKeywordsNote();
@@ -832,6 +874,37 @@ export function listsPageHtml(): string {
           })
           .catch(function (error) {
             showMsg('verify-msg', errorText(error.message), true);
+          });
+      });
+
+      /* --- 词库贡献（匿名；服务端按 IP 哈希每日限流，先挂待审，运营审阅后才入词库） --- */
+      document.getElementById('kw-contribute-form').addEventListener('submit', function (event) {
+        event.preventDefault();
+        var phrases = document.getElementById('kw-contribute-input').value
+          .split(/[,，\n]/)
+          .map(function (word) { return word.trim(); })
+          .filter(Boolean);
+        if (phrases.length === 0) return;
+        if (phrases.length > 10) { showMsg('kw-contribute-msg', errorText('batch_too_large'), true); return; }
+        showMsg('kw-contribute-msg', '提交中…', false);
+        fetch(API_BASE + '/v1/keyword-contributions', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ phrases: phrases }),
+        })
+          .then(async function (res) {
+            var body = await res.json().catch(function () { return {}; });
+            if (!res.ok) throw new Error(body.error || 'network');
+            var recorded = 0;
+            var results = body.results || [];
+            for (var i = 0; i < results.length; i++) {
+              if (results[i].status === 'recorded' || results[i].status === 'duplicate') recorded++;
+            }
+            showMsg('kw-contribute-msg', recorded > 0 ? '已提交 ' + recorded + ' 条，审阅通过后进入词库' : '没有可提交的内容', false);
+            if (recorded > 0) document.getElementById('kw-contribute-input').value = '';
+          })
+          .catch(function (error) {
+            showMsg('kw-contribute-msg', errorText(error.message), true);
           });
       });
     })();
