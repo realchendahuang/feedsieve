@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@feedsieve/community-lists": "workspace:*",
+    "@feedsieve/detector": "workspace:*",
     "@feedsieve/shared": "workspace:*",
     "hono": "^4.13.5",
     "jose": "^6.1.3",

@@ -399,6 +399,16 @@ export const getMe = () => request<{ email: string }>('/me');
 
 export const importKeywordCatalog = () =>
   request<{ imported: boolean; packs: number; rules: number }>('/keywords/import', { method: 'POST' });
+
+/** GET/POST /keywords/detector-config：天级判定参数（对象或 null=清除）。 */
+export const getDetectorConfig = () =>
+  request<{ detector_config: unknown }>('/keywords/detector-config');
+export const saveDetectorConfig = (detector_config: unknown | null) =>
+  request<{ saved: boolean | null; version: string | null }>(
+    '/keywords/detector-config',
+    { method: 'POST', body: JSON.stringify({ detector_config }) },
+  );
+
 // 保存/移除即发布：响应携带新版本号，界面不再有独立发布步骤。
 export const saveAccount = (body: AccountInput) =>
   request<{ action: 'add' | 'update'; entry: AccountEntry; snapshot_version?: string }>('/accounts', {

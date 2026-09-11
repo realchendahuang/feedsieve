@@ -111,6 +111,9 @@ importers:
       '@feedsieve/community-lists':
         specifier: workspace:*
         version: link:../../packages/community-lists
+      '@feedsieve/detector':
+        specifier: workspace:*
+        version: link:../../packages/detector
       '@feedsieve/shared':
         specifier: workspace:*
         version: link:../../packages/shared

@@ -4,6 +4,7 @@ import {
   signManifestMessage,
   type ManifestSignature,
 } from '@feedsieve/community-lists';
+import { validateDetectorConfigOverride } from '@feedsieve/detector';
 import { sha256Hex } from './lib/hash';
 
 const PACK_ID = /^[a-z][a-z0-9_]{1,63}$/;
@@ -423,6 +424,69 @@ export async function publishAdminKeywords(env: Cloudflare.Env, actorEmail = 'sy
   return withPublishLock(() => publishAdminKeywordsInner(env, actorEmail));
 }
 
+/**
+ * 天级判定参数（packages/detector 的运行时覆写）随词库发布链下发：
+ * 当前生效值存 D1 meta；发布时嵌入 official.json 的 `detector_config` 段，
+ * 与 manifest/checksum/验签同一条签名链。回滚随历史 body 原样找回。
+ */
+export const KEYWORD_DETECTOR_CONFIG_META_KEY = 'keyword_detector_config';
+
+/** 读当前配置；无存值或存值非法时返回 null（发布缺省段，客户端回退内置兜底）。 */
+export async function getKeywordDetectorConfig(env: Cloudflare.Env): Promise<unknown | null> {
+  const row = await env.DB.prepare('SELECT value FROM meta WHERE key = ?1')
+    .bind(KEYWORD_DETECTOR_CONFIG_META_KEY)
+    .first<{ value: string }>();
+  if (!row) return null;
+  try {
+    const parsed: unknown = JSON.parse(row.value);
+    return validateDetectorConfigOverride(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 校验后写入配置；传 null 清除（等价回退发布段缺省）。非法值 fail closed。 */
+export function setKeywordDetectorConfig(env: Cloudflare.Env, raw: unknown): Promise<boolean> {
+  const write = async (value: string | null): Promise<boolean> => {
+    if (value === null) {
+      await env.DB.prepare('DELETE FROM meta WHERE key = ?1')
+        .bind(KEYWORD_DETECTOR_CONFIG_META_KEY)
+        .run();
+      return true;
+    }
+    await env.DB.prepare('INSERT INTO meta (key, value) VALUES (?1, ?2)')
+      .bind(KEYWORD_DETECTOR_CONFIG_META_KEY, value)
+      .run();
+    return true;
+  };
+  if (raw === null) return write(null);
+  if (!validateDetectorConfigOverride(raw)) return Promise.resolve(false);
+  return write(JSON.stringify(raw));
+}
+
+/**
+ * 发布时要携带的配置：meta 有值优先；否则继承最近一次发布 body 里携带的
+ * 配置（避免一次普通词库发布意外回退参数）；再没有就不带段。
+ */
+async function detectorConfigForPublish(env: Cloudflare.Env): Promise<unknown | null> {
+  const own = await getKeywordDetectorConfig(env);
+  if (own) return own;
+  try {
+    const latest = await env.KEYWORD_PACKS?.get('keyword-packs/latest.json');
+    if (!latest) return null;
+    const manifest = JSON.parse(await latest.text()) as { pack_version?: unknown };
+    if (typeof manifest.pack_version !== 'string') return null;
+    const body = await env.KEYWORD_PACKS?.get(
+      `keyword-packs/${manifest.pack_version}/official.json`,
+    );
+    if (!body) return null;
+    const document = JSON.parse(await body.text()) as { detector_config?: unknown };
+    return validateDetectorConfigOverride(document.detector_config) ? document.detector_config : null;
+  } catch {
+    return null;
+  }
+}
+
 async function publishAdminKeywordsInner(env: Cloudflare.Env, actorEmail: string) {
   if (!env.KEYWORD_PACKS) throw new Error('keyword_packs_unavailable');
   assertKeywordSigningAvailable(env);
@@ -441,6 +505,7 @@ async function publishAdminKeywordsInner(env: Cloudflare.Env, actorEmail: string
   const version = nextVersion(latestManifest.pack_version, stamp);
   if (!VERSION.test(version)) throw new Error('invalid_version');
   const activeRules = rules.filter((rule) => rule.active);
+  const detectorConfig = await detectorConfigForPublish(env);
   const document = {
     schema_version: 1,
     pack_version: version,
@@ -459,6 +524,7 @@ async function publishAdminKeywordsInner(env: Cloudflare.Env, actorEmail: string
           ...(rule.terms?.length ? { terms: rule.terms, max_gap: rule.max_gap } : {}),
         })),
     })),
+    ...(detectorConfig ? { detector_config: detectorConfig } : {}),
   };
   const body = `${JSON.stringify(document)}\n`;
   const sha256 = await sha256Hex(body);

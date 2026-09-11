@@ -25,12 +25,14 @@ import { getPublicRoster } from './roster';
 import { getDashboardMetrics } from './dashboard';
 import {
   disableAdminKeyword,
+  getKeywordDetectorConfig,
   importKeywordCatalog,
   listAdminKeywords,
   publishAdminKeywords,
   rollbackAdminKeywordRelease,
   saveAdminKeywordPack,
   saveAdminKeywordRule,
+  setKeywordDetectorConfig,
 } from './keyword-admin';
 import {
   agentKeyIdentity,
@@ -49,6 +51,8 @@ import {
   upsertAgentKeywordPack,
   upsertAgentKeywordRule,
   upsertAgentMaintainerEntry,
+  readAgentKeywordDetectorConfig,
+  writeAgentKeywordDetectorConfig,
 } from './agent-admin';
 import { hunterPageHtml } from './hunter-page';
 import { homePageHtml, listsPageHtml } from './site-pages';
@@ -324,6 +328,37 @@ export function createApp() {
     }
   });
 
+  // 天级判定参数（乱码/词沙拉/组合门槛）：随词库发布链下发到扩展。
+  // 保存后立即重发布（带新参数生成新版本），与词库「保存即发布」同节奏。
+  // 请求体：{ detector_config: <对象> | null }，null = 清除（回退内置兜底）。
+  app.get('/api/admin/keywords/detector-config', async (c) => {
+    return c.json({ detector_config: await getKeywordDetectorConfig(c.env) });
+  });
+  app.post('/api/admin/keywords/detector-config', async (c) => {
+    const body = (await c.req.json().catch(() => undefined)) as
+      | { detector_config?: unknown }
+      | undefined;
+    const value = body?.detector_config;
+    if (
+      !body ||
+      !('detector_config' in body) ||
+      (value !== null && (typeof value !== 'object' || Array.isArray(value)))
+    ) {
+      return c.json({ error: 'invalid_detector_config' }, 400);
+    }
+    const accepted = await setKeywordDetectorConfig(c.env, value);
+    if (!accepted) return c.json({ error: 'invalid_detector_config' }, 400);
+    await recordAdminAudit(
+      c.env,
+      c.get('maintainerEmail'),
+      'update',
+      'keyword_detector_config',
+      'keyword-detector-config',
+      {},
+    );
+    return republishKeywords(c, { saved: value === null ? null : true });
+  });
+
   // 只展示去标识化的规则级反馈；维护者不能读取安装 ID 或原始浏览内容。
   app.get('/api/admin/feedback', async (c) => {
     const [summary, feedback] = await Promise.all([
@@ -474,6 +509,17 @@ export function createApp() {
     } catch (error) {
       return c.json({ error: error instanceof Error ? error.message : 'publish_failed' }, 400);
     }
+  });
+
+  // 天级判定参数读写（与后台 POST 语义一致：PUT body 直接是配置本体或 null）
+  app.get('/api/agent/keywords/detector-config', async (c) => {
+    return c.json(await readAgentKeywordDetectorConfig(c.env));
+  });
+  app.put('/api/agent/keywords/detector-config', async (c) => {
+    const guard = c.get('agentIdentity');
+    const raw = (await c.req.json().catch(() => undefined)) as unknown;
+    const result = await writeAgentKeywordDetectorConfig(c.env, raw ?? null, `agent:${guard}`);
+    return result.ok ? c.json(result) : c.json({ error: result.error }, 400);
   });
 
   app.post('/api/agent/keywords/import', async (c) => {

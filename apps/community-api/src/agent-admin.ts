@@ -21,12 +21,14 @@ import {
 } from './admin-accounts';
 import {
   disableAdminKeyword,
+  getKeywordDetectorConfig,
   importKeywordCatalog,
   listAdminKeywords,
   publishAdminKeywords,
   rollbackAdminKeywordRelease,
   saveAdminKeywordPack,
   saveAdminKeywordRule,
+  setKeywordDetectorConfig,
 } from './keyword-admin';
 import { getDashboardMetrics } from './dashboard';
 import { buildKillSwitch, getLatestSnapshotVersion } from './snapshot';
@@ -220,6 +222,32 @@ export async function removeAgentKeyword(
 /** 发布词库（签名 + R2 产物 + release/audit 记录）。 */
 export async function publishAgentKeywords(env: Cloudflare.Env, actor: string) {
   return publishAdminKeywords(env, actor);
+}
+
+/** 读取天级判定参数（null = 未设置，客户端回退内置兜底）。 */
+export async function readAgentKeywordDetectorConfig(
+  env: Cloudflare.Env,
+): Promise<{ detector_config: unknown | null }> {
+  return { detector_config: await getKeywordDetectorConfig(env) };
+}
+
+export type AgentDetectorConfigWriteResult =
+  | { ok: true; saved: boolean }
+  | { ok: false; error: string };
+
+/** 写入天级判定参数（null = 清除）；非法值 fail closed，不落库。 */
+export async function writeAgentKeywordDetectorConfig(
+  env: Cloudflare.Env,
+  raw: unknown,
+  actor: string,
+): Promise<AgentDetectorConfigWriteResult> {
+  if (raw !== null && (typeof raw !== 'object' || Array.isArray(raw))) {
+    return { ok: false, error: 'invalid_detector_config' };
+  }
+  const accepted = await setKeywordDetectorConfig(env, raw);
+  if (!accepted) return { ok: false, error: 'invalid_detector_config' };
+  await recordAdminAudit(env, actor, 'update', 'keyword_detector_config', 'keyword-detector-config', {});
+  return { ok: true, saved: raw !== null };
 }
 
 /** 首次导入词库（仅在空库时生效，幂等）。 */

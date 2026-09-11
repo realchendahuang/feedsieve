@@ -37,19 +37,22 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { LoadError, Loading, PageHeader } from '../components/layout';
 import { ConfirmDialog } from '../components/confirm-dialog';
 import {
+  getDetectorConfig,
   getKeywords,
   importKeywordCatalog,
   removePack,
   removeRule,
+  saveDetectorConfig,
   savePack,
   saveRule,
   type KeywordPack,
   type KeywordRule,
 } from '../lib/api';
 import { errorText } from '../lib/errors';
+import { Textarea } from '@/components/ui/textarea';
+import { Hint, LoadError, Loading, PageHeader } from '../components/layout';
 
 const splitTerms = (value: string): string[] =>
   value.split(/[,，]/).map((term) => term.trim()).filter(Boolean);
@@ -401,6 +404,7 @@ export function KeywordsPage() {
           </Button>
         ) : null}
       </div>
+      <DetectorConfigSection />
       {keywords.isPending ? (
         <Loading />
       ) : keywords.isError ? (
@@ -540,5 +544,83 @@ export function KeywordsPage() {
         onAction={() => removing && removeMutation.mutate(removing)}
       />
     </section>
+  );
+}
+
+/** 天级判定参数：随词库发布链下发到扩展的乱码 / 词沙拉 / 组合门槛数值。 */
+function DetectorConfigSection() {
+  const queryClient = useQueryClient();
+  const config = useQuery({ queryKey: ['detector-config'], queryFn: getDetectorConfig });
+  // null=未动过（跟随服务端值）；字符串=编辑中的草稿
+  const [draft, setDraft] = React.useState<string | null>(null);
+  const serverValue = config.data?.detector_config ?? null;
+  const pretty = React.useMemo(() => JSON.stringify(serverValue, null, 2), [serverValue]);
+  const current = draft ?? pretty;
+
+  const saveMutation = useMutation({
+    mutationFn: (value: unknown | null) => saveDetectorConfig(value),
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: ['detector-config'] });
+      setDraft(null);
+      toast.success(result.version ? `已生效（词库 v${result.version}）` : '已保存');
+    },
+    onError: (error) => toast.error(errorText(error)),
+  });
+
+  function submit(payload: unknown | null): void {
+    if (saveMutation.isPending) return;
+    if (payload !== null && (typeof payload !== 'object' || Array.isArray(payload))) {
+      toast.error('参数必须是对象或 null');
+      return;
+    }
+    saveMutation.mutate(payload);
+  }
+
+  return (
+    <div className="mt-4 rounded-lg border p-4">
+      <div className="flex items-center gap-1.5">
+        <h3 className="text-sm font-medium">检测参数</h3>
+        <Hint text="乱码批量号 / 词沙拉 / 组合门槛等天级参数，随词库发布链签名下发到扩展；保存后立即重发布词库。" />
+        <div className="ml-auto flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={saveMutation.isPending || draft === null}
+            onClick={() => {
+              try {
+                submit(JSON.parse(current));
+              } catch {
+                toast.error('参数不是合法 JSON');
+              }
+            }}
+          >
+            保存
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={saveMutation.isPending}
+            onClick={() => {
+              setDraft(null);
+              submit(null);
+            }}
+          >
+            清除（回退内置）
+          </Button>
+        </div>
+      </div>
+      {config.isPending ? (
+        <Loading rows={2} />
+      ) : config.isError ? (
+        <LoadError error={config.error} onRetry={() => void config.refetch()} />
+      ) : (
+        <Textarea
+          className="mt-3 min-h-40 font-mono text-xs"
+          spellCheck={false}
+          value={current}
+          onChange={(event) => setDraft(event.target.value)}
+        />
+      )}
+    </div>
   );
 }
