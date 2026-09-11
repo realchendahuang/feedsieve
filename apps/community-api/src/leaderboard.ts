@@ -31,7 +31,33 @@ export const LEADERBOARD = {
   cacheMaxAgeSeconds: 90,
   /** 全量聚合最小间隔（秒）：脏标记被刷屏时榜单最多陈旧这么久，换取确定性的 CPU 上限 */
   minRecomputeIntervalSeconds: 300,
+  /**
+   * 称号阶梯：按累计确认击杀（全赛季合计）晋升、只升不降。阈值是数据，
+   * 上线后按玩家分布调；阶梯与词义见 docs/HUNTING.md §6。
+   */
+  titles: [
+    { kills: 1, name: '滤福娃' },
+    { kills: 10, name: '鞭福娃' },
+    { kills: 100, name: '滤福侠' },
+    { kills: 500, name: '鞭福侠' },
+    { kills: 1000, name: '滤福王' },
+    { kills: 2000, name: '鞭福王' },
+    { kills: 5000, name: '滤福王中王' },
+    { kills: 10000, name: '鞭福王中王' },
+  ],
 } as const;
+
+type TitleLadder = (typeof LEADERBOARD)['titles'][number];
+
+/** 由累计击杀派生阶梯称号（0 杀无称号；周结算称号 title 列独立并存） */
+export function ladderTitle(careerKills: number): string | null {
+  let earned: TitleLadder | null = null;
+  for (const tier of LEADERBOARD.titles) {
+    if (careerKills >= tier.kills) earned = tier;
+    else break;
+  }
+  return earned?.name ?? null;
+}
 
 export interface SeasonWindow {
   id: number;
@@ -43,7 +69,13 @@ export interface HunterRow {
   id: string;
   name: string;
   bio: string | null;
+  /** 周结算发放的永久荣誉称号（猎黄人），不清除 */
   title: string | null;
+  /** 称号阶梯派生头衔（按累计击杀），随排名流动升级 */
+  tier: string | null;
+  /** 累计确认击杀（全赛季合计，称号阶梯依据） */
+  career_kills: number;
+  x_handle: string | null;
   email_verified: boolean;
   kills: number;
   first_bloods: number;
@@ -62,7 +94,8 @@ export interface SeasonChampion {
 
 export interface LeaderboardData {
   computed_at: number;
-  season: SeasonWindow;
+  /** 周榜的赛季窗口；总榜为 null */
+  season: SeasonWindow | null;
   rows: HunterRow[];
   /** 最近一个已结算赛季（页脚「上届冠军」） */
   last_season?: { id: number; champions: SeasonChampion[] };
@@ -85,6 +118,8 @@ const D1_CHUNK = 100;
 
 const DIRTY_KEY = 'leaderboard_dirty';
 const CACHE_KEY = 'leaderboard_cache';
+/** 总榜独立缓存键（同口径无时间窗） */
+const CACHE_KEY_ALL = 'leaderboard_cache_all';
 /** 上次全量聚合时间（meta）；节流窗口内即便脏标记已置也不重算，防重算滥用 */
 const LAST_RECOMPUTE_KEY = 'leaderboard_last_recompute_at';
 
@@ -200,78 +235,118 @@ export async function syncConsensusEvents(
   }
 }
 
-/** 一次榜单聚合（给定赛季窗口）。纯读，4 条聚合 SQL + 猎手档案点查。 */
+/**
+ * 一次榜单聚合。season 非空 = 周榜（各维度限赛季窗口）；season 为 null =
+ * 总榜（同口径、不设时间窗，无首杀概念）。纯读聚合 + 猎手档案点查。
+ */
 async function aggregateLeaderboard(
   env: Cloudflare.Env,
-  season: SeasonWindow,
+  season: SeasonWindow | null,
 ): Promise<{ rows: HunterRow[] }> {
+  const since = season ? Math.floor(season.starts_at) : null;
   // 开火数/误伤以 reports 拉黑证据为准（append-only）：先拉黑后改判的历史
   // 不会从战报里消失——打错的野同样要结账；击杀才要求当前仍投 blocked 票。
-  const [shots, kills, firstBloodRows, falsePositives] = await Promise.all([
-    env.DB.prepare(
-      `SELECT installation_id AS iid, COUNT(*) AS n FROM reports
-       WHERE created_at >= ?1 GROUP BY installation_id`,
-    )
-      .bind(season.starts_at)
-      .all<{ iid: string; n: number }>(),
+  const [shots, kills, firstBloodRows, falsePositives, careerKills] = await Promise.all([
+    (since
+      ? env.DB.prepare(
+          `SELECT installation_id AS iid, COUNT(*) AS n FROM reports
+           WHERE created_at >= ?1 GROUP BY installation_id`,
+        ).bind(since)
+      : env.DB.prepare(
+          `SELECT installation_id AS iid, COUNT(*) AS n FROM reports
+           GROUP BY installation_id`,
+        )
+    ).all<{ iid: string; n: number }>(),
+    (since
+      ? env.DB.prepare(
+          `SELECT l.installation_id AS iid, COUNT(*) AS n
+           FROM active_labels l
+           JOIN accounts a ON a.handle = l.handle AND a.status = 'strong'
+           JOIN consensus_events e ON e.handle = l.handle
+           LEFT JOIN maintainer_whitelist w ON w.handle = l.handle AND w.active = 1
+           WHERE l.label = 'blocked' AND w.handle IS NULL AND e.confirmed_at >= ?1
+           GROUP BY l.installation_id`,
+        ).bind(since)
+      : env.DB.prepare(
+          `SELECT l.installation_id AS iid, COUNT(*) AS n
+           FROM active_labels l
+           JOIN accounts a ON a.handle = l.handle AND a.status = 'strong'
+           JOIN consensus_events e ON e.handle = l.handle
+           LEFT JOIN maintainer_whitelist w ON w.handle = l.handle AND w.active = 1
+           WHERE l.label = 'blocked' AND w.handle IS NULL
+           GROUP BY l.installation_id`,
+        )
+    ).all<{ iid: string; n: number }>(),
+    // 首杀：账号最早的上报安装（SQLite min 聚合行携带 bare column），
+    // 上报时间也要落在同一窗口；白名单一票否决同样适用于首杀。总榜不发首杀。
+    since
+      ? env.DB.prepare(
+          `SELECT handle, installation_id AS iid, MIN(created_at) AS first_at
+           FROM reports
+           WHERE handle IN (
+             SELECT e.handle FROM consensus_events e
+             LEFT JOIN maintainer_whitelist w ON w.handle = e.handle AND w.active = 1
+             WHERE e.confirmed_at >= ?1 AND w.handle IS NULL
+           )
+           GROUP BY handle`,
+        )
+          .bind(since)
+          .all<{ iid: string; first_at: number }>()
+      : Promise.resolve({ results: [] as Array<{ iid: string; first_at: number }> }),
+    (since
+      ? env.DB.prepare(
+          `SELECT r.installation_id AS iid, COUNT(*) AS n
+           FROM reports r
+           JOIN accounts a ON a.handle = r.handle
+           LEFT JOIN maintainer_whitelist w ON w.handle = r.handle AND w.active = 1
+           WHERE r.created_at >= ?1
+             AND (a.rescue_count - a.report_count >= ?2 OR w.handle IS NOT NULL)
+           GROUP BY r.installation_id`,
+        ).bind(since, POLICY.communityNetThreshold)
+      : env.DB.prepare(
+          `SELECT r.installation_id AS iid, COUNT(*) AS n
+           FROM reports r
+           JOIN accounts a ON a.handle = r.handle
+           LEFT JOIN maintainer_whitelist w ON w.handle = r.handle AND w.active = 1
+           WHERE a.rescue_count - a.report_count >= ?1 OR w.handle IS NOT NULL
+           GROUP BY r.installation_id`,
+        ).bind(POLICY.communityNetThreshold)
+    ).all<{ iid: string; n: number }>(),
+    // 累计击杀（称号阶梯依据）：与周榜击杀同口径、不设时间窗
     env.DB.prepare(
       `SELECT l.installation_id AS iid, COUNT(*) AS n
        FROM active_labels l
        JOIN accounts a ON a.handle = l.handle AND a.status = 'strong'
        JOIN consensus_events e ON e.handle = l.handle
        LEFT JOIN maintainer_whitelist w ON w.handle = l.handle AND w.active = 1
-       WHERE l.label = 'blocked' AND w.handle IS NULL AND e.confirmed_at >= ?1
+       WHERE l.label = 'blocked' AND w.handle IS NULL
        GROUP BY l.installation_id`,
-    )
-      .bind(season.starts_at)
-      .all<{ iid: string; n: number }>(),
-    // 首杀：账号最早的上报安装（SQLite min 聚合行携带 bare column），
-    // 上报时间也要落在同一窗口；白名单一票否决同样适用于首杀。
-    env.DB.prepare(
-      `SELECT handle, installation_id AS iid, MIN(created_at) AS first_at
-       FROM reports
-       WHERE handle IN (
-         SELECT e.handle FROM consensus_events e
-         LEFT JOIN maintainer_whitelist w ON w.handle = e.handle AND w.active = 1
-         WHERE e.confirmed_at >= ?1 AND w.handle IS NULL
-       )
-       GROUP BY handle`,
-    )
-      .bind(season.starts_at)
-      .all<{ iid: string; first_at: number }>(),
-    env.DB.prepare(
-      `SELECT r.installation_id AS iid, COUNT(*) AS n
-       FROM reports r
-       JOIN accounts a ON a.handle = r.handle
-       LEFT JOIN maintainer_whitelist w ON w.handle = r.handle AND w.active = 1
-       WHERE r.created_at >= ?1
-         AND (a.rescue_count - a.report_count >= ?2 OR w.handle IS NOT NULL)
-       GROUP BY r.installation_id`,
-    )
-      .bind(season.starts_at, POLICY.communityNetThreshold)
-      .all<{ iid: string; n: number }>(),
+    ).all<{ iid: string; n: number }>(),
   ]);
 
   const shotsBy = new Map(shots.results.map((row) => [row.iid, row.n] as const));
   const killsBy = new Map(kills.results.map((row) => [row.iid, row.n] as const));
   const fpBy = new Map(falsePositives.results.map((row) => [row.iid, row.n] as const));
+  const careerKillsBy = new Map(careerKills.results.map((row) => [row.iid, row.n] as const));
   const firstBloodsBy = new Map<string, number>();
-  for (const row of firstBloodRows.results) {
-    if (row.first_at >= season.starts_at) {
-      firstBloodsBy.set(row.iid, (firstBloodsBy.get(row.iid) ?? 0) + 1);
+  if (season) {
+    for (const row of firstBloodRows.results) {
+      if (row.first_at >= season.starts_at) {
+        firstBloodsBy.set(row.iid, (firstBloodsBy.get(row.iid) ?? 0) + 1);
+      }
     }
   }
 
   const hunters = [...shotsBy.keys()];
-  const profilesBy = new Map<string, { display_name: string | null; bio: string | null; title: string | null; email_verified_at: number | null }>();
+  const profilesBy = new Map<string, { display_name: string | null; bio: string | null; title: string | null; x_handle: string | null; email_verified_at: number | null }>();
   for (let index = 0; index < hunters.length; index += D1_CHUNK) {
     const chunk = hunters.slice(index, index + D1_CHUNK);
     const rows = await env.DB.prepare(
-      `SELECT id, display_name, bio, title, email_verified_at
+      `SELECT id, display_name, bio, title, x_handle, email_verified_at
        FROM installations WHERE id IN (${chunk.map(() => '?').join(', ')})`,
     )
       .bind(...chunk)
-      .all<{ id: string; display_name: string | null; bio: string | null; title: string | null; email_verified_at: number | null }>();
+      .all<{ id: string; display_name: string | null; bio: string | null; title: string | null; x_handle: string | null; email_verified_at: number | null }>();
     for (const row of rows.results) profilesBy.set(row.id, row);
   }
 
@@ -281,11 +356,15 @@ async function aggregateLeaderboard(
     const fps = fpBy.get(iid) ?? 0;
     const shotCount = shotsBy.get(iid) ?? 0;
     const profile = profilesBy.get(iid);
+    const careerKillCount = careerKillsBy.get(iid) ?? 0;
     return {
       id: iid,
       name: hunterDisplayName(iid, profile?.display_name ?? null),
       bio: profile?.bio ?? null,
       title: profile?.title ?? null,
+      tier: ladderTitle(careerKillCount),
+      career_kills: careerKillCount,
+      x_handle: profile?.x_handle ?? null,
       email_verified: profile?.email_verified_at != null,
       kills: killCount,
       first_bloods: firstBloods,
@@ -310,33 +389,44 @@ async function aggregateLeaderboard(
 
 /**
  * 榜单读取（懒重算）：脏标记或缓存过期（> cacheMaxAgeSeconds / 赛季已切换）
- * 时现场聚合并写回；否则直接回缓存。
+ * 时现场聚合并写回；否则直接回缓存。scope='week'（默认）周榜，
+ * scope='all' 总榜（独立缓存键、同口径无时间窗、无首杀）。
  */
-export async function getLeaderboard(env: Cloudflare.Env): Promise<LeaderboardData> {
-  const season = await ensureCurrentSeason(env);
+export async function getLeaderboard(
+  env: Cloudflare.Env,
+  scope: 'week' | 'all' = 'week',
+): Promise<LeaderboardData> {
+  // 赛季窗口纯本地派生：热路径（直接回缓存）零写入。赛季行只在真的要
+  // 重算时才落库，否则榜单每被读一次就向 D1 白写一行。
+  const season = scope === 'week' ? isoWeek(new Date()) : null;
+  const cacheKey = scope === 'week' ? CACHE_KEY : CACHE_KEY_ALL;
   const now = Math.floor(Date.now() / 1000);
-  const [dirtyRow, cacheRow, lastRecomputeRow] = await Promise.all([
-    env.DB.prepare('SELECT value FROM meta WHERE key = ?1').bind(DIRTY_KEY).first<{ value: string }>(),
-    env.DB.prepare('SELECT value FROM meta WHERE key = ?1').bind(CACHE_KEY).first<{ value: string }>(),
-    env.DB.prepare('SELECT value FROM meta WHERE key = ?1').bind(LAST_RECOMPUTE_KEY).first<{ value: string }>(),
-  ]);
+  const metaRows = await env.DB.prepare(
+    'SELECT key, value FROM meta WHERE key IN (?1, ?2, ?3)',
+  )
+    .bind(DIRTY_KEY, cacheKey, LAST_RECOMPUTE_KEY)
+    .all<{ key: string; value: string }>();
+  const byKey = new Map(metaRows.results.map((row) => [row.key, row.value] as const));
+  const dirtyValue = byKey.get(DIRTY_KEY);
+  const cacheRow = byKey.get(cacheKey);
+  const lastRecomputeRow = byKey.get(LAST_RECOMPUTE_KEY);
 
-  let cache = parseCache(cacheRow?.value);
+  let cache = parseCache(cacheRow);
   const expired =
     cache == null ||
-    cache.season.id !== season.id ||
+    (season != null && cache.season?.id !== season.id) ||
     now - cache.computed_at > LEADERBOARD.cacheMaxAgeSeconds;
-  if (dirtyRow == null && !expired && cache != null) {
+  if (dirtyValue == null && !expired && cache != null) {
     return cache;
   }
 
   // 节流：/v1/leaderboard 是公开端点，脏标记可以被客户端投票不断刷新，
   // 无节流时攻击者可用恒定重算驱动全表聚合。最小聚合间隔独立于脏标记，
   // 窗口内即使脏也回陈旧缓存（冷启动无缓存、或赛季已切换时例外，必须算）。
-  const lastRecompute = Number(lastRecomputeRow?.value ?? 0);
+  const lastRecompute = Number(lastRecomputeRow ?? 0);
   if (
     cache != null &&
-    cache.season.id === season.id &&
+    (season == null || cache.season?.id === season.id) &&
     Number.isFinite(lastRecompute) &&
     now - lastRecompute < LEADERBOARD.minRecomputeIntervalSeconds
   ) {
@@ -344,20 +434,26 @@ export async function getLeaderboard(env: Cloudflare.Env): Promise<LeaderboardDa
   }
 
   const { rows } = await aggregateLeaderboard(env, season);
-  cache = { computed_at: now, season, rows, last_season: await lastSettledSeason(env) };
+  if (season) await ensureCurrentSeason(env);
+  cache = {
+    computed_at: now,
+    season,
+    rows,
+    last_season: season != null ? await lastSettledSeason(env) : undefined,
+  };
   await env.DB.batch([
     env.DB.prepare(
       `INSERT INTO meta (key, value) VALUES (?1, ?2)
        ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
     )
-      .bind(CACHE_KEY, JSON.stringify(cache)),
+      .bind(cacheKey, JSON.stringify(cache)),
     env.DB.prepare(
       `INSERT INTO meta (key, value) VALUES (?1, ?2)
        ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
     )
       .bind(LAST_RECOMPUTE_KEY, String(now)),
   ]);
-  if (dirtyRow != null) await clearLeaderboardDirty(env, dirtyRow.value);
+  if (dirtyValue != null) await clearLeaderboardDirty(env, dirtyValue);
   return cache;
 }
 

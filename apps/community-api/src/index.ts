@@ -57,7 +57,14 @@ import {
 import { hunterPageHtml } from './hunter-page';
 import { homePageHtml, listsPageHtml } from './site-pages';
 import { LEADERBOARD, getLeaderboard, markLeaderboardDirty, settleDueSeasons } from './leaderboard';
-import { bindEmail, getProfile, updateProfile, verifyEmail } from './player';
+import {
+  bindEmail,
+  getProfile,
+  pageCode,
+  pageLogin,
+  updateProfile,
+  verifyEmail,
+} from './player';
 import { MAINTAINER_CATEGORIES } from './maintainer-blocklist';
 import { processRetractionBatch } from './labels';
 import { POLICY, processReportBatch, publicPolicy } from './reports';
@@ -639,14 +646,35 @@ export function createApp() {
     return c.json(publicPolicy());
   });
 
+  // 公开榜单（GET）：边缘缓存挡读——榜单数据本身有 90 秒新鲜容忍，边缘各
+  // PoP 缓存 60 秒，热点访客请求零 D1 查询。个人化字段（me）只在 POST 端点：
+  // POST 不进 CDN 缓存，避免按 body 维度分片缓存。
+  app.get('/v1/leaderboard', async (c) => {
+    const scope = c.req.query('scope') === 'all' ? 'all' : 'week';
+    const data = await getLeaderboard(c.env, scope);
+    c.header('Cache-Control', 'public, max-age=0, s-maxage=60');
+    const trim = (row: Record<string, unknown>) => ({ ...row, id: String(row.id).slice(0, 12) });
+    return c.json({
+      season: data.season,
+      updated_at: data.computed_at,
+      server_time: Math.floor(Date.now() / 1000),
+      total: data.rows.length,
+      rows: data.rows.slice(0, LEADERBOARD.topSize).map((row, index) => trim({ ...row, rank: index + 1 })),
+      me: null,
+      last_season: data.last_season ?? null,
+    });
+  });
+
   // 打野排位赛榜单（脏标记懒重算，读这条就是实时口径）。
   // 隐私：installation_id / me 前缀都走 POST body，不进 URL 与边缘访问日志；
   // me 是加盐哈希前缀（不可逆），只用于定位高亮，无任何敏感操作。
   app.post('/v1/leaderboard', async (c) => {
     const body: unknown = await c.req.json().catch(() => undefined);
     let mePrefix: string | null = null;
+    let scope: 'week' | 'all' = 'week';
     if (typeof body === 'object' && body !== null) {
       const b = body as Record<string, unknown>;
+      if (b.scope === 'all') scope = 'all';
       if (
         typeof b.installation_id === 'string' &&
         b.installation_id.length >= 8 &&
@@ -657,7 +685,7 @@ export function createApp() {
         mePrefix = b.me;
       }
     }
-    const data = await getLeaderboard(c.env);
+    const data = await getLeaderboard(c.env, scope);
     let me: (Record<string, unknown> & { rank: number }) | null = null;
     if (mePrefix) {
       const rank = data.rows.findIndex((row) => row.id.startsWith(mePrefix));
@@ -670,6 +698,8 @@ export function createApp() {
       season: data.season,
       updated_at: data.computed_at,
       server_time: Math.floor(Date.now() / 1000),
+      /** 榜上总人数（缓存保存全量）；百分位 = 前端用 me.rank/total 换算 */
+      total: data.rows.length,
       rows: data.rows.slice(0, LEADERBOARD.topSize).map((row, index) => trim({ ...row, rank: index + 1 })),
       me: me ? trim(me) : null,
       last_season: data.last_season ?? null,
@@ -697,6 +727,20 @@ export function createApp() {
   });
   app.post('/v1/player/me', async (c) => {
     const result = await getProfile(c.env, await c.req.json().catch(() => undefined));
+    if (!result.ok) return c.json({ error: result.error }, result.httpStatus);
+    c.header('Cache-Control', 'no-store');
+    return c.json(result.value);
+  });
+  // 榜单页认领：发码（要求邮箱已绑定过 verified installation）→ 登录换编辑 token。
+  // token 后续可换 /v1/player/profile｜me 的编辑凭证（服务端重算 HMAC 校验）。
+  app.post('/v1/player/page-code', async (c) => {
+    const result = await pageCode(c.env, await c.req.json().catch(() => undefined));
+    if (!result.ok) return c.json({ error: result.error }, result.httpStatus);
+    c.header('Cache-Control', 'no-store');
+    return c.json(result.value);
+  });
+  app.post('/v1/player/page-login', async (c) => {
+    const result = await pageLogin(c.env, await c.req.json().catch(() => undefined));
     if (!result.ok) return c.json({ error: result.error }, result.httpStatus);
     c.header('Cache-Control', 'no-store');
     return c.json(result.value);

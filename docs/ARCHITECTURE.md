@@ -1,6 +1,6 @@
 # FeedSieve Architecture
 
-> Canonical implementation details: [`TECHNICAL_SPEC.md`](TECHNICAL_SPEC.md)
+> Canonical implementation details: [`TECHNICAL_SPEC.md`](TECHNICAL_SPEC.md)。打野排位赛产品方案：[`HUNTING.md`](HUNTING.md)。
 
 ## 1. 总体原则
 

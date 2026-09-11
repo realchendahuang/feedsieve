@@ -44,7 +44,7 @@ describe('site host 公开页', () => {
   it('/leaderboard 在 site host 上同样可用', async () => {
     const res = await worker.fetch(siteRequest('/leaderboard'), env);
     expect(res.status).toBe(200);
-    expect(await res.text()).toContain('打野周榜');
+    expect(await res.text()).toContain('id="tab-week"');
   });
 });
 
