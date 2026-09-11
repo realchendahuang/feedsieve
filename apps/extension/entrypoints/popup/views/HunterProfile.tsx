@@ -9,7 +9,7 @@ import {
 import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
 
 /**
- * 猎手档案（设置区）：默认匿名上榜，邮箱验证码解锁自定义昵称 / 一句话介绍。
+ * 猎手档案（名单区，紧跟战报条）：默认匿名上榜，邮箱验证码解锁自定义昵称 / 一句话介绍。
  * 无密码无会话——安装 ID 即凭证，邮箱只用于发码。
  */
 export default function HunterProfile({

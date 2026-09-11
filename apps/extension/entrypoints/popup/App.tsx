@@ -25,6 +25,7 @@ import ListsView from './views/ListsView';
 import KeywordsView from './views/KeywordsView';
 import SettingsView from './views/SettingsView';
 import HunterBar from './views/HunterBar';
+import HunterProfile from './views/HunterProfile';
 import {
   AppIcon,
   asPageMarkedList,
@@ -331,6 +332,7 @@ export default function App() {
               onRefreshCommunitySnapshot={refreshCommunitySnapshot}
             />
             <HunterBar language={language} />
+            <HunterProfile language={language} notify={notify} />
           </>
         ) : null}
         {view === 'keywords' ? (
