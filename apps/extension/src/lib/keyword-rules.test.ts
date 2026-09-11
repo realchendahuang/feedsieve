@@ -40,7 +40,7 @@ describe('本地关键词规则', () => {
     );
   });
 
-  it('首次安装默认只订阅黄推 / 成人引流，其余行业包按需开启', async () => {
+  it('首次安装默认只订阅黄推 / 成人引流，订阅不在词库的旧分类是宽容空操作', async () => {
     let settings = await getKeywordRuleSettings();
     expect(isOfficialKeywordCategorySubscribed(settings, 'adult_gray_traffic')).toBe(true);
     expect(isOfficialKeywordCategorySubscribed(settings, 'crypto_scam')).toBe(false);
@@ -48,10 +48,12 @@ describe('本地关键词规则', () => {
       OFFICIAL_KEYWORD_RULES.filter((rule) => rule.category === 'adult_gray_traffic').length,
     );
 
-    await setOfficialKeywordCategorySubscribed('scam_phishing', true);
+    // 2026-09-11 起词库只保留黄推包；老版本备份把 crypto_scam 标成订阅时，
+    // 该分类没有任何官方规则，不产出条目也不报错（迁移兼容面）
+    await setOfficialKeywordCategorySubscribed('crypto_scam', true);
     settings = await getKeywordRuleSettings();
-    expect(activeKeywordRules(settings).some((rule) => rule.category === 'scam_phishing')).toBe(
-      true,
+    expect(activeKeywordRules(settings).some((rule) => rule.category === 'crypto_scam')).toBe(
+      false,
     );
   });
 
@@ -109,21 +111,19 @@ describe('本地关键词规则', () => {
     );
   });
 
-  it('新增反诈话术命中完整短语，而不会把普通“内部群”讨论误标', async () => {
-    await setOfficialKeywordCategorySubscribed('scam_phishing', true);
+  it('分词组合规则命中完整短语，而不会把普通“内部群”讨论误标', async () => {
     const settings = await getKeywordRuleSettings();
-    const rules = createKeywordHeuristics(settings);
-    const insiderTip = rules.find((rule) => rule.id === 'keyword:official:scam-insider-tip');
-    const principalHighInterest = rules.find(
-      (rule) => rule.id === 'keyword:official:scam-principal-high-interest',
-    );
+    if (!isOfficialKeywordCategorySubscribed(settings, 'adult_gray_traffic')) {
+      await setOfficialKeywordCategorySubscribed('adult_gray_traffic', true);
+    }
+    const rules = createKeywordHeuristics(await getKeywordRuleSettings());
+    // 成人包的分词组合示例（同城 + 上门），替代已移除的反诈包规则
+    const comboRule = rules.find((rule) => rule.id === 'keyword:official:adult-terms-local-door');
 
-    expect(insiderTip?.check({ handle: 'bait', text: '专家有内幕消息，保证高额返利' })).toContain(
-      '内幕消息',
+    expect(comboRule?.check({ handle: 'bait', text: '同城有派对，秒到车上即可安排上门' })).toContain(
+      '同城',
     );
-    expect(principalHighInterest?.check({ handle: 'bait', text: '保本 高息，快来上车' })).toContain(
-      '保本高息',
-    );
+    // 分词顺序/gap 之外：正常生活讨论既不命中该组合，也不命中其它官方规则
     expect(
       rules.some((rule) => rule.check({ handle: 'team', text: '我们部门的内部群今晚开会' })),
     ).toBe(false);

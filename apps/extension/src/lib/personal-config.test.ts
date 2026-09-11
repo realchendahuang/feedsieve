@@ -187,7 +187,9 @@ describe('个人配置备份与迁移', () => {
       { id: 'new-id', phrase: '新词', createdAt: 20 },
     ]);
     expect(prepared.next?.keywordRules.subscribedCategoryIds).not.toContain('adult_gray_traffic');
-    expect(prepared.next?.keywordRules.subscribedCategoryIds).toContain('scam_phishing');
+    // 单包词库（2026-09-11 起其他行业包移除）：备份中的 scam_phishing 已不存在；
+    // adult 是备份显式取消过的分类，备份偏好为准 -> 订阅列表清空
+    expect(prepared.next?.keywordRules.subscribedCategoryIds).toEqual([]);
     expect(prepared.next?.keywordRules.disabledOfficialRuleIds).toEqual(['adult-fu-not-black']);
     expect(prepared.next?.preferences).toEqual(source.preferences);
 
@@ -201,7 +203,8 @@ describe('个人配置备份与迁移', () => {
       { id: 'restored-2', phrase: '新词', createdAt: 30 },
     ]);
     expect(replaced.next?.keywordRules.subscribedCategoryIds).not.toContain('adult_gray_traffic');
-    expect(replaced.next?.keywordRules.subscribedCategoryIds).toContain('scam_phishing');
+    // 单包词库：scam_phishing 分类已随官方包移除，替换也不会把它带回来
+    expect(replaced.next?.keywordRules.subscribedCategoryIds).toEqual([]);
     expect(replaced.next?.keywordRules.disabledOfficialRuleIds).toEqual(['adult-fu-not-black']);
     expect(replaced.next?.preferences).toEqual(source.preferences);
   });

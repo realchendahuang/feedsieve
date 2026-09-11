@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "pack_version": "2026.09.07.1",
+  "pack_version": "2026.09.11.4",
   "generated_at": null,
   "packs": [
     {
@@ -17,115 +17,442 @@
         "external_sensitive_terms_reference_2026-09-02",
         "local_x_miss_2026-09-01"
       ],
-      "rules_source": "adult-high-recall.json",
       "rules": [
         [
-          "adult-fu-not-black",
-          "我福不黑"
+          "adult-gray-traffic-2e2fcf30cf5745bc",
+          "18禁"
         ],
         [
-          "adult-benefits-profile",
-          "福利在主页"
+          "adult-gray-traffic-3cd723d887aa7f5c",
+          "99bb"
         ],
         [
-          "adult-benefits-bio",
-          "福利在简介"
+          "adult-gray-traffic-877572064da8e9ac",
+          "AV女优"
         ],
         [
-          "adult-tap-profile-benefits",
-          "点击头像看福利"
+          "adult-gray-traffic-23f55efa45415fdc",
+          "AV男优"
         ],
         [
-          "adult-profile-collect-benefits",
-          "主页自取福利"
+          "adult-gray-traffic-16722f43160a13cb",
+          "SM全明星"
         ],
         [
-          "adult-enter-profile-benefits",
-          "进主页看福利"
+          "adult-gray-traffic-2b2b654c014074b6",
+          "SM舞会"
         ],
         [
-          "adult-benefit-video-profile",
-          "福利视频在主页"
+          "adult-gray-traffic-533afd329d106184",
+          "SM虐恋"
         ],
         [
-          "adult-benefit-video-bio",
-          "福利视频在简介"
+          "adult-gray-traffic-0f214cd6cc1c4973",
+          "SM调教"
         ],
         [
-          "adult-benefit-link-profile",
-          "福利链接在主页"
+          "adult-gray-traffic-03f67ead556e84e7",
+          "a4y"
         ],
         [
-          "adult-benefit-link-bio",
-          "福利链接在简介"
+          "adult-gray-traffic-7fdc3e8038e87ff5",
+          "adult"
         ],
         [
-          "adult-private-message-video",
-          "私信看福利视频"
+          "adult-gray-traffic-8dd9ed10798ded82",
+          "amateur"
         ],
         [
-          "adult-private-message-benefit",
-          "私信发福利视频"
+          "adult-gray-traffic-2334ab3172ae72cb",
+          "a片"
         ],
         [
-          "adult-benefit-collection-profile",
-          "福利合集在主页"
+          "adult-gray-traffic-47c21198ebe6a08b",
+          "gay片"
         ],
         [
-          "adult-video-collection-profile",
-          "视频合集在主页"
+          "adult-gray-traffic-53e6707035b1f483",
+          "g点"
         ],
         [
-          "adult-profile-get-benefits",
-          "主页领取福利"
+          "adult-gray-traffic-0130e2d27102a651",
+          "g片"
         ],
         [
-          "adult-local-door-hookup",
-          "同城上门约炮"
+          "adult-gray-traffic-08775183b0ecf9d8",
+          "hardcore"
         ],
         [
-          "adult-local-hookup",
-          "同城约炮"
+          "adult-gray-traffic-cebd9d37be016798",
+          "h动漫"
+        ],
+        [
+          "adult-gray-traffic-e9bf04c34750999d",
+          "h动画"
+        ],
+        [
+          "adult-gray-traffic-dd32831e9d5f3da3",
+          "incest"
+        ],
+        [
+          "adult-gray-traffic-3c35e97df40e46f0",
+          "secom"
+        ],
+        [
+          "adult-gray-traffic-b33d985503886e36",
+          "sexinsex"
+        ],
+        [
+          "adult-gray-traffic-97aee0ee16be7f76",
+          "sm女王"
+        ],
+        [
+          "adult-gray-traffic-820e04bc0fb39434",
+          "tokyohot"
+        ],
+        [
+          "adult-gray-traffic-58c2e555821225d3",
+          "xiao77"
+        ],
+        [
+          "adult-gray-traffic-5eb9eaeaff2fc872",
+          "xing伴侣"
+        ],
+        [
+          "adult-gray-traffic-2e92bf94af1b468a",
+          "xxoo"
+        ],
+        [
+          "adult-gray-traffic-4fabf6ea56b56d42",
+          "yin荡"
+        ],
+        [
+          "adult-gray-traffic-66e9e41c48cf907c",
+          "一ye情"
+        ],
+        [
+          "adult-gray-traffic-e72700a70a0e388d",
+          "一丝不挂"
+        ],
+        [
+          "adult-gray-traffic-9feedaf086f0cf2c",
+          "一夜情"
+        ],
+        [
+          "adult-gray-traffic-3ae7884e4e65efd2",
+          "一夜欢"
+        ],
+        [
+          "adult-gray-traffic-b4d7212d455126d4",
+          "一本道"
+        ],
+        [
+          "adult-gray-traffic-cf4cd06c4ad7cda5",
+          "三级"
+        ],
+        [
+          "adult-gray-traffic-baac231fd4d244c5",
+          "三级片"
+        ],
+        [
+          "adult-gray-traffic-ed9d7bcc53d63cfd",
+          "三陪"
         ],
         [
           "adult-door-hookup",
           "上门约炮"
         ],
         [
-          "adult-local-private-date",
-          "同城私约"
+          "adult-gray-traffic-712eededffeca7fe",
+          "下体"
         ],
         [
-          "adult-local-available",
-          "同城可约"
+          "adult-gray-traffic-3ac4373310014eeb",
+          "不穿"
         ],
         [
-          "adult-nearby-available",
-          "附近可约"
+          "adult-professional-match",
+          "专业牵线"
         ],
         [
-          "adult-real-person-door",
-          "真人上门"
+          "adult-gray-traffic-83325b8aa35cd61b",
+          "丝袜"
         ],
         [
-          "adult-student-door",
-          "学生妹上门"
+          "adult-gray-traffic-b8e25cfd2e3fa336",
+          "丝诱"
         ],
         [
-          "adult-young-woman-door",
-          "少妇上门"
+          "adult-gray-traffic-bd195dc2214f8070",
+          "两性知识"
+        ],
+        [
+          "adult-gray-traffic-a011e098465c70c9",
+          "中年美妇"
+        ],
+        [
+          "adult-profile-collect-benefits",
+          "主页自取福利"
+        ],
+        [
+          "adult-profile-get-benefits",
+          "主页领取福利"
+        ],
+        [
+          "adult-gray-traffic-cdfdf26a09e5945a",
+          "买春"
+        ],
+        [
+          "adult-gray-traffic-a65ddd029ec79a81",
+          "乱交"
+        ],
+        [
+          "adult-gray-traffic-3bb0ed5821842e4a",
+          "乱伦"
+        ],
+        [
+          "adult-gray-traffic-c1443f3d55ff2852",
+          "乱伦小"
+        ],
+        [
+          "adult-gray-traffic-ed4d747a4b67fff9",
+          "乱伦类"
+        ],
+        [
+          "adult-gray-traffic-c15ab5059b44dbb1",
+          "乱奸"
+        ],
+        [
+          "adult-gray-traffic-609377a051e6e846",
+          "乳交"
+        ],
+        [
+          "adult-gray-traffic-3f6c8cf28a4d72bc",
+          "乳头"
+        ],
+        [
+          "adult-gray-traffic-268f83084a1f14ca",
+          "乳房"
+        ],
+        [
+          "adult-gray-traffic-04a791c016791fd9",
+          "乳晕"
+        ],
+        [
+          "adult-gray-traffic-865be665f848ee6e",
+          "乳沟"
+        ],
+        [
+          "adult-gray-traffic-8ee82f50dfae627d",
+          "乳爆"
+        ],
+        [
+          "adult-gray-traffic-38daa9df4f93f116",
+          "乳神"
+        ],
+        [
+          "adult-gray-traffic-84149b75775944bc",
+          "亚情"
+        ],
+        [
+          "adult-gray-traffic-03575be93fb35d99",
+          "人体摄影"
+        ],
+        [
+          "adult-gray-traffic-7672078e77e8bfad",
+          "人兽"
+        ],
+        [
+          "adult-gray-traffic-e84145404ef941e5",
+          "人妻"
+        ],
+        [
+          "adult-gray-traffic-8023dfa9ef959f56",
+          "人妻熟女"
+        ],
+        [
+          "adult-gray-traffic-e022f76878eb87e8",
+          "仓井空"
+        ],
+        [
+          "adult-gray-traffic-66a50891683e6dfc",
+          "伦图"
+        ],
+        [
+          "adult-gray-traffic-edf0dcf51e4db76f",
+          "伦理"
+        ],
+        [
+          "adult-gray-traffic-58d42fda7ea878b6",
+          "伦理大"
+        ],
+        [
+          "adult-gray-traffic-0c49424ff197fdee",
+          "伦理毛"
+        ],
+        [
+          "adult-gray-traffic-fa1bf95784cdd257",
+          "伦理片"
+        ],
+        [
+          "adult-gray-traffic-1dcf780e561061f5",
+          "伦理电影"
+        ],
+        [
+          "adult-gray-traffic-eaf79e41621e12f1",
+          "体位"
+        ],
+        [
+          "adult-gray-traffic-450098560762f5de",
+          "体奸"
+        ],
+        [
+          "adult-gray-traffic-fa5c4a73a63a1799",
+          "做爱"
+        ],
+        [
+          "adult-gray-traffic-bb70beadeb7db709",
+          "偷拍"
+        ],
+        [
+          "adult-gray-traffic-db8dfc5dfafaa5d7",
+          "偷欢"
+        ],
+        [
+          "adult-gray-traffic-d5373ec8bce92744",
+          "偷窥"
+        ],
+        [
+          "adult-gray-traffic-8bfa899191c7bdb7",
+          "免费A片"
+        ],
+        [
+          "adult-nationwide-coverage",
+          "全国1-5线覆盖"
         ],
         [
           "adult-national-airdrop",
           "全国空降"
         ],
         [
-          "adult-local-airdrop",
-          "同城空降"
+          "adult-gray-traffic-f45fb61cd8db3b65",
+          "全裸"
         ],
         [
-          "adult-offline-private-date",
-          "线下私约"
+          "adult-gray-traffic-09f5ef68b2c4a033",
+          "兽交"
+        ],
+        [
+          "adult-gray-traffic-94a0911b834f2087",
+          "兽奸"
+        ],
+        [
+          "adult-gray-traffic-f6be5f0991c095ba",
+          "兽性"
+        ],
+        [
+          "adult-gray-traffic-33574dce83b23e3e",
+          "兽欲"
+        ],
+        [
+          "adult-gray-traffic-f810641ae3b132e4",
+          "内射"
+        ],
+        [
+          "adult-gray-traffic-9c3250ff63e15e91",
+          "写真"
+        ],
+        [
+          "adult-gray-traffic-dfdb6153dcfd2040",
+          "凌辱"
+        ],
+        [
+          "adult-gray-traffic-266908737763773c",
+          "几吧"
+        ],
+        [
+          "adult-gray-traffic-3e58aa8710ba1d3a",
+          "出轨"
+        ],
+        [
+          "adult-gray-traffic-45ce8abf119efdde",
+          "前凸后翘"
+        ],
+        [
+          "adult-gray-traffic-908e686854d1b622",
+          "包二奶"
+        ],
+        [
+          "adult-gray-traffic-16aa401ba627ec6a",
+          "卖淫"
+        ],
+        [
+          "adult-gray-traffic-008bb2f808f55639",
+          "厕奴"
+        ],
+        [
+          "adult-gray-traffic-a8a3eddad1a728c6",
+          "原味内衣"
+        ],
+        [
+          "adult-gray-traffic-e49225ed0dc849b0",
+          "双乳"
+        ],
+        [
+          "adult-gray-traffic-cec445b92550c3bc",
+          "双峰"
+        ],
+        [
+          "adult-gray-traffic-5cc272fc10435ea2",
+          "双性恋"
+        ],
+        [
+          "adult-gray-traffic-f8c4e2f848d3e431",
+          "双臀"
+        ],
+        [
+          "adult-gray-traffic-0bfada45ac64d5ad",
+          "发情"
+        ],
+        [
+          "adult-gray-traffic-754917300a5eb3ba",
+          "发浪"
+        ],
+        [
+          "adult-gray-traffic-6b753637846bed88",
+          "发生关系"
+        ],
+        [
+          "adult-gray-traffic-8f18c4fb1b2d7920",
+          "口交"
+        ],
+        [
+          "adult-gray-traffic-b9d165b9df5059e4",
+          "口射"
+        ],
+        [
+          "adult-gray-traffic-40ca1f0660259f33",
+          "口活"
+        ],
+        [
+          "adult-gray-traffic-9b078abb0d1c5e1d",
+          "口淫"
+        ],
+        [
+          "adult-gray-traffic-1f29ce5c7db01948",
+          "口爆"
+        ],
+        [
+          "adult-gray-traffic-bfae4fc6d2f0051a",
+          "叫床"
+        ],
+        [
+          "adult-gray-traffic-2e326ec05161bb01",
+          "吃精"
+        ],
+        [
+          "adult-gray-traffic-bbe562b9e3a8ee85",
+          "各种姿势"
         ],
         {
           "id": "adult-terms-local-door",
@@ -133,15 +460,6 @@
           "terms": [
             "同城",
             "上门"
-          ],
-          "max_gap": 12
-        },
-        {
-          "id": "adult-terms-local-hookup",
-          "phrase": "同城 + 约炮",
-          "terms": [
-            "同城",
-            "约炮"
           ],
           "max_gap": 12
         },
@@ -155,32 +473,143 @@
           "max_gap": 12
         },
         {
-          "id": "adult-terms-nearby-available",
-          "phrase": "附近 + 可约",
+          "id": "adult-terms-local-airdrop",
+          "phrase": "同城 + 空降",
           "terms": [
-            "附近",
-            "可约"
-          ],
-          "max_gap": 12
-        },
-        {
-          "id": "adult-terms-nearby-door",
-          "phrase": "附近 + 上门",
-          "terms": [
-            "附近",
-            "上门"
-          ],
-          "max_gap": 12
-        },
-        {
-          "id": "adult-terms-beauty-door",
-          "phrase": "美女 + 上门",
-          "terms": [
-            "美女",
-            "上门"
+            "同城",
+            "空降"
           ],
           "max_gap": 10
         },
+        {
+          "id": "adult-terms-local-hookup",
+          "phrase": "同城 + 约炮",
+          "terms": [
+            "同城",
+            "约炮"
+          ],
+          "max_gap": 12
+        },
+        [
+          "adult-local-door-hookup",
+          "同城上门约炮"
+        ],
+        [
+          "adult-local-available",
+          "同城可约"
+        ],
+        [
+          "adult-local-private-date",
+          "同城私约"
+        ],
+        [
+          "adult-local-airdrop",
+          "同城空降"
+        ],
+        [
+          "adult-local-hookup",
+          "同城约炮"
+        ],
+        [
+          "adult-gray-traffic-5d3c8acaa9d1748d",
+          "同房"
+        ],
+        [
+          "adult-gray-traffic-1415a2a845f3c0da",
+          "后庭"
+        ],
+        [
+          "adult-gray-traffic-25420e3d8d141e2b",
+          "后穴"
+        ],
+        [
+          "adult-gray-traffic-1d0f6d6674457668",
+          "吞精"
+        ],
+        [
+          "adult-gray-traffic-67d163c409b7614a",
+          "呻吟"
+        ],
+        [
+          "adult-gray-traffic-b943ef7a595abd2b",
+          "品香堂"
+        ],
+        [
+          "adult-gray-traffic-a5f1bddc24f52ec5",
+          "喷精"
+        ],
+        [
+          "adult-gray-traffic-722a86bf05ee7081",
+          "四房色播"
+        ],
+        [
+          "adult-gray-traffic-798ba71b932685c7",
+          "国产av"
+        ],
+        [
+          "adult-gray-traffic-48449310f847748c",
+          "处女"
+        ],
+        [
+          "adult-gray-traffic-fc42ccbaebce4a79",
+          "处男"
+        ],
+        [
+          "adult-gray-traffic-b7ddc3c485169681",
+          "夏川纯"
+        ],
+        [
+          "adult-gray-traffic-e0e52aa6541b4fc2",
+          "多人轮"
+        ],
+        [
+          "adult-gray-traffic-7842d12511f5a4f1",
+          "多人运动"
+        ],
+        [
+          "adult-gray-traffic-fdceb99b4cf4eeff",
+          "夜勤病栋"
+        ],
+        [
+          "adult-gray-traffic-170eaf413b2d641c",
+          "大乳"
+        ],
+        [
+          "adult-gray-traffic-741ccfbca571c2f5",
+          "大力抽送"
+        ],
+        [
+          "adult-gray-traffic-b30ba82cd7f05aef",
+          "大波"
+        ],
+        [
+          "adult-gray-traffic-8d61a1b16fe719b9",
+          "奈美"
+        ],
+        [
+          "adult-gray-traffic-e55027e0047fdd88",
+          "套弄"
+        ],
+        [
+          "adult-gray-traffic-540afe3609975c6d",
+          "女优"
+        ],
+        [
+          "adult-gray-traffic-99003c9c9a19db00",
+          "奶子"
+        ],
+        [
+          "adult-gray-traffic-81cddbcf67e7820e",
+          "奸情"
+        ],
+        [
+          "adult-gray-traffic-c74f0538c72a56ac",
+          "好嫩"
+        ],
+        [
+          "adult-gray-traffic-055dc1f10b45bac7",
+          "妓女"
+        ],
         {
           "id": "adult-terms-girl-door",
           "phrase": "妹 + 上门",
@@ -190,6 +619,46 @@
           ],
           "max_gap": 8
         },
+        [
+          "adult-gray-traffic-b41bb87cbaa0e718",
+          "妹上门"
+        ],
+        [
+          "adult-gray-traffic-4c6a09f389d33cd3",
+          "妹按摩"
+        ],
+        [
+          "adult-gray-traffic-f887e9df70584b8c",
+          "婬"
+        ],
+        [
+          "adult-gray-traffic-804416e83097e8c2",
+          "嫖娼"
+        ],
+        [
+          "adult-gray-traffic-b2c42d7b5cca0a46",
+          "嫖客"
+        ],
+        [
+          "adult-gray-traffic-0ef55bd5f2d93ba7",
+          "嫩B"
+        ],
+        [
+          "adult-gray-traffic-2da622d0e258986b",
+          "嫩女"
+        ],
+        [
+          "adult-gray-traffic-deacd7d79094326c",
+          "嫩穴"
+        ],
+        [
+          "adult-gray-traffic-dc3875aa27488ed4",
+          "嫩逼"
+        ],
+        [
+          "adult-gray-traffic-75b7be6f7ea6e165",
+          "学生妹"
+        ],
         {
           "id": "adult-terms-student-door",
           "phrase": "学生妹 + 上门",
@@ -199,15 +668,1126 @@
           ],
           "max_gap": 10
         },
-        {
-          "id": "adult-terms-flight-attendant-door",
-          "phrase": "空姐 + 上门",
-          "terms": [
-            "空姐",
-            "上门"
-          ],
-          "max_gap": 10
-        },
+        [
+          "adult-student-door",
+          "学生妹上门"
+        ],
+        [
+          "adult-gray-traffic-891a225c09de641c",
+          "寂寞女"
+        ],
+        [
+          "adult-gray-traffic-a63e7166c427be3d",
+          "寂寞少妇"
+        ],
+        [
+          "adult-gray-traffic-8ec7f46009da30d0",
+          "寂寞男"
+        ],
+        [
+          "adult-gray-traffic-7a9c63e85222586c",
+          "密穴"
+        ],
+        [
+          "adult-gray-traffic-04432d0eb5699bab",
+          "封面女郎"
+        ],
+        [
+          "adult-gray-traffic-08755450f0ae7935",
+          "射爽"
+        ],
+        [
+          "adult-gray-traffic-1ad7becf1a8f7dfc",
+          "射精"
+        ],
+        [
+          "adult-gray-traffic-aad363f9acdfdc37",
+          "射颜"
+        ],
+        [
+          "adult-gray-traffic-4090e1d0487465c6",
+          "小xue"
+        ],
+        [
+          "adult-gray-traffic-abb020790b2ce513",
+          "小穴"
+        ],
+        [
+          "adult-gray-traffic-d05e151a8435442e",
+          "小逼"
+        ],
+        [
+          "adult-gray-traffic-12f694afb6fcdab5",
+          "少修正"
+        ],
+        [
+          "adult-gray-traffic-c01dc884cf268927",
+          "少妇"
+        ],
+        [
+          "adult-young-woman-door",
+          "少妇上门"
+        ],
+        [
+          "adult-gray-traffic-de4a8d6f8b1c88d9",
+          "少妇自慰"
+        ],
+        [
+          "adult-gray-traffic-e481028c4fb20aba",
+          "少年阿宾"
+        ],
+        [
+          "adult-gray-traffic-ff6af044913f7636",
+          "少男少女"
+        ],
+        [
+          "adult-gray-traffic-00bb0b0a8bbe1e7e",
+          "就去日"
+        ],
+        [
+          "adult-gray-traffic-d25d3ac64c911dfc",
+          "屁眼"
+        ],
+        [
+          "adult-gray-traffic-4bcf0b2ebe42d2d3",
+          "屄"
+        ],
+        [
+          "adult-gray-traffic-15539ce91f0c4b67",
+          "巨乳"
+        ],
+        [
+          "adult-gray-traffic-a21c647b1dee5cf1",
+          "巨奶"
+        ],
+        [
+          "adult-gray-traffic-27b4ed6998bb1d6b",
+          "巨屌"
+        ],
+        [
+          "adult-gray-traffic-ff32c58fa09e4b28",
+          "干死你"
+        ],
+        [
+          "adult-gray-traffic-37b08ea822f0e3a7",
+          "干穴"
+        ],
+        [
+          "adult-gray-traffic-b3d51967db7049df",
+          "幼b"
+        ],
+        [
+          "adult-gray-traffic-14be5ce9ddab6acf",
+          "幼交"
+        ],
+        [
+          "adult-gray-traffic-64c2c582415e7cfc",
+          "幼女"
+        ],
+        [
+          "adult-gray-traffic-d4af546db9ce3add",
+          "幼师"
+        ],
+        [
+          "adult-gray-traffic-b09b8df3a65f6cbb",
+          "幼男"
+        ],
+        [
+          "adult-gray-traffic-11013528c9226ac9",
+          "幼逼"
+        ],
+        [
+          "adult-gray-traffic-2f44693635a063f5",
+          "幼齿"
+        ],
+        [
+          "adult-gray-traffic-8188b39000be02e6",
+          "应召"
+        ],
+        [
+          "adult-gray-traffic-c88be49f76d0ddd6",
+          "开苞"
+        ],
+        [
+          "adult-gray-traffic-521a8033bf0b2965",
+          "张筱雨"
+        ],
+        [
+          "adult-gray-traffic-7e7495156b9348cc",
+          "强jian"
+        ],
+        [
+          "adult-gray-traffic-87809878bddd9ccd",
+          "强奸"
+        ],
+        [
+          "adult-gray-traffic-dfd9eb3bfaec110b",
+          "强奸处女"
+        ],
+        [
+          "adult-gray-traffic-3329afbd938ed72f",
+          "强暴"
+        ],
+        [
+          "adult-gray-traffic-6f424b45cca85a7f",
+          "快感"
+        ],
+        [
+          "adult-gray-traffic-29845368f0649b29",
+          "性交"
+        ],
+        [
+          "adult-gray-traffic-611f7690126cb0c1",
+          "性交图片"
+        ],
+        [
+          "adult-gray-traffic-ed8f873356844078",
+          "性交易"
+        ],
+        [
+          "adult-gray-traffic-1df367a953e98b1f",
+          "性交视频"
+        ],
+        [
+          "adult-gray-traffic-c0e40c00b11b66f2",
+          "性伙伴"
+        ],
+        [
+          "adult-gray-traffic-3a012366928806f5",
+          "性伴侣"
+        ],
+        [
+          "adult-gray-traffic-63a18010c746275f",
+          "性器"
+        ],
+        [
+          "adult-gray-traffic-3085274827e84a85",
+          "性器官"
+        ],
+        [
+          "adult-gray-traffic-f03f9d0a0409d198",
+          "性奴"
+        ],
+        [
+          "adult-gray-traffic-d1e201bde07cf068",
+          "性奴集中营"
+        ],
+        [
+          "adult-gray-traffic-593573309b9be294",
+          "性息"
+        ],
+        [
+          "adult-gray-traffic-d947cc2e0d9621f8",
+          "性感"
+        ],
+        [
+          "adult-gray-traffic-fe19186b28750ac5",
+          "性感妖娆"
+        ],
+        [
+          "adult-gray-traffic-b21adecc1329dc73",
+          "性感少"
+        ],
+        [
+          "adult-gray-traffic-14652d9cfafc9784",
+          "性感沙滩"
+        ],
+        [
+          "adult-gray-traffic-d913b57f4bb64a03",
+          "性感诱惑"
+        ],
+        [
+          "adult-gray-traffic-4fac1e08165d65bf",
+          "性技巧"
+        ],
+        [
+          "adult-gray-traffic-3832f180636fb9ea",
+          "性服务"
+        ],
+        [
+          "adult-gray-traffic-a4c8e25ccf1e31cc",
+          "性欲"
+        ],
+        [
+          "adult-gray-traffic-e998241d6861ff3f",
+          "性爱"
+        ],
+        [
+          "adult-gray-traffic-bbd7ed3b0495c92a",
+          "性爱动态图"
+        ],
+        [
+          "adult-gray-traffic-5fe2e275867beca5",
+          "性爱动漫"
+        ],
+        [
+          "adult-gray-traffic-db9738d5263e72ad",
+          "性爱图"
+        ],
+        [
+          "adult-gray-traffic-821d324c31ad29e2",
+          "性爱图片"
+        ],
+        [
+          "adult-gray-traffic-c2c617ee403dd61e",
+          "性爱姿势"
+        ],
+        [
+          "adult-gray-traffic-886036393c56f3f5",
+          "性爱小电影"
+        ],
+        [
+          "adult-gray-traffic-ba4b4b0dda9c12a2",
+          "性爱插图"
+        ],
+        [
+          "adult-gray-traffic-7263e2eaef634fdc",
+          "性爱电影"
+        ],
+        [
+          "adult-gray-traffic-2f6719eec79a99c4",
+          "性爱视"
+        ],
+        [
+          "adult-gray-traffic-27b1b4daa13e0a68",
+          "性爱贴图"
+        ],
+        [
+          "adult-gray-traffic-23fb072c4b50ac4a",
+          "性生活"
+        ],
+        [
+          "adult-gray-traffic-e51834341b405b42",
+          "性瘾"
+        ],
+        [
+          "adult-gray-traffic-c3dd4126b01c1dd2",
+          "性福情"
+        ],
+        [
+          "adult-gray-traffic-ff546a4adee5c01d",
+          "性虎"
+        ],
+        [
+          "adult-gray-traffic-e2380db69206bc2a",
+          "性虐"
+        ],
+        [
+          "adult-gray-traffic-fb210f08f6f30c1f",
+          "性虐待"
+        ],
+        [
+          "adult-gray-traffic-e1a5f8eba0b4f3ac",
+          "性行为"
+        ],
+        [
+          "adult-gray-traffic-decbe82fa7daaad6",
+          "性饥渴"
+        ],
+        [
+          "adult-gray-traffic-906c726c991ff3e1",
+          "性高潮"
+        ],
+        [
+          "adult-gray-traffic-96147b64775d5222",
+          "情欲"
+        ],
+        [
+          "adult-gray-traffic-444485725ede9d20",
+          "情色"
+        ],
+        [
+          "adult-gray-traffic-8878a711b658aaa4",
+          "情色图片"
+        ],
+        [
+          "adult-gray-traffic-a1819229451c960d",
+          "情色小说"
+        ],
+        [
+          "adult-gray-traffic-87801412ff139d00",
+          "情色成人"
+        ],
+        [
+          "adult-gray-traffic-31681826704ad2d5",
+          "情色电影"
+        ],
+        [
+          "adult-gray-traffic-3acd618d1ffe050c",
+          "情色视频"
+        ],
+        [
+          "adult-gray-traffic-b5f9ba7dff858e3b",
+          "情趣内衣"
+        ],
+        [
+          "adult-gray-traffic-68601149fd6194a0",
+          "情趣用品"
+        ],
+        [
+          "adult-gray-traffic-c393e18d0d1c80f8",
+          "惹火身材"
+        ],
+        [
+          "adult-gray-traffic-50f312c22af2071d",
+          "成人dv"
+        ],
+        [
+          "adult-gray-traffic-4e24e038dcfee4ed",
+          "成人卡通"
+        ],
+        [
+          "adult-gray-traffic-7085daf43ea69bb3",
+          "成人图"
+        ],
+        [
+          "adult-gray-traffic-c272625720beec90",
+          "成人小"
+        ],
+        [
+          "adult-gray-traffic-5fddb39145fe0acf",
+          "成人小说"
+        ],
+        [
+          "adult-gray-traffic-45bb2f55f96e93a0",
+          "成人文"
+        ],
+        [
+          "adult-gray-traffic-77a9bd96a8842ba8",
+          "成人文学"
+        ],
+        [
+          "adult-gray-traffic-110cf0d556583b2f",
+          "成人杂志"
+        ],
+        [
+          "adult-gray-traffic-2b371dfdf391e1f2",
+          "成人游戏"
+        ],
+        [
+          "adult-gray-traffic-6137d42c5a05a066",
+          "成人漫画"
+        ],
+        [
+          "adult-gray-traffic-73e738ff002922f8",
+          "成人片"
+        ],
+        [
+          "adult-gray-traffic-512fc764fa3094fe",
+          "成人用品"
+        ],
+        [
+          "adult-gray-traffic-d1cf4075ecb06ed8",
+          "成人电"
+        ],
+        [
+          "adult-gray-traffic-24edfb49d94ad63b",
+          "成人电影"
+        ],
+        [
+          "adult-gray-traffic-c8e66c847d0628ac",
+          "成人网站"
+        ],
+        [
+          "adult-gray-traffic-6e3372a624a54c03",
+          "成人聊"
+        ],
+        [
+          "adult-gray-traffic-0528922ba417cc28",
+          "成人色情"
+        ],
+        [
+          "adult-gray-traffic-3d9441239d82b22d",
+          "成人视"
+        ],
+        [
+          "adult-gray-traffic-6bfdb080ef89b817",
+          "成人论坛"
+        ],
+        [
+          "adult-gray-traffic-c3a0840a781e44bd",
+          "成年片"
+        ],
+        [
+          "adult-gray-traffic-42813962301983bd",
+          "我就色"
+        ],
+        [
+          "adult-gray-traffic-f87413e217d7f657",
+          "我干"
+        ],
+        [
+          "adult-fu-not-black",
+          "我福不黑"
+        ],
+        [
+          "adult-gray-traffic-8c29b68da747950d",
+          "手淫"
+        ],
+        [
+          "adult-gray-traffic-2d2a6214ec4ab57f",
+          "扌由插"
+        ],
+        [
+          "adult-gray-traffic-e1de4fa6010905c7",
+          "抓胸"
+        ],
+        [
+          "adult-gray-traffic-277c12f52dbab5d4",
+          "抽一插"
+        ],
+        [
+          "adult-gray-traffic-34ab2dfab8a4225c",
+          "抽插"
+        ],
+        [
+          "adult-gray-traffic-da302cdd5e1d0ab8",
+          "拉拉香港"
+        ],
+        [
+          "adult-gray-traffic-0a9795a17550af38",
+          "拔出来"
+        ],
+        [
+          "adult-gray-traffic-ce6b37624d6fad62",
+          "招妓"
+        ],
+        [
+          "adult-gray-traffic-d2ea82e00b91c5b4",
+          "招鸡"
+        ],
+        [
+          "adult-gray-traffic-9e8d01bd770d3615",
+          "拳交"
+        ],
+        [
+          "adult-gray-traffic-0d501e9b4dbc4779",
+          "按摩棒"
+        ],
+        [
+          "adult-gray-traffic-28299f2ad04d4763",
+          "捏弄"
+        ],
+        [
+          "adult-gray-traffic-f987422aa47f1938",
+          "换妻"
+        ],
+        [
+          "adult-gray-traffic-0221eea13d1be931",
+          "换妻俱乐部"
+        ],
+        [
+          "adult-gray-traffic-741d8f62eb9bf999",
+          "换媳"
+        ],
+        [
+          "adult-gray-traffic-4d3364035509a50b",
+          "揉乳"
+        ],
+        [
+          "adult-gray-traffic-6e7435f9d9fb0e6d",
+          "插b"
+        ],
+        [
+          "adult-gray-traffic-eff78bd693be3785",
+          "插我"
+        ],
+        [
+          "adult-gray-traffic-adcd0b57f23f7a21",
+          "插暴"
+        ],
+        [
+          "adult-gray-traffic-62bc55020526b126",
+          "插比"
+        ],
+        [
+          "adult-gray-traffic-ac3e7fc27b39c09e",
+          "插进"
+        ],
+        [
+          "adult-gray-traffic-887201d916239607",
+          "插逼"
+        ],
+        [
+          "adult-gray-traffic-9f359c492b3ca813",
+          "插阴"
+        ],
+        [
+          "adult-gray-traffic-45ac0fbd123f359f",
+          "援交"
+        ],
+        [
+          "adult-gray-traffic-0aae1919a5ee8f90",
+          "援助交际"
+        ],
+        [
+          "adult-gray-traffic-11702415691e00db",
+          "摸奶"
+        ],
+        [
+          "adult-gray-traffic-209409026aab609a",
+          "摸奶门"
+        ],
+        [
+          "adult-gray-traffic-43bb47516edd58be",
+          "摸胸"
+        ],
+        [
+          "adult-gray-traffic-7b2fede091f61a1f",
+          "操我"
+        ],
+        [
+          "adult-gray-traffic-68c2efa2af765235",
+          "操死"
+        ],
+        [
+          "adult-gray-traffic-5436d35ba5d6fc07",
+          "操烂"
+        ],
+        [
+          "adult-gray-traffic-c72549ca90843152",
+          "操逼"
+        ],
+        [
+          "adult-gray-traffic-2f504a7ac4a6ce7b",
+          "操黑"
+        ],
+        [
+          "adult-gray-traffic-79669ac63f32b9a9",
+          "放尿"
+        ],
+        [
+          "adult-gray-traffic-2872a2423b99c00b",
+          "文学情色"
+        ],
+        [
+          "adult-gray-traffic-f37f9a78815f25ef",
+          "无修正"
+        ],
+        [
+          "adult-wuchangyue",
+          "无偿约"
+        ],
+        [
+          "adult-gray-traffic-feffd452f2037139",
+          "无码"
+        ],
+        [
+          "adult-gray-traffic-3b33724050149cd8",
+          "无码AV"
+        ],
+        [
+          "adult-gray-traffic-e27132af473860c0",
+          "日本AV"
+        ],
+        [
+          "adult-gray-traffic-e02c56b5a1a7abc7",
+          "日本AV女优"
+        ],
+        [
+          "adult-gray-traffic-793f763d6852978d",
+          "日本SM调教"
+        ],
+        [
+          "adult-gray-traffic-435440b82fb5e424",
+          "日本拉拉"
+        ],
+        [
+          "adult-gray-traffic-22f95670386c8b39",
+          "日本淫电影"
+        ],
+        [
+          "adult-gray-traffic-5960bf4d72d2190e",
+          "日本淫荡美少女"
+        ],
+        [
+          "adult-gray-traffic-7ce5df638cf21871",
+          "日烂"
+        ],
+        [
+          "adult-gray-traffic-ffefbb79a9182686",
+          "日逼"
+        ],
+        [
+          "adult-gray-traffic-87ef948833cafd7e",
+          "春宫"
+        ],
+        [
+          "adult-gray-traffic-1079799056cac56a",
+          "春药"
+        ],
+        [
+          "adult-gray-traffic-b1648c034f469b16",
+          "暴乳"
+        ],
+        [
+          "adult-gray-traffic-74d069077b4cfe8e",
+          "暴奸"
+        ],
+        [
+          "adult-gray-traffic-3ce0e6aa8b3438b4",
+          "暴干"
+        ],
+        [
+          "adult-gray-traffic-fd917b446b3f15ff",
+          "暴淫"
+        ],
+        [
+          "adult-gray-traffic-825da03554eac018",
+          "有码"
+        ],
+        [
+          "adult-gray-traffic-da2024c66e61e968",
+          "未满"
+        ],
+        [
+          "adult-gray-traffic-fcd208dc0b4aab8f",
+          "杨思敏"
+        ],
+        [
+          "adult-gray-traffic-6543b48831cf2f8b",
+          "松岛枫"
+        ],
+        [
+          "adult-gray-traffic-27eeffda0986d20b",
+          "校鸡"
+        ],
+        [
+          "adult-gray-traffic-4984054cf0907593",
+          "梦幻西游性爱版"
+        ],
+        [
+          "adult-gray-traffic-403734d4b879000e",
+          "欧美BT"
+        ],
+        [
+          "adult-gray-traffic-ddab70edef45aeeb",
+          "欲仙欲死"
+        ],
+        [
+          "adult-gray-traffic-e73bfe135e4ca193",
+          "欲女"
+        ],
+        [
+          "adult-gray-traffic-1be3f7c6580b02f4",
+          "欲火"
+        ],
+        [
+          "adult-gray-traffic-f7531269cc2a0036",
+          "死逼"
+        ],
+        [
+          "adult-gray-traffic-0e650a4a0f7d888a",
+          "母奸"
+        ],
+        [
+          "adult-gray-traffic-9d9a5de705ae8bf4",
+          "汤加丽"
+        ],
+        [
+          "adult-gray-traffic-522d65c98381d854",
+          "流出"
+        ],
+        [
+          "adult-gray-traffic-58d8aeedd03daf36",
+          "流淫"
+        ],
+        [
+          "adult-gray-traffic-c3a5bd4a55c71836",
+          "浑圆"
+        ],
+        [
+          "adult-gray-traffic-f38dd8153e3bd6ca",
+          "浪叫"
+        ],
+        [
+          "adult-gray-traffic-3b4a142f700dc10f",
+          "浪女"
+        ],
+        [
+          "adult-gray-traffic-d877e8c703f3d47d",
+          "浪妇"
+        ],
+        [
+          "adult-gray-traffic-51c9e69e88e7ab6d",
+          "浪逼"
+        ],
+        [
+          "adult-gray-traffic-37dcf0e7644c407a",
+          "淫书"
+        ],
+        [
+          "adult-gray-traffic-348a19351eb16873",
+          "淫乱"
+        ],
+        [
+          "adult-gray-traffic-e7cf5cae7b3bf96c",
+          "淫乱熟女"
+        ],
+        [
+          "adult-gray-traffic-0da8512f7dfadd0e",
+          "淫乳"
+        ],
+        [
+          "adult-gray-traffic-ed8f3fbbbd2ea9df",
+          "淫亵"
+        ],
+        [
+          "adult-gray-traffic-8c3dd37fb4619dba",
+          "淫兽"
+        ],
+        [
+          "adult-gray-traffic-906a0b70cbfadc1c",
+          "淫兽学"
+        ],
+        [
+          "adult-gray-traffic-802f5b437061a33e",
+          "淫兽学园"
+        ],
+        [
+          "adult-gray-traffic-4b5912f4325a61f2",
+          "淫叫"
+        ],
+        [
+          "adult-gray-traffic-b51e54b4433ad696",
+          "淫声"
+        ],
+        [
+          "adult-gray-traffic-7f3556d969c0b73a",
+          "淫声浪语"
+        ],
+        [
+          "adult-gray-traffic-8151aacc6c2a86a8",
+          "淫女"
+        ],
+        [
+          "adult-gray-traffic-f0432346f517822b",
+          "淫妇"
+        ],
+        [
+          "adult-gray-traffic-c9f4e80f715ecedc",
+          "淫妻"
+        ],
+        [
+          "adult-gray-traffic-e98d99be69f3bb42",
+          "淫姐"
+        ],
+        [
+          "adult-gray-traffic-a663cdd20ae8f52b",
+          "淫威"
+        ],
+        [
+          "adult-gray-traffic-3cd10237cfe8d7f4",
+          "淫娃"
+        ],
+        [
+          "adult-gray-traffic-323ff639c0fda478",
+          "淫媚"
+        ],
+        [
+          "adult-gray-traffic-aa92ed0164f24aa0",
+          "淫情"
+        ],
+        [
+          "adult-gray-traffic-7f685ead0ce0bc4f",
+          "淫情女"
+        ],
+        [
+          "adult-gray-traffic-36c6423579403713",
+          "淫教师"
+        ],
+        [
+          "adult-gray-traffic-c21adeac66b61b38",
+          "淫术炼金士"
+        ],
+        [
+          "adult-gray-traffic-ad2583605d97f73e",
+          "淫样"
+        ],
+        [
+          "adult-gray-traffic-c5cda39783842137",
+          "淫母"
+        ],
+        [
+          "adult-gray-traffic-eef05f2097c2100c",
+          "淫水"
+        ],
+        [
+          "adult-gray-traffic-9c0c3260329e5655",
+          "淫河"
+        ],
+        [
+          "adult-gray-traffic-9e41f1f97361a4b2",
+          "淫流"
+        ],
+        [
+          "adult-gray-traffic-841e2d456fea14eb",
+          "淫浪"
+        ],
+        [
+          "adult-gray-traffic-86398c999bb4c5dc",
+          "淫液"
+        ],
+        [
+          "adult-gray-traffic-791ad82c20f19545",
+          "淫照"
+        ],
+        [
+          "adult-gray-traffic-310aff0f98be15a4",
+          "淫电影"
+        ],
+        [
+          "adult-gray-traffic-048b0743a8e2fd6a",
+          "淫秽"
+        ],
+        [
+          "adult-gray-traffic-b2a3c03d1e0e7769",
+          "淫穴"
+        ],
+        [
+          "adult-gray-traffic-8729d5023d4091ab",
+          "淫糜"
+        ],
+        [
+          "adult-gray-traffic-09ef58ae47702a50",
+          "淫肉"
+        ],
+        [
+          "adult-gray-traffic-84e55a5e0fa259bc",
+          "淫色"
+        ],
+        [
+          "adult-gray-traffic-2bdcf7e3d7949fa8",
+          "淫荡"
+        ],
+        [
+          "adult-gray-traffic-3028c0f52df28f32",
+          "淫荡照片"
+        ],
+        [
+          "adult-gray-traffic-75a409ac5140aff7",
+          "淫荡笑话"
+        ],
+        [
+          "adult-gray-traffic-b15b8f59fdb5a30f",
+          "淫荡美女"
+        ],
+        [
+          "adult-gray-traffic-179b5b88406f6c19",
+          "淫荡视频"
+        ],
+        [
+          "adult-gray-traffic-fc27d666e5e53e61",
+          "淫蕩"
+        ],
+        [
+          "adult-gray-traffic-b44a6cff03417983",
+          "淫虐"
+        ],
+        [
+          "adult-gray-traffic-f9fecbc34efd474b",
+          "淫虫"
+        ],
+        [
+          "adult-gray-traffic-28008a4584c84eeb",
+          "淫虫电影"
+        ],
+        [
+          "adult-gray-traffic-55d675a8258ea3d3",
+          "淫贱"
+        ],
+        [
+          "adult-gray-traffic-1d90bda6316e2514",
+          "淫赶"
+        ],
+        [
+          "adult-gray-traffic-7366280ede30c2c1",
+          "淫靡"
+        ],
+        [
+          "adult-gray-traffic-18ff053fe6fa6652",
+          "淫騷妹"
+        ],
+        [
+          "adult-gray-traffic-d2164ef3ca171424",
+          "淫魔"
+        ],
+        [
+          "adult-gray-traffic-e4e094cf07f010f6",
+          "淫魔舞"
+        ],
+        [
+          "adult-gray-traffic-6bd0d3b8c8a477bc",
+          "深喉"
+        ],
+        [
+          "adult-gray-traffic-5b6115c5e5131392",
+          "滥交"
+        ],
+        [
+          "adult-gray-traffic-0636106313f6b624",
+          "漏乳"
+        ],
+        [
+          "adult-gray-traffic-45f7909012010ac9",
+          "潮吹"
+        ],
+        [
+          "adult-gray-traffic-b572a2fa5f9d1283",
+          "潮喷"
+        ],
+        [
+          "adult-gray-traffic-bae9189bd39939dd",
+          "激情打炮"
+        ],
+        [
+          "adult-gray-traffic-fcd669779a4250c7",
+          "火辣"
+        ],
+        [
+          "adult-gray-traffic-dc4156e0b24de172",
+          "炮友"
+        ],
+        [
+          "adult-tap-profile-benefits",
+          "点击头像看福利"
+        ],
+        [
+          "adult-gray-traffic-89f1a482f0342a91",
+          "熟女"
+        ],
+        [
+          "adult-gray-traffic-0788104b7af70d4f",
+          "熟妇"
+        ],
+        [
+          "adult-gray-traffic-177426ddfd4d23f6",
+          "熟母"
+        ],
+        [
+          "adult-gray-traffic-9df46b9e4ce7cb43",
+          "爆乳"
+        ],
+        [
+          "adult-gray-traffic-14e80f768e02ce00",
+          "爆草"
+        ],
+        [
+          "adult-gray-traffic-623ec191106f4672",
+          "爱女人"
+        ],
+        [
+          "adult-gray-traffic-5709c9d081d6222b",
+          "爱情岛论坛"
+        ],
+        [
+          "adult-gray-traffic-219af6c42926a728",
+          "爱液"
+        ],
+        [
+          "adult-gray-traffic-76e62f046e3055cc",
+          "爱爱"
+        ],
+        [
+          "adult-gray-traffic-fdbdcc82cceffa31",
+          "爱爱视频"
+        ],
+        [
+          "adult-gray-traffic-40f081498c60e7a0",
+          "爽死我了"
+        ],
+        [
+          "adult-gray-traffic-88b780faf973e9f0",
+          "爽片"
+        ],
+        [
+          "adult-gray-traffic-144d8b59d96f6f0e",
+          "狂插"
+        ],
+        [
+          "adult-gray-traffic-7108af60e0d7e070",
+          "狂操"
+        ],
+        [
+          "adult-gray-traffic-901280f72f76ffd1",
+          "狼友"
+        ],
+        [
+          "adult-gray-traffic-eea4eb329dcf5044",
+          "猛男"
+        ],
+        [
+          "adult-gray-traffic-52ae1b8b2f9c9aa4",
+          "猥亵"
+        ],
+        [
+          "adult-gray-traffic-a0ed8b37f130c559",
+          "玉乳"
+        ],
+        [
+          "adult-gray-traffic-ffc608500d67ece5",
+          "玉女心经"
+        ],
+        [
+          "adult-gray-traffic-f0aef763e3f78f5a",
+          "玉穴"
+        ],
+        [
+          "adult-gray-traffic-0dc6a9000e5c8c89",
+          "玉蒲团"
+        ],
+        [
+          "adult-gray-traffic-be3e71b52cf28504",
+          "现代情色"
+        ],
+        [
+          "adult-gray-traffic-401acab9c5b77481",
+          "生殖器"
+        ],
+        [
+          "adult-gray-traffic-861dd92b7560768a",
+          "电影色情"
+        ],
+        [
+          "adult-gray-traffic-40d8e4db065dd3d5",
+          "男公关"
+        ],
+        [
+          "adult-gray-traffic-356a5f61bec7c62e",
+          "男女公关"
+        ],
+        [
+          "adult-gray-traffic-b4ba95e846fafea8",
+          "男奴"
+        ],
+        [
+          "adult-gray-traffic-011a9d5c7fd2a248",
+          "白嫩"
+        ],
+        [
+          "adult-gray-traffic-8f823640128dab30",
+          "盗撮"
+        ],
+        [
+          "adult-gray-traffic-2586dec2a8527b47",
+          "相奸"
+        ],
+        [
+          "adult-real-person-door",
+          "真人上门"
+        ],
+        [
+          "adult-gray-traffic-9f74b49c6e2ebfa1",
+          "砲友"
+        ],
+        [
+          "adult-gray-traffic-77f87e83a9a9ec6a",
+          "破处"
+        ],
+        [
+          "adult-gray-traffic-a82f316fd18b13e1",
+          "禁室培欲"
+        ],
         {
           "id": "adult-terms-benefit-profile",
           "phrase": "福利 + 主页",
@@ -226,920 +1806,806 @@
           ],
           "max_gap": 12
         },
-        {
-          "id": "adult-terms-local-airdrop",
-          "phrase": "同城 + 空降",
-          "terms": [
-            "同城",
-            "空降"
-          ],
-          "max_gap": 10
-        }
-      ]
-    },
-    {
-      "id": "scam_phishing",
-      "name": {
-        "zh": "投资 / 带单诈骗",
-        "en": "Investment scams"
-      },
-      "description": {
-        "zh": "保本、高收益、荐股、内幕消息等诱导话术",
-        "en": "Guaranteed-return and insider-tip lures"
-      },
-      "source_refs": [
-        "cn_financial_regulator_2025",
-        "csrc_ai_investment_2026",
-        "ftc_crypto_2026"
-      ],
-      "rules": [
         [
-          "scam-guaranteed-profit",
-          "稳赚不赔"
+          "adult-benefit-collection-profile",
+          "福利合集在主页"
         ],
         [
-          "scam-principal-high-interest",
-          "保本高息"
+          "adult-benefits-profile",
+          "福利在主页"
         ],
         [
-          "scam-principal-interest-guaranteed",
-          "保本保息"
+          "adult-benefits-bio",
+          "福利在简介"
         ],
         [
-          "scam-high-return-no-risk",
-          "高收益无风险"
+          "adult-benefit-video-profile",
+          "福利视频在主页"
         ],
         [
-          "scam-high-rebate",
-          "高额返利"
+          "adult-benefit-video-bio",
+          "福利视频在简介"
         ],
         [
-          "scam-insider-tip",
-          "内幕消息"
+          "adult-benefit-link-profile",
+          "福利链接在主页"
         ],
         [
-          "scam-expert-guarantee",
-          "专家保证"
+          "adult-benefit-link-bio",
+          "福利链接在简介"
         ],
         [
-          "scam-teacher-signal",
-          "老师带单"
+          "adult-private-message-benefit",
+          "私信发福利视频"
         ],
         [
-          "scam-daily-return-three-percent",
-          "日收益3%"
+          "adult-private-message-video",
+          "私信看福利视频"
         ],
         [
-          "scam-stable-high-return",
-          "稳定高收益"
+          "adult-gray-traffic-601be8146c58f8ab",
+          "秘唇"
         ],
         [
-          "scam-low-risk-high-return",
-          "低风险高收益"
+          "adult-gray-traffic-ef6df4b479e98c89",
+          "穴口"
         ],
         [
-          "scam-risk-free-return",
-          "无风险收益"
+          "adult-gray-traffic-d969ce928151f1e1",
+          "穴图"
         ],
         [
-          "scam-guaranteed-principal-safe",
-          "保证本金安全"
-        ],
-        [
-          "scam-never-lose-money",
-          "绝对不会亏损"
-        ],
-        [
-          "scam-inside-stock-tip",
-          "内部荐股"
-        ],
-        [
-          "scam-free-stock-tip",
-          "免费荐股"
-        ],
-        [
-          "scam-follow-teacher-earn",
-          "跟着老师赚钱"
-        ],
-        [
-          "scam-vip-investment-group",
-          "VIP投资群"
-        ],
-        [
-          "scam-exclusive-investment-channel",
-          "独家投资渠道"
-        ],
-        [
-          "scam-bull-stock-insider-tip",
-          "牛股内幕消息"
+          "adult-gray-traffic-a8a2882ea4ffe2d7",
+          "空姐"
         ],
         {
-          "id": "scam-terms-teacher-signal",
-          "phrase": "老师 + 带单",
+          "id": "adult-terms-flight-attendant-door",
+          "phrase": "空姐 + 上门",
           "terms": [
-            "老师",
-            "带单"
-          ],
-          "max_gap": 14
-        },
-        {
-          "id": "scam-terms-insider-tip",
-          "phrase": "内幕 + 消息",
-          "terms": [
-            "内幕",
-            "消息"
+            "空姐",
+            "上门"
           ],
           "max_gap": 10
         },
+        [
+          "adult-gray-traffic-f3f8cf9e41eb4d89",
+          "粉嫩"
+        ],
+        [
+          "adult-gray-traffic-0759d18300803dcf",
+          "粉穴"
+        ],
+        [
+          "adult-gray-traffic-65aa864b49421410",
+          "精子"
+        ],
+        [
+          "adult-gray-traffic-af45dc4f92c64c61",
+          "精液"
+        ],
+        [
+          "adult-gray-traffic-39c13661882e7b08",
+          "素人"
+        ],
+        [
+          "adult-gray-traffic-e3f1e193dcbd573d",
+          "素质男"
+        ],
+        [
+          "adult-gray-traffic-49b57e52e99ff914",
+          "约炮"
+        ],
+        [
+          "adult-offline-private-date",
+          "线下私约"
+        ],
+        [
+          "adult-gray-traffic-e54f10c671f4bbba",
+          "绿帽"
+        ],
+        [
+          "adult-gray-traffic-9c88e8da3cb9e6f2",
+          "美乳"
+        ],
         {
-          "id": "scam-terms-guaranteed-profit",
-          "phrase": "稳赚 + 不赔",
+          "id": "adult-terms-beauty-door",
+          "phrase": "美女 + 上门",
           "terms": [
-            "稳赚",
-            "不赔"
+            "美女",
+            "上门"
           ],
           "max_gap": 10
         },
+        [
+          "adult-gray-traffic-6563c0711501b759",
+          "美女上门"
+        ],
+        [
+          "adult-gray-traffic-0354100d9bc9bb9f",
+          "美女写真"
+        ],
+        [
+          "adult-gray-traffic-61d1ee182908aa14",
+          "美女图片"
+        ],
+        [
+          "adult-gray-traffic-498bb95702491458",
+          "美女斗地主"
+        ],
+        [
+          "adult-gray-traffic-74f1ede585f42966",
+          "美女裸体"
+        ],
+        [
+          "adult-gray-traffic-6b5133d096cbb9b1",
+          "美女裸聊"
+        ],
+        [
+          "adult-gray-traffic-d781124166205977",
+          "美少妇"
+        ],
+        [
+          "adult-gray-traffic-2a64634ebdce8732",
+          "美幼"
+        ],
+        [
+          "adult-gray-traffic-3f60f2cd0dcb0e21",
+          "美穴"
+        ],
+        [
+          "adult-gray-traffic-cb0e8546fc6f4784",
+          "美腿"
+        ],
+        [
+          "adult-gray-traffic-2216b282be971418",
+          "美艳少妇"
+        ],
+        [
+          "adult-gray-traffic-6153e566f5e31939",
+          "美逼"
+        ],
+        [
+          "adult-gray-traffic-0e0d085a32686059",
+          "羞羞"
+        ],
+        [
+          "adult-gray-traffic-c2fc297d1b282985",
+          "群交"
+        ],
+        [
+          "adult-gray-traffic-8bc25c97fbcd658a",
+          "聊性"
+        ],
+        [
+          "adult-gray-traffic-7d0737df3df13576",
+          "肉体"
+        ],
+        [
+          "adult-gray-traffic-ecea8205f2671984",
+          "肉具"
+        ],
+        [
+          "adult-gray-traffic-9af77c08923e71fb",
+          "肉唇"
+        ],
+        [
+          "adult-gray-traffic-9d13435637f6572c",
+          "肉弹"
+        ],
+        [
+          "adult-gray-traffic-f327d778882dd557",
+          "肉棍"
+        ],
+        [
+          "adult-gray-traffic-7ccbbbcc51f03c49",
+          "肉棒"
+        ],
+        [
+          "adult-gray-traffic-e53d41896d4a6891",
+          "肉欲"
+        ],
+        [
+          "adult-gray-traffic-02f926585623f475",
+          "肉洞"
+        ],
+        [
+          "adult-gray-traffic-23e231b1a9f437e2",
+          "肉穴"
+        ],
+        [
+          "adult-gray-traffic-b2cf11df1889d1cc",
+          "肉缝"
+        ],
+        [
+          "adult-gray-traffic-ea24aff20e301c52",
+          "肉茎"
+        ],
+        [
+          "adult-gray-traffic-dfc065a9e6bd6531",
+          "肉逼"
+        ],
+        [
+          "adult-gray-traffic-4a8d56542c6b0fba",
+          "肏你"
+        ],
+        [
+          "adult-gray-traffic-12e787a3b057c229",
+          "肏死"
+        ],
+        [
+          "adult-gray-traffic-aa289d65be1a57f5",
+          "肛交"
+        ],
+        [
+          "adult-gray-traffic-3602bb450e53dc04",
+          "肛洞"
+        ],
+        [
+          "adult-gray-traffic-0290ae5131ec7c77",
+          "肛门"
+        ],
+        [
+          "adult-gray-traffic-1148fa6481000a11",
+          "肛门喷水"
+        ],
+        [
+          "adult-gray-traffic-7bbb76d32b144ee9",
+          "肥逼"
+        ],
+        [
+          "adult-gray-traffic-eb40e0be36d9a0ac",
+          "背德"
+        ],
+        [
+          "adult-gray-traffic-30f6273388621e60",
+          "胸推"
+        ],
+        [
+          "adult-gray-traffic-c46177f4680a1e88",
+          "胸部"
+        ],
+        [
+          "adult-gray-traffic-f5582902dc11a4dd",
+          "脚交"
+        ],
+        [
+          "adult-gray-traffic-418010303ffa9987",
+          "脱光"
+        ],
+        [
+          "adult-gray-traffic-2b04070d17b9edc8",
+          "脱内裤"
+        ],
+        [
+          "adult-gray-traffic-2eeed1adb3cc4cba",
+          "脱衣"
+        ],
+        [
+          "adult-gray-traffic-47c5ddc3d3c4e353",
+          "脱裤"
+        ],
+        [
+          "adult-gray-traffic-8d8ee058ab47c84b",
+          "腋毛女"
+        ],
+        [
+          "adult-gray-traffic-6339d66a1807b2bf",
+          "自慰"
+        ],
+        [
+          "adult-gray-traffic-2ae6536f8eb235bb",
+          "自拍"
+        ],
+        [
+          "adult-gray-traffic-337c934caf19e43a",
+          "舔脚"
+        ],
+        [
+          "adult-gray-traffic-b478adebbc525e73",
+          "舔阴"
+        ],
+        [
+          "adult-gray-traffic-8201acde93b9416d",
+          "舞女"
+        ],
+        [
+          "adult-gray-traffic-c1a24307fdd3335b",
+          "色b"
+        ],
+        [
+          "adult-gray-traffic-11048cdbf9d70603",
+          "色区"
+        ],
+        [
+          "adult-gray-traffic-54905ae44e4ee7a7",
+          "色即是空"
+        ],
+        [
+          "adult-gray-traffic-be6ba9c89136469d",
+          "色妹妹"
+        ],
+        [
+          "adult-gray-traffic-fd1d34ba88b702aa",
+          "色小说"
+        ],
+        [
+          "adult-gray-traffic-b0c20dd76c58ff4f",
+          "色情图片"
+        ],
+        [
+          "adult-gray-traffic-fc6e53a4b1e1cbd1",
+          "色情小说"
+        ],
+        [
+          "adult-gray-traffic-34a5362c5d6d5678",
+          "色情影片"
+        ],
+        [
+          "adult-gray-traffic-2dd058fe0d6bf5f8",
+          "色情服务"
+        ],
+        [
+          "adult-gray-traffic-d640d34151499df5",
+          "色情片"
+        ],
+        [
+          "adult-gray-traffic-b092c0a3d6b16e96",
+          "色情电影"
+        ],
+        [
+          "adult-gray-traffic-12b10746656988af",
+          "色情网站"
+        ],
+        [
+          "adult-gray-traffic-4fcc8387584b9938",
+          "色情表演"
+        ],
+        [
+          "adult-gray-traffic-0d6aeca9bdf5241a",
+          "色欲"
+        ],
+        [
+          "adult-gray-traffic-d4c6f4a0f46120ed",
+          "色狼"
+        ],
+        [
+          "adult-gray-traffic-cecaba163705943a",
+          "色猫"
+        ],
+        [
+          "adult-gray-traffic-19b5c3ccb1558602",
+          "色电影"
+        ],
+        [
+          "adult-gray-traffic-c8f740816d4f2ff7",
+          "色界"
+        ],
+        [
+          "adult-gray-traffic-74a6e2ba64a0b325",
+          "色盟"
+        ],
+        [
+          "adult-gray-traffic-5dc35cce1ef26131",
+          "色色"
+        ],
+        [
+          "adult-gray-traffic-4ff6758a2adb91ae",
+          "色视频"
+        ],
+        [
+          "adult-gray-traffic-b531c59be1f65551",
+          "色诱"
+        ],
+        [
+          "adult-gray-traffic-530e90d1b92d6018",
+          "色逼"
+        ],
+        [
+          "adult-gray-traffic-b25d4a37661d1ec2",
+          "艳情小说"
+        ],
+        [
+          "adult-gray-traffic-aafafa7690fabc9f",
+          "艳照"
+        ],
+        [
+          "adult-gray-traffic-f7722af407934d37",
+          "艳舞女郎"
+        ],
+        [
+          "adult-gray-traffic-fe288fd9e0b72656",
+          "花花公子"
+        ],
+        [
+          "adult-gray-traffic-e8fdc19497197724",
+          "荡女"
+        ],
+        [
+          "adult-gray-traffic-583b7d69cce6ce15",
+          "荡妇"
+        ],
+        [
+          "adult-gray-traffic-d95a6cc76ba7e362",
+          "菊穴"
+        ],
+        [
+          "adult-gray-traffic-9d8541c2277e5821",
+          "菊花洞"
+        ],
+        [
+          "adult-gray-traffic-1f6557695c03075e",
+          "菊门"
+        ],
+        [
+          "adult-gray-traffic-46982c4755be1836",
+          "蜜液"
+        ],
+        [
+          "adult-gray-traffic-08e4a20ec0bdf3cb",
+          "蜜穴"
+        ],
+        [
+          "adult-gray-traffic-577392c2680a4c10",
+          "被干"
+        ],
+        [
+          "adult-gray-traffic-b18c23ce6959ee7f",
+          "被插"
+        ],
+        [
+          "adult-gray-traffic-beea215ad136eaca",
+          "被操"
+        ],
+        [
+          "adult-gray-traffic-be6afb673317b8d6",
+          "裙中性运动"
+        ],
+        [
+          "adult-gray-traffic-de77de17348b14f1",
+          "裤袜"
+        ],
+        [
+          "adult-gray-traffic-8d1bc21a642ef599",
+          "裸体"
+        ],
+        [
+          "adult-gray-traffic-196c9ff119ab39f4",
+          "裸体写真"
+        ],
+        [
+          "adult-gray-traffic-f9c8560b2ccdb54f",
+          "裸体照片"
+        ],
+        [
+          "adult-gray-traffic-b2f05ff893b58234",
+          "裸照"
+        ],
+        [
+          "adult-gray-traffic-4a8dbea08c8d76a5",
+          "裸聊"
+        ],
+        [
+          "adult-gray-traffic-8352a31539b16840",
+          "裸聊网"
+        ],
+        [
+          "adult-gray-traffic-2c1ec0a585d92d19",
+          "裸聊视频"
+        ],
+        [
+          "adult-gray-traffic-4932012163e406a4",
+          "裸舞视"
+        ],
+        [
+          "adult-gray-traffic-e85a464a00d26af0",
+          "裸陪"
+        ],
+        [
+          "adult-gray-traffic-538002c38aeb598d",
+          "裸露"
+        ],
+        [
+          "adult-gray-traffic-d555bfdf72037c09",
+          "裹本"
+        ],
+        [
+          "adult-gray-traffic-299a5792ab8c9a8f",
+          "要射了"
+        ],
+        [
+          "adult-video-collection-profile",
+          "视频合集在主页"
+        ],
+        [
+          "adult-gray-traffic-02c30a7c94947a90",
+          "视频美女"
+        ],
+        [
+          "adult-gray-traffic-25ec86820c63a7a4",
+          "视频聊天"
+        ],
+        [
+          "adult-gray-traffic-4ce6419d1eda0c08",
+          "诱奸"
+        ],
+        [
+          "adult-gray-traffic-bc92f601167cae87",
+          "诱惑"
+        ],
+        [
+          "adult-gray-traffic-0db0710d878d47b2",
+          "豪乳"
+        ],
+        [
+          "adult-gray-traffic-72453fea93a7c582",
+          "赤裸"
+        ],
+        [
+          "adult-gray-traffic-eefca5d7436ce86b",
+          "轮奸"
+        ],
+        [
+          "adult-gray-traffic-a152fff1c9b38878",
+          "轮操"
+        ],
+        [
+          "adult-gray-traffic-fe832d0782692284",
+          "轮暴"
+        ],
+        [
+          "adult-enter-profile-benefits",
+          "进主页看福利"
+        ],
+        [
+          "adult-gray-traffic-cfe092ca25808239",
+          "迷奸"
+        ],
+        [
+          "adult-gray-traffic-f94bc7b4d7f3dba4",
+          "逼奸"
+        ],
+        [
+          "adult-gray-traffic-ce8c80efc298a759",
+          "酒瓶插入"
+        ],
+        [
+          "adult-gray-traffic-8757472d4e67f068",
+          "酥痒"
+        ],
+        [
+          "adult-gray-traffic-a6b4fb6a84d1f42c",
+          "释欲"
+        ],
+        [
+          "adult-gray-traffic-a9652a37e864458f",
+          "金鳞岂是池中物"
+        ],
+        [
+          "adult-gray-traffic-624a9b0fa5599533",
+          "金麟岂是池中物"
+        ],
+        [
+          "adult-gray-traffic-feec065620bd6438",
+          "铃木麻"
+        ],
+        [
+          "adult-gray-traffic-3cc114b23cde6734",
+          "阉割"
+        ],
+        [
+          "adult-gray-traffic-b86f18d8714487b6",
+          "阳具"
+        ],
+        [
+          "adult-gray-traffic-8dc31c938f5addcc",
+          "阴b"
+        ],
+        [
+          "adult-gray-traffic-a5c0715da42310b3",
+          "阴唇"
+        ],
+        [
+          "adult-gray-traffic-11b21557f32bef6c",
+          "阴囊"
+        ],
+        [
+          "adult-gray-traffic-b14534df24d849f0",
+          "阴户"
+        ],
+        [
+          "adult-gray-traffic-78d6c980e4966207",
+          "阴核"
+        ],
+        [
+          "adult-gray-traffic-c2962ead1e8866d5",
+          "阴毛"
+        ],
+        [
+          "adult-gray-traffic-f3c4b21ecaff74bb",
+          "阴精"
+        ],
+        [
+          "adult-gray-traffic-287bb9965653f73d",
+          "阴茎"
+        ],
+        [
+          "adult-gray-traffic-fd4be01f8b2b878d",
+          "阴茎助勃"
+        ],
+        [
+          "adult-gray-traffic-e055050e860dc0ba",
+          "阴茎勃起"
+        ],
+        [
+          "adult-gray-traffic-a11ab1e61d58c44f",
+          "阴茎增大"
+        ],
+        [
+          "adult-gray-traffic-968fbdc472483e0f",
+          "阴蒂"
+        ],
+        [
+          "adult-gray-traffic-1f8a615a570f0639",
+          "阴道"
+        ],
+        [
+          "adult-gray-traffic-07b8f3a516df5ade",
+          "阴道口"
+        ],
+        [
+          "adult-gray-traffic-92524c5b99858853",
+          "阴部"
+        ],
+        [
+          "adult-gray-traffic-621628ee869a105b",
+          "阴阜"
+        ],
+        [
+          "adult-gray-traffic-1574b2157a28a423",
+          "阿姨"
+        ],
         {
-          "id": "scam-terms-principal-interest",
-          "phrase": "保本 + 高息",
+          "id": "adult-terms-nearby-door",
+          "phrase": "附近 + 上门",
           "terms": [
-            "保本",
-            "高息"
+            "附近",
+            "上门"
           ],
           "max_gap": 12
         },
         {
-          "id": "scam-terms-high-return-risk-free",
-          "phrase": "高收益 + 无风险",
+          "id": "adult-terms-nearby-available",
+          "phrase": "附近 + 可约",
           "terms": [
-            "高收益",
-            "无风险"
-          ],
-          "max_gap": 16
-        },
-        {
-          "id": "scam-terms-free-stock-tip",
-          "phrase": "免费 + 荐股",
-          "terms": [
-            "免费",
-            "荐股"
-          ],
-          "max_gap": 14
-        },
-        {
-          "id": "scam-terms-group-stock-tip",
-          "phrase": "加群 + 荐股",
-          "terms": [
-            "加群",
-            "荐股"
-          ],
-          "max_gap": 16
-        },
-        {
-          "id": "scam-terms-follow-earn",
-          "phrase": "跟单 + 赚钱",
-          "terms": [
-            "跟单",
-            "赚钱"
-          ],
-          "max_gap": 16
-        }
-      ]
-    },
-    {
-      "id": "crypto_scam",
-      "name": {
-        "zh": "加密货币骗局",
-        "en": "Crypto scams"
-      },
-      "description": {
-        "zh": "空投、免费领取、双倍返还和保证收益话术",
-        "en": "Airdrop, giveaway, doubling, and guaranteed-return lures"
-      },
-      "source_refs": [
-        "ftc_crypto_2026",
-        "cn_financial_regulator_2025"
-      ],
-      "rules": [
-        [
-          "crypto-usdt-airdrop",
-          "USDT空投"
-        ],
-        [
-          "crypto-free-usdt",
-          "免费领取USDT"
-        ],
-        [
-          "crypto-free-airdrop-claim",
-          "免费领取空投"
-        ],
-        [
-          "crypto-airdrop-candy",
-          "空投糖果"
-        ],
-        [
-          "crypto-price-only-rises",
-          "币值只涨不跌"
-        ],
-        [
-          "crypto-claim-your-airdrop",
-          "claim your airdrop"
-        ],
-        [
-          "crypto-free-usdt-en",
-          "free usdt"
-        ],
-        [
-          "crypto-usdt-giveaway",
-          "usdt giveaway"
-        ],
-        [
-          "crypto-send-usdt-get",
-          "send usdt get"
-        ],
-        [
-          "crypto-double-your-crypto",
-          "double your crypto"
-        ],
-        [
-          "crypto-double-your-bitcoin",
-          "double your bitcoin"
-        ],
-        [
-          "crypto-claim-free-crypto",
-          "claim free crypto"
-        ],
-        [
-          "crypto-guaranteed-returns",
-          "guaranteed crypto returns"
-        ],
-        [
-          "crypto-web3-airdrop-benefits",
-          "web3空投福利"
-        ],
-        [
-          "crypto-wallet-airdrop-claim",
-          "钱包空投领取"
-        ],
-        [
-          "crypto-onchain-airdrop-claim",
-          "链上空投领取"
-        ],
-        [
-          "crypto-airdrop-reward-claim",
-          "领取空投奖励"
-        ],
-        [
-          "crypto-signup-usdt",
-          "注册领取USDT"
-        ],
-        {
-          "id": "crypto-terms-free-usdt",
-          "phrase": "免费 + 领取 + USDT",
-          "terms": [
-            "免费",
-            "领取",
-            "USDT"
-          ],
-          "max_gap": 14
-        },
-        {
-          "id": "crypto-terms-wallet-airdrop",
-          "phrase": "钱包 + 空投",
-          "terms": [
-            "钱包",
-            "空投"
-          ],
-          "max_gap": 16
-        },
-        {
-          "id": "crypto-terms-onchain-airdrop",
-          "phrase": "链上 + 空投",
-          "terms": [
-            "链上",
-            "空投"
-          ],
-          "max_gap": 16
-        },
-        {
-          "id": "crypto-terms-signup-usdt",
-          "phrase": "注册 + USDT",
-          "terms": [
-            "注册",
-            "USDT"
-          ],
-          "max_gap": 16
-        },
-        {
-          "id": "crypto-terms-send-double",
-          "phrase": "发送 + 双倍返还",
-          "terms": [
-            "发送",
-            "双倍返还"
-          ],
-          "max_gap": 18
-        },
-        {
-          "id": "crypto-terms-connect-airdrop",
-          "phrase": "连接钱包 + 领取空投",
-          "terms": [
-            "连接钱包",
-            "领取空投"
-          ],
-          "max_gap": 18
-        }
-      ]
-    },
-    {
-      "id": "task_job_scam",
-      "name": {
-        "zh": "兼职刷单 / 任务诈骗",
-        "en": "Task and job scams"
-      },
-      "description": {
-        "zh": "刷单、点赞返佣、垫资任务和求职收费话术",
-        "en": "Fake task, commission, and paid-job lures"
-      },
-      "source_refs": [
-        "ftc_task_scams_2024",
-        "shanghai_police_job_scams_2026",
-        "cac_brushing_scams_2019"
-      ],
-      "rules": [
-        [
-          "task-brushing-rebate",
-          "刷单返利"
-        ],
-        [
-          "task-part-time-brushing",
-          "兼职刷单"
-        ],
-        [
-          "task-like-earn-commission",
-          "点赞赚佣金"
-        ],
-        [
-          "task-like-rebate",
-          "点赞返佣"
-        ],
-        [
-          "task-product-optimization",
-          "商品优化任务"
-        ],
-        [
-          "task-data-optimization",
-          "数据优化任务"
-        ],
-        [
-          "task-task-commission",
-          "任务返佣"
-        ],
-        [
-          "task-advance-funds",
-          "垫付资金做任务"
-        ],
-        [
-          "task-top-up-unlock",
-          "充值解锁任务"
-        ],
-        [
-          "task-combo-task",
-          "连单任务"
-        ],
-        [
-          "task-frozen-order-unlock",
-          "卡单需要解冻"
-        ],
-        [
-          "task-training-fee",
-          "先交培训费"
-        ],
-        [
-          "task-high-pay-job-guarantee",
-          "高薪包就业"
-        ],
-        [
-          "task-daily-paid-job",
-          "工资日结"
-        ],
-        [
-          "task-daily-high-pay",
-          "日结高薪"
-        ],
-        [
-          "task-no-experience-daily-pay",
-          "无需经验日结"
-        ],
-        [
-          "task-recruit-brushing",
-          "招聘兼职刷单"
-        ],
-        [
-          "task-complete-for-commission",
-          "做任务领佣金"
-        ],
-        {
-          "id": "task-terms-like-commission",
-          "phrase": "点赞 + 返佣",
-          "terms": [
-            "点赞",
-            "返佣"
-          ],
-          "max_gap": 14
-        },
-        {
-          "id": "task-terms-task-commission",
-          "phrase": "任务 + 佣金",
-          "terms": [
-            "任务",
-            "佣金"
-          ],
-          "max_gap": 16
-        },
-        {
-          "id": "task-terms-topup-unlock",
-          "phrase": "充值 + 解锁任务",
-          "terms": [
-            "充值",
-            "解锁任务"
-          ],
-          "max_gap": 18
-        },
-        {
-          "id": "task-terms-advance-task",
-          "phrase": "垫付 + 任务",
-          "terms": [
-            "垫付",
-            "任务"
-          ],
-          "max_gap": 16
-        },
-        {
-          "id": "task-terms-daily-highpay",
-          "phrase": "日结 + 高薪",
-          "terms": [
-            "日结",
-            "高薪"
+            "附近",
+            "可约"
           ],
           "max_gap": 12
         },
-        {
-          "id": "task-terms-parttime-brushing",
-          "phrase": "兼职 + 刷单",
-          "terms": [
-            "兼职",
-            "刷单"
-          ],
-          "max_gap": 16
-        }
-      ]
-    },
-    {
-      "id": "loan_scam",
-      "name": {
-        "zh": "贷款 / 解冻诈骗",
-        "en": "Loan and freeze-fee scams"
-      },
-      "description": {
-        "zh": "无抵押低息、放款前收费和刷流水话术",
-        "en": "No-collateral loan and upfront-fee lures"
-      },
-      "source_refs": [
-        "cn_antifraud_ten_rules_2026",
-        "hubei_police_loan_scams_2020"
-      ],
-      "rules": [
         [
-          "loan-no-collateral-low-rate",
-          "无抵押低利率"
+          "adult-nearby-available",
+          "附近可约"
         ],
         [
-          "loan-no-collateral",
-          "无抵押贷款"
+          "adult-gray-traffic-c5dbe192e43737de",
+          "陰唇"
         ],
         [
-          "loan-no-qualification",
-          "无需资质放款"
+          "adult-gray-traffic-788549cedac2118a",
+          "陰戶"
         ],
         [
-          "loan-low-rate-fast",
-          "低利率放款快"
+          "adult-gray-traffic-b3d5a7a7b052f765",
+          "陰核"
         ],
         [
-          "loan-guarantee-before-loan",
-          "贷款前交保证金"
+          "adult-gray-traffic-a6002cabdb5e68b2",
+          "陰道"
         ],
         [
-          "loan-membership-fee",
-          "先交会员费"
+          "adult-gray-traffic-4c44b178586ab31c",
+          "集体淫"
         ],
         [
-          "loan-unfreeze-fee",
-          "先交解冻费"
+          "adult-gray-traffic-c29abc26771d5d40",
+          "露b"
         ],
         [
-          "loan-account-packaging",
-          "包装账户流水"
+          "adult-gray-traffic-57ec07d071595bf0",
+          "颜射"
         ],
         [
-          "loan-run-flow-limit",
-          "刷流水提额度"
+          "adult-gray-traffic-b7c9081af0872e1d",
+          "风月大陆"
         ],
         [
-          "loan-repayment-ability",
-          "验证还款能力"
+          "adult-gray-traffic-1bbeb7fbbb565008",
+          "风骚"
         ],
         [
-          "loan-review-fee",
-          "贷款审核费"
+          "adult-gray-traffic-53ff912845da5f76",
+          "食精"
         ],
         [
-          "loan-pay-before-disbursement",
-          "下款前交费"
+          "adult-gray-traffic-de8b1dc3206b0029",
+          "骚嘴"
         ],
         [
-          "loan-service-fee",
-          "贷款收取手续费"
+          "adult-gray-traffic-8c1a39086f1b9951",
+          "骚女"
         ],
         [
-          "loan-account-freeze-fee",
-          "账户冻结解冻费"
+          "adult-gray-traffic-ebd0de8527b1bd87",
+          "骚妇"
         ],
         [
-          "loan-tax-before-disbursement",
-          "放款前缴税"
+          "adult-gray-traffic-7688eea3ceb1f3c3",
+          "骚比"
         ],
         [
-          "loan-agency-service",
-          "代办贷款"
+          "adult-gray-traffic-dcc5abfa6dd25896",
+          "骚水"
         ],
         [
-          "loan-fast-disbursement",
-          "快速放款"
+          "adult-gray-traffic-3da44e277868b99a",
+          "骚浪"
         ],
         [
-          "loan-instant-low-rate",
-          "秒批低息"
-        ],
-        {
-          "id": "loan-terms-no-collateral",
-          "phrase": "无抵押 + 放款",
-          "terms": [
-            "无抵押",
-            "放款"
-          ],
-          "max_gap": 16
-        },
-        {
-          "id": "loan-terms-fast-disbursement",
-          "phrase": "快速 + 放款",
-          "terms": [
-            "快速",
-            "放款"
-          ],
-          "max_gap": 14
-        },
-        {
-          "id": "loan-terms-fee-before",
-          "phrase": "下款前 + 交费",
-          "terms": [
-            "下款前",
-            "交费"
-          ],
-          "max_gap": 14
-        },
-        {
-          "id": "loan-terms-frozen-unfreeze",
-          "phrase": "账户冻结 + 解冻费",
-          "terms": [
-            "账户冻结",
-            "解冻费"
-          ],
-          "max_gap": 18
-        },
-        {
-          "id": "loan-terms-flow-limit",
-          "phrase": "刷流水 + 提额",
-          "terms": [
-            "刷流水",
-            "提额"
-          ],
-          "max_gap": 14
-        }
-      ]
-    },
-    {
-      "id": "gambling_diversion",
-      "name": {
-        "zh": "博彩 / 赌场引流",
-        "en": "Gambling diversion"
-      },
-      "description": {
-        "zh": "博彩注册、送彩金和代理招募话术",
-        "en": "Casino registration, bonus, and agent lures"
-      },
-      "source_refs": [
-        "community_spam_datasets"
-      ],
-      "rules": [
-        [
-          "gambling-signup-bonus",
-          "注册送送彩金"
+          "adult-gray-traffic-683c868904f7bf49",
+          "骚穴"
         ],
         [
-          "gambling-signup-trial",
-          "注册送体验金"
+          "adult-gray-traffic-a8b0aabaa0562b5d",
+          "骚货"
         ],
         [
-          "gambling-first-deposit-bonus",
-          "首存送彩金"
+          "adult-gray-traffic-3d1d5303fdb64eb4",
+          "骚逼"
         ],
         [
-          "gambling-live-casino",
-          "真人博彩"
+          "adult-gray-traffic-9081db84b5859ab4",
+          "高清性愛"
         ],
         [
-          "gambling-online-casino",
-          "在线博彩平台"
+          "adult-gray-traffic-24d894eab18fc851",
+          "高潮"
         ],
         [
-          "gambling-high-cashback",
-          "高额返现博彩"
+          "adult-gray-traffic-d5af8cdb08e2eae9",
+          "鬼畜抄"
         ],
         [
-          "gambling-card-bonus",
-          "棋牌送彩金"
+          "adult-gray-traffic-a8f1eb789e2d4dde",
+          "魅惑"
         ],
         [
-          "gambling-cash-agent",
-          "现金网招代理"
+          "adult-gray-traffic-77a612246dcc75f8",
+          "鸡吧"
         ],
         [
-          "gambling-sports-bonus",
-          "体育投注送彩金"
+          "adult-gray-traffic-cd1576313cdb4116",
+          "鸡奸"
         ],
         [
-          "gambling-account-registration",
-          "博彩开户注册"
+          "adult-gray-traffic-852601d7b6b71ed7",
+          "鸡巴"
         ],
         [
-          "gambling-topup-customer-service",
-          "上分下分客服"
+          "adult-gray-traffic-188219ab6457eb39",
+          "黄片"
         ],
         [
-          "gambling-one-yuan-bonus",
-          "一元送彩金"
-        ],
-        {
-          "id": "gambling-terms-signup-bonus",
-          "phrase": "注册 + 彩金",
-          "terms": [
-            "注册",
-            "彩金"
-          ],
-          "max_gap": 16
-        },
-        {
-          "id": "gambling-terms-firstdeposit-bonus",
-          "phrase": "首存 + 彩金",
-          "terms": [
-            "首存",
-            "彩金"
-          ],
-          "max_gap": 14
-        },
-        {
-          "id": "gambling-terms-casino-agent",
-          "phrase": "赌场 + 代理",
-          "terms": [
-            "赌场",
-            "代理"
-          ],
-          "max_gap": 16
-        },
-        {
-          "id": "gambling-terms-sports-bonus",
-          "phrase": "体育 + 彩金",
-          "terms": [
-            "体育",
-            "彩金"
-          ],
-          "max_gap": 16
-        },
-        {
-          "id": "gambling-terms-topup-service",
-          "phrase": "上分 + 客服",
-          "terms": [
-            "上分",
-            "客服"
-          ],
-          "max_gap": 16
-        }
-      ]
-    },
-    {
-      "id": "engagement_bait",
-      "name": {
-        "zh": "互动诱导",
-        "en": "Engagement bait"
-      },
-      "description": {
-        "zh": "关注、点赞、转发换取奖励的话术",
-        "en": "Follow, like, and repost-for-reward phrases"
-      },
-      "source_refs": [
-        "community_spam_datasets"
-      ],
-      "rules": [
-        [
-          "engagement-follow-repost",
-          "关注并转发"
+          "adult-gray-traffic-5e4be82e6eea38f3",
+          "黄色网站"
         ],
         [
-          "engagement-repost-raffle",
-          "关注转发抽奖"
+          "adult-gray-traffic-fbe3dfd656909331",
+          "黑逼"
         ],
         [
-          "engagement-repost-follow",
-          "转发并关注"
-        ],
-        [
-          "engagement-follow-like-repost",
-          "关注点赞转发"
-        ],
-        [
-          "engagement-repost-cash",
-          "转发抽现金"
-        ],
-        [
-          "engagement-like-repost-raffle",
-          "点赞转发抽奖"
-        ],
-        [
-          "engagement-follow-comment-raffle",
-          "关注评论抽奖"
-        ],
-        [
-          "engagement-follow-dm-claim",
-          "关注私信领取"
-        ],
-        [
-          "engagement-repost-benefit-claim",
-          "转发领取福利"
-        ],
-        [
-          "engagement-follow-repost-en",
-          "follow and repost"
-        ],
-        [
-          "engagement-repost-to-win",
-          "repost to win"
-        ],
-        [
-          "engagement-like-follow-en",
-          "like and follow"
-        ],
-        [
-          "engagement-retweet-to-win",
-          "retweet to win"
-        ],
-        {
-          "id": "engagement-terms-follow-raffle",
-          "phrase": "关注 + 抽奖",
-          "terms": [
-            "关注",
-            "抽奖"
-          ],
-          "max_gap": 18
-        },
-        {
-          "id": "engagement-terms-repost-cash",
-          "phrase": "转发 + 现金",
-          "terms": [
-            "转发",
-            "现金"
-          ],
-          "max_gap": 18
-        },
-        {
-          "id": "engagement-terms-like-reward",
-          "phrase": "点赞 + 奖励",
-          "terms": [
-            "点赞",
-            "奖励"
-          ],
-          "max_gap": 18
-        }
-      ]
-    },
-    {
-      "id": "marketing_diversion",
-      "name": {
-        "zh": "通用营销引流",
-        "en": "Marketing diversion"
-      },
-      "description": {
-        "zh": "私信、扫码、加群、主页链接导流话术",
-        "en": "DM, QR-code, group, and profile-link lures"
-      },
-      "source_refs": [
-        "community_spam_datasets"
-      ],
-      "rules": [
-        [
-          "marketing-scan-add-wechat",
-          "扫码加微信"
-        ],
-        [
-          "marketing-dm-send-link",
-          "私信发你链接"
-        ],
-        [
-          "marketing-click-profile-link",
-          "点击主页链接"
-        ],
-        [
-          "marketing-add-me-get-materials",
-          "加我领取资料"
-        ],
-        [
-          "marketing-join-group-get-benefits",
-          "进群领取福利"
-        ],
-        [
-          "marketing-dm-get-materials",
-          "私信领取资料"
-        ],
-        [
-          "marketing-reply-get-materials",
-          "回复领取资料"
-        ],
-        [
-          "marketing-add-wechat-get",
-          "添加微信领取"
-        ],
-        [
-          "marketing-profile-link-self-service",
-          "主页链接自取"
-        ],
-        [
-          "marketing-dm-get-resources",
-          "私信获取资源"
-        ],
-        [
-          "marketing-scan-get-materials",
-          "扫码领取资料"
-        ],
-        [
-          "marketing-join-group-get-materials",
-          "加群领取资料"
-        ],
-        {
-          "id": "marketing-terms-scan-wechat",
-          "phrase": "扫码 + 微信",
-          "terms": [
-            "扫码",
-            "微信"
-          ],
-          "max_gap": 16
-        },
-        {
-          "id": "marketing-terms-dm-link",
-          "phrase": "私信 + 链接",
-          "terms": [
-            "私信",
-            "链接"
-          ],
-          "max_gap": 18
-        },
-        {
-          "id": "marketing-terms-profile-link",
-          "phrase": "主页 + 链接",
-          "terms": [
-            "主页",
-            "链接"
-          ],
-          "max_gap": 18
-        },
-        {
-          "id": "marketing-terms-group-benefit",
-          "phrase": "进群 + 福利",
-          "terms": [
-            "进群",
-            "福利"
-          ],
-          "max_gap": 18
-        },
-        {
-          "id": "marketing-terms-add-get",
-          "phrase": "添加 + 领取",
-          "terms": [
-            "添加",
-            "领取"
-          ],
-          "max_gap": 18
-        }
+          "adult-gray-traffic-0a291ce4b79ee76e",
+          "龟头"
+        ]
       ]
     }
   ]

@@ -33,20 +33,13 @@ beforeEach(() => {
 });
 
 describe('远程关键词包契约', () => {
-  it('构建时词库包含八个可订阅行业包、成人高召回规则和分词组合', () => {
-    expect(BUNDLED_KEYWORD_PACK_CATALOG.pack_version).toBe('2026.09.07.1');
-    expect(BUNDLED_KEYWORD_PACK_CATALOG.packs).toHaveLength(8);
+  it('构建时词库只保留黄推 / 成人引流包（其余行业包已于 2026-09-11 移除）、成人高召回规则和分词组合', () => {
+    expect(BUNDLED_KEYWORD_PACK_CATALOG.packs).toHaveLength(1);
+    expect(BUNDLED_KEYWORD_PACK_CATALOG.packs[0].id).toBe('adult_gray_traffic');
+    expect(BUNDLED_KEYWORD_PACK_CATALOG.pack_version).toBe('2026.09.11.4');
     expect(
       BUNDLED_KEYWORD_PACK_CATALOG.packs.reduce((count, pack) => count + pack.rules.length, 0),
-    ).toBe(778);
-    expect(
-      BUNDLED_KEYWORD_PACK_CATALOG.packs
-        .find((pack) => pack.id === 'task_job_scam')
-        ?.rules.some((rule) => rule.phrase === '刷单返利'),
-    ).toBe(true);
-    expect(
-      BUNDLED_KEYWORD_PACK_CATALOG.packs.find((pack) => pack.id === 'adult_gray_traffic')?.rules,
-    ).toHaveLength(629);
+    ).toBe(632);
     expect(
       BUNDLED_KEYWORD_PACK_CATALOG.packs
         .find((pack) => pack.id === 'adult_gray_traffic')
@@ -64,7 +57,7 @@ describe('远程关键词包契约', () => {
     const invalid = structuredClone(BUNDLED_KEYWORD_PACK_CATALOG) as unknown as {
       packs: Array<{ rules: Array<{ id: string }> }>;
     };
-    invalid.packs[1]!.rules[0]!.id = invalid.packs[0]!.rules[0]!.id;
+    invalid.packs[0]!.rules[1]!.id = invalid.packs[0]!.rules[0]!.id;
     expect(parseKeywordPackCatalog(invalid)).toBeNull();
   });
 

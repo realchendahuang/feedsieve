@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CATEGORIES, categoryLabel, formatAgo, isCategory, normalizeHandle } from './index';
 
 describe('categories', () => {
@@ -66,7 +66,16 @@ describe('normalizeHandle', () => {
 });
 
 describe('formatAgo', () => {
-  const sec = Math.floor(Date.now() / 1000);
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const sec = Math.floor(new Date('2026-01-01T00:00:00Z').getTime() / 1000);
 
   it('边界：59s→刚刚，60s→1 分钟前，3599s→59 小时前，86400s→1 天前', () => {
     expect(formatAgo(sec - 59, 'zh')).toBe('刚刚');
