@@ -174,7 +174,7 @@ export default function CleanView({
       } else if (result?.status === 'started') {
         setBlockResult(null);
         setQueue(await getPersistentBlockQueue());
-        notify(t.queueStarted(result.count ?? 0));
+        // 队列启动的即时反馈由下方的进度面板承担，不做额外瞬时提示
         // 全部被过滤（已拉黑/白名单/关注，无实际可拉黑对象）时立即刷新，
         // 「一键拉黑」按钮即刻回到禁用态，而不是停留在这个会话的旧计数。
         if ((result.count ?? 0) === 0) {
@@ -481,6 +481,7 @@ export default function CleanView({
               <AppIcon name="refresh" />
             </button>
           </div>
+          <p className="manual-block-hint">{t.manualBlockHint}</p>
         </div>
       </section>
     </div>

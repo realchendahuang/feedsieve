@@ -1430,6 +1430,15 @@ input:focus-visible + span {
   }
 }
 
+/* 底部手动兜底提示：单行弱化，不占视觉重心 */
+.manual-block-hint {
+  margin: 8px 0 0;
+  color: var(--fs-muted);
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: center;
+}
+
 .result-message,
 .inline-notice {
   margin: 9px 0 0;
