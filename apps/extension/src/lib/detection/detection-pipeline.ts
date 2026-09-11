@@ -11,7 +11,6 @@
  */
 
 import {
-  contentFingerprintV1,
   detect,
   type DetectInput,
   type Detection,
@@ -22,16 +21,11 @@ import type { CommunityEntry, MarkStrength } from '@feedsieve/community-lists';
 import type { RuntimeCommunity } from '../community/community-store';
 import { classifyDetection, type DetectionPresentation } from './detection-policy';
 import { categoryLabel, localizedDetectionReason, type UiLanguage } from '../platform/i18n';
-import { categoryFromDetection, collectLinkDomains } from '../community/contribute';
+import { categoryFromDetection } from '../community/contribute';
+import { collectContentEvidence, type BlockEvidence } from './detection-evidence';
 import type { KeywordPackCatalog } from './keyword-packs';
 
-/** 标注时刻收集的内容证据（上报载荷，见 contribute.ts）。 */
-export interface BlockEvidence {
-  contentFingerprint?: string;
-  linkDomains?: string[];
-  /** 判断来源；手动标记路径强制 manual，检测器命中带各自来源。 */
-  detectionSource?: string;
-}
+export type { BlockEvidence };
 
 export interface DetectionPipelineInput {
   input: DetectInput;
@@ -120,13 +114,7 @@ export function runDetectionPipeline(input: DetectionPipelineInput): DetectionPi
   }
 
   // 内容证据只用于用户主动标记或高置信命中后的社区证据。
-  // v0.8 起产 v1 指纹（NFKC + 停用字 + 更低门槛）：新拉黑账号随上报
-  // 自然积累 v1 模板；本地旧记录的 v0 指纹值继续原样上报，两者在服务端并存。
-  const evidence: BlockEvidence = {};
-  const fp = contentFingerprintV1(source);
-  if (fp) evidence.contentFingerprint = fp;
-  const linkDomains = collectLinkDomains(source.links ?? []);
-  if (linkDomains) evidence.linkDomains = linkDomains;
+  const evidence = collectContentEvidence(source);
 
   // 识别顺序：社区快照名单 -> 内置名单兜底 -> 用户/官方可配置词库。
   const evidenceOptions = {
