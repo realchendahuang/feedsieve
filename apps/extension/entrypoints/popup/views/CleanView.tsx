@@ -292,9 +292,17 @@ export default function CleanView({
           </div>
         ) : pageCount === 0 ? (
           <div className="clean-state">
-            <span className="clean-state-icon">
+            {/* 两态大图标：页面清爽 = 绿盾勾；有黄框后点它重新扫一遍清单 */}
+            <button
+              type="button"
+              className={`clean-state-icon${refreshing ? ' is-spinning' : ''}`}
+              aria-label={t.refreshPage}
+              title={t.refreshPage}
+              disabled={refreshing}
+              onClick={() => void handleRefresh()}
+            >
               <AppIcon name="clean" size={24} />
-            </span>
+            </button>
             <p>{running ? t.processing : t.pageClean}</p>
             {!running ? (
               <span className="clean-state-hint" role="img" title={t.pageCleanHint}>
@@ -461,16 +469,16 @@ export default function CleanView({
                     ? t.batchBlockSelected(pendingCount)
                     : `${t.blockPage} · ${pageCount}`}
             </button>
-            {/* 状态大按钮（与空状态绿色勾同尺寸）：有黄框 = 刷新，清爽 = 绿色勾，两态切换 */}
+            {/* 右下角刷新：列表在手时重新拉取当前页面黄框清单 */}
             <button
               type="button"
-              className={`status-action${pageCount === 0 ? ' state-clean' : ''}${refreshing ? ' is-spinning' : ''}`}
+              className={`square-action${refreshing ? ' is-spinning' : ''}`}
               aria-label={t.refreshPage}
               title={t.refreshPage}
               disabled={running || refreshing}
               onClick={() => void handleRefresh()}
             >
-              <AppIcon name={pageCount === 0 ? 'clean' : 'refresh'} size={22} />
+              <AppIcon name="refresh" />
             </button>
           </div>
         </div>
