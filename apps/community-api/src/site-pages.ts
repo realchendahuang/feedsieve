@@ -291,6 +291,10 @@ export function listsPageHtml(): string {
         <span class="pill" id="ranked-season"></span>
         <span class="panel-note dim" id="ranked-updated"></span>
       </div>
+      <div class="ranked-tabs">
+        <button type="button" class="ranked-tab is-active" id="ranked-tab-week" aria-pressed="true">周榜</button>
+        <button type="button" class="ranked-tab" id="ranked-tab-all" aria-pressed="false">总榜</button>
+      </div>
       <div class="ranked-list" id="ranked-list"><p class="empty">载入中…</p></div>
       <p class="ranked-rule" id="ranked-foot">确认击杀 +1 · 首杀 +1 · 误伤 −2 · 周一开榜</p>
     </section>
@@ -671,33 +675,55 @@ export function listsPageHtml(): string {
           document.getElementById('keywords-meta').textContent = '词库加载失败';
         });
 
-      /* 排位赛榜单（切到该 Tab 时加载/刷新） --- */
+      /* 排位赛榜单（周榜 / 总榜切换，切到该 Tab 时加载/刷新） --- */
       var rankedLoaded = false;
+      var rankedScope = 'week';
+      function huluBadge(rank) {
+        if (rank <= 7) return ['大娃','二娃','三娃','四娃','五娃','六娃','七娃'][rank - 1];
+        if (rank <= 50) return '小金刚';
+        return '';
+      }
       function renderRanked(data) {
+        var isAllScope = rankedScope === 'all';
         var seasonEl = document.getElementById('ranked-season');
         var updatedEl = document.getElementById('ranked-updated');
         var list = document.getElementById('ranked-list');
-        var days = Math.max(0, Math.ceil((data.season.ends_at - data.updated_at) / 86400));
-        seasonEl.textContent = '第 ' + (data.season.id % 100) + ' 周 · 剩 ' + days + ' 天';
+        if (isAllScope || !data.season) {
+          seasonEl.textContent = '累计总分 · 一人一娃';
+        } else {
+          var days = Math.max(0, Math.ceil((data.season.ends_at - data.updated_at) / 86400));
+          seasonEl.textContent = '第 ' + (data.season.id % 100) + ' 周 · 剩 ' + days + ' 天';
+        }
         if (data.updated_at) {
           updatedEl.textContent = '更新于 ' + new Date(data.updated_at * 1000).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
         }
         list.textContent = '';
         if (!data.rows.length) {
-          list.appendChild(el('p', 'empty', '本周还没有人开火'));
+          list.appendChild(el('p', 'empty', isAllScope ? '总榜还没有人' : '本周还没有人开火'));
         }
         for (var i = 0; i < data.rows.length; i++) {
           var row = data.rows[i];
-          var item = el('div', 'ranked-row' + (i === 0 ? ' first' : ''));
-          if (i === 0) item.appendChild(el('span', 'glow'));
+          var item = el('div', 'ranked-row' + (row.rank === 1 ? ' first' : ''));
+          if (row.rank === 1) item.appendChild(el('span', 'glow'));
           item.appendChild(el('span', 'ranked-rank', String(row.rank)));
           var who = el('div', 'ranked-who');
           var name = el('div', 'ranked-name');
+          var badge = isAllScope ? huluBadge(row.rank) : '';
+          if (badge) name.appendChild(el('span', 'ranked-hulu' + (row.rank > 7 ? ' mid' : ''), badge));
           if (row.title) name.appendChild(el('span', 'ranked-title', '◆ ' + row.title));
+          if (row.tier) name.appendChild(el('span', 'ranked-tier', row.tier));
           name.appendChild(el('span', null, row.name));
           who.appendChild(name);
-          if (row.bio) who.appendChild(el('div', 'ranked-bio', row.bio));
-          item.appendChild(who);
+          var meta = el('div', 'ranked-meta');
+          if (row.bio) meta.appendChild(el('span', 'ranked-bio', row.bio));
+          if (row.x_handle) {
+            var handle = el('a', 'ranked-handle', '@' + row.x_handle);
+            handle.href = 'https://x.com/' + encodeURIComponent(row.x_handle);
+            handle.target = '_blank';
+            handle.rel = 'noopener noreferrer';
+            meta.appendChild(handle);
+          }
+          if (meta.childNodes.length) who.appendChild(meta);
           var stats = el('div', 'ranked-stats');
           stats.appendChild(el('span', 'ranked-kills', row.kills + ' 只野'));
           stats.appendChild(el('span', 'ranked-accuracy', Math.round(row.accuracy * 100) + '%'));
@@ -705,18 +731,31 @@ export function listsPageHtml(): string {
           list.appendChild(item);
         }
         var foot = document.getElementById('ranked-foot');
-        if (data.last_season && data.last_season.champions && data.last_season.champions.length) {
+        if (!isAllScope && data.last_season && data.last_season.champions && data.last_season.champions.length) {
           var names = data.last_season.champions.map(function (c) { return c.name; }).join('、');
           foot.textContent = '上届冠军 ' + names + ' · 第 ' + (data.last_season.id % 100) + ' 周';
         } else {
           foot.textContent = '确认击杀 +1 · 首杀 +1 · 误伤 −2 · 周一开榜';
         }
       }
+      function setRankedScope(value) {
+        if (rankedScope === value) return;
+        rankedScope = value;
+        var week = document.getElementById('ranked-tab-week');
+        var all = document.getElementById('ranked-tab-all');
+        week.classList.toggle('is-active', value === 'week');
+        week.setAttribute('aria-pressed', value === 'week' ? 'true' : 'false');
+        all.classList.toggle('is-active', value === 'all');
+        all.setAttribute('aria-pressed', value === 'all' ? 'true' : 'false');
+        loadRanked();
+      }
+      document.getElementById('ranked-tab-week').addEventListener('click', function () { setRankedScope('week'); });
+      document.getElementById('ranked-tab-all').addEventListener('click', function () { setRankedScope('all'); });
       function loadRanked() {
         fetch(API_BASE + '/v1/leaderboard', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: '{}',
+          body: JSON.stringify({ scope: rankedScope }),
         })
           .then(function (res) { if (!res.ok) throw new Error('http_' + res.status); return res.json(); })
           .then(function (data) {

@@ -55,7 +55,7 @@ import {
   writeAgentKeywordDetectorConfig,
 } from './agent-admin';
 import { hunterPageHtml } from './hunter-page';
-import { homePageHtml, listsPageHtml } from './site-pages';
+import { guidePageHtml, homePageHtml, listsPageHtml } from './site-pages';
 import { LEADERBOARD, getLeaderboard, markLeaderboardDirty, settleDueSeasons } from './leaderboard';
 import {
   bindEmail,
@@ -835,6 +835,10 @@ export function createApp() {
       if (path === '/lists') {
         c.header('Cache-Control', 'no-store');
         return c.html(listsPageHtml());
+      }
+      if (path === '/guide') {
+        c.header('Cache-Control', 'no-store');
+        return c.html(guidePageHtml());
       }
       if (!c.env.ASSETS) {
         return c.json({ error: 'not_found' }, 404);
