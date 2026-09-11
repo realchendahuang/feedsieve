@@ -16,44 +16,74 @@ export interface HunterStatus {
   rank: number | null;
   /** 本赛季确认击杀数 */
   kills: number | null;
+  /** 本赛季累计分数 */
+  score: number | null;
+  /** 称号阶梯头衔（按累计击杀）；从未开火为 null */
+  tier: string | null;
+  /** 榜上总人数（百分位换算用） */
+  total: number;
 }
 
 interface LeaderboardResponse {
-  rows: Array<{ id: string }>;
-  me: { id: string; rank: number; kills: number } | null;
+  rows: HunterBoardRow[];
+  total: number;
+  me: HunterBoardRow | null;
+}
+
+export interface HunterBoardRow {
+  id: string;
+  name: string;
+  bio: string | null;
+  title: string | null;
+  tier: string | null;
+  x_handle: string | null;
+  kills: number;
+  score: number;
+  accuracy: number;
+  rank?: number;
+}
+
+export interface HunterBoard {
+  rows: HunterBoardRow[];
+  total: number;
+  me: HunterBoardRow | null;
+}
+
+/** 榜单速览（name/Top10 + 我 + 总人数）。失败返回 null，由调用方降级空态。 */
+export async function fetchHunterBoard(): Promise<HunterBoard | null> {
+  const installationId = await peekInstallationId();
+  try {
+    const res = await fetch(`${API_BASE}/v1/leaderboard`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(installationId ? { installation_id: installationId } : {}),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as LeaderboardResponse;
+    return { rows: data.rows.slice(0, 10), total: data.total ?? 0, me: data.me };
+  } catch {
+    return null;
+  }
 }
 
 export function leaderboardUrl(mePrefix?: string | null): string {
   return mePrefix ? `${API_BASE}/leaderboard?me=${mePrefix}` : `${API_BASE}/leaderboard`;
 }
 
-/** 榜单状态（打开 popup 时拉一次即可；失败静默为空态，不打扰战报线） */
+/** 榜单状态（战报卡片订阅；失败静默为空态，不打扰）。 */
 export async function fetchHunterStatus(): Promise<HunterStatus> {
-  const installationId = await peekInstallationId();
-  if (!installationId) {
-    return { mePrefix: null, rank: null, kills: null };
+  const board = await fetchHunterBoard();
+  if (!board?.me) {
+    return { mePrefix: null, rank: null, kills: null, score: null, tier: null, total: 0 };
   }
-  try {
-    const res = await fetch(`${API_BASE}/v1/leaderboard`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ installation_id: installationId }),
-    });
-    if (!res.ok) {
-      return { mePrefix: null, rank: null, kills: null };
-    }
-    const data = (await res.json()) as LeaderboardResponse;
-    if (!data.me) {
-      return { mePrefix: null, rank: null, kills: null };
-    }
-    return {
-      mePrefix: data.me.id,
-      rank: data.me.rank,
-      kills: data.me.kills,
-    };
-  } catch {
-    return { mePrefix: null, rank: null, kills: null };
-  }
+  return {
+    mePrefix: board.me.id,
+    rank: board.me.rank ?? null,
+    kills: board.me.kills,
+    score: board.me.score,
+    tier: board.me.tier ?? null,
+    total: board.total,
+  };
 }
 
 export async function openLeaderboard(mePrefix?: string | null): Promise<void> {
@@ -63,6 +93,7 @@ export async function openLeaderboard(mePrefix?: string | null): Promise<void> {
 export interface HunterProfileState {
   display_name: string | null;
   bio: string | null;
+  x_handle: string | null;
   title: string | null;
   email_verified: boolean;
 }
@@ -120,17 +151,24 @@ export async function verifyHunterEmail(email: string, code: string): Promise<bo
 export async function saveHunterProfile(
   displayName: string,
   bio: string,
-): Promise<boolean> {
+  xHandle: string = '',
+): Promise<{ ok: boolean; invalid?: boolean }> {
   const installationId = await peekInstallationId();
-  if (!installationId) return false;
+  if (!installationId) return { ok: false };
   try {
     const res = await fetch(`${API_BASE}/v1/player/profile`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ installation_id: installationId, display_name: displayName, bio }),
+      body: JSON.stringify({
+        installation_id: installationId,
+        display_name: displayName,
+        bio,
+        x_handle: xHandle,
+      }),
     });
-    return res.ok;
+    if (res.status === 400) return { ok: false, invalid: true };
+    return { ok: res.ok };
   } catch {
-    return false;
+    return { ok: false };
   }
 }

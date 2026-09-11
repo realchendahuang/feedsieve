@@ -26,6 +26,7 @@ export default function HunterProfile({
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
   const [bio, setBio] = useState('');
+  const [xHandle, setXHandle] = useState('');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -34,6 +35,7 @@ export default function HunterProfile({
       setProfile(value);
       setName(value.display_name ?? '');
       setBio(value.bio ?? '');
+      setXHandle(value.x_handle ?? '');
     });
   }, []);
 
@@ -77,9 +79,11 @@ export default function HunterProfile({
     if (busy) return;
     setBusy(true);
     try {
-      const ok = await saveHunterProfile(name.trim(), bio.trim());
-      notify(ok ? t.hunterProfileSaved : t.hunterError);
-      if (ok) setProfile(await fetchHunterProfile());
+      // 去 @：用户习惯粘贴 @handle，X handle 存储不带 @
+      const handle = xHandle.trim().replace(/^@+/, '');
+      const result = await saveHunterProfile(name.trim(), bio.trim(), handle);
+      notify(result.ok ? t.hunterProfileSaved : result.invalid ? t.hunterXHandleInvalid : t.hunterError);
+      if (result.ok) setProfile(await fetchHunterProfile());
     } finally {
       setBusy(false);
     }
@@ -115,6 +119,18 @@ export default function HunterProfile({
                 maxLength={60}
                 placeholder={t.hunterBio}
                 onChange={(event) => setBio(event.target.value)}
+              />
+            </label>
+            <label className="setting-row">
+              <span className="setting-copy">
+                <strong>{t.hunterXHandle}</strong>
+              </span>
+              <input
+                type="text"
+                value={xHandle}
+                maxLength={15}
+                placeholder={t.hunterXHandle}
+                onChange={(event) => setXHandle(event.target.value)}
               />
             </label>
             <button type="button" className="text-action" onClick={() => void save()} disabled={busy}>

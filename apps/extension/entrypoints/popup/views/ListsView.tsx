@@ -443,11 +443,18 @@ export default function ListsView({
               >
                 <AppIcon name="refresh" size={18} />
               </button>
+              {/* 一键拉黑与排序/刷新同行：一行放完所有头部动作 */}
+              <button
+                className="secondary-action community-clean-action"
+                disabled={running || queueActive || cloudEligible.length === 0 || pauseDestructive}
+                onClick={() => void startCommunityQueue()}
+              >
+                {t.startCommunityClean(cloudEligible.length)}
+              </button>
             </div>
             {syncMsg ? <p className="inline-notice">{syncMsg}</p> : null}
 
-            {/* 动作区固定在首屏（统计条之下、名单之上）：一键入口和队列进度
-                不能落到折叠线以下，否则 600px 弹窗里用户根本找不到发起入口。 */}
+            {/* 动作区固定在首屏：一键入口已在头部行，这里是队列进度与失败转述 */}
             {queueActive ? (
               <QueuePanel
                 language={language}
@@ -478,23 +485,8 @@ export default function ListsView({
                     </li>
                   ))}
                 </ul>
-                <button
-                  className="secondary-action community-clean-action"
-                  disabled={running || cloudEligible.length === 0 || pauseDestructive}
-                  onClick={() => void startCommunityQueue()}
-                >
-                  {t.startCommunityClean(cloudEligible.length)}
-                </button>
               </div>
-            ) : (
-              <button
-                className="secondary-action community-clean-action"
-                disabled={running || cloudEligible.length === 0 || pauseDestructive}
-                onClick={() => void startCommunityQueue()}
-              >
-                {t.startCommunityClean(cloudEligible.length)}
-              </button>
-            )}
+            ) : null}
 
             {communityEntries.length > 0 ? (
               <ul className="manage-list community-list" aria-label={t.communityClean}>

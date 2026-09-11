@@ -399,13 +399,27 @@ input:focus-visible + span {
   outline-offset: 2px;
 }
 
-/* 名单前端操作区：排序 / 版本 / 刷新（替代原冗余标题+统计条） */
+/* 名单前端操作区单行：排序 / 版本 / 刷新 / 一键拉黑 */
 .list-head-actions {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   gap: 8px;
-  min-height: 30px;
+}
+
+/* 版本 chip 在窄面板让位：可收缩省略号，完整信息悬浮再见 */
+.list-head-actions .community-meta {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.list-head-actions .community-clean-action {
+  flex: 1 0 auto;
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 12.5px;
 }
 
 .sort-toggle {
@@ -2460,4 +2474,126 @@ input:focus-visible + span {
 .settings-fields input[type='email'] {
   flex: 1;
   min-width: 0;
+}
+
+/* 打野 tab：战报 + 周榜速览（流式固定排，禁用视口单位） */
+.hunter-report {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 12.5px;
+  color: var(--fs-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.hunter-report .hunter-beaten {
+  font-weight: 600;
+  color: var(--fs-accent);
+}
+
+.hunter-titles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.hunter-tier,
+.hunter-title-badge {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #b8860b;
+}
+
+.hunter-title-badge {
+  border: 1px solid currentColor;
+  border-radius: 10px;
+  padding: 0 8px;
+}
+
+.hunter-board {
+  display: flex;
+  flex-direction: column;
+}
+
+.hunter-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 2px;
+  border-bottom: 1px solid var(--fs-line);
+  font-variant-numeric: tabular-nums;
+}
+
+.hunter-row:last-child {
+  border-bottom: 0;
+}
+
+.hunter-row.is-me {
+  background: var(--fs-me-bg, rgba(184, 134, 11, 0.08));
+  border-radius: 6px;
+  border-bottom: 0;
+}
+
+.hunter-rank {
+  width: 26px;
+  text-align: right;
+  font-size: 12.5px;
+  color: var(--fs-muted);
+}
+
+.hunter-who {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.hunter-name {
+  font-weight: 600;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hunter-handle {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 12px;
+  color: var(--fs-accent);
+  cursor: pointer;
+}
+
+.hunter-handle:hover {
+  text-decoration: underline;
+}
+
+.hunter-stats {
+  text-align: right;
+  white-space: nowrap;
+  display: flex;
+  gap: 8px;
+}
+
+.hunter-kills {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.hunter-accuracy {
+  font-size: 12px;
+  color: var(--fs-muted);
+}
+
+.hunter-unranked {
+  margin-top: 4px;
+}
+
+.hunter-board-empty {
+  color: var(--fs-muted);
+  font-size: 12.5px;
+  padding: 6px 2px;
 }

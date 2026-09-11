@@ -13,6 +13,7 @@ export type AppIconName =
   | 'refresh'
   | 'shield'
   | 'detect'
+  | 'hunt'
   | 'plus'
   | 'x'
   | 'check'
@@ -72,6 +73,13 @@ export function AppIcon({
       <>
         <circle cx="11" cy="11" r="6.5" />
         <path d="m20 20-4.5-4.5" />
+      </>
+    ),
+    hunt: (
+      <>
+        <circle cx="12" cy="12" r="8" />
+        <circle cx="12" cy="12" r="3" />
+        <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
       </>
     ),
     plus: (

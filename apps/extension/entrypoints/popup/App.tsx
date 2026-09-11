@@ -24,8 +24,7 @@ import CleanView from './views/CleanView';
 import ListsView from './views/ListsView';
 import KeywordsView from './views/KeywordsView';
 import SettingsView from './views/SettingsView';
-import HunterBar from './views/HunterBar';
-import HunterProfile from './views/HunterProfile';
+import HuntingView from './views/HuntingView';
 import {
   AppIcon,
   asPageMarkedList,
@@ -34,7 +33,7 @@ import {
   type PageMarkedItem,
 } from './views/shared';
 
-type PopupView = 'clean' | 'lists' | 'keywords' | 'settings';
+type PopupView = 'clean' | 'lists' | 'keywords' | 'hunting' | 'settings';
 
 const PAGE_MARKED_MESSAGE = { type: 'feedsieve:page-marked-list' } as const;
 
@@ -47,6 +46,8 @@ function initialPopupView(): PopupView {
     case 'keywords':
     case 'detection':
       return 'keywords';
+    case 'hunting':
+      return 'hunting';
     case 'settings':
       return 'settings';
     default:
@@ -341,9 +342,10 @@ export default function App() {
               communityMeta={communityMeta}
               onRefreshCommunitySnapshot={refreshCommunitySnapshot}
             />
-            <HunterBar language={language} />
-            <HunterProfile language={language} notify={notify} />
           </>
+        ) : null}
+        {view === 'hunting' ? (
+          <HuntingView language={language} notify={notify} />
         ) : null}
         {view === 'keywords' ? (
           <KeywordsView language={language} notify={notify} />
@@ -402,6 +404,17 @@ export default function App() {
             <AppIcon name="detect" />
           </span>
           <span>{t.keywords}</span>
+        </button>
+        <button
+          type="button"
+          className={view === 'hunting' ? 'is-active' : ''}
+          aria-current={view === 'hunting' ? 'page' : undefined}
+          onClick={() => setView('hunting')}
+        >
+          <span className="nav-icon-wrap">
+            <AppIcon name="hunt" />
+          </span>
+          <span>{t.hunting}</span>
         </button>
         <button
           type="button"
