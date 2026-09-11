@@ -2,6 +2,7 @@ import { env } from 'cloudflare:workers';
 import { afterAll, describe, expect, it } from 'vitest';
 import worker from '../src/index';
 import { hashInstallationId } from '../src/lib/hash';
+import { decideKeywordContributions, listKeywordContributions } from '../src/keyword-contributions';
 
 const ORIGIN = 'https://api.example.com';
 const TEST_SALT = 'override-salt-0123456789';
@@ -134,17 +135,42 @@ describe('keyword contributions', () => {
     expect(webRows?.n).toBe(5);
   });
 
-  it('admin 审阅决定按词聚合改状态（尽力而为：非管理域名上中间件先 404）', async () => {
-    await postContributions('install-decide-1', ['待审词甲']);
+  it('admin 审阅决定按词聚合改状态（函数级：admitted/rejected/幂等/状态只标记不写词库）', async () => {
+    await postContributions('install-decide-1', ['待审词甲', '待审词乙']);
+    // 同词第二来源也进同一聚合
+    await postContributions('install-decide-2', [' 待审词甲 ']);
 
-    const decide = await worker.fetch(
-      new Request(`${ORIGIN}/api/admin/keywords/contributions/decide`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ norm_phrase: '待审词甲', decision: 'admitted' }),
-      }),
-      env,
-    );
-    expect([200, 404]).toContain(decide.status);
+    // admitted：清空该词所有 new 行
+    expect(
+      await decideKeywordContributions(env, '待审词甲', 'admitted', 'maintainer@example.com'),
+    ).toEqual({ changed: 2 });
+    const admitted = await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM keyword_contributions WHERE norm_phrase = '待审词甲' AND status = 'admitted' AND decided_by = 'maintainer@example.com'",
+    ).first<{ n: number }>();
+    expect(admitted?.n).toBe(2);
+    // 已决定的词再次 decide 是幂等 no-op（只作用于 new 行）
+    expect(
+      await decideKeywordContributions(env, '待审词甲', 'admitted', 'maintainer@example.com'),
+    ).toEqual({ changed: 0 });
+
+    // rejected 同理
+    expect(
+      await decideKeywordContributions(env, '待审词乙', 'rejected', 'maintainer@example.com'),
+    ).toEqual({ changed: 1 });
+
+    // decide 只改状态：不自动写入官方词库、不进快照
+    const rule = await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM admin_keyword_rules WHERE phrase = '待审词甲'",
+    ).first<{ n: number }>();
+    expect(rule?.n).toBe(0);
+  });
+
+  it('待审列表按词聚合、显示来源数与展示词', async () => {
+    await postContributions('install-list-1', ['聚合展示词']);
+    await postContributions('install-list-2', [' 聚合展示词 ']);
+    const listed = await listKeywordContributions(env);
+    const row = listed.contributions.find((item) => item.norm_phrase === '聚合展示词');
+    expect(row?.reports).toBe(2);
+    expect(row?.display_phrase.length).toBeGreaterThan(0);
   });
 });

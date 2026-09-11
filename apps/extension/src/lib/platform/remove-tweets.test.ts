@@ -2,7 +2,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   HIDDEN_TWEET_CELL_ATTRIBUTE,
-  collectCellsByHandle,
   hideCellsSoon,
   mutateWithStableViewport,
 } from './remove-tweets';
@@ -37,45 +36,6 @@ afterEach(() => {
   document.documentElement.removeAttribute('style');
   document.documentElement.scrollTop = 0;
   document.documentElement.scrollLeft = 0;
-});
-
-describe('collectCellsByHandle', () => {
-  it('collects only cells whose author matches the handle, deduped', () => {
-    const target = tweetCell('spamking88', '1');
-    document.body.append(target, tweetCell('spamking88', '2'), tweetCell('cleanuser', '3'));
-
-    const cells = collectCellsByHandle('spamking88');
-
-    expect(cells).toHaveLength(2);
-    expect(cells).toContain(target);
-  });
-
-  it('normalizes @ prefixes and handle casing before matching', () => {
-    const target = tweetCell('SpamKing88', '1');
-    document.body.append(target);
-
-    expect(collectCellsByHandle('@spamking88')).toEqual([target]);
-  });
-
-  it('falls back to the article when no cellInnerDiv wrapper exists', () => {
-    const bareArticle = tweetCell('spamking88', '1').querySelector('article')!;
-    document.body.append(bareArticle);
-
-    const cells = collectCellsByHandle('spamking88');
-
-    expect(cells).toEqual([bareArticle]);
-  });
-
-  it('skips articles it cannot parse (no author link)', () => {
-    const cell = document.createElement('div');
-    const article = document.createElement('article');
-    article.dataset.testid = 'tweet';
-    article.textContent = 'unparseable';
-    cell.append(article);
-    document.body.append(cell);
-
-    expect(collectCellsByHandle('whatever')).toEqual([]);
-  });
 });
 
 describe('hideCellsSoon', () => {

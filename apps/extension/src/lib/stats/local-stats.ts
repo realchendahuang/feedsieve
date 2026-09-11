@@ -14,6 +14,8 @@ export interface LocalStats {
   unblocked: number;
 }
 
+import { enqueueStorageWrite } from '../platform/storage-mutex';
+
 const STORAGE_KEY = 'stats';
 
 const EMPTY: LocalStats = { detected: 0, blocked: 0, unblocked: 0 };
@@ -32,19 +34,18 @@ export async function getStats(): Promise<LocalStats> {
   };
 }
 
-/** 单项计数 +delta（默认 +1）。调用方串行等待即可，不做并发合并。 */
+/** 单项计数 +delta（默认 +1）。读改写走存储互斥链，多个黄框同帧落地不丢计数。 */
 export async function bumpStat(key: keyof LocalStats, delta = 1): Promise<void> {
-  const stats = await getStats();
-  stats[key] = (stats[key] ?? 0) + delta;
-  await browser.storage.local.set({ [STORAGE_KEY]: stats });
+  await enqueueStorageWrite(async () => {
+    const stats = await getStats();
+    stats[key] = (stats[key] ?? 0) + delta;
+    await browser.storage.local.set({ [STORAGE_KEY]: stats });
+  });
 }
 
 /** 订阅变化（popup 实时刷新）。返回解绑函数。 */
 export function subscribeStats(onChange: (stats: LocalStats) => void): () => void {
-  const listener = (
-    changes: Record<string, { newValue?: unknown }>,
-    areaName: string,
-  ) => {
+  const listener = (changes: Record<string, { newValue?: unknown }>, areaName: string) => {
     if (areaName === 'local' && changes[STORAGE_KEY]) {
       void getStats().then(onChange);
     }

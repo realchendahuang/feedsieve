@@ -21,7 +21,7 @@ FeedSieve（福滤娃）是 X（Twitter）扩展：黄框标注垃圾账号，�
 ### 离开设备的数据
 
 **1. 社区名单同步（无你的任何数据）**
-扩展从官方 API `feedsieve-api.chendahuang.com` 下载社区名单快照（黑名单与验证正常白名单，JSON，经 SHA-256 校验与发布者签名验证）。该请求不包含你的任何个人数据。
+扩展从官方 API `api.feedsieve.win` 下载社区名单快照（黑名单与验证正常白名单，JSON，经 SHA-256 校验与发布者签名验证）。该请求不包含你的任何个人数据。
 
 **2. 黑白名单上传（默认开启，可一键关闭）**
 开启「名单上传」时，扩展同步你明确维护的本地黑名单和白名单，包括升级前已保存在本机的历史记录。它不上传仅仅浏览过、仅仅被标注但未处理的账号；也不上传关注保护名单、你的自定义关键词或官方词库的订阅/启停状态。公开词库下载不携带安装 ID、X 账号、浏览历史或自定义词；由本地关键词触发的拉黑会明确标记为仅本地，不会回灌成社区举报票；直接执行「社区清理」产生的批量拉黑同样只记录在本机。
@@ -38,9 +38,12 @@ FeedSieve（福滤娃）是 X（Twitter）扩展：黄框标注垃圾账号，�
 **4. 抢救票（显式动作）**
 你认为误伤并点击「抢救」时，上报 `handle`、可选 `x_user_id`、误标规则证据与安装 ID，并作为当前负标签计票。
 
+**5. 关键词贡献（显式动作）**
+你在关键词页点击「贡献给官方词库」（或在官网词库页提交）时，上传你主动挑选的短语与安装 ID（网页通道为加盐哈希后的 IP）。短语进入维护者人工审阅队列，审阅通过后才纳入官方词库；不参与黑名单计票。受每日额度限制。
+
 ### 服务器保存什么
 
-官方 API（部署于 Cloudflare Workers + D1）保存：handle、x_user_id、分类、指纹、外链域名、误标来源/规则/理由、当前黑白标签、加盐哈希后的安装 ID、时间。不保存 IP、原始安装 ID、Cookie、任何 X 凭证。
+官方 API（部署于 Cloudflare Workers + D1）保存：handle、x_user_id、分类、指纹、外链域名、误标来源/规则/理由、当前黑白标签、加盐哈希后的安装 ID、你主动贡献的关键词短语、时间。不保存原始 IP（网页关键词提交的 IP 级限流只保存盐哈希）、原始安装 ID、Cookie、任何 X 凭证。
 
 ### 删除与退出
 
@@ -68,7 +71,7 @@ FeedSieve（福滤娃）是 X（Twitter）扩展：黄框标注垃圾账号，�
 ### Data that leaves the device
 
 **1. Community list sync (contains none of your data)**
-The extension downloads the community snapshot (JSON, SHA-256 verified) from the official API `feedsieve-api.chendahuang.com`. No personal data is included in this request.
+The extension downloads the community snapshot (JSON, SHA-256 verified) from the official API `api.feedsieve.win`. No personal data is included in this request.
 
 **2. Blocklist and allowlist uploads (default on, one toggle to disable)**
 When “List uploads” is enabled, the extension syncs the local blocklist and allowlist entries you explicitly maintain, including records already stored locally before an upgrade. Merely viewed or merely marked accounts are never uploaded. Neither is the following-protection list. Blocks performed by Community Clean are kept as local action records and do not create new community report votes.
@@ -85,9 +88,12 @@ Only if this device has contributed before, opening the popup queries your cumul
 **4. Rescue votes (explicit action)**
 Clicking rescue on a wrongly marked account reports its `handle`, optional `x_user_id`, rule evidence, and installation ID as a current negative label.
 
+**5. Keyword contributions (explicit action)**
+When you click “Contribute to official wordpacks” in the keywords page (or submit from the website wordpack tab), the phrases you actively selected are uploaded together with the installation ID (the web channel sends a salted, hashed IP instead). Phrases enter a maintainer review queue and are added to official wordpacks only after review; they never affect blocklist votes. Daily quotas apply.
+
 ### What the server stores
 
-The official API (Cloudflare Workers + D1) stores: handle, x_user_id, category, fingerprint, link domains, false-positive source/rule/reason, current block/allow label, salted-hashed installation ID, and timestamps. It does not store IPs, raw installation IDs, cookies, or any X credentials.
+The official API (Cloudflare Workers + D1) stores: handle, x_user_id, category, fingerprint, link domains, false-positive source/rule/reason, current block/allow label, salted-hashed installation ID, keyword phrases you actively contributed, and timestamps. It does not store raw IPs (IP-level rate limiting for web keyword submissions keeps only a salted hash), raw installation IDs, cookies, or any X credentials.
 
 ### Deletion and opt-out
 

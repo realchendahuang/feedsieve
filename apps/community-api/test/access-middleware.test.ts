@@ -191,6 +191,18 @@ describe('管理端 CSRF 防线（POST）', () => {
     );
   }
 
+  it('跨站 Origin 的 DELETE 同样被 CSRF 门拒绝（预检可放行、副作用照发）', async () => {
+    const response = await worker.fetch(
+      new Request(`${ADMIN_ORIGIN}/api/admin/accounts/someone`, {
+        method: 'DELETE',
+        headers: { 'Cf-Access-Jwt-Assertion': fixture!.token, origin: 'https://evil.example' },
+      }),
+      env,
+    );
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: 'cross_origin_admin_post' });
+  });
+
   it('跨站 Origin 的 POST 被拒绝（403），即使带了有效 Access JWT', async () => {
     const response = await adminPost({
       'Cf-Access-Jwt-Assertion': fixture!.token,

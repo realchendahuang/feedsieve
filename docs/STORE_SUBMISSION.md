@@ -87,7 +87,7 @@ bash scripts/pack-store.sh
   | -------------------------------------------------- | -------------------------------------------------------------------- |
   | `storage`                                          | 缓存社区名单快照、用户设置、本地统计、已拉黑记录                     |
   | 主机权限 `https://x.com/*`                         | 内容脚本在时间线识别账号并标注；用户点击时经 X 自身会话执行拉黑/撤销 |
-  | 主机权限 `https://feedsieve-api.chendahuang.com/*` | 自有 API：下载经校验的社区名单快照；开启名单上传时同步匿名黑白标签   |
+  | 主机权限 `https://api.feedsieve.win/*` | 自有 API：下载经校验的社区名单快照；开启名单上传时同步匿名黑白标签   |
 
 - **数据使用勾选**（收集 = 离开设备的数据）：
   - ✅ 网站内容（Website content）——拉黑对象的话术指纹（单向哈希）与外链域名
@@ -127,7 +127,7 @@ Permissions rationale
   accounts and execute the user-triggered block/unblock against X's own
   endpoints with the user's existing session (no cookies permission; the
   session token is read from the page context and sent only to x.com itself).
-- Host "https://feedsieve-api.chendahuang.com/*" (our own API, shipped in this
+- Host "https://api.feedsieve.win/*" (our own API, shipped in this
   repo): downloads the community snapshot (JSON validated by schema + SHA-256)
   and, when List uploads is enabled, syncs only entries the user explicitly
   maintains in the local blocklist or allowlist. Block entries include handle,

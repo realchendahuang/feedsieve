@@ -64,7 +64,8 @@ export const FALLBACK_ACCOUNT_KEY = 'no-account';
  */
 export type SafetySignal = 'rate_limit_storm' | 'auth_required' | 'challenge';
 
-export interface SafetyLedger {  accountKey: string;
+export interface SafetyLedger {
+  accountKey: string;
   preset: SafetyPreset;
   /** 档位预算起点（50–800 可调，PR3 设置页）；不是固定闸门 */
   dailyLimit: number;
@@ -148,11 +149,7 @@ export function shouldPauseForQuota(
  * 风控信号收缩预算：429 风暴砍半，认证失效 / 人机挑战清零。
  * 信号日 cleanStreak 归零，当天不再回补（rolloverBudget 幂等标记）。
  */
-export function applySignal(
-  ledger: SafetyLedger,
-  signal: SafetySignal,
-  now: number,
-): SafetyLedger {
+export function applySignal(ledger: SafetyLedger, signal: SafetySignal, now: number): SafetyLedger {
   const budget = signal === 'rate_limit_storm' ? Math.floor(ledger.budget / 2) : 0;
   return {
     ...ledger,
@@ -207,10 +204,7 @@ export function applyBudgetOverride(ledger: SafetyLedger, override: number): Saf
 }
 
 /** 成功后相邻间隔：base + jitter 内抖动，避免固定节拍器被 X 的规律自动化识别。 */
-export function paceForPreset(
-  preset: SafetyPreset,
-  random: () => number = Math.random,
-): number {
+export function paceForPreset(preset: SafetyPreset, random: () => number = Math.random): number {
   const config = SAFETY_PRESETS[preset] ?? SAFETY_PRESETS[DEFAULT_PRESET];
   return jitteredPaceMs(config.paceBaseMs, config.paceJitterMs, random);
 }
@@ -228,7 +222,10 @@ export function normalizeLedger(value: unknown): SafetyLedger | null {
     : SAFETY_PRESETS[preset].dailyLimit;
   const events = Array.isArray(raw.events)
     ? raw.events
-        .filter((timestamp): timestamp is number => typeof timestamp === 'number' && Number.isFinite(timestamp))
+        .filter(
+          (timestamp): timestamp is number =>
+            typeof timestamp === 'number' && Number.isFinite(timestamp),
+        )
         .sort((a, b) => a - b)
         .slice(-dailyLimit)
     : [];
@@ -240,8 +237,9 @@ export function normalizeLedger(value: unknown): SafetyLedger | null {
     budget: Number.isFinite(raw.budget)
       ? Math.max(0, Math.round(raw.budget as number))
       : dailyLimit,
-    cleanStreak:
-      Number.isFinite(raw.cleanStreak) ? Math.max(0, Math.round(raw.cleanStreak as number)) : 0,
+    cleanStreak: Number.isFinite(raw.cleanStreak)
+      ? Math.max(0, Math.round(raw.cleanStreak as number))
+      : 0,
     events,
     // 保险丝缺省即不封顶（存量账本没有这字段 → 纯自适应，行为等同升级）
     ...(Number.isFinite(raw.budget_cap)
@@ -420,10 +418,7 @@ export async function persistSignal(
 
 /** 订阅账本变化（popup 额度条实时刷新）。返回解绑函数。 */
 export function subscribeSafetyLedger(onChange: (ledger: SafetyLedger) => void): () => void {
-  const listener = (
-    changes: Record<string, unknown>,
-    areaName: string,
-  ) => {
+  const listener = (changes: Record<string, unknown>, areaName: string) => {
     if (areaName === 'local' && changes[STORAGE_KEY]) {
       void loadSafetyLedger().then(onChange);
     }

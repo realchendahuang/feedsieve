@@ -183,12 +183,15 @@ export function createApp() {
   // React 管理端使用 Cloudflare Access 身份；此路由永远不接受旧的 Bearer 凭据。
   app.use('/api/admin/*', async (c, next) => {
     if (!isAdminHost(c.req.raw, c.env)) return c.json({ error: 'not_found' }, 404);
-    // CSRF 防线：Access 身份是边缘按会话 Cookie 注入的，跨站简单 POST
+    // CSRF 防线：Access 身份是边缘按会话 Cookie 注入的，跨站简单请求
     // （无预检的 text/plain body）会带着维护者的有效会话到达这里，而
-    // Hono 的 c.req.json() 不看 content-type。浏览器发起的 POST 一定带
+    // Hono 的 c.req.json() 不看 content-type。浏览器发起的写请求一定带
     // Origin：Origin 存在但不等于管理域名 → 直接拒绝；无 Origin 的
     // 非浏览器客户端（curl/脚本）必须声明 application/json。
-    if (c.req.method === 'POST') {
+    // 写方法覆盖 POST/PUT/PATCH/DELETE：跨站 DELETE 预检可被放行、
+    // 副作用照发（浏览器只是不给读响应），不能只挡 POST。
+    const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+    if (WRITE_METHODS.has(c.req.method)) {
       const configured = c.env.ADMIN_HOST?.trim().toLowerCase();
       const origin = c.req.header('origin');
       if (origin) {
@@ -755,6 +758,7 @@ export function createApp() {
       body,
       ip: c.req.header('cf-connecting-ip') ?? null,
     });
+    c.header('Cache-Control', 'no-store');
     if (!result.ok) {
       return c.json({ error: result.error }, result.httpStatus);
     }

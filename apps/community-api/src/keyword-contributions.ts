@@ -120,7 +120,6 @@ export async function processKeywordContributions(
     return { ok: true, results };
   }
 
-  const today = utcToday();
   const validNorms = valid.map((item) => item.norm);
   const dailyLimit = isWebChannel ? MAX_WEB_PHRASES_PER_DAY : MAX_PHRASES_PER_DAY;
 
@@ -139,14 +138,29 @@ export async function processKeywordContributions(
   );
   const quotaUnits = valid.filter((item) => !existingNorms.has(item.norm)).length;
   if (quotaUnits > 0) {
-    const used = await env.DB.prepare(
-      `SELECT COUNT(*) AS used FROM keyword_contributions
-       WHERE installation_id = ?1
-         AND created_at > CAST(strftime('%s', ?2) AS INTEGER) - 86400`,
+    // 原子预留本批额度（条件 UPSERT 本身即门禁，杜绝并发 COUNT 检查两写并存）。
+    // 与 rescues 语义一致：预留消耗即计入全天，即使后续写入失败不做回退（日切换归还）。
+    const reserved = await env.DB.prepare(
+      `INSERT INTO keyword_contrib_usage (submission_key, day, used)
+       VALUES (?1, ?2, ?3)
+       ON CONFLICT(submission_key) DO UPDATE SET
+         day = excluded.day,
+         used = CASE
+           WHEN keyword_contrib_usage.day = excluded.day
+             THEN keyword_contrib_usage.used + excluded.used
+           ELSE excluded.used
+         END
+       WHERE (
+         CASE
+           WHEN keyword_contrib_usage.day = excluded.day THEN keyword_contrib_usage.used
+           ELSE 0
+         END
+         + excluded.used
+       ) <= ?4`,
     )
-      .bind(submissionKey, today)
-      .first<{ used: number }>();
-    if ((used?.used ?? 0) + quotaUnits > dailyLimit) {
+      .bind(submissionKey, utcToday(), quotaUnits, dailyLimit)
+      .run();
+    if ((reserved.meta.changes ?? 0) === 0) {
       return { ok: false, httpStatus: 429, error: 'rate_limited' };
     }
   }
@@ -216,7 +230,8 @@ export type KeywordContributionDecision = 'admitted' | 'rejected';
 
 /**
  * 运营审阅决定：按归一化词批量改状态。审阅只在后台进行，
- * 'admitted' 表示已纳入官方词库，'rejected' 表示否决——都不改变快照与公共数据。
+ * 'admitted' / 'rejected' 都只是待审队列的状态标记，不自动写入官方词库、不改变
+ * 快照与公共数据；真正入库由维护者把词加进工作区后走显式发布链路。
  */
 export async function decideKeywordContributions(
   env: Cloudflare.Env,

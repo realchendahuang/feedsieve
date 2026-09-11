@@ -6,7 +6,6 @@
  * 节点，只用属性/CSS 隐藏，并在布局变化前后锁定实际滚动容器的位置。
  */
 
-import { contextFromPath, extractFeedItem, tweetSelectors } from '@feedsieve/x-adapter';
 
 /** X cell 已被 FeedSieve 隐藏；由 content script 的注入样式折叠高度。 */
 export const HIDDEN_TWEET_CELL_ATTRIBUTE = 'data-fs-hidden';
@@ -25,26 +24,6 @@ interface ScrollSnapshot {
  * 对齐 X 原生行为：同一账号的多条推文（刷屏集群常见）一次性全部隐藏。
  * 格子取 `cellInnerDiv`（标注同款目标层）；页面结构异常取不到时退回 article。
  */
-export function collectCellsByHandle(handle: string): Element[] {
-  const normalizedHandle = normalizeHandle(handle);
-  if (!normalizedHandle) return [];
-
-  const cells: Element[] = [];
-  const seen = new Set<Element>();
-  const context = contextFromPath(location.pathname);
-  for (const article of document.querySelectorAll(tweetSelectors.article)) {
-    if (extractFeedItem(article, context)?.author.handle.toLowerCase() !== normalizedHandle) {
-      continue;
-    }
-    const cell = article.closest(tweetSelectors.timelineCell) ?? article;
-    if (!seen.has(cell)) {
-      seen.add(cell);
-      cells.push(cell);
-    }
-  }
-  return cells;
-}
-
 /**
  * 延迟后批量隐藏：先让「已拉黑 ✓」反馈停留一拍，再让推文消失。
  *
@@ -94,10 +73,6 @@ export function mutateWithStableViewport<T>(targets: Iterable<Element>, mutate: 
     restoreScrollAnchoring(snapshots);
     throw error;
   }
-}
-
-function normalizeHandle(handle: string): string {
-  return handle.trim().replace(/^@+/, '').toLowerCase();
 }
 
 function connectedUniqueCells(targets: Iterable<Element>): Element[] {

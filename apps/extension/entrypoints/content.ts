@@ -10,7 +10,11 @@ import {
   runNativeAction,
   tweetSelectors,
 } from '@feedsieve/x-adapter';
-import { getBlockedAccounts, markBlocked, subscribeBlocked } from '../src/lib/community/blocked-accounts';
+import {
+  getBlockedAccounts,
+  markBlocked,
+  subscribeBlocked,
+} from '../src/lib/community/blocked-accounts';
 import { bumpStat } from '../src/lib/stats/local-stats';
 import { bumpDaily } from '../src/lib/stats/daily-stats';
 import {
@@ -32,11 +36,7 @@ import {
   removeAllowed,
   subscribeAllowlist,
 } from '../src/lib/community/allowlist';
-import {
-  contributeBlocks,
-  rescueHandle,
-  syncLocalLabels,
-} from '../src/lib/community/contribute';
+import { contributeBlocks, rescueHandle, syncLocalLabels } from '../src/lib/community/contribute';
 import { getCommunitySettings } from '../src/lib/community/community-store';
 import { runDetectionPipeline, type BlockEvidence } from '../src/lib/detection/detection-pipeline';
 import { recordDetection } from '../src/lib/detection/detection-log';
@@ -57,10 +57,7 @@ import {
   setPersistentBlockQueue,
   type PersistentBlockQueueState,
 } from '../src/lib/queue/block-queue-store';
-import {
-  createQueueSupervisor,
-  QUEUE_HEARTBEAT_KEY,
-} from '../src/lib/queue/queue-supervisor';
+import { createQueueSupervisor, QUEUE_HEARTBEAT_KEY } from '../src/lib/queue/queue-supervisor';
 import { sanitizeBridgePayload, STRICT_HANDLE_RE } from '../src/lib/platform/xhr-bridge-guard';
 import {
   currentAccountKey,
@@ -73,11 +70,7 @@ import {
   shouldPauseForQuota,
   type SafetyPreset,
 } from '../src/lib/queue/block-safety';
-import {
-  getUiLanguage,
-  subscribeUiLanguage,
-  type UiLanguage,
-} from '../src/lib/platform/i18n';
+import { getUiLanguage, subscribeUiLanguage, type UiLanguage } from '../src/lib/platform/i18n';
 import {
   createKeywordHeuristics,
   getKeywordRuleSettings,
@@ -128,7 +121,6 @@ interface PageMarkedAccount {
 function communityVoteForDetection(detectionSource: string | undefined, ruleId?: string): boolean {
   return detectionSource !== 'community-list' && !ruleId?.startsWith('keyword:');
 }
-
 
 /**
  * Phase 1 content script：黄框标注（带理由）。一键拉黑 = 当前页面全部黄框账号。
@@ -285,10 +277,7 @@ export default defineContentScript({
             reason: item.reason,
             evidence: item.evidence,
             // 防自我放大的计票口径与单条拉黑路径完全一致（communityVoteForDetection）
-            communityVote: communityVoteForDetection(
-              item.evidence.detectionSource,
-              item.ruleId,
-            ),
+            communityVote: communityVoteForDetection(item.evidence.detectionSource, item.ruleId),
           })),
           msg?.targetTabId,
         );
@@ -732,7 +721,6 @@ export default defineContentScript({
       });
     }
 
-
     // 页面变化监听 + 扫描调度：收敛在 PageScanController（有脏才调度，反馈环由
     // .fs-badge/.fs-manual-mark 过滤；无关 mutation 直接忽略）
     controller.observe(document.body);
@@ -761,9 +749,10 @@ export default defineContentScript({
       button.setAttribute('data-fs-manual-action', 'true');
       const idleLabel = uiLanguage === 'zh' ? '拉黑' : 'Block';
       button.textContent = idleLabel;
-      button.title = uiLanguage === 'zh'
-        ? '福滤娃 · 拉黑此账号，并计入社区名单'
-        : 'FeedSieve · Block this account and count as a community vote';
+      button.title =
+        uiLanguage === 'zh'
+          ? '福滤娃 · 拉黑此账号，并计入社区名单'
+          : 'FeedSieve · Block this account and count as a community vote';
       button.setAttribute('aria-label', button.title);
       button.addEventListener('click', () => {
         void (async () => {
@@ -792,7 +781,12 @@ export default defineContentScript({
       const handle = normalizeManualHandle(rawHandle);
       if (!handle) return { ok: false, code: 'invalid-handle' };
       const outcome = await blockOne(
-        { handle, category: 'other', reason: '', evidence: { ...evidence, detectionSource: 'manual' } },
+        {
+          handle,
+          category: 'other',
+          reason: '',
+          evidence: { ...evidence, detectionSource: 'manual' },
+        },
         {
           origin: 'manual-spam',
           communityVote: true,
@@ -856,8 +850,12 @@ export default defineContentScript({
       // 本地统计：每次新标注 +1（扫描快照保证每个 cell 只标一次）；
       // 已拉黑回显不是新发现，不计数
       if (detection.source !== 'blocked') {
+        // 连续 30 天战斗统计与总累计一起记（页面快照保证同 cell 不重复计数）
         void bumpStat('detected').catch(() => {
           // 统计写入失败不影响标注
+        });
+        void bumpDaily('detected').catch(() => {
+          // 同上，写失败静默
         });
       }
     }
@@ -890,7 +888,8 @@ export default defineContentScript({
       blockBtn.className = 'fs-block-now';
       blockBtn.type = 'button';
       blockBtn.textContent = uiLanguage === 'zh' ? '拉黑' : 'Block';
-      blockBtn.title = uiLanguage === 'zh' ? '福滤娃 · 拉黑此账号' : 'FeedSieve · Block this account';
+      blockBtn.title =
+        uiLanguage === 'zh' ? '福滤娃 · 拉黑此账号' : 'FeedSieve · Block this account';
       blockBtn.addEventListener('click', () => {
         // 计票口径与批量路径唯一共享：见 communityVoteForDetection
         const communityVote = communityVoteForDetection(detection.source, detection.ruleId);
@@ -912,8 +911,11 @@ export default defineContentScript({
       const allowBtn = document.createElement('button');
       allowBtn.className = 'fs-allow';
       allowBtn.type = 'button';
-      allowBtn.textContent = '误标？';
-      allowBtn.title = '加入个人白名单，并提交这条规则的误标反馈';
+      allowBtn.textContent = uiLanguage === 'zh' ? '误标？' : 'Misflagged?';
+      allowBtn.title =
+        uiLanguage === 'zh'
+          ? '加入个人白名单，并提交这条规则的误标反馈'
+          : 'Add to your allowlist and report this rule as a false positive';
       allowBtn.addEventListener('click', () => {
         void (async () => {
           const feedback = {
@@ -939,8 +941,11 @@ export default defineContentScript({
               const btn = document.createElement('button');
               btn.className = 'fs-allow';
               btn.type = 'button';
-              btn.textContent = '抢救';
-              btn.title = '向社区投票：这个标注可能误伤了';
+              btn.textContent = uiLanguage === 'zh' ? '抢救' : 'Rescue';
+              btn.title =
+                uiLanguage === 'zh'
+                  ? '向社区投票：这个标注可能误伤了'
+                  : 'Vote to community: this mark may be a false positive';
               btn.addEventListener('click', () => {
                 void (async () => {
                   btn.disabled = true;
@@ -955,15 +960,15 @@ export default defineContentScript({
                     (await getUserId(detection.handle)) ?? undefined,
                   );
                   if (ok) {
-                    btn.textContent = '已抢救 ✓';
+                    btn.textContent = uiLanguage === 'zh' ? '已抢救 ✓' : 'Rescued ✓';
                     setTimeout(() => {
                       btn.remove();
                     }, 2000);
                   } else {
-                    btn.textContent = '失败';
+                    btn.textContent = uiLanguage === 'zh' ? '失败' : 'Failed';
                     setTimeout(() => {
                       btn.disabled = false;
-                      btn.textContent = '抢救';
+                      btn.textContent = uiLanguage === 'zh' ? '抢救' : 'Rescue';
                     }, 3000);
                   }
                 })();
@@ -995,8 +1000,7 @@ export default defineContentScript({
         deferContribution?: boolean;
       } = {},
     ): Promise<
-      | { ok: true }
-      | { ok: false; code: string; httpStatus?: number; retryAfterMs?: number }
+      { ok: true } | { ok: false; code: string; httpStatus?: number; retryAfterMs?: number }
     > {
       // 官方破坏性动作暂停开关：本地快照命中立刻拦截（零额外请求）；
       // 否则实时问一次 /v1/kill-switch（background 30s TTL 缓存），网络失败回退快照。
@@ -1019,8 +1023,7 @@ export default defineContentScript({
       // 多一次 UserByScreenName 可接受）；解析失败宁可拒发，绝不用可疑 id 打 block API。
       // 手动输入（manual-*）保留缓存优先：用户明确指向的是 handle，行为与 v0.8 前一致。
       const trustCachedId =
-        options.origin === undefined ||
-        ['manual-spam', 'manual-personal'].includes(options.origin);
+        options.origin === undefined || ['manual-spam', 'manual-personal'].includes(options.origin);
       let xUserId: string | undefined | null = trustCachedId
         ? (item.xUserId ?? (await getUserId(handle)))
         : undefined;
@@ -1073,9 +1076,7 @@ export default defineContentScript({
       await recordSafetyEvent(currentAccountKey());
       // 摩擦设计：拉黑成功即自动贡献社区（无弹窗；全局开关在 contributeBlocks 内判断）
       if (options.communityVote !== false && !options.deferContribution) {
-        contributeBlocks([
-          { handle, xUserId, category: item.category, ...item.evidence },
-        ]);
+        contributeBlocks([{ handle, xUserId, category: item.category, ...item.evidence }]);
       }
       return { ok: true };
     }
@@ -1099,7 +1100,7 @@ export default defineContentScript({
       const original = button.textContent;
       button.disabled = true;
       try {
-        button.textContent = '拉黑中…';
+        button.textContent = uiLanguage === 'zh' ? '拉黑中…' : 'Blocking…';
         const outcome = await blockOne(
           {
             handle,
@@ -1110,13 +1111,13 @@ export default defineContentScript({
           { origin, communityVote },
         );
         if (outcome.ok) {
-          button.textContent = '已拉黑 ✓';
+          button.textContent = uiLanguage === 'zh' ? '已拉黑 ✓' : 'Blocked ✓';
           pageMarked.delete(handle);
           notifyPageMarkedChanged();
           hideCellsSoon(collectCellsForHandle(handle));
         } else {
           // 如实反馈失败原因（auth_required / rate_limited / network_error…）
-          button.textContent = `失败 ${outcome.code}`;
+          button.textContent = `${uiLanguage === 'zh' ? '失败' : 'Failed'} ${outcome.code}`;
           console.warn(`[FeedSieve] block @${handle} failed:`, outcome.code);
           setTimeout(() => {
             button.textContent = original;
@@ -1254,12 +1255,10 @@ export default defineContentScript({
 /** bio 内存缓存上限（每页会话），防止超长会话无界增长。 */
 const BIO_CACHE_MAX = 2000;
 
-
 /** 安全档位缓存：每次账本读取时刷新，供 successPaceMs 同步注入（runner 的 pace 是同步函数）。 */
 let safetyPresetCache: SafetyPreset = DEFAULT_PRESET;
 /** 连续 429 计数：达到阈值升级为 rate_limit_storm（收缩当日预算 + 整队暂停）。 */
 let consecutiveRateLimited = 0;
-
 
 function ensureStyles(): void {
   if (document.getElementById(STYLE_ELEMENT_ID)) {

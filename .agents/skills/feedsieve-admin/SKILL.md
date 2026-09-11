@@ -32,11 +32,11 @@
 
 ## 操作流（先看后改，改后验证）
 
-1. **巡检**：`m.sh status` 一次拿快照/词库/开关状态；有异常再 `m.sh assets`、`m.sh audit` 定位。
-2. **改名单**：`m.sh find <handle>` 查重 → `m.sh put <handle> <category> <note> [evidence_post_id]` / `m.sh remove <handle>`（拿到举报链接时把 `status/<id>` 的数字作为 evidence 传入，公开快照会带上实锤）。
-3. **改词库**：`m.sh klist` → `m.sh kpack <id> <name> <desc>` / `m.sh krule <id> <pack_id> <phrase>` → **`m.sh kpub` 发布**（改词库必须显式发布才生效）。
-4. **发布快照**：名单/白名单改动后 `m.sh wpub`（或跑 `scripts/publish-community-whitelist.sh` 自动收尾）即时发布，不用去后台点。
-4. **验证**：`m.sh status`（新版本号）或拉取公开产物 `/v1/snapshots/latest`、`/v1/keyword-packs/latest`。
+1. **巡检**：`.agents/skills/feedsieve-admin/m.sh status` 一次拿快照/词库/开关状态；有异常再 `.agents/skills/feedsieve-admin/m.sh assets`、`.agents/skills/feedsieve-admin/m.sh audit` 定位。
+2. **改名单**：`.agents/skills/feedsieve-admin/m.sh find <handle>` 查重 → `.agents/skills/feedsieve-admin/m.sh put <handle> <category> <note> [evidence_post_id]` / `.agents/skills/feedsieve-admin/m.sh remove <handle>`（拿到举报链接时把 `status/<id>` 的数字作为 evidence 传入，公开快照会带上实锤）。
+3. **改词库**：`.agents/skills/feedsieve-admin/m.sh klist` → `.agents/skills/feedsieve-admin/m.sh kpack <id> <name> <desc>` / `.agents/skills/feedsieve-admin/m.sh krule <id> <pack_id> <phrase>` → **`.agents/skills/feedsieve-admin/m.sh kpub` 发布**（改词库必须显式发布才生效）。
+4. **发布快照**：名单/白名单改动后 `.agents/skills/feedsieve-admin/m.sh wpub`（或跑 `scripts/publish-community-whitelist.sh` 自动收尾）即时发布，不用去后台点。
+4. **验证**：`.agents/skills/feedsieve-admin/m.sh status`（新版本号）或拉取公开产物 `/v1/snapshots/latest`、`/v1/keyword-packs/latest`。
 5. **留档**：名单/词库发布后跑 `scripts/mirror-community-lists.sh` 并提交（GitHub 每日自动镜像兜底）。
 
 ## 治理红线（违反破坏社区信任，禁止）

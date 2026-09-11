@@ -525,6 +525,7 @@ export function listsPageHtml(): string {
       }
 
       function renderBlacklist() {
+        clampBlacklistPage();
         var tbody = document.querySelector('#blacklist-table tbody');
         tbody.textContent = '';
         var query = document.getElementById('blacklist-search').value.trim().toLowerCase().replace(/^@/, '');
@@ -567,6 +568,11 @@ export function listsPageHtml(): string {
         blacklistPage++;
         renderBlacklist();
       });
+      // 数据缩水后页码越界防御：渲染时夹紧到最后一页
+      function clampBlacklistPage() {
+        var pages = Math.ceil(blacklistEntries.length / BLACKLIST_PAGE_SIZE);
+        if (blacklistPage > pages - 1) blacklistPage = Math.max(0, pages - 1);
+      }
       document.querySelector('#blacklist-table').addEventListener('click', function (event) {
         var row = event.target.closest('tr.main-row');
         if (!row) return;
@@ -595,6 +601,8 @@ export function listsPageHtml(): string {
       }
 
       function renderVerified() {
+        var vpages = Math.max(0, Math.ceil(verifiedEntries.length / VERIFIED_PAGE_SIZE) - 1);
+        if (verifiedPage > vpages) verifiedPage = vpages;
         var tbody = document.querySelector('#verified-table tbody');
         tbody.textContent = '';
         verifiedEntries.sort(function (a, b) { return b.net_votes - a.net_votes; });
@@ -817,7 +825,11 @@ export function listsPageHtml(): string {
       function scheduleRankedRefresh() {
         loadRanked();
         clearTimeout(rankedTimer);
-        rankedTimer = setTimeout(loadRanked, 30000);
+        // 每 30 秒刷新一次，但只在排位赛 Tab 可见时；切走后停止轮询
+        rankedTimer = setTimeout(function () {
+          if (document.getElementById('panel-ranked').hidden) return;
+          loadRanked();
+        }, 30000);
       }
       var initialTab = location.hash.slice(1);
       showTab(initialTab || 'blacklist');
@@ -869,6 +881,7 @@ export function listsPageHtml(): string {
             var body = await res.json().catch(function () { return {}; });
             if (!res.ok) throw new Error(body.error || 'network');
             showMsg('apply-msg', '已进入处理队列。', false);
+            setTimeout(function () { showMsg('apply-msg', '', false); }, 4000);
             document.getElementById('verify-form').hidden = true;
             document.getElementById('apply-form').hidden = false;
           })
@@ -901,6 +914,7 @@ export function listsPageHtml(): string {
               if (results[i].status === 'recorded' || results[i].status === 'duplicate') recorded++;
             }
             showMsg('kw-contribute-msg', recorded > 0 ? '已提交 ' + recorded + ' 条，审阅通过后进入词库' : '没有可提交的内容', false);
+            setTimeout(function () { showMsg('kw-contribute-msg', '', false); }, 4000);
             if (recorded > 0) document.getElementById('kw-contribute-input').value = '';
           })
           .catch(function (error) {

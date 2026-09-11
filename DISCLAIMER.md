@@ -2,8 +2,9 @@
 
 生效日期：2026-09-11 · Contact: [GitHub Issues](https://github.com/realchendahuang/feedsieve/issues)
 
-官网「[名单公示](https://feedsieve.win/lists)」页公示 FeedSieve 社区名单（黑名单、白名单），
-并提供申请入口。本声明说明公示内容的性质、边界与救济方式。
+官网「[名单公示](https://feedsieve.win/lists)」页公示 FeedSieve 社区名单（黑名单、白名单）
+与词库（官方公布的关键词规则，另设「关键词贡献」匿名提交入口，提交先挂人工审阅队列、
+审阅通过后才进入词库），并提供申请入口。本声明说明公示内容的性质、边界与救济方式。
 
 ---
 
@@ -35,6 +36,12 @@
 ---
 
 ## English
+
+The [roster page](https://feedsieve.win/lists) publishes the community lists (blacklist,
+whitelist) and the official keyword packs, with a keyword-contribution submission entry
+(submissions enter a manual review queue and join the wordpacks only after review), plus an
+application entry. This statement explains the nature, boundaries, and remedies of what is
+published.
 
 ### What the roster is
 

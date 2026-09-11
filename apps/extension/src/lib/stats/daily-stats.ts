@@ -27,6 +27,8 @@ export interface DailyStats {
   days: Record<string, DailyStat>;
 }
 
+import { enqueueStorageWrite } from '../platform/storage-mutex';
+
 const STORAGE_KEY = 'dailyStats';
 const KEEP_DAYS = 30;
 
@@ -62,6 +64,16 @@ export async function bumpDaily(
   key: 'blocked' | 'detected' | 'unblocked',
   category?: string,
 ): Promise<void> {
+  // 读改写走存储互斥链：同帧多个标注/拉黑不互相覆盖丢计数
+  await enqueueStorageWrite(async () => {
+    await bumpDailyInner(key, category);
+  });
+}
+
+async function bumpDailyInner(
+  key: 'blocked' | 'detected' | 'unblocked',
+  category?: string,
+): Promise<void> {
   const stats = await getDailyStats();
   const today = todayKey();
   const day = stats.days[today] ?? { ...EMPTY_DAY, byCategory: {} };
@@ -81,13 +93,8 @@ export async function bumpDaily(
 }
 
 /** 订阅变化（popup 实时刷新）。返回解绑函数。 */
-export function subscribeDaily(
-  onChange: (stats: DailyStats) => void,
-): () => void {
-  const listener = (
-    changes: Record<string, { newValue?: unknown }>,
-    areaName: string,
-  ) => {
+export function subscribeDaily(onChange: (stats: DailyStats) => void): () => void {
+  const listener = (changes: Record<string, { newValue?: unknown }>, areaName: string) => {
     if (areaName === 'local' && changes[STORAGE_KEY]) {
       void getDailyStats().then(onChange);
     }
