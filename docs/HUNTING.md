@@ -50,14 +50,13 @@ Tab 内结构：
 - 榜单行（网页 + 弹窗速览）渲染可点击的 `@handle`，直达 `x.com/<handle>`
 - 取舍（拍板记录）：bio 与 X handle 均自报、不审核、不验证归属——不审就都要认；邮箱不公示
 
-## 5. 改造三：榜单页登录与页面内认领
+## 5. 榜单页与认领通道（2026-09-12 定稿）
 
-认领流程在官网闭环，不强迫回扩展：
+网页 `/leaderboard` 纯观看：周榜/总榜切换 + me 高亮，不提供认领、登录与编辑。认领与编辑只在扩展弹窗做一次：邮箱验证码绑定 → 解锁昵称 / 简介 / X handle，此后免登录（安装 ID 即凭证）。
 
-- `/leaderboard` 页新增「认领」入口：输入邮箱 → 收 6 位验证码 → 登录成功
-- 服务端新增换凭证端点：对已绑定邮箱的 installation，凭邮箱验证码换取时效编辑 token（复用 `email_codes` 与 `email_hash` 绑定关系）；浏览器保存该 token 实现回访自动登录
-- 登录后页面内可编辑：昵称（≤16 字）、一句话简介（≤60 字）、X handle；保存即 `markLeaderboardDirty`，榜单可见
-- 未装扩展的网页访客走认领路径：验证邮箱 → 与后续安装绑定为同一身份（见开放问题）
+- 不做网页认领 / page token：浏览器拿不到安装 ID，曾设想的「凭邮箱验证码换编辑 token」双通道已撤——两处认领用户分不清用途，且邮箱验证的本职已经由扩展绑定完成
+- 服务端保留 `email_codes` / `bind-email` / `verify` / `/v1/player/profile`（安装 ID 凭证）通道不变
+- 未装扩展的网页访客不下身份（不能贡献就没有档案），保持零步骤原则
 
 ## 6. 称号系统
 
@@ -104,8 +103,6 @@ Tab 内结构：
 | --- | --- |
 | `installations` 加 `x_handle` 列（迁移） | community-api migrations |
 | `/v1/player/profile` 扩展 `x_handle` 读写与校验 | `src/player.ts` |
-| 凭验证码换编辑 token 的登录端点 | `src/player.ts`（新） |
-| 编辑 token 校验中间件（页面编辑路径） | `src/player.ts` |
 | 百分位与总人数字段加入 `/v1/leaderboard` 响应 | `src/leaderboard.ts`（缓存结构同步扩展） |
 | `installations` 加 `title`→称号派生列 + 累计击杀聚合（称号晋升） | `src/leaderboard.ts` + migrations |
 | `/v1/leaderboard` 加 `scope=all`（总榜聚合，口径同、无窗口） | `src/leaderboard.ts` |
@@ -116,7 +113,7 @@ Tab 内结构：
 
 1. **M1 打野 tab**：弹窗一级入口、战报（百分位）、Top 10 速览、 HunterBar/HunterProfile 迁移 —— 纯扩展侧，见效最快
 2. **M2 X handle + 称号**：迁移 + profile 扩展 + 榜单行渲染 + 称号晋升（累计击杀阶梯） —— 一个小迭代可随 M1 同发
-3. **M3 页面认领**：登录端点 + 页面登录态 + 页上编辑 + 总榜（scope=all 聚合与切换） —— 工作量最大，单独走
+3. **M3 网页纯观看收尾**：榜单页周榜/总榜与 me 高亮（无 me 走 GET 边缘缓存）；认领/编辑通道只在扩展弹窗，不重复做页面内认领
 
 每个里程碑独立可发布；发布节奏由用户逐次点头。
 

@@ -1,8 +1,8 @@
 /**
- * 打野榜公开页：纯静态单文件（无框架、无外链资源），数据走
- * POST /v1/leaderboard（scope=week｜all）。?me= 的高亮标识由扩展跳转携带，
- * 页面拿到后立即从地址栏抹除；编辑凭证 token 存 localStorage，凭它改档案。
- * 周榜 30 秒静默轮询；总榜按需加载；认领/登录/编辑全部在页面内闭环。
+ * 打野榜公开页：纯静态单文件（无框架、无外链资源），网页纯观看——周榜/总榜
+ * 切换、30 秒静默轮询；无 me 时走 GET 边缘缓存端点。?me= 的高亮标识由扩展
+ * 跳转携带，页面拿到后立即从地址栏抹除。不对网页提供认领/编辑/登录：
+ * 那些只在扩展弹窗做一次（安装 ID 即凭证）。
  */
 
 function escapeHtml(value: string): string {
@@ -65,28 +65,6 @@ export function hunterPageHtml(): string {
   .accuracy { color: light-dark(#737373, #8b98a5); font-size: 12.5px; margin-left: 6px; }
   .beaten { color: light-dark(#737373, #8b98a5); font-size: 12px; margin-left: 6px; }
   .empty { text-align: center; color: light-dark(#737373, #8b98a5); padding: 48px 0; }
-  .claim {
-    margin-top: 20px; padding: 14px 16px; border: 1px solid light-dark(#ececec, #2f3336);
-    border-radius: 10px;
-  }
-  .claim h2 { margin: 0 0 4px; font-size: 14px; font-weight: 700; }
-  .claim .hint { color: light-dark(#737373, #8b98a5); font-size: 12.5px; margin: 0 0 10px; }
-  .claim .fields { display: flex; gap: 8px; flex-wrap: wrap; }
-  .claim input {
-    flex: 1 1 220px; min-width: 0; padding: 8px 10px;
-    border: 1px solid light-dark(#e5e5e5, #2f3336); border-radius: 8px;
-    background: none; color: inherit; font: inherit;
-  }
-  .claim button {
-    padding: 8px 16px; border: 0; border-radius: 8px; background: #d4a017; color: #fff;
-    font: inherit; font-weight: 650; cursor: pointer;
-  }
-  .claim button:disabled { opacity: 0.5; cursor: default; }
-  .claim .profile .fields { flex-direction: column; }
-  .claim .profile input { width: 100%; flex: none; }
-  .msg { font-size: 12.5px; margin: 8px 0 0; color: light-dark(#737373, #8b98a5); }
-  .msg-ok { color: #1a7f37 !important; } .msg-err { color: #c0392b !important; }
-  .profile { margin-top: 10px; display: none; }
   footer { margin-top: 24px; color: light-dark(#737373, #8b98a5); font-size: 12.5px; }
 </style>
 </head>
@@ -102,29 +80,7 @@ export function hunterPageHtml(): string {
   </div>
   <div id="board"><div class="empty">载入中…</div></div>
 
-  <div class="claim">
-    <h2>认领我的猎手档</h2>
-    <p class="hint">先在扩展弹窗「猎手」里绑定过邮箱，这里用验证码登录后即可改昵称 / 简介 / X 账号。</p>
-    <div class="fields" id="claim-step-email">
-      <input type="email" id="claim-email" placeholder="邮箱" autocomplete="email">
-      <button type="button" id="claim-send">领取验证码</button>
-    </div>
-    <div class="fields" id="claim-step-code" style="display:none">
-      <input type="text" id="claim-code" placeholder="6 位验证码" inputmode="numeric" maxlength="6" autocomplete="one-time-code">
-      <button type="button" id="claim-login">登录</button>
-    </div>
-    <div class="profile" id="profile">
-      <div class="fields">
-        <input type="text" id="pf-name" maxlength="16" placeholder="昵称（≤16 字）">
-        <input type="text" id="pf-bio" maxlength="60" placeholder="一句话介绍（≤60 字）">
-        <input type="text" id="pf-handle" maxlength="15" placeholder="X 账号（不带 @）">
-        <button type="button" id="pf-save">保存</button>
-      </div>
-    </div>
-    <p class="msg" id="claim-msg"></p>
-  </div>
-
-  <footer id="foot">确认击杀 +1 · 首杀 +1 · 误伤 −2 · 周一开榜</footer>
+  <footer id="foot">确认击杀 +1 · 首杀 +1 · 误伤 −2 · 周一开榜 · 改名/认领在扩展弹窗「打野」</footer>
 </main>
 <script>
   var me = new URLSearchParams(location.search).get('me');
@@ -243,103 +199,6 @@ export function hunterPageHtml(): string {
     if (!document.hidden && scope === 'week') refresh();
   });
   refresh();
-
-  // ---- 认领 / 登录 / 编辑 ----
-  var msgEl = document.getElementById('claim-msg');
-  function setMsg(text, kind) {
-    msgEl.textContent = text;
-    msgEl.setAttribute('class',
-      'msg' + (kind === 'ok' ? ' msg-ok' : kind === 'err' ? ' msg-err' : ''));
-  }
-  function post(path, body) {
-    return fetch(path, {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-    }).then(function (res) {
-      return res.json().then(function (json) { return { status: res.status, json: json }; });
-    });
-  }
-  document.getElementById('claim-send').addEventListener('click', function () {
-    var email = document.getElementById('claim-email').value.trim();
-    if (!email) return;
-    setMsg('发送中…', '');
-    post('/v1/player/page-code', { email: email }).then(function (result) {
-      if (result.status === 200) {
-        pendingEmail = email;
-        document.getElementById('claim-step-email').style.display = 'none';
-        document.getElementById('claim-step-code').style.display = '';
-        if (result.json.dev_code) document.getElementById('claim-code').value = result.json.dev_code;
-        setMsg('验证码已发到 ' + esc(email), 'ok');
-      } else if (result.json.error === 'not_bound') {
-        setMsg('这个邮箱还没绑定过猎手账号：先在扩展弹窗「打野 → 猎手」完成一次邮箱验证，再回来认领。', 'err');
-      } else if (result.json.error === 'too_many_code_requests') {
-        setMsg('发码太频繁，一小时后再试', 'err');
-      } else if (result.status === 400) {
-        setMsg('邮箱格式不对', 'err');
-      } else {
-        setMsg('发送失败，稍后再试', 'err');
-      }
-    }).catch(function () { setMsg('网络异常，稍后再试', 'err'); });
-  });
-  document.getElementById('claim-login').addEventListener('click', function () {
-    var code = document.getElementById('claim-code').value.trim();
-    if (!pendingEmail || code.length !== 6) { setMsg('先取码、再填 6 位验证码', 'err'); return; }
-    post('/v1/player/page-login', { email: pendingEmail, code: code }).then(function (result) {
-      if (result.status === 200 && result.json.token) {
-        token = result.json.token;
-        try { localStorage.setItem(TOKEN_KEY, token); } catch (storageError) {}
-        hydrateProfile(result.json);
-        setMsg('已登录，改完点「保存」即可上新榜', 'ok');
-      } else if (result.json.error === 'not_bound') {
-        setMsg('这个邮箱还没绑定过猎手账号', 'err');
-      } else if (result.json.error === 'too_many_attempts') {
-        setMsg('错码次数过多，请重新领码', 'err');
-      } else {
-        setMsg('验证码不对或已过期', 'err');
-      }
-    }).catch(function () { setMsg('网络异常，稍后再试', 'err'); });
-  });
-  function hydrateProfile(profileValue) {
-    document.getElementById('pf-name').value = profileValue.display_name || '';
-    document.getElementById('pf-bio').value = profileValue.bio || '';
-    document.getElementById('pf-handle').value = profileValue.x_handle || '';
-    document.getElementById('profile').style.display = 'block';
-  }
-  document.getElementById('pf-save').addEventListener('click', function () {
-    if (!token) return;
-    post('/v1/player/profile', {
-      token: token,
-      display_name: document.getElementById('pf-name').value.trim(),
-      bio: document.getElementById('pf-bio').value.trim(),
-      x_handle: document.getElementById('pf-handle').value.trim().replace(/^@+/, ''),
-    }).then(function (result) {
-      if (result.status === 200) {
-        setMsg('已保存，榜单稍候更新', 'ok');
-      } else if (result.json.error === 'invalid_x_handle') {
-        setMsg('X 账号格式不对（1-15 位字母数字下划线）', 'err');
-      } else if (result.json.error === 'invalid_bio') {
-        setMsg('简介太长', 'err');
-      } else if (result.status === 403) {
-        document.getElementById('profile').style.display = 'none';
-        setMsg('登录已过期，请重新认领', 'err');
-      } else {
-        setMsg('保存失败，稍后再试', 'err');
-      }
-    }).catch(function () { setMsg('网络异常，稍后再试', 'err'); });
-  });
-
-  // 回访自动登录：先校验本地 token，有效则展开档案区
-  if (token) {
-    post('/v1/player/me', { token: token }).then(function (result) {
-      if (result.status === 200) {
-        hydrateProfile(result.json);
-        setMsg('已登录', 'ok');
-      } else {
-        token = '';
-        try { localStorage.removeItem(TOKEN_KEY); } catch (storageError) {}
-      }
-    }).catch(function () {});
-  }
 </script>
 </body>
 </html>`;

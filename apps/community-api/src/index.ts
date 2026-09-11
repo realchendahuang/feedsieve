@@ -60,8 +60,6 @@ import { LEADERBOARD, getLeaderboard, markLeaderboardDirty, settleDueSeasons } f
 import {
   bindEmail,
   getProfile,
-  pageCode,
-  pageLogin,
   updateProfile,
   verifyEmail,
 } from './player';
@@ -727,20 +725,6 @@ export function createApp() {
   });
   app.post('/v1/player/me', async (c) => {
     const result = await getProfile(c.env, await c.req.json().catch(() => undefined));
-    if (!result.ok) return c.json({ error: result.error }, result.httpStatus);
-    c.header('Cache-Control', 'no-store');
-    return c.json(result.value);
-  });
-  // 榜单页认领：发码（要求邮箱已绑定过 verified installation）→ 登录换编辑 token。
-  // token 后续可换 /v1/player/profile｜me 的编辑凭证（服务端重算 HMAC 校验）。
-  app.post('/v1/player/page-code', async (c) => {
-    const result = await pageCode(c.env, await c.req.json().catch(() => undefined));
-    if (!result.ok) return c.json({ error: result.error }, result.httpStatus);
-    c.header('Cache-Control', 'no-store');
-    return c.json(result.value);
-  });
-  app.post('/v1/player/page-login', async (c) => {
-    const result = await pageLogin(c.env, await c.req.json().catch(() => undefined));
     if (!result.ok) return c.json({ error: result.error }, result.httpStatus);
     c.header('Cache-Control', 'no-store');
     return c.json(result.value);

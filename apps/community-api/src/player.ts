@@ -30,8 +30,6 @@ export const PLAYER = {
   bioMax: 60,
   /** 同一安装每小时最多发码次数（防换邮箱轰炸邮件通道） */
   sendsPerInstallerHour: 10,
-  /** 榜单页编辑 token 有效期（回访自动登录） */
-  pageTokenTtlSeconds: 30 * 86400,
 } as const;
 
 /** 按账号域推断常见服务商的 SMTP 端点（省得手填 host/port） */
@@ -179,68 +177,9 @@ async function codeHash(salt: string, emailHash: string, code: string): Promise<
 }
 
 // ---------------------------------------------------------------------------
-// 榜单页登录：页面凭邮箱验证码换「时效编辑 token」，凭 token 改档案。
-// token = installHash|exp|HMAC(salt)——服务端不存明文安装 ID，只有哈希可寻址。
+// 档案凭证只有一种：安装 ID（扩展侧）。网页纯观看，不做认领/编辑——
+// 没有二次登录通道，也就没有「为什么插件和网页各要认领一遍」。
 // ---------------------------------------------------------------------------
-
-async function pageTokenSign(
-  salt: string,
-  installHash: string,
-  exp: number,
-): Promise<string> {
-  return sha256Hex(`page-edit:${salt}:${installHash}:${exp}`);
-}
-
-export async function createPageToken(
-  env: Cloudflare.Env,
-  installHash: string,
-): Promise<string> {
-  const exp = Math.floor(Date.now() / 1000) + PLAYER.pageTokenTtlSeconds;
-  return `${installHash}|${exp}|${await pageTokenSign(env.INSTALLATION_SALT, installHash, exp)}`;
-}
-
-/** 校验页面编辑 token，返回 installHash；非法/过期 → null */
-export async function verifyPageToken(
-  env: Cloudflare.Env,
-  token: unknown,
-): Promise<string | null> {
-  if (typeof token !== 'string') return null;
-  const parts = token.split('|');
-  if (parts.length !== 3) return null;
-  const [installHash, expRaw, mac] = parts;
-  if (
-    typeof installHash !== 'string' ||
-    typeof expRaw !== 'string' ||
-    typeof mac !== 'string' ||
-    !/^[0-9a-f]{64}$/.test(installHash)
-  ) {
-    return null;
-  }
-  const exp = Number(expRaw);
-  if (!Number.isFinite(exp) || exp <= Math.floor(Date.now() / 1000)) return null;
-  const expected = await pageTokenSign(env.INSTALLATION_SALT, installHash, exp);
-  return mac === expected ? installHash : null;
-}
-
-/**
- * 档案读写凭证二选一：安装 ID（扩展侧）或页面 token（榜单页登录）。
- * 都无效 → error（400 invalid_credentials / 400 invalid_token）。
- */
-async function resolveInstallCredential(
-  env: Cloudflare.Env,
-  body: unknown,
-): Promise<{ ok: true; installHash: string } | { ok: false; httpStatus: 400 | 403; error: string }> {
-  const b = (typeof body === 'object' && body !== null ? body : {}) as Record<string, unknown>;
-  if (b.token != null || b.installation_id == null) {
-    const installHash = await verifyPageToken(env, b.token);
-    if (!installHash) return { ok: false, httpStatus: 403, error: 'invalid_token' };
-    return { ok: true, installHash };
-  }
-  if (!isValidInstallationId(b.installation_id)) {
-    return { ok: false, httpStatus: 400, error: 'invalid_installation_id' };
-  }
-  return { ok: true, installHash: await sha256Hex(`${env.INSTALLATION_SALT}:${b.installation_id}`) };
-}
 
 export async function bindEmail(
   env: Cloudflare.Env,
@@ -409,9 +348,10 @@ export async function getProfile(
   }>
 > {
   const b = (typeof body === 'object' && body !== null ? body : {}) as Record<string, unknown>;
-  const resolved = await resolveInstallCredential(env, b);
-  if (!resolved.ok) return resolved;
-  const installHash = resolved.installHash;
+  if (!isValidInstallationId(b.installation_id)) {
+    return { ok: false, httpStatus: 400, error: 'invalid_installation_id' };
+  }
+  const installHash = await sha256Hex(`${env.INSTALLATION_SALT}:${b.installation_id}`);
   const row = await env.DB.prepare(
     'SELECT display_name, bio, title, x_handle, email_verified_at FROM installations WHERE id = ?1',
   )
@@ -440,8 +380,10 @@ export async function updateProfile(
   body: unknown,
 ): Promise<PlayerResult<{ display_name: string | null; bio: string | null; x_handle: string | null }>> {
   const b = (typeof body === 'object' && body !== null ? body : {}) as Record<string, unknown>;
-  const resolved = await resolveInstallCredential(env, b);
-  if (!resolved.ok) return resolved;
+  if (!isValidInstallationId(b.installation_id)) {
+    return { ok: false, httpStatus: 400, error: 'invalid_installation_id' };
+  }
+  const installHash = await sha256Hex(`${env.INSTALLATION_SALT}:${b.installation_id}`);
   const displayName = typeof b.display_name === 'string' ? b.display_name.trim() : null;
   const bio = typeof b.bio === 'string' ? b.bio.trim() : null;
   if (displayName != null && (displayName.length === 0 || displayName.length > PLAYER.displayNameMax)) {
@@ -454,7 +396,6 @@ export async function updateProfile(
   if (xHandle === undefined) {
     return { ok: false, httpStatus: 400, error: 'invalid_x_handle' };
   }
-  const installHash = resolved.installHash;
 
   const row = await env.DB.prepare(
     'SELECT email_verified_at FROM installations WHERE id = ?1',
@@ -472,165 +413,4 @@ export async function updateProfile(
     .run();
   await markLeaderboardDirty(env);
   return { ok: true, value: { display_name: displayName, bio, x_handle: xHandle } };
-}
-
-// ---------------------------------------------------------------------------
-// 榜单页认领：page-code（发码）→ page-login（验证码换编辑 token）。
-// 认领的前提是该邮箱已在扩展侧绑定为 verified installation——页面本身
-// 不装载扩展语义，因此不给「新装用户」发身份，保证零步骤原则不破。
-// ---------------------------------------------------------------------------
-
-/** page-code 用的哨兵 installer（无安装语义的发码来源） */
-const PAGE_INSTALLER = 'page';
-
-export async function pageCode(
-  env: Cloudflare.Env,
-  body: unknown,
-): Promise<PlayerResult<{ sent: boolean; dev_code?: string }>> {
-  const b = (typeof body === 'object' && body !== null ? body : {}) as Record<string, unknown>;
-  if (!isValidEmail(b.email)) {
-    return { ok: false, httpStatus: 400, error: 'invalid_email' };
-  }
-  const email = normalizeEmail(b.email);
-  const emailHash = await hashEmail(env.INSTALLATION_SALT, email);
-  const now = Math.floor(Date.now() / 1000);
-
-  const recent = await env.DB.prepare(
-    'SELECT send_count, created_at FROM email_codes WHERE email_hash = ?1',
-  )
-    .bind(emailHash)
-    .first<{ send_count: number; created_at: number }>();
-  if (recent && recent.created_at > now - 3600 && recent.send_count >= PLAYER.sendsPerHour) {
-    return { ok: false, httpStatus: 429, error: 'too_many_code_requests' };
-  }
-
-  // 先查绑定归属：未绑定邮箱不打码也不明说错误（防枚举），统一返回 not_bound
-  const bound = await env.DB.prepare(
-    `SELECT id FROM installations
-     WHERE email_hash = ?1 AND email_verified_at IS NOT NULL
-     ORDER BY email_verified_at DESC LIMIT 1`,
-  )
-    .bind(emailHash)
-    .first<{ id: string }>();
-  if (!bound) {
-    return { ok: false, httpStatus: 404, error: 'not_bound' };
-  }
-
-  const code = generateCode();
-  await env.DB.prepare(
-    `INSERT INTO email_codes (email_hash, installer_hash, code_hash, attempts, send_count, created_at, expires_at)
-     VALUES (?1, ?2, ?3, 0, 1, ?4, ?5)
-     ON CONFLICT(email_hash) DO UPDATE SET
-       installer_hash = excluded.installer_hash,
-       code_hash = excluded.code_hash,
-       attempts = 0,
-       send_count = CASE WHEN email_codes.created_at > ?6 THEN email_codes.send_count + 1 ELSE 1 END,
-       created_at = excluded.created_at,
-       expires_at = excluded.expires_at`,
-  )
-    .bind(
-      emailHash,
-      PAGE_INSTALLER,
-      await codeHash(env.INSTALLATION_SALT, emailHash, code),
-      now,
-      now + PLAYER.codeTtlSeconds,
-      now - 3600,
-    )
-    .run();
-
-  const sent = await sendMail(env, {
-    to: email,
-    subject: 'FeedSieve 验证码',
-    text: `验证码 ${code}，10 分钟内有效。`,
-  });
-  if (!sent) {
-    if (env.WORKER_ENV === 'production') {
-      return { ok: false, httpStatus: 503, error: 'mail_unconfigured' };
-    }
-    return { ok: true, value: { sent: false, dev_code: code } };
-  }
-  return { ok: true, value: { sent: true } };
-}
-
-export async function pageLogin(
-  env: Cloudflare.Env,
-  body: unknown,
-): Promise<
-  PlayerResult<{
-    token: string;
-    display_name: string | null;
-    bio: string | null;
-    x_handle: string | null;
-    title: string | null;
-    email_verified: true;
-  }>
-> {
-  const b = (typeof body === 'object' && body !== null ? body : {}) as Record<string, unknown>;
-  if (!isValidEmail(b.email)) {
-    return { ok: false, httpStatus: 400, error: 'invalid_email' };
-  }
-  const code = b.code;
-  if (typeof code !== 'string' || !/^\d{6}$/.test(code)) {
-    return { ok: false, httpStatus: 400, error: 'invalid_code' };
-  }
-  const emailHash = await hashEmail(env.INSTALLATION_SALT, normalizeEmail(b.email));
-  const now = Math.floor(Date.now() / 1000);
-
-  const row = await env.DB.prepare(
-    'SELECT installer_hash, code_hash, attempts, expires_at FROM email_codes WHERE email_hash = ?1',
-  )
-    .bind(emailHash)
-    .first<{ installer_hash: string; code_hash: string; attempts: number; expires_at: number }>();
-  if (!row || row.expires_at < now) {
-    await env.DB.prepare('DELETE FROM email_codes WHERE email_hash = ?1').bind(emailHash).run();
-    return { ok: false, httpStatus: 400, error: 'invalid_or_expired_code' };
-  }
-  if (row.attempts >= PLAYER.codeMaxAttempts) {
-    await env.DB.prepare('DELETE FROM email_codes WHERE email_hash = ?1').bind(emailHash).run();
-    return { ok: false, httpStatus: 429, error: 'too_many_attempts' };
-  }
-  // installer_hash 不校验：page-login 接受 page 哨兵与扩展 bind-email 两种来源的码
-  if ((await codeHash(env.INSTALLATION_SALT, emailHash, code)) !== row.code_hash) {
-    // 与 verifyEmail 同款：错码计数原子递增，并发错猜共享不了同一份读数
-    const bumped = await env.DB.prepare(
-      'UPDATE email_codes SET attempts = attempts + 1 WHERE email_hash = ?1 AND attempts < ?2',
-    )
-      .bind(emailHash, PLAYER.codeMaxAttempts)
-      .run();
-    if ((bumped.meta.changes ?? 0) === 0) {
-      await env.DB.prepare('DELETE FROM email_codes WHERE email_hash = ?1').bind(emailHash).run();
-      return { ok: false, httpStatus: 429, error: 'too_many_attempts' };
-    }
-    return { ok: false, httpStatus: 400, error: 'invalid_or_expired_code' };
-  }
-
-  const bound = await env.DB.prepare(
-    `SELECT id, display_name, bio, x_handle, title FROM installations
-     WHERE email_hash = ?1 AND email_verified_at IS NOT NULL
-     ORDER BY email_verified_at DESC LIMIT 1`,
-  )
-    .bind(emailHash)
-    .first<{
-      id: string;
-      display_name: string | null;
-      bio: string | null;
-      x_handle: string | null;
-      title: string | null;
-    }>();
-  if (!bound) {
-    return { ok: false, httpStatus: 404, error: 'not_bound' };
-  }
-
-  await env.DB.prepare('DELETE FROM email_codes WHERE email_hash = ?1').bind(emailHash).run();
-  return {
-    ok: true,
-    value: {
-      token: await createPageToken(env, bound.id),
-      display_name: bound.display_name,
-      bio: bound.bio,
-      x_handle: bound.x_handle,
-      title: bound.title,
-      email_verified: true,
-    },
-  };
 }
