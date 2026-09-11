@@ -1,4 +1,4 @@
-# FeedSieve 公开社区白名单（金刚防护罩）
+# FeedSieve 推荐白名单（金刚防护罩）
 #
 # 名单内账号永远不会被标注或拉黑：扩展对 whitelist 一票否决，优先级高于一切检测来源
 # （社区名单 / 指纹 / 域名 / 词库）。与社区黑名单互斥——命中白名单的账号不进黑名单。
@@ -14,5 +14,199 @@
 #   note      必填。为什么这个账号值得豁免（会随快照公开）
 #   x_user_id 选填。账号数字 ID，能填则填（改名前仍可识别）
 schema_version: 1
-updated_at: "2026-09-08T00:00:00.000Z"
-entries: []
+updated_at: "2026-09-11T17:36:49.000Z"
+entries:
+  - handle: 01wu1
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: 03aier
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: 2038277897zheng
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: 369serena
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: 8kkjw6
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: adrianpunk115
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: agentbuff_dev
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: ai_jacksaku
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: ai_suxiaole
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: ai_xiaomu
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: alexchou_x
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: ally_foe
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: anion_ex
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: ansyn_07
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: aomyying
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: averiox007
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: benzye1988
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: bketck
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: calvinnotes
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: cgnot996
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: changqinghanbot
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: chenkunhu00111
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: chenshuoai
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: chilljccu
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: clara_j_0529
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: cxjwin
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: cy_chase_ai
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: darkmirror_n
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: dashen_wang
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: davidlin449854
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: dingwenlei1
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: dollyw73878
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: echo6718
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: edison_aware
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: erwinwu000
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: eugeniasususu
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: funx1001
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: fxmqs
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: haifeng1974
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: halou168
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: hh681hh
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: hunlan77
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: isnail
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: jack_fluxai
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: jackywine
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: januslixxx23
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: jarvis11x
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: jask_don
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: jasper_wei1
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: jiefubtc
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: jingqing_z16832
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: jonathanfwu
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: jxjx2081310
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: kekeya88
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: king1818888
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: kkkm2238
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: kosxai
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: li665508li
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: liangshuang2026
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: liuchan41094685
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: masionww
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: mickty
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: mikelammm
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: mm_options
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: mooninai
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: ned_us
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: neverofmeyzc
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: nian_tu41685
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: noahduck283
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: passenger0522
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: realchenchenluo
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: realchendahuang
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: ringodontpanic
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: rollingsirius
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: rwayne
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: scarletkc_
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: shancha103
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: shuton_leon
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: silasandowen
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: sisymithus
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: skavenps1
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: song66546656
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: statiocat
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: sukiea1008
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: superwang
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: tsoiiiiioooyeye
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: vegas_liu
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: wangdakealien
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: wangdefou
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: weichen_ink
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: xchatgcp
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: xingyao47854
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: xueyu1125
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: yanxi
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: yifanxu_ephai
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: zhengyifan12345
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
+  - handle: zwzw3888
+    note: KOSX Impact 博主（impact.kosx.ai/members 收录）
