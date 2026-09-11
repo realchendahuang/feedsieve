@@ -58,6 +58,40 @@ export interface MailMessage {
   to: string;
   subject: string;
   text: string;
+  /** 邮件 HTML 正文（webhook 通道只支持 text，自动忽略 html） */
+  html?: string;
+}
+
+/** 验证码 HTML 模板复用：hono 无 HTML 转义内置需要，本地转义即可 */
+function htmlFor(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll("'", '&#39;');
+}
+
+/** 福滤娃验证码邮件：官网托管头像当 logo；图片挂了也不影响读码（纯文字兜底） */
+export function verificationCodeEmailHtml(code: string): string {
+  const minutes = Math.round(PLAYER.codeTtlSeconds / 60);
+  return `<div style="margin:0;padding:24px 12px;background:#faf6ec;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:0;"><tr><td align="center">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:440px;background:#fffdf7;border:1px solid #efe4c8;border-radius:16px;">
+      <tr><td align="center" style="padding:28px 24px 8px;">
+        <img src="https://feedsieve.win/assets/avatar.png" width="72" height="72" alt="福滤娃" style="display:block;border-radius:16px;border:0;" />
+        <div style="margin-top:10px;font-size:17px;font-weight:700;color:#6b4d00;">福滤娃 · 验证码</div>
+        <div style="margin-top:6px;font-size:13px;color:#8a7a55;">有人正在认领猎手身份——是你吗？</div>
+      </td></tr>
+      <tr><td align="center" style="padding:18px 24px 6px;">
+        <div style="display:inline-block;padding:12px 26px;background:#fff8e1;border:1px solid #f0d98c;border-radius:12px;font-size:30px;letter-spacing:9px;font-weight:800;color:#7a5800;font-family:Menlo,Consolas,monospace;">${htmlFor(code)}</div>
+      </td></tr>
+      <tr><td align="center" style="padding:14px 24px 26px;">
+        <div style="font-size:12.5px;color:#8a7a55;">${minutes} 分钟内有效，过期作废（黄推可没有这待遇）。</div>
+        <div style="margin-top:6px;font-size:12.5px;color:#8a7a55;">不是你在操作？无视即可，福滤娃不记仇。</div>
+      </td></tr>
+    </table>
+  </td></tr></table>
+</div>`;
 }
 
 /** 网络失败不阻塞主流程——收不到码的用户可以重新发码。 */
@@ -72,6 +106,7 @@ export async function sendMail(env: Cloudflare.Env, message: MailMessage): Promi
         from,
         subject: message.subject,
         text: message.text,
+        html: message.html,
       });
       // send 不抛错即受理（部分版本响应不含 messageId，不以此判失败）
       return true;
@@ -103,6 +138,7 @@ export async function sendMail(env: Cloudflare.Env, message: MailMessage): Promi
         to: message.to,
         subject: message.subject,
         text: message.text,
+        html: message.html,
       });
       return true;
     } catch (error) {
@@ -255,8 +291,9 @@ export async function bindEmail(
 
   const sent = await sendMail(env, {
     to: email,
-    subject: 'FeedSieve 验证码',
+    subject: '福滤娃 · 验证码',
     text: `验证码 ${code}，10 分钟内有效。`,
+    html: verificationCodeEmailHtml(code),
   });
   if (!sent) {
     // 生产部署忘配邮件通道时，绝不能把验证码回给调用方（否则任何人可验证

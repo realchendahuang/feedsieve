@@ -2539,15 +2539,18 @@ input:focus-visible + span {
 
 .hunter-tier,
 .hunter-title-badge {
-  font-size: 11.5px;
-  font-weight: 650;
-  color: #b8860b;
+  flex: none;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #8a5b00;
+  background: var(--fs-accent-soft);
+  border-radius: 999px;
+  padding: 1px 7px;
 }
 
 .hunter-title-badge {
+  background: var(--fs-surface);
   border: 1px solid currentColor;
-  border-radius: 10px;
-  padding: 1px 8px;
 }
 
 .hunter-board {
@@ -2595,6 +2598,7 @@ input:focus-visible + span {
   align-items: baseline;
   gap: 6px;
   white-space: nowrap;
+  flex-wrap: wrap;
 }
 
 .hunter-name {
@@ -2654,6 +2658,7 @@ input:focus-visible + span {
 /* 榜行 bio（设置页「个人资料」编辑的一句话介绍，打野榜展示） */
 .hunter-row-bio {
   display: block;
+  flex-basis: 100%;
   color: var(--fs-muted);
   font-size: 11.5px;
   line-height: 1.45;
@@ -2850,3 +2855,36 @@ input:focus-visible + span {
 .hunter-modal .text-action {
   align-self: center;
 }
+
+/* 推荐白名单：白名单 tab 底部的收起式只读标题行 */
+.recommend-list-head {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--fs-line);
+}
+
+.recommend-list-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 4px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.recommend-list-toggle:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.recommend-list-toggle em {
+  font-style: normal;
+}
+
+.recommend-list-toggle + .manage-list {
+  margin-top: 4px;
+}
+

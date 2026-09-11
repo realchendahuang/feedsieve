@@ -188,7 +188,7 @@ export default function HunterProfileModal({
               onClick={() => void sendCode()}
               disabled={busy || !email.trim()}
             >
-              {t.hunterSendCode}
+              {busy ? t.processing : t.hunterSendCode}
             </button>
           </>
         ) : (
@@ -202,7 +202,7 @@ export default function HunterProfileModal({
               onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
             />
             <button type="button" className="primary-action" onClick={() => void verify()} disabled={busy}>
-              {t.hunterVerify}
+              {busy ? t.processing : t.hunterVerify}
             </button>
             <button
               type="button"
