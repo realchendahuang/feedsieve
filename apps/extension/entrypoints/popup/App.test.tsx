@@ -202,7 +202,6 @@ describe('popup App 渲染冒烟', () => {
     expect(rootEl.textContent).toContain('同城上门约炮');
 
     await act(async () => buttonWithText(rootEl, '设置').click());
-    expect(rootEl.textContent).toContain('自动标注');
     expect(rootEl.textContent).toContain('页面标黄');
     await act(async () => buttonWithText(rootEl, 'EN').click());
     expect(rootEl.textContent).toContain('FeedSieve');

@@ -261,9 +261,6 @@ export default function SettingsView({
   return (
     <div className="view-stack settings-view">
       <section className="settings-card">
-        <div className="settings-card-head">
-          <h2>{t.autoMarking}</h2>
-        </div>
         {community ? (
           <div className="settings-fields">
             <label className="setting-row">
@@ -298,22 +295,7 @@ export default function SettingsView({
                 ))}
               </div>
             </div>
-          </div>
-        ) : (
-          <div className="loading-list settings-loading" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </div>
-        )}
-      </section>
 
-      <section className="settings-card">
-        <div className="settings-card-head">
-          <h2>{t.privacy}</h2>
-        </div>
-        {community ? (
-          <div className="settings-fields">
             <label className="setting-row">
               <span className="setting-copy">
                 <strong>
@@ -330,14 +312,14 @@ export default function SettingsView({
               </span>
             </label>
 
-            <div className="setting-row manual-sync-row">
+            <div className="setting-row">
               <span className="setting-copy">
                 <strong>{t.manualSync}</strong>
                 <HelpIcon text={t.manualSyncHint} />
               </span>
               <button
                 type="button"
-                className={`secondary-inline${manualSyncing ? ' is-spinning' : ''}`}
+                className="secondary-inline"
                 disabled={manualSyncing}
                 onClick={() => void syncAllNow()}
               >
@@ -345,22 +327,72 @@ export default function SettingsView({
               </button>
             </div>
 
-            <div className="settings-meta-row">
-              {contribution && (contribution.reports > 0 || contribution.rescues > 0) ? (
-                <span className="contribution-chip">
-                  {t.contribution(contribution.reports, contribution.rescues)}
-                </span>
-              ) : (
-                <span />
-              )}
-              <button
-                type="button"
-                className="text-action"
-                onClick={() => void copyInstallationId()}
-              >
-                {t.copyInstallationId}
-              </button>
-              <HelpIcon text={t.copyInstallationIdHint} />
+            <div className="setting-row">
+              <span className="setting-copy">
+                <strong>
+                  {t.personalConfig} <HelpIcon text={t.personalConfigHint} />
+                </strong>
+              </span>
+              <span className="personal-config-inline">
+                <button
+                  type="button"
+                  className="secondary-inline"
+                  disabled={!keywordRules || personalConfigBusy}
+                  onClick={exportPersonalConfig}
+                >
+                  {t.exportPersonalConfig}
+                </button>
+                <button
+                  type="button"
+                  className="secondary-inline"
+                  disabled={!keywordRules || personalConfigBusy}
+                  onClick={choosePersonalConfigFile}
+                >
+                  {t.importPersonalConfig}
+                </button>
+              </span>
+            </div>
+
+            <div className="setting-row">
+              <span className="setting-copy">
+                <strong>{t.languageSetting}</strong>
+              </span>
+              <div className="language-control" role="group" aria-label={t.language}>
+                <button
+                  type="button"
+                  className={language === 'zh' ? 'is-selected' : ''}
+                  aria-pressed={language === 'zh'}
+                  onClick={() => void selectLanguage('zh')}
+                >
+                  中文
+                </button>
+                <button
+                  type="button"
+                  className={language === 'en' ? 'is-selected' : ''}
+                  aria-pressed={language === 'en'}
+                  onClick={() => void selectLanguage('en')}
+                >
+                  EN
+                </button>
+              </div>
+            </div>
+
+            <div className="setting-row">
+              <span className="setting-copy">
+                <strong>{t.aboutLinks}</strong>
+              </span>
+              <div className="about-links">
+                <a
+                  href="https://github.com/realchendahuang/feedsieve"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  {t.githubLink}
+                </a>
+                <a href="https://feedsieve.win" target="_blank" rel="noreferrer noopener">
+                  {t.officialSiteLink}
+                </a>
+              </div>
             </div>
           </div>
         ) : (
@@ -370,31 +402,22 @@ export default function SettingsView({
             <span />
           </div>
         )}
-      </section>
-
-      <section className="settings-card personal-config-card">
-        <div className="settings-card-head">
-          <h2>
-            {t.personalConfig} <HelpIcon text={t.personalConfigHint} />
-          </h2>
-        </div>
-        <div className="personal-config-actions">
+        <div className="settings-meta-row">
+          {contribution && (contribution.reports > 0 || contribution.rescues > 0) ? (
+            <span className="contribution-chip">
+              {t.contribution(contribution.reports, contribution.rescues)}
+            </span>
+          ) : (
+            <span />
+          )}
           <button
             type="button"
-            className="secondary-inline"
-            disabled={!keywordRules || !community || personalConfigBusy}
-            onClick={exportPersonalConfig}
+            className="text-action"
+            onClick={() => void copyInstallationId()}
           >
-            {t.exportPersonalConfig}
+            {t.copyInstallationId}
           </button>
-          <button
-            type="button"
-            className="secondary-inline"
-            disabled={!keywordRules || !community || personalConfigBusy}
-            onClick={choosePersonalConfigFile}
-          >
-            {t.importPersonalConfig}
-          </button>
+          <HelpIcon text={t.copyInstallationIdHint} />
         </div>
         <input
           ref={personalConfigInputRef}
@@ -532,62 +555,6 @@ export default function SettingsView({
             </div>
           </div>
         ) : null}
-      </section>
-
-      <section className="settings-card general-card">
-        <div className="settings-card-head">
-          <h2>{t.generalSettings}</h2>
-        </div>
-        {community ? (
-          <div className="settings-fields">
-            <div className="setting-row static-row">
-              <span className="setting-copy">
-                <strong>{t.languageSetting}</strong>
-              </span>
-              <div className="language-control" role="group" aria-label={t.language}>
-                <button
-                  type="button"
-                  className={language === 'zh' ? 'is-selected' : ''}
-                  aria-pressed={language === 'zh'}
-                  onClick={() => void selectLanguage('zh')}
-                >
-                  中文
-                </button>
-                <button
-                  type="button"
-                  className={language === 'en' ? 'is-selected' : ''}
-                  aria-pressed={language === 'en'}
-                  onClick={() => void selectLanguage('en')}
-                >
-                  EN
-                </button>
-              </div>
-            </div>
-            <div className="setting-row static-row">
-              <span className="setting-copy">
-                <strong>{t.aboutLinks}</strong>
-              </span>
-              <div className="about-links">
-                <a
-                  href="https://github.com/realchendahuang/feedsieve"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                >
-                  {t.githubLink}
-                </a>
-                <a href="https://feedsieve.win" target="_blank" rel="noreferrer noopener">
-                  {t.officialSiteLink}
-                </a>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="loading-list settings-loading" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </div>
-        )}
       </section>
     </div>
   );

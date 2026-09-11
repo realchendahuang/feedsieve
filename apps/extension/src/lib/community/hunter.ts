@@ -115,10 +115,13 @@ export async function fetchHunterProfile(): Promise<HunterProfileState | null> {
   }
 }
 
+/** 发验证码结果：失败时带上服务端 error code（弹窗按 code 分文案）。 */
+export type HunterBindResult =
+  | { ok: true; sent: boolean; dev_code?: string }
+  | { ok: false; error: string };
+
 /** 发验证码（安装 ID 在此刻惰性生成——想露脸才建档）。 */
-export async function bindHunterEmail(
-  email: string,
-): Promise<{ ok: boolean; sent: boolean; dev_code?: string }> {
+export async function bindHunterEmail(email: string): Promise<HunterBindResult> {
   const installationId = await getInstallationId();
   try {
     const res = await fetch(`${API_BASE}/v1/player/bind-email`, {
@@ -126,15 +129,18 @@ export async function bindHunterEmail(
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ installation_id: installationId, email }),
     });
-    if (!res.ok) return { ok: false, sent: false };
+    if (!res.ok) return { ok: false, error: await res.json().then((v) => v?.error ?? '').catch(() => '') };
     const value = (await res.json()) as { sent: boolean; dev_code?: string };
     return { ok: true, sent: value.sent, dev_code: value.dev_code };
   } catch {
-    return { ok: false, sent: false };
+    return { ok: false, error: 'network_error' };
   }
 }
 
-export async function verifyHunterEmail(email: string, code: string): Promise<boolean> {
+export async function verifyHunterEmail(
+  email: string,
+  code: string,
+): Promise<{ ok: boolean; error?: string }> {
   const installationId = await getInstallationId();
   try {
     const res = await fetch(`${API_BASE}/v1/player/verify`, {
@@ -142,9 +148,10 @@ export async function verifyHunterEmail(email: string, code: string): Promise<bo
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ installation_id: installationId, email, code }),
     });
-    return res.ok;
+    if (res.ok) return { ok: true };
+    return { ok: false, error: await res.json().then((v) => v?.error ?? '').catch(() => 'network_error') };
   } catch {
-    return false;
+    return { ok: false, error: 'network_error' };
   }
 }
 

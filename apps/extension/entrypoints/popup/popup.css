@@ -2114,9 +2114,14 @@ input:focus-visible + span {
   color: var(--fs-success);
 }
 
+/* 设置页一级拍平：无分节标题，行列表 self-contained，行线相邻行共用 */
 .settings-fields {
-  margin-top: 14px;
-  border-top: 1px solid var(--fs-line);
+  margin-top: 0;
+  border-top: none;
+}
+
+.settings-fields > :last-child {
+  border-bottom: 0;
 }
 
 .setting-row,
