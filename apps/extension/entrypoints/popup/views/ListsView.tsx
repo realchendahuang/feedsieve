@@ -35,10 +35,8 @@ import {
   allowlistReason,
   AppIcon,
   FAILURE_LABELS,
-  formatAgo,
   formatDate,
   normalizeManualInput,
-  type CommunityMeta,
 } from './shared';
 import QueuePanel from './QueuePanel';
 
@@ -68,8 +66,6 @@ interface ListsViewProps {
   refreshPageMarked: () => Promise<void>;
   pauseDestructive: boolean;
   communityEntries: CommunityEntry[];
-  communityMeta: CommunityMeta | null;
-  onRefreshCommunitySnapshot: () => Promise<void>;
 }
 
 export default function ListsView({
@@ -79,8 +75,6 @@ export default function ListsView({
   refreshPageMarked,
   pauseDestructive,
   communityEntries,
-  communityMeta,
-  onRefreshCommunitySnapshot,
 }: ListsViewProps) {
   const t = UI_COPY[language];
   const [listView, setListView] = useState<ListView>(initialListView);
@@ -98,8 +92,6 @@ export default function ListsView({
   const [allowAdding, setAllowAdding] = useState(false);
   const [manualHandle, setManualHandle] = useState('');
   const [manualRunning, setManualRunning] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-  const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [queue, setQueue] = useState<PersistentBlockQueueState | null>(null);
   // 安全额度条：滚动 24h 已用数（暂停原因文案用到预算上限）
   const [safety, setSafety] = useState<SafetyLedger | null>(null);
@@ -208,32 +200,6 @@ export default function ListsView({
       notify(t.openXNotice);
     } finally {
       setRunning(false);
-    }
-  }
-
-  async function syncCommunityNow(): Promise<void> {
-    setSyncing(true);
-    setSyncMsg(null);
-    try {
-      const res = (await browser.runtime.sendMessage({
-        type: 'feedsieve:community-sync',
-        force: true,
-      })) as { outcome?: { status: string; version?: string; error?: string } };
-      const outcome = res?.outcome;
-      if (outcome?.status === 'updated' || outcome?.status === 'unchanged') {
-        await onRefreshCommunitySnapshot();
-        // 瞬时成功提示走 toast（4s 自动消失，AGENTS 红线：不常驻遮挡界面）；
-        // 错误留在 inline 供排查。
-        notify(outcome.status === 'updated' ? t.synced(outcome.version) : t.upToDate);
-      } else if (outcome?.status === 'error') {
-        setSyncMsg(outcome.error ? `${t.syncFailed}: ${outcome.error}` : t.syncFailed);
-      } else {
-        setSyncMsg(t.unavailable);
-      }
-    } catch {
-      setSyncMsg(t.backgroundUnavailable);
-    } finally {
-      setSyncing(false);
     }
   }
 
@@ -404,7 +370,15 @@ export default function ListsView({
       >
         {listView === 'community' ? (
           <>
-            <div className="settings-head-actions list-head-actions">
+            {/* 头部一行：一键清理在左，筛选在右；刷新收进设置页 */}
+            <div className="list-head-actions">
+              <button
+                className="secondary-action community-clean-action"
+                disabled={running || queueActive || cloudEligible.length === 0 || pauseDestructive}
+                onClick={() => void startCommunityQueue()}
+              >
+                {t.startCommunityClean(cloudEligible.length)}
+              </button>
               <div className="sort-toggle" role="group" aria-label={`${t.sortVotes}/${t.sortAlpha}`}>
                 <button
                   type="button"
@@ -423,38 +397,9 @@ export default function ListsView({
                   {t.sortAlpha}
                 </button>
               </div>
-              <span
-                className={`community-meta${communityMeta ? ' is-ready' : ''}`}
-                title={
-                  communityMeta
-                    ? `v${communityMeta.version} · ${formatAgo(communityMeta.syncedAt, language)}`
-                    : t.listLoading
-                }
-              >
-                {communityMeta ? `${communityMeta.count} · v${communityMeta.version}` : '…'}
-              </span>
-              <button
-                type="button"
-                className={`square-action small${syncing ? ' is-spinning' : ''}`}
-                aria-label={t.syncNow}
-                title={t.syncNow}
-                disabled={syncing}
-                onClick={() => void syncCommunityNow()}
-              >
-                <AppIcon name="refresh" size={18} />
-              </button>
-              {/* 一键拉黑与排序/刷新同行：一行放完所有头部动作 */}
-              <button
-                className="secondary-action community-clean-action"
-                disabled={running || queueActive || cloudEligible.length === 0 || pauseDestructive}
-                onClick={() => void startCommunityQueue()}
-              >
-                {t.startCommunityClean(cloudEligible.length)}
-              </button>
             </div>
-            {syncMsg ? <p className="inline-notice">{syncMsg}</p> : null}
 
-            {/* 动作区固定在首屏：一键入口已在头部行，这里是队列进度与失败转述 */}
+            {/* 动作区固定在首屏：这里是队列进度与失败转述 */}
             {queueActive ? (
               <QueuePanel
                 language={language}

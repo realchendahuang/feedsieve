@@ -399,27 +399,17 @@ input:focus-visible + span {
   outline-offset: 2px;
 }
 
-/* 名单前端操作区单行：排序 / 版本 / 刷新 / 一键拉黑 */
+/* 名单头部一行：一键清理（主操作）在左，筛选在右；高度 38 统一对齐 */
 .list-head-actions {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
 }
 
-/* 版本 chip 保持自然宽度不缩；剩余空间给一键拉黑，窄面板按钮内文字省略 */
-.list-head-actions .community-meta {
-  flex: none;
-  min-width: 0;
-}
-
 .list-head-actions .community-clean-action {
-  flex: 1 1 0;
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  min-height: 36px;
-  padding: 0 12px;
+  min-height: 38px;
+  padding: 0 14px;
   font-size: 12.5px;
 }
 
@@ -434,9 +424,9 @@ input:focus-visible + span {
   border: 0;
   background: transparent;
   color: var(--fs-muted);
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 650;
-  padding: 4px 9px;
+  padding: 10px 11px;
   cursor: pointer;
   transition: all 120ms ease;
 }

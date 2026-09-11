@@ -29,7 +29,6 @@ import {
   AppIcon,
   asPageMarkedList,
   getChromeSidePanel,
-  type CommunityMeta,
   type PageMarkedItem,
 } from './views/shared';
 
@@ -65,7 +64,6 @@ export default function App() {
   >(null);
   const [capabilities, setCapabilities] = useState<XAdapterCapabilities | null>(null);
   const [community, setCommunity] = useState<CommunitySettings | null>(null);
-  const [communityMeta, setCommunityMeta] = useState<CommunityMeta | null>(null);
   const [communityEntries, setCommunityEntries] = useState<CommunityEntry[]>([]);
   // 名单 tab 徽章需要计算「社区候选中未被保护」的数量，轻量订阅三份名单。
   const [blocked, setBlocked] = useState<Array<{ handle: string }>>([]);
@@ -80,13 +78,11 @@ export default function App() {
     (snapshot: Awaited<ReturnType<typeof getCommunitySnapshot>>): void => {
       if (!snapshot) {
         setCommunityEntries([]);
-        setCommunityMeta(null);
         return;
       }
       const parsed = parseSnapshotBody(snapshot.body);
       if (!parsed.ok) {
         setCommunityEntries([]);
-        setCommunityMeta(null);
         return;
       }
       // 展示与批量拉黑都用这个顺序：净票高的排前面（票面主序稳定，同人并列按 handle）
@@ -94,11 +90,6 @@ export default function App() {
         (a, b) => b.net_votes - a.net_votes || a.handle.localeCompare(b.handle),
       );
       setCommunityEntries(sorted);
-      setCommunityMeta({
-        version: snapshot.snapshot_version,
-        count: parsed.value.entries.length,
-        syncedAt: snapshot.synced_at,
-      });
     },
     [],
   );
@@ -339,8 +330,6 @@ export default function App() {
               refreshPageMarked={refreshPageMarked}
               pauseDestructive={pauseDestructive}
               communityEntries={communityEntries}
-              communityMeta={communityMeta}
-              onRefreshCommunitySnapshot={refreshCommunitySnapshot}
             />
           </>
         ) : null}
@@ -357,6 +346,7 @@ export default function App() {
             community={community}
             onUpdateCommunity={updateCommunity}
             onLanguageChange={setLanguage}
+            onSyncCommunity={refreshCommunitySnapshot}
           />
         ) : null}
       </div>

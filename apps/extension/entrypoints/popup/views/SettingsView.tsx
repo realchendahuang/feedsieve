@@ -42,6 +42,8 @@ interface SettingsViewProps {
     strength?: MarkStrength;
   }) => Promise<unknown>;
   onLanguageChange: (next: UiLanguage) => void;
+  /** 各名单手动同步后的快照回填（同步落盘后立即刷新展示） */
+  onSyncCommunity: () => Promise<void>;
 }
 
 export default function SettingsView({
@@ -50,6 +52,7 @@ export default function SettingsView({
   community,
   onUpdateCommunity,
   onLanguageChange,
+  onSyncCommunity,
 }: SettingsViewProps) {
   const t = UI_COPY[language];
   const [contribution, setContribution] = useState<ContributionStats | null>(null);
@@ -203,7 +206,30 @@ export default function SettingsView({
   const keywordCategoryNames = new Map(
     keywordCatalog.packs.map((pack) => [pack.id, pack.name[language]]),
   );
-  const officialKeywordRuleNames = new Map(
+  // 各名单的手动刷新统一收在设置页；成功提示走 toast（4s 自动消失）
+  const [manualSyncing, setManualSyncing] = useState(false);
+  async function syncAllNow(): Promise<void> {
+    setManualSyncing(true);
+    try {
+      const res = (await browser.runtime.sendMessage({
+        type: 'feedsieve:community-sync',
+        force: true,
+      })) as { outcome?: { status: string; version?: string; error?: string } };
+      const outcome = res?.outcome;
+      if (outcome?.status === 'updated' || outcome?.status === 'unchanged') {
+        await onSyncCommunity();
+        notify(outcome.status === 'updated' ? t.synced(outcome.version) : t.upToDate);
+      } else if (outcome?.status === 'error') {
+        notify(`${t.syncFailed}: ${outcome.error ?? t.unavailable}`);
+      } else {
+        notify(t.unavailable);
+      }
+    } catch {
+      notify(t.backgroundUnavailable);
+    } finally {
+      setManualSyncing(false);
+    }
+  }  const officialKeywordRuleNames = new Map(
     keywordCatalog.packs
       .flatMap((pack) => pack.rules.map((rule) => ({ ...rule, category: pack.id })))
       .map((rule) => [rule.id, rule.name[language]]),
@@ -271,6 +297,21 @@ export default function SettingsView({
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="setting-row manual-sync-row">
+              <span className="setting-copy">
+                <strong>{t.manualSync}</strong>
+                <HelpIcon text={t.manualSyncHint} />
+              </span>
+              <button
+                type="button"
+                className={`secondary-inline${manualSyncing ? ' is-spinning' : ''}`}
+                disabled={manualSyncing}
+                onClick={() => void syncAllNow()}
+              >
+                {manualSyncing ? t.processing : t.manualSyncAction}
+              </button>
             </div>
           </div>
         ) : (

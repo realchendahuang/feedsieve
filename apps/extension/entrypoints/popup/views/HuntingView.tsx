@@ -14,6 +14,7 @@ import {
   fetchHunterBoard,
   openLeaderboard,
   type HunterBoard,
+  type HunterBoardRow,
 } from '../../../src/lib/community/hunter';
 import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
 import HunterProfile from './HunterProfile';
@@ -52,22 +53,21 @@ export default function HuntingView({
   }, []);
 
   const openFullBoard = useCallback(() => {
-    const mePrefix = board?.me?.id ?? null;
-    void openLeaderboard(mePrefix);
+    void openLeaderboard(board?.me?.id ?? null);
   }, [board]);
+
+  const openXProfile = useCallback((handle: string): void => {
+    void browser.tabs.create({ url: `https://x.com/${handle}` });
+  }, []);
 
   if (todayBlocked == null) return null;
 
   const me = board?.me ?? null;
-  // 打败百分比 = 1 - 本周排名/总人数；round 下界出 0%（垫底就是 0，不虚）
+  // 打败百分比 = 1 - 本周排名/总人数；垫底就是 0%，不虚报
   const beatenPct =
     me?.rank && board && board.total > 0
       ? Math.max(0, Math.round((1 - me.rank / board.total) * 100))
       : null;
-
-  const openXHandle = (handle: string): void => {
-    void browser.tabs.create({ url: `https://x.com/${handle}` });
-  };
 
   return (
     <>
@@ -75,19 +75,24 @@ export default function HuntingView({
         <div className="settings-card-head">
           <h2>{t.hunterReportTitle}</h2>
         </div>
-        <div className="hunter-report">
-          <span className="hunter-stat">{t.hunterToday(todayBlocked)}</span>
-          {bullets ? (
-            <span className="hunter-stat">{t.hunterBullets(bullets.left, bullets.total)}</span>
-          ) : null}
-          {me?.rank ? (
-            <span className="hunter-stat">{t.hunterWeek(me.rank, me.kills)}</span>
-          ) : null}
-          {beatenPct != null ? (
-            <span className="hunter-stat hunter-beaten">{t.hunterBeaten(beatenPct)}</span>
-          ) : null}
+        <div className="hunter-report-grid">
+          <HunterStat label={t.statToday} value={String(todayBlocked)} />
+          <HunterStat
+            label={t.statBullets}
+            value={bullets ? `${bullets.left}/${bullets.total}` : '—'}
+          />
+          <HunterStat
+            label={t.statWeek}
+            value={me?.rank ? `#${me.rank}` : '—'}
+            sub={me ? `${me.kills} ${t.hunterKillsUnit}` : t.hunterUnrankedShort}
+          />
+          <HunterStat
+            label={t.statBeaten}
+            value={beatenPct != null ? `${beatenPct}%` : '—'}
+            hero={beatenPct != null}
+          />
         </div>
-        {me?.tier ?? me?.title ? (
+        {me?.tier || me?.title ? (
           <div className="hunter-titles">
             {me?.tier ? <span className="hunter-tier">{me.tier}</span> : null}
             {me?.title ? <span className="hunter-title-badge">{me.title}</span> : null}
@@ -105,41 +110,21 @@ export default function HuntingView({
         {board && board.rows.length ? (
           <div className="hunter-board">
             {board.rows.map((row) => (
-              <div className="hunter-row" key={row.id}>
-                <span className="hunter-rank">{row.rank}</span>
-                <span className="hunter-who">
-                  <span className="hunter-name">
-                    {row.title ? <span className="hunter-title-badge">{row.title}</span> : null}
-                    {row.tier ? <span className="hunter-tier">{row.tier}</span> : null}
-                    {row.name}
-                  </span>
-                  {row.x_handle ? (
-                    <button
-                      type="button"
-                      className="hunter-handle"
-                      onClick={() => openXHandle(row.x_handle!)}
-                    >
-                      @{row.x_handle}
-                    </button>
-                  ) : null}
-                </span>
-                <span className="hunter-stats">
-                  <span className="hunter-kills">{row.kills}</span>
-                  <span className="hunter-accuracy">{Math.round(row.accuracy * 100)}%</span>
-                </span>
-              </div>
+              <BoardRow
+                key={row.id}
+                row={row}
+                isMe={false}
+                onOpenX={openXProfile}
+                killsUnit={t.hunterKillsUnit}
+              />
             ))}
             {me ? (
-              <div className="hunter-row is-me">
-                <span className="hunter-rank">{me.rank}</span>
-                <span className="hunter-who">
-                  <span className="hunter-name">{me.name}</span>
-                </span>
-                  <span className="hunter-stats">
-                    <span className="hunter-kills">{me?.kills ?? ''}</span>
-                    <span className="hunter-accuracy">{me ? `${Math.round(me.accuracy * 100)}%` : ''}</span>
-                  </span>
-              </div>
+              <BoardRow
+                row={me}
+                isMe
+                onOpenX={openXProfile}
+                killsUnit={t.hunterKillsUnit}
+              />
             ) : (
               <button type="button" className="text-action hunter-unranked" onClick={openFullBoard}>
                 {t.hunterUnranked}
@@ -151,11 +136,74 @@ export default function HuntingView({
             {t.hunterUnranked}
           </button>
         ) : (
-          <div className="hunter-board-empty">{t.hunterError}</div>
+          <div className="hunter-board-empty">{t.hunterLoadFailed}</div>
         )}
       </section>
 
       <HunterProfile language={language} notify={notify} />
     </>
+  );
+}
+
+function HunterStat({
+  label,
+  value,
+  sub,
+  hero,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  /** hero：百分位这种"荣誉值"用主题色放大表现 */
+  hero?: boolean;
+}) {
+  return (
+    <div className={hero ? 'hunter-stat hunter-stat-hero' : 'hunter-stat'}>
+      <span className="hunter-stat-value">{value}</span>
+      <span className="hunter-stat-label">{label}</span>
+      {sub ? <span className="hunter-stat-sub">{sub}</span> : null}
+    </div>
+  );
+}
+
+function BoardRow({
+  row,
+  isMe,
+  onOpenX,
+  killsUnit,
+}: {
+  row: HunterBoardRow;
+  isMe: boolean;
+  onOpenX: (handle: string) => void;
+  killsUnit: string;
+}) {
+  return (
+    <div className={isMe ? 'hunter-row is-me' : 'hunter-row'}>
+      <span className={row.rank != null && row.rank <= 3 ? 'hunter-rank top' : 'hunter-rank'}>
+        {row.rank}
+      </span>
+      <span className="hunter-who">
+        <span className="hunter-name">
+          {row.tier ? <span className="hunter-tier">{row.tier}</span> : null}
+          {row.title ? <span className="hunter-title-badge">{row.title}</span> : null}
+          {row.name}
+        </span>
+        {row.x_handle ? (
+          <button
+            type="button"
+            className="hunter-handle"
+            onClick={() => onOpenX(row.x_handle!)}
+          >
+            @{row.x_handle}
+          </button>
+        ) : null}
+      </span>
+      <span className="hunter-stats">
+        <span className="hunter-kills">
+          {row.kills} {killsUnit}
+        </span>
+        <span className="hunter-accuracy">{Math.round(row.accuracy * 100)}%</span>
+      </span>
+    </div>
   );
 }
