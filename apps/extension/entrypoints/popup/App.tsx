@@ -25,7 +25,13 @@ import ListsView from './views/ListsView';
 import KeywordsView from './views/KeywordsView';
 import SettingsView from './views/SettingsView';
 import HunterBar from './views/HunterBar';
-import { AppIcon, asPageMarkedList, type CommunityMeta, type PageMarkedItem } from './views/shared';
+import {
+  AppIcon,
+  asPageMarkedList,
+  getChromeSidePanel,
+  type CommunityMeta,
+  type PageMarkedItem,
+} from './views/shared';
 
 type PopupView = 'clean' | 'lists' | 'keywords' | 'settings';
 
@@ -81,7 +87,11 @@ export default function App() {
         setCommunityMeta(null);
         return;
       }
-      setCommunityEntries(parsed.value.entries);
+      // 展示与批量拉黑都用这个顺序：净票高的排前面（票面主序稳定，同人并列按 handle）
+      const sorted = [...parsed.value.entries].sort(
+        (a, b) => b.net_votes - a.net_votes || a.handle.localeCompare(b.handle),
+      );
+      setCommunityEntries(sorted);
       setCommunityMeta({
         version: snapshot.snapshot_version,
         count: parsed.value.entries.length,
@@ -201,6 +211,73 @@ export default function App() {
     return () => window.clearTimeout(timeout);
   }, [notice]);
 
+  const [isSidePanel, setIsSidePanel] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return (
+      window.location.search.includes('panel') ||
+      window.location.hash.includes('sidepanel') ||
+      window.innerHeight > 650
+    );
+  });
+
+  const sidePanelApi = getChromeSidePanel();
+  const canOpenSidePanel = Boolean(sidePanelApi?.open);
+
+  useEffect(() => {
+    const syncMode = () => {
+      const isPanel =
+        window.location.search.includes('panel') ||
+        window.location.hash.includes('sidepanel') ||
+        window.innerHeight > 650;
+      setIsSidePanel(isPanel);
+      if (isPanel) {
+        document.body.classList.add('mode-sidepanel');
+      } else {
+        document.body.classList.remove('mode-sidepanel');
+      }
+    };
+    syncMode();
+    window.addEventListener('resize', syncMode);
+    return () => window.removeEventListener('resize', syncMode);
+  }, []);
+
+  // 弹窗 → 侧边栏。Chrome 152 实测：setOptions 不支持 windowId（同步 TypeError，
+  // 会拦死后续代码），只允许全局 {enabled, path}；setOptions 独立捕获，绝不让它拦住 open
+  const handleOpenSidePanel = async () => {
+    const api = getChromeSidePanel();
+    if (!api?.open) return;
+    try {
+      const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+      if (!tab?.windowId) return;
+      try {
+        await api.setOptions?.({ enabled: true, path: 'popup.html' });
+      } catch {
+        // setOptions 兼容性差异不阻塞 open
+      }
+      await api.open({ windowId: tab.windowId });
+      window.close();
+    } catch (err) {
+      notify(`${t.sidePanelOpenFailed}：${err instanceof Error ? err.message : String(err)}`);
+    }
+  };
+
+  // 侧边栏模式不提供切回弹窗的按钮：关闭面板会连带杀掉刚打开的 action popup
+  // （Chromium 平台行为，实测含延迟收起均如此），且想用弹窗直接点工具栏图标即可。
+  // 弹窗 → 侧边栏方向是弹窗自己 window.close()，可对称收起，保留入口。
+  const modeToggle =
+    canOpenSidePanel && !isSidePanel ? (
+      <button
+        type="button"
+        className="sidepanel-toggle-btn"
+        title={t.openSidePanel}
+        aria-label={t.openSidePanel}
+        onClick={() => void handleOpenSidePanel()}
+      >
+        <AppIcon name="sidepanel" size={15} />
+        <span className="sidepanel-label-text">{t.openSidePanel}</span>
+      </button>
+    ) : null;
+
   // 破坏性操作降级：官方暂停开关优先，其次 X 能力快照（会话/Block 接口异常）
   const killSwitchActive = Boolean(killSwitch?.destructive_actions_disabled);
   const pauseDestructive =
@@ -214,50 +291,47 @@ export default function App() {
   const communityTodo = communityEntries.filter(
     (entry) => !protectedHandles.has(entry.handle.toLowerCase()),
   ).length;
-  const communityStatus = communityMeta ? t.listReady(communityMeta.count) : t.listLoading;
 
   return (
     <main className="popup">
-      <header className="popup-header">
-        <div className="brand-lockup">
-          <img src="/icon-64.png" alt="" className="brand-icon" />
-          <h1>{t.brand}</h1>
-        </div>
-        {view === 'clean' ? (
-          <div className={`sync-pill${communityMeta ? ' is-ready' : ''}`} title={communityStatus}>
-            <span className="sync-dot" aria-hidden="true" />
-            <span>{communityStatus}</span>
+      {/* 侧边栏模式 Chrome 自带标题栏，应用内头部整行去掉 */}
+      {!isSidePanel ? (
+        <header className="popup-header">
+          <div className="brand-lockup">
+            <img src="/icon-64.png" alt="" className="brand-icon" />
+            <h1>{t.brand}</h1>
           </div>
-        ) : null}
-      </header>
+          {modeToggle ? <div className="header-actions">{modeToggle}</div> : null}
+        </header>
+      ) : null}
 
       <div className="popup-content">
         {view === 'clean' ? (
-          <>
-            <CleanView
-              language={language}
-              notify={notify}
-              sendToXPage={sendToXPage}
-              pageMarked={pageMarked}
-              refreshPageMarked={refreshPageMarked}
-              pauseDestructive={pauseDestructive}
-              killSwitchActive={killSwitchActive}
-              killSwitchReason={killSwitch?.reason}
-            />
-            <HunterBar language={language} />
-          </>
-        ) : null}
-        {view === 'lists' ? (
-          <ListsView
+          <CleanView
             language={language}
             notify={notify}
             sendToXPage={sendToXPage}
+            pageMarked={pageMarked}
             refreshPageMarked={refreshPageMarked}
             pauseDestructive={pauseDestructive}
-            communityEntries={communityEntries}
-            communityMeta={communityMeta}
-            onRefreshCommunitySnapshot={refreshCommunitySnapshot}
+            killSwitchActive={killSwitchActive}
+            killSwitchReason={killSwitch?.reason}
           />
+        ) : null}
+        {view === 'lists' ? (
+          <>
+            <ListsView
+              language={language}
+              notify={notify}
+              sendToXPage={sendToXPage}
+              refreshPageMarked={refreshPageMarked}
+              pauseDestructive={pauseDestructive}
+              communityEntries={communityEntries}
+              communityMeta={communityMeta}
+              onRefreshCommunitySnapshot={refreshCommunitySnapshot}
+            />
+            <HunterBar language={language} />
+          </>
         ) : null}
         {view === 'keywords' ? (
           <KeywordsView language={language} notify={notify} />

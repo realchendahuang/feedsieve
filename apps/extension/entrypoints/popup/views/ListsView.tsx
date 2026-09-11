@@ -97,11 +97,41 @@ export default function ListsView({
   const [running, setRunning] = useState(false);
   const [allowHandle, setAllowHandle] = useState('');
   const [allowAdding, setAllowAdding] = useState(false);
+  const [manualHandle, setManualHandle] = useState('');
+  const [manualRunning, setManualRunning] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [queue, setQueue] = useState<PersistentBlockQueueState | null>(null);
   // 安全额度条：滚动 24h 已用数（暂停原因文案用到预算上限）
   const [safety, setSafety] = useState<SafetyLedger | null>(null);
+
+  async function runManualBlock(): Promise<void> {
+    const handle = normalizeManualInput(manualHandle);
+    if (!handle) {
+      notify(t.invalidHandle);
+      return;
+    }
+    setManualRunning(true);
+    notify(null);
+    try {
+      const result = (await sendToXPage({
+        type: 'feedsieve:manual-spam-block',
+        handle,
+      })) as { ok?: boolean; code?: string };
+      if (result?.ok) {
+        setManualHandle('');
+        notify(t.manualBlocked(handle));
+        setBlocked(await getBlockedAccounts());
+        await refreshPageMarked();
+      } else {
+        notify(`${t.failed}: ${result?.code ?? t.unknown}`);
+      }
+    } catch {
+      notify(t.openXNotice);
+    } finally {
+      setManualRunning(false);
+    }
+  }
 
   useEffect(() => {
     void getBlockedAccounts().then(setBlocked);
@@ -459,24 +489,23 @@ export default function ListsView({
                 {communityEntries.map((entry) => {
                   const excluded = !cloudEligibleSet.has(entry.handle.toLowerCase());
                   return (
-                    <li key={entry.handle} className={`manage-item${excluded ? ' is-excluded' : ''}`}>
+                    <li key={entry.handle} className={`manage-item community-item${excluded ? ' is-excluded' : ''}`}>
                       <span className={`account-avatar${excluded ? ' is-muted' : ''}`} aria-hidden="true">
                         {entry.handle.slice(0, 1).toUpperCase()}
                       </span>
-                      <div className="account-info">
+                      <div className="account-line">
                         <span className="account-handle">@{entry.handle}</span>
-                        <span className="account-meta">
-                          {entry.sources.includes('maintainer') &&
-                          entry.sources.includes('community')
-                            ? t.communitySourceBoth(entry.net_votes)
-                            : entry.sources.includes('maintainer')
-                              ? t.communitySourceMaintainer
-                              : t.communitySourceVotes(entry.net_votes)}
-                        </span>
-                        {excluded ? (
-                          <span className="account-reason">{t.cloudProtected}</span>
+                        {entry.sources.includes('maintainer') ? (
+                          <span className="maintainer-chip">{t.communitySourceMaintainer}</span>
                         ) : null}
+                        {excluded ? <span className="maintainer-chip">{t.cloudProtected}</span> : null}
                       </div>
+                      {excluded ? null : (
+                        <span className="community-votes">
+                          <strong>{entry.net_votes}</strong>
+                          <em>{t.votesUnit}</em>
+                        </span>
+                      )}
                     </li>
                   );
                 })}
@@ -487,6 +516,35 @@ export default function ListsView({
           </>
         ) : listView === 'blocked' ? (
           <>
+            <form
+              className="manual-block-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void runManualBlock();
+              }}
+            >
+              <label htmlFor="manual-spam-handle" className="sr-only">
+                {t.missedAccount}
+              </label>
+              <div className="manual-block-row">
+                <input
+                  id="manual-spam-handle"
+                  type="text"
+                  value={manualHandle}
+                  placeholder={t.missedAccountHint}
+                  autoComplete="off"
+                  spellCheck={false}
+                  onChange={(event) => setManualHandle(event.target.value)}
+                />
+                <button
+                  type="submit"
+                  className="secondary-inline"
+                  disabled={manualRunning || manualHandle.trim().length === 0 || pauseDestructive}
+                >
+                  {manualRunning ? t.processing : t.markSpamAndBlock}
+                </button>
+              </div>
+            </form>
             {blockedCount === null ? (
               <div className="loading-list" aria-hidden="true">
                 <span />

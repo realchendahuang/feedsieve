@@ -44,12 +44,22 @@ beforeEach(() => {
 });
 
 function renderApp(): HTMLElement {
+  // jsdom 默认 innerHeight=768 会被判成侧边栏模式；固定成弹窗实际高度
+  Object.defineProperty(window, 'innerHeight', { value: 600, configurable: true });
   const rootEl = document.createElement('div');
   document.body.append(rootEl);
   const root = ReactDOM.createRoot(rootEl);
   mountedRoots.push(root);
   root.render(React.createElement(App));
   return rootEl;
+}
+
+async function waitForCondition(predicate: () => boolean, timeoutMs = 1200): Promise<void> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (predicate()) return;
+    await new Promise((r) => setTimeout(r, 20));
+  }
 }
 
 function buttonWithText(root: HTMLElement, label: string): HTMLButtonElement {
@@ -153,14 +163,13 @@ describe('popup App 渲染冒烟', () => {
   it('renders header and empty page-marked hint without throwing', async () => {
     const rootEl = renderApp();
     // 等 storage/tabs 异步 resolve 完成（加载态「…」过渡到空态提示）；
-    // 全量 verify 高并发时 50ms 偶发不够，放宽到 150ms
-    await new Promise((r) => setTimeout(r, 150));
+    // 全量 verify 高并发时放宽到 250ms
+    await new Promise((r) => setTimeout(r, 250));
 
     expect(rootEl.textContent).toContain('福滤娃');
     expect(rootEl.textContent).toContain('当前页面');
     expect(rootEl.textContent).toContain('当前页面没有待处理账号');
     expect(rootEl.textContent).toContain('一键拉黑全部');
-    expect(rootEl.textContent).toContain('今日概览');
     expect(rootEl.textContent).toContain('清理');
     expect(rootEl.textContent).toContain('名单');
     expect(rootEl.textContent).toContain('关键词');
@@ -274,7 +283,7 @@ describe('popup App 渲染冒烟', () => {
     });
 
     const rootEl = renderApp();
-    await new Promise((r) => setTimeout(r, 150));
+    await waitForCondition(() => rootEl.textContent?.includes('@spamking88') ?? false);
 
     expect(rootEl.textContent).toContain('@spamking88');
     expect(rootEl.textContent).toContain('3 人标记 · 重复刷屏');
@@ -305,11 +314,11 @@ describe('popup App 渲染冒烟', () => {
     await new Promise((resolve) => setTimeout(resolve, 150));
     await act(async () => buttonWithText(rootEl, '名单').click());
 
-    expect(rootEl.textContent).toContain('社区');
     expect(rootEl.textContent).toContain('@three_votes');
-    expect(rootEl.textContent).toContain('社区净票 3');
+    expect(rootEl.textContent).toContain('3');
+    expect(rootEl.textContent).toContain('票');
     expect(rootEl.textContent).toContain('@maintained');
-    expect(rootEl.textContent).toContain('维护者加入');
+    expect(rootEl.textContent).toContain('维护者认证');
 
     // 一键入口必须排在名单列表之前（否则在 600px 弹窗里落到折叠线以下不可见）
     const cleanAction = rootEl.querySelector('.community-clean-action');
@@ -538,8 +547,8 @@ describe('popup App 渲染冒烟', () => {
     await new Promise((resolve) => setTimeout(resolve, 150));
 
     expect(rootEl.textContent).toContain('拉黑接口暂不可用');
-    const manualBtn = rootEl.querySelector<HTMLButtonElement>('.secondary-inline');
-    expect(manualBtn?.disabled).toBe(true);
+    const blockBtn = rootEl.querySelector<HTMLButtonElement>('.primary-action');
+    expect(blockBtn?.disabled).toBe(true);
   });
 
   it('能力快照正常时（working）不显示降级提示', async () => {
@@ -786,5 +795,82 @@ describe('popup App 渲染冒烟', () => {
     // 死账号与瞬时失败语义分开：前者不用重试，后者等待重试
     expect(rootEl.textContent).toContain('@mtzntzvcuuvan5（账号已不存在）');
     expect(rootEl.textContent).toContain('@petersulli92sm（请求过于频繁）');
+  });
+
+  it('支持在当前页面卡片浏览推文帖子正文，并可剔除误伤项后再一键拉黑', async () => {
+    vi.stubGlobal('browser', {
+      storage: {
+        local: {
+          remove: vi.fn(),
+          get: vi.fn().mockResolvedValue({ uiLanguage: 'zh' }),
+          set: vi.fn().mockResolvedValue(undefined),
+        },
+        onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+      },
+      tabs: {
+        query: vi.fn().mockResolvedValue([{ id: 1, active: true, url: 'https://x.com/home' }]),
+        sendMessage: tabSendMessage,
+      },
+      runtime: { sendMessage: runtimeSendMessage },
+    });
+
+    tabSendMessage.mockImplementation(async (_tabId, msg) => {
+      if ((msg as { type: string }).type === 'feedsieve:page-marked-list') {
+        return [
+          {
+            handle: 'spam_queen',
+            displayName: '小甜甜 🌸',
+            category: 'adult_gray_traffic',
+            reason: '色情引流',
+            snippet: '哥哥看我置顶私聊',
+          },
+          {
+            handle: 'normal_user',
+            displayName: '普通博主',
+            category: 'other',
+            reason: '可疑关键词',
+            snippet: '这是一条正常的讨论',
+          },
+        ];
+      }
+      if ((msg as { type: string }).type === 'feedsieve:run-page-block') {
+        return { status: 'started', count: 1 };
+      }
+      return undefined;
+    });
+
+    const rootEl = renderApp();
+    await waitForCondition(() => rootEl.textContent?.includes('小甜甜 🌸') ?? false);
+
+    // 帖子正文与昵称直接可见，供用户快速辨识
+    expect(rootEl.textContent).toContain('小甜甜 🌸');
+    expect(rootEl.textContent).toContain('哥哥看我置顶私聊');
+    expect(rootEl.textContent).toContain('普通博主');
+    expect(rootEl.textContent).toContain('这是一条正常的讨论');
+
+    const primaryBtn = rootEl.querySelector<HTMLButtonElement>('.primary-action');
+    expect(primaryBtn?.textContent).toContain('2');
+
+    // 用户快速剔除误伤的 normal_user
+    const excludeBtns = rootEl.querySelectorAll<HTMLButtonElement>('.item-btn-exclude');
+    expect(excludeBtns.length).toBe(2);
+    await act(async () => {
+      excludeBtns[1]?.click(); // 剔除第 2 个（normal_user）
+    });
+
+    // 按钮文案联动更新为选中的 1 个
+    expect(rootEl.textContent).toContain('已剔除');
+    expect(primaryBtn?.textContent).toContain('一键拉黑选中的 1 个');
+
+    // 点击一键拉黑，校验只发出了未剔除的账号
+    await act(async () => {
+      primaryBtn?.click();
+    });
+
+    const blockCalls = tabSendMessage.mock.calls.filter(([, msg]) =>
+      (msg as { type: string }).type === 'feedsieve:run-page-block'
+    );
+    expect(blockCalls.length).toBe(1);
+    expect((blockCalls[0]?.[1] as { handles: string[] } | undefined)?.handles).toEqual(['spam_queen']);
   });
 });

@@ -521,6 +521,26 @@ export default function SettingsView({
           </div>
         </div>
       </section>
+
+      <section className="settings-card about-card">
+        <div className="setting-row static-row">
+          <span className="setting-copy">
+            <strong>{t.aboutLinks}</strong>
+          </span>
+          <div className="about-links">
+            <a
+              href="https://github.com/realchendahuang/feedsieve"
+              target="_blank"
+              rel="noreferrer noopener"
+            >
+              {t.githubLink}
+            </a>
+            <a href="https://feedsieve.win" target="_blank" rel="noreferrer noopener">
+              {t.officialSiteLink}
+            </a>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

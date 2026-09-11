@@ -6,10 +6,34 @@ import { normalizeStrictHandle } from '../../../src/lib/xhr-bridge-guard';
 import { localizedDetectionReason, type UiLanguage } from '../../../src/lib/i18n';
 import { formatAgo as sharedFormatAgo } from '@feedsieve/shared';
 
-export type AppIconName = 'clean' | 'lists' | 'settings' | 'refresh' | 'shield' | 'detect';
+export type AppIconName =
+  | 'clean'
+  | 'lists'
+  | 'settings'
+  | 'refresh'
+  | 'shield'
+  | 'detect'
+  | 'plus'
+  | 'x'
+  | 'check'
+  | 'sidepanel';
 
-export function AppIcon({ name, size = 20 }: { name: AppIconName; size?: number }) {
+export function AppIcon({
+  name,
+  size = 20,
+  className,
+}: {
+  name: AppIconName;
+  size?: number;
+  className?: string;
+}) {
   const paths: Record<AppIconName, ReactNode> = {
+    sidepanel: (
+      <>
+        <rect width="18" height="18" x="3" y="3" rx="2" />
+        <path d="M15 3v18" />
+      </>
+    ),
     clean: (
       <>
         <path d="M12 3.25 5 6.1v5.15c0 4.3 2.82 7.7 7 9.5 4.18-1.8 7-5.2 7-9.5V6.1L12 3.25Z" />
@@ -50,12 +74,27 @@ export function AppIcon({ name, size = 20 }: { name: AppIconName; size?: number 
         <path d="m20 20-4.5-4.5" />
       </>
     ),
+    plus: (
+      <>
+        <path d="M12 5v14M5 12h14" />
+      </>
+    ),
+    x: (
+      <>
+        <path d="M18 6 6 18M6 6l12 12" />
+      </>
+    ),
+    check: (
+      <>
+        <path d="m4.5 12.5 5 5 10-11" />
+      </>
+    ),
   };
 
   return (
     <svg
       aria-hidden="true"
-      className="app-icon"
+      className={`app-icon${className ? ` ${className}` : ''}`}
       width={size}
       height={size}
       viewBox="0 0 24 24"
@@ -172,6 +211,8 @@ export interface PageMarkedItem {
   handle: string;
   category: string;
   reason: string;
+  snippet?: string;
+  displayName?: string;
 }
 
 export interface CommunityMeta {
@@ -189,7 +230,15 @@ export function asPageMarkedList(value: unknown): PageMarkedItem[] {
     const raw = entry as Record<string, unknown>;
     const handle = normalizeStrictHandle(raw.handle);
     if (!handle || typeof raw.category !== 'string' || typeof raw.reason !== 'string') continue;
-    items.push({ handle, category: raw.category, reason: raw.reason });
+    const snippet = typeof raw.snippet === 'string' && raw.snippet.trim().length > 0 ? raw.snippet.trim() : undefined;
+    const displayName = typeof raw.displayName === 'string' && raw.displayName.trim().length > 0 ? raw.displayName.trim() : undefined;
+    items.push({
+      handle,
+      category: raw.category,
+      reason: raw.reason,
+      snippet,
+      displayName,
+    });
   }
   return items;
 }
@@ -231,3 +280,6 @@ export function normalizeManualInput(value: string): string | null {
   const handle = candidate.replace(/^@+/, '').toLowerCase();
   return /^[a-z0-9_]{1,15}$/.test(handle) ? handle : null;
 }
+
+export { getChromeSidePanel, type ChromeSidePanelApi } from '../../../src/lib/sidepanel';
+

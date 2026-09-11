@@ -112,6 +112,10 @@ interface PageMarkedAccount {
   /** 检测规则 ID：批量拉黑计票口径需要（communityVoteForDetection） */
   ruleId?: string;
   evidence: BlockEvidence;
+  /** 推文原文本（供用户在清理面板快速浏览帖子正文、防误伤） */
+  snippet?: string;
+  /** 作者昵称 */
+  displayName?: string;
 }
 
 /**
@@ -172,7 +176,7 @@ export default defineContentScript({
     let selfHandle: string | null = null;
     /** 社区最终名单运行时状态（快照同步后的索引） */
     let community: RuntimeCommunity | null = null;
-    /** 检测总开关；关闭后仍保留用户主动「标记垃圾并拉黑」入口。 */
+    /** 检测总开关；关闭后仍保留用户主动「拉黑」入口。 */
     let detectionEnabled = true;
     /** 自动贡献总开关（决定「抢救」按钮是否出现） */
     let autoContribute = true;
@@ -247,15 +251,22 @@ export default defineContentScript({
       const msg = message as {
         type?: string;
         handle?: string;
+        handles?: string[];
         targetTabId?: number;
         items?: Array<{ handle: string; xUserId?: string; category: string }>;
       } | null;
       const type = msg?.type;
-      // 一键拉黑 = 当前页面全部黄框账号（用户拍板的交互语义）
+      // 一键拉黑 = 当前页面黄框账号（支持剔除误删项后仅拉黑选中的账号）
       if (type === 'feedsieve:run-page-block') {
+        const targetHandles = Array.isArray(msg?.handles)
+          ? new Set(msg.handles.map((h: string) => String(h).toLowerCase()))
+          : null;
+        const toBlock = [...pageMarked.values()].filter(
+          (item) => !targetHandles || targetHandles.has(item.handle.toLowerCase()),
+        );
         return startPersistentQueue(
           'page-batch',
-          [...pageMarked.values()].map((item) => ({
+          toBlock.map((item) => ({
             handle: item.handle,
             category: item.category,
             reason: item.reason,
@@ -318,6 +329,8 @@ export default defineContentScript({
             handle: m.handle,
             category: m.category,
             reason: m.reason,
+            snippet: m.snippet,
+            displayName: m.displayName,
           })),
         );
       }
@@ -668,6 +681,8 @@ export default defineContentScript({
         result.category ?? 'other',
         result.evidence,
         pendingBadges,
+        item.text,
+        item.author.displayName,
       );
     }
 
@@ -728,9 +743,11 @@ export default defineContentScript({
       button.type = 'button';
       button.className = 'fs-manual-mark';
       button.setAttribute('data-fs-manual-action', 'true');
-      const idleLabel = uiLanguage === 'zh' ? '标记' : 'Mark';
+      const idleLabel = uiLanguage === 'zh' ? '拉黑' : 'Block';
       button.textContent = idleLabel;
-      button.title = uiLanguage === 'zh' ? '标记为垃圾账号并拉黑' : 'Mark as spam and block';
+      button.title = uiLanguage === 'zh'
+        ? '福滤娃 · 拉黑此账号，并计入社区名单'
+        : 'FeedSieve · Block this account and count as a community vote';
       button.setAttribute('aria-label', button.title);
       button.addEventListener('click', () => {
         void (async () => {
@@ -798,6 +815,8 @@ export default defineContentScript({
       category: string,
       evidence: BlockEvidence,
       pendingBadges: PendingBadge[],
+      snippet?: string,
+      displayName?: string,
     ): void {
       cell.setAttribute(MARK_ATTRIBUTE, detection.source);
       const badge = buildBadge(cell, detection, category, evidence);
@@ -813,6 +832,8 @@ export default defineContentScript({
           reason: detection.reason,
           ruleId: detection.ruleId,
           evidence: { ...evidence, detectionSource: detection.source },
+          snippet: snippet?.trim() || undefined,
+          displayName: displayName?.trim() || undefined,
         });
       }
       // 本地统计：每次新标注 +1（扫描快照保证每个 cell 只标一次）；
@@ -852,7 +873,7 @@ export default defineContentScript({
       blockBtn.className = 'fs-block-now';
       blockBtn.type = 'button';
       blockBtn.textContent = uiLanguage === 'zh' ? '拉黑' : 'Block';
-      blockBtn.title = uiLanguage === 'zh' ? '标记垃圾账号并拉黑' : 'Mark as spam and block';
+      blockBtn.title = uiLanguage === 'zh' ? '福滤娃 · 拉黑此账号' : 'FeedSieve · Block this account';
       blockBtn.addEventListener('click', () => {
         // 计票口径与批量路径唯一共享：见 communityVoteForDetection
         const communityVote = communityVoteForDetection(detection.source, detection.ruleId);
@@ -1306,8 +1327,8 @@ function ensureStyles(): void {
       transition: all 120ms ease;
     }
     .fs-manual-mark:hover:not(:disabled) {
-      background: rgba(244, 33, 46, 0.1);
-      color: rgb(244, 33, 46);
+      background: rgba(245, 158, 11, 0.12);
+      color: #b45309;
     }
     .fs-manual-mark:disabled { opacity: 0.65; cursor: wait; }
   `;

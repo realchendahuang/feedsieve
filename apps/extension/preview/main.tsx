@@ -8,14 +8,40 @@ const today = new Date().toISOString().slice(0, 10);
 
 const pageMarked = [
   {
+    handle: 'beauty_live520',
+    displayName: '小甜甜 🌸 优质交友',
+    category: 'adult_gray_traffic',
+    reason: '6 人标记 · 色情引流',
+    snippet: '哥哥看我主页置顶有惊喜哦 🔞 私信我发完整高清视频，同城可约～',
+  },
+  {
     handle: 'crypto_gift88',
+    displayName: 'Binance Rewards Official',
     category: 'scam_phishing',
     reason: '5 人标记 · 诈骗',
+    snippet: '🔥 5,000,000 USDT Airdrop is live! Connect your Web3 wallet now to claim: claim-binance-free.gift/airdrop',
   },
-  { handle: 'daily_alpha369', category: 'copy_paste', reason: '4 人标记 · 重复刷屏' },
-  { handle: 'beauty_live520', category: 'adult_gray_traffic', reason: '6 人标记 · 色情引流' },
-  { handle: 'auto_reply_bot', category: 'bot_spam', reason: '3 人标记 · 机器人' },
-  { handle: 'hot_topic_ai', category: 'ai_slop', reason: '5 人标记 · AI 垃圾' },
+  {
+    handle: 'daily_alpha369',
+    displayName: '币圈每日早报',
+    category: 'copy_paste',
+    reason: '4 人标记 · 重复刷屏',
+    snippet: '关注我并转发本条推文，今晚抽 10 位幸运粉丝平分 500U 红包！赶快行动起来！',
+  },
+  {
+    handle: 'hot_topic_ai',
+    displayName: 'AI 资讯速递',
+    category: 'ai_slop',
+    reason: '5 人标记 · AI 垃圾',
+    snippet: '深度剖析：这 10 个 AI 工具将彻底颠覆你的工作流！第 7 个绝对让你惊掉下巴，速看收藏避免迷路！',
+  },
+  {
+    handle: 'auto_reply_bot',
+    displayName: 'Boost Growth Service',
+    category: 'bot_spam',
+    reason: '3 人标记 · 机器人',
+    snippet: 'Awesome post! If you want to grow your followers and get real organic impressions fast, check my bio!',
+  },
 ];
 
 const snapshotBody = JSON.stringify({
@@ -155,11 +181,17 @@ const previewBrowser = {
     },
   },
   tabs: {
-    query: async () => [{ id: 1, active: true }],
-    sendMessage: async (_tabId: number, message: { type: string; handle?: string }) => {
+    query: async () => [{ id: 1, active: true, url: 'https://x.com/home' }],
+    sendMessage: async (
+      _tabId: number,
+      message: { type: string; handle?: string; handles?: string[] },
+    ) => {
       if (message.type === 'feedsieve:page-marked-list') return pageMarked;
       if (message.type === 'feedsieve:run-page-block') {
-        return { blocked: pageMarked.map((item) => item.handle), failed: [] };
+        const toBlock = Array.isArray(message.handles)
+          ? message.handles
+          : pageMarked.map((item) => item.handle);
+        return { blocked: toBlock, failed: [] };
       }
       if (message.type === 'feedsieve:unblock') {
         return {

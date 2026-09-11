@@ -1,13 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  getDailyStats,
-  subscribeDaily,
-  todayKey,
-  type DailyStats,
-} from '../../../src/lib/daily-stats';
-import { buildReportText, shareUrl } from '../../../src/lib/share-card';
-import { estimateTimeSaved } from '../../../src/lib/time-saved';
-import { drawReportCard } from '../../../src/lib/share-card-image';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   blockQueueProgress,
   getPersistentBlockQueue,
@@ -22,8 +13,9 @@ import {
   usedInWindow,
   type SafetyLedger,
 } from '../../../src/lib/block-safety';
+import { addAllowlist } from '../../../src/lib/allowlist';
 import { categoryLabel, UI_COPY, type UiLanguage } from '../../../src/lib/i18n';
-import { AppIcon, FAILURE_LABELS, normalizeManualInput, type PageMarkedItem } from './shared';
+import { AppIcon, FAILURE_LABELS, type PageMarkedItem } from './shared';
 import QueuePanel from './QueuePanel';
 
 interface PageBlockResult {
@@ -31,15 +23,10 @@ interface PageBlockResult {
   failed: Array<{ handle: string; code: string }>;
 }
 
-interface ManualBlockResult {
-  ok: boolean;
-  handle?: string;
-  code?: string;
-}
-
 interface SendMessageShape {
   type: string;
   handle?: string;
+  handles?: string[];
   force?: boolean;
   items?: Array<{ handle: string; xUserId?: string; category: string }>;
 }
@@ -55,8 +42,6 @@ interface CleanViewProps {
   killSwitchReason?: string;
 }
 
-const BLOCK_MESSAGE = { type: 'feedsieve:run-page-block' } as const;
-
 export default function CleanView({
   language,
   notify,
@@ -68,19 +53,25 @@ export default function CleanView({
   killSwitchReason,
 }: CleanViewProps) {
   const t = UI_COPY[language];
-  const [daily, setDaily] = useState<DailyStats>({ days: {} });
-  const [reportExpanded, setReportExpanded] = useState(false);
-  const [cardUrl, setCardUrl] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [blockResult, setBlockResult] = useState<PageBlockResult | null>(null);
-  const [manualHandle, setManualHandle] = useState('');
-  const [manualRunning, setManualRunning] = useState(false);
+  const [operatingHandles, setOperatingHandles] = useState<Set<string>>(new Set());
+  const [refreshing, setRefreshing] = useState(false);
   const [queue, setQueue] = useState<PersistentBlockQueueState | null>(null);
+  const [excludedHandles, setExcludedHandles] = useState<Set<string>>(() => new Set());
   /** 追踪上一个队列状态：page-batch 收尾时据此判断是否该刷新页面黄框。 */
   const pageBatchQueueRef = useRef<PersistentBlockQueueState | null>(null);
   // 安全额度条：滚动 24h 已用数（账本事件驱动更新，渲染期不调 Date.now）
   const [safety, setSafety] = useState<SafetyLedger | null>(null);
   const [safetyUsed, setSafetyUsed] = useState(0);
+
+  /** 瞬时成功反馈 4 秒后自动消失，遵守 AGENTS 约定 */
+  useEffect(() => {
+    if (!blockResult) return;
+    const timeout = window.setTimeout(() => setBlockResult(null), 4000);
+    return () => window.clearTimeout(timeout);
+  }, [blockResult]);
+
 
   /**
    * 队列状态回调：page-batch 批量拉黑收尾（completed/cancelled）时，
@@ -107,14 +98,12 @@ export default function CleanView({
   );
 
   useEffect(() => {
-    void getDailyStats().then(setDaily);
     void getPersistentBlockQueue().then(setQueue);
     void loadSafetyLedger().then((ledger) => {
       setSafety(ledger);
       setSafetyUsed(usedInWindow(ledger, Date.now()));
     });
     const unsubs = [
-      subscribeDaily(setDaily),
       subscribePersistentBlockQueue(handleQueueChange),
       subscribeSafetyLedger((ledger) => {
         setSafety(ledger);
@@ -124,12 +113,57 @@ export default function CleanView({
     return () => unsubs.forEach((unsub) => unsub());
   }, [handleQueueChange]);
 
+  const pageCount = pageMarked?.length ?? null;
+
+  const pendingItems = useMemo(() => {
+    if (!pageMarked) return [];
+    return pageMarked.filter((item) => !excludedHandles.has(item.handle));
+  }, [pageMarked, excludedHandles]);
+
+  const pendingCount = pendingItems.length;
+  const excludedCount = (pageMarked?.length ?? 0) - pendingCount;
+
+  function toggleExclude(handle: string): void {
+    setExcludedHandles((prev) => {
+      const next = new Set(prev);
+      if (next.has(handle)) {
+        next.delete(handle);
+      } else {
+        next.add(handle);
+      }
+      return next;
+    });
+  }
+
+  function toggleSelectAll(): void {
+    if (!pageMarked || pageMarked.length === 0) return;
+    if (excludedHandles.size > 0) {
+      setExcludedHandles(new Set());
+    } else {
+      setExcludedHandles(new Set(pageMarked.map((item) => item.handle)));
+    }
+  }
+
+  async function handleRefresh(): Promise<void> {
+    setRefreshing(true);
+    try {
+      await refreshPageMarked();
+    } finally {
+      setTimeout(() => setRefreshing(false), 500);
+    }
+  }
+
   async function runBatch(): Promise<void> {
+    if (pendingCount === 0) return;
     setRunning(true);
     notify(null);
     setBlockResult(null);
     try {
-      const result = (await sendToXPage(BLOCK_MESSAGE)) as {
+      const handles = pendingItems.map((item) => item.handle);
+      const result = (await sendToXPage({
+        type: 'feedsieve:run-page-block',
+        handles,
+      })) as {
         status?: string;
         id?: string;
         count?: number;
@@ -159,29 +193,24 @@ export default function CleanView({
     }
   }
 
-  async function runManualBlock(): Promise<void> {
-    const handle = normalizeManualInput(manualHandle);
-    if (!handle) {
-      notify(t.invalidHandle);
-      return;
-    }
-    setManualRunning(true);
+  async function markFalsePositive(item: PageMarkedItem): Promise<void> {
+    setOperatingHandles((prev) => new Set(prev).add(item.handle));
     notify(null);
     try {
-      const result = (await sendToXPage({
-        type: 'feedsieve:manual-spam-block',
-        handle,
-      })) as ManualBlockResult;
-      if (result?.ok) {
-        setManualHandle('');
-        notify(t.manualBlocked(handle));
-      } else {
-        notify(`${t.failed}: ${result?.code ?? t.unknown}`);
-      }
+      await addAllowlist(item.handle, undefined, {
+        detectionSource: 'page-marked',
+        detectionReason: item.reason,
+      });
+      notify(t.allowlistAdded(item.handle));
+      await refreshPageMarked();
     } catch {
       notify(t.openXNotice);
     } finally {
-      setManualRunning(false);
+      setOperatingHandles((prev) => {
+        const next = new Set(prev);
+        next.delete(item.handle);
+        return next;
+      });
     }
   }
 
@@ -193,7 +222,6 @@ export default function CleanView({
     }
   }
 
-  const pageCount = pageMarked?.length ?? null;
   const queueSummary = blockQueueProgress(queue);
   const queueDone = queueSummary.success + queueSummary.failed;
   const queueActive =
@@ -231,53 +259,34 @@ export default function CleanView({
           .join(' · ')
       : null;
 
-  // 日期键与写入侧（daily-stats.todayKey 的本地日期）同源；用 UTC 的 ISO 日期
-  // 会让东八区用户在本地 0-8 点读到前一天的数。
-  const today = daily.days[todayKey()] ?? {
-    blocked: 0,
-    detected: 0,
-    unblocked: 0,
-    byCategory: {},
-  };
-  const reportText = buildReportText(today, language);
-  const shareHref = shareUrl(reportText);
-  const timeSaved = estimateTimeSaved(today.detected, language);
-  const categoryBars = Object.entries(today.byCategory)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 4)
-    .map(([key, count]) => ({
-      key,
-      label: categoryLabel(key, language),
-      count,
-      pct: today.blocked > 0 ? Math.round((count / today.blocked) * 100) : 0,
-    }));
-
-  function makeCard(): void {
-    try {
-      const canvas = drawReportCard(today, language);
-      setCardUrl(canvas.toDataURL('image/png'));
-    } catch {
-      setCardUrl(null);
-    }
-  }
-
   return (
     <div className="view-stack clean-view">
-      {safety && safetyUsed > 0 ? (
-        <div className="safety-quota-line" role="status">
-          {t.safetyQuota(safetyUsed, safety.budget)}
-        </div>
-      ) : null}
       <section className={`review-card${pageCount === 0 ? ' is-clean' : ''}`}>
         <div className="section-heading">
-          <h2>{t.pageMarked}</h2>
-          <span className="count-badge" aria-label={`${t.pageMarked}: ${pageCount ?? 0}`}>
-            {pageCount === null ? '…' : pageCount}
-          </span>
+          <div className="heading-title-group">
+            <h2>{t.pageMarked}</h2>
+            <span className="count-badge" aria-label={`${t.pageMarked}: ${pageCount ?? 0}`}>
+              {pageCount === null ? '…' : pageCount}
+            </span>
+          </div>
+
+          <div className="heading-toolbar">
+            {safety && safetyUsed > 0 ? (
+              <span
+                className="safety-quota-chip"
+                role="status"
+                title={t.safetyQuota(safetyUsed, safety.budget)}
+              >
+                <span className="quota-dot" aria-hidden="true" />
+                <span>{t.safetyQuota(safetyUsed, safety.budget)}</span>
+              </span>
+            ) : null}
+          </div>
         </div>
 
         {pageCount === null ? (
           <div className="loading-list" aria-hidden="true">
+            <span />
             <span />
             <span />
           </div>
@@ -287,26 +296,122 @@ export default function CleanView({
               <AppIcon name="clean" size={24} />
             </span>
             <p>{running ? t.processing : t.pageClean}</p>
+            {!running ? (
+              <div className="clean-state-hint-group">
+                <button
+                  type="button"
+                  className="clean-state-action"
+                  disabled={refreshing}
+                  onClick={() => void handleRefresh()}
+                >
+                  <AppIcon name="refresh" size={12} className={refreshing ? 'is-spinning' : ''} />
+                  <span>{t.textRefresh}</span>
+                </button>
+                <span className="clean-state-hint" role="img" title={t.pageCleanHint}>
+                  !
+                </span>
+              </div>
+            ) : null}
           </div>
         ) : (
-          <ul className="review-list">
-            {pageMarked!.map((item) => (
-              <li key={item.handle} className="review-item">
-                <span className="account-avatar" aria-hidden="true">
-                  {item.handle.slice(0, 1).toUpperCase()}
-                </span>
-                <div className="account-info">
-                  <div className="account-line">
-                    <span className="account-handle">@{item.handle}</span>
-                    <span className="category-chip">
-                      {categoryLabel(item.category, language)}
-                    </span>
-                  </div>
-                  {item.reason ? <span className="account-reason">{item.reason}</span> : null}
-                </div>
-              </li>
-            ))}
-          </ul>
+          <>
+            <div className="selection-toolbar">
+              <span className="selection-summary">
+                {t.selectedCount(pendingCount, pageCount)}
+              </span>
+              <button
+                type="button"
+                className="toolbar-text-btn"
+                onClick={toggleSelectAll}
+              >
+                {excludedHandles.size > 0 ? t.selectAll : t.deselectAll}
+              </button>
+            </div>
+
+            <ul className="review-list" aria-label={t.pageMarked}>
+              {pageMarked!.map((item) => {
+                const isOperating = operatingHandles.has(item.handle);
+                const isExcluded = excludedHandles.has(item.handle);
+                return (
+                  <li
+                    key={item.handle}
+                    className={`review-item${isExcluded ? ' is-excluded' : ''}`}
+                  >
+                    <div className="review-item-header">
+                      <div className="review-meta-group">
+                        <label
+                          className="checkbox-control"
+                          title={isExcluded ? t.restoreItem : t.excludeItemHint}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={!isExcluded}
+                            onChange={() => toggleExclude(item.handle)}
+                            aria-label={`${t.excludeItem}: @${item.handle}`}
+                          />
+                          <span className="checkbox-box" aria-hidden="true">
+                            {!isExcluded ? <AppIcon name="check" size={13} /> : null}
+                          </span>
+                        </label>
+
+                        <span className="category-chip" data-category={item.category}>
+                          {categoryLabel(item.category, language)}
+                        </span>
+
+                        {item.reason ? (
+                          <span className="account-reason" title={item.reason}>
+                            {item.reason}
+                          </span>
+                        ) : null}
+
+                        <span className="account-handle" title={`@${item.handle}`}>
+                          @{item.handle}
+                        </span>
+
+                        {item.displayName ? (
+                          <span className="account-name" title={item.displayName}>
+                            {item.displayName}
+                          </span>
+                        ) : null}
+
+                        {isExcluded ? (
+                          <span className="excluded-pill">{t.excludedBadge}</span>
+                        ) : null}
+                      </div>
+
+                      <div className="review-item-actions">
+                        <button
+                          type="button"
+                          className={`item-btn ${isExcluded ? 'item-btn-restore' : 'item-btn-exclude'}`}
+                          title={isExcluded ? t.restoreItem : t.excludeItemHint}
+                          onClick={() => toggleExclude(item.handle)}
+                        >
+                          {isExcluded ? t.restoreItem : t.excludeItem}
+                        </button>
+                        <button
+                          type="button"
+                          className="item-btn item-btn-safe"
+                          title={t.falsePositiveHint}
+                          aria-label={`${t.falsePositive}: @${item.handle}`}
+                          disabled={isOperating || running}
+                          onClick={() => void markFalsePositive(item)}
+                        >
+                          {isOperating ? '…' : t.falsePositive}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 帖子正文：信息架构的核心第一视觉重心 */}
+                    <div className="review-snippet">
+                      <p className="snippet-text">
+                        {item.snippet || t.noPostContent}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
         )}
 
         {blockResult ? (
@@ -347,138 +452,38 @@ export default function CleanView({
           />
         ) : null}
 
-        <form
-          className="manual-block-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void runManualBlock();
-          }}
-        >
-          <label htmlFor="manual-spam-handle">{t.missedAccount}</label>
-          <div className="manual-block-row">
-            <input
-              id="manual-spam-handle"
-              type="text"
-              value={manualHandle}
-              placeholder={t.missedAccountHint}
-              autoComplete="off"
-              spellCheck={false}
-              onChange={(event) => setManualHandle(event.target.value)}
-            />
-            <button
-              type="submit"
-              className="secondary-inline"
-              disabled={manualRunning || manualHandle.trim().length === 0 || pauseDestructive}
-            >
-              {manualRunning ? t.processing : t.markSpamAndBlock}
-            </button>
-          </div>
-        </form>
-
-        <div className="primary-actions">
+        <div className="clean-bottom-bar">
           {pauseDestructive ? (
             <p className="controls-warning" role="status">
               {killSwitchActive ? t.killSwitchActive(killSwitchReason) : t.blockUnavailable}
             </p>
           ) : null}
-          <button
-            className="primary-action"
-            disabled={!pageCount || running || queueActive || pauseDestructive}
-            onClick={() => void runBatch()}
-          >
-            {running
-              ? t.processing
-              : pageCount
-                ? `${t.blockPage} · ${pageCount}`
-                : t.blockPage}
-          </button>
-          <button
-            type="button"
-            className="square-action"
-            aria-label={t.refreshPage}
-            title={t.refreshPage}
-            disabled={running}
-            onClick={() => void refreshPageMarked()}
-          >
-            <AppIcon name="refresh" />
-          </button>
-        </div>
-      </section>
-
-      <section className="summary-card" aria-labelledby="today-title">
-        <div className="section-heading compact">
-          <h2 id="today-title">{t.todaySummary}</h2>
-          {today.detected > 0 ? (
+          <div className="primary-actions">
+            <button
+              className="primary-action"
+              disabled={!pageCount || pendingCount === 0 || running || queueActive || pauseDestructive}
+              onClick={() => void runBatch()}
+            >
+              {running
+                ? t.processing
+                : !pageCount || pendingCount === 0
+                  ? t.blockPage
+                  : excludedCount > 0
+                    ? t.batchBlockSelected(pendingCount)
+                    : `${t.blockPage} · ${pageCount}`}
+            </button>
             <button
               type="button"
-              className="text-action"
-              aria-expanded={reportExpanded}
-              onClick={() => setReportExpanded((expanded) => !expanded)}
+              className={`square-action${refreshing ? ' is-spinning' : ''}`}
+              aria-label={t.refreshPage}
+              title={t.refreshPage}
+              disabled={running || refreshing}
+              onClick={() => void handleRefresh()}
             >
-              {reportExpanded ? t.hideDetails : t.showDetails}
+              <AppIcon name="refresh" />
             </button>
-          ) : null}
-        </div>
-        <div className="metric-grid" aria-label={t.todaySummary}>
-          <div>
-            <strong>{today.detected}</strong>
-            <span>{t.marked}</span>
-          </div>
-          <div>
-            <strong>{today.blocked}</strong>
-            <span>{t.blocked}</span>
-          </div>
-          <div>
-            <strong>{today.unblocked}</strong>
-            <span>{t.restored}</span>
           </div>
         </div>
-        {today.detected > 0 ? (
-          <p className="saved-time">
-            {t.saved} <strong>{timeSaved.label}</strong>
-          </p>
-        ) : (
-          <p className="summary-empty">{t.todayQuiet}</p>
-        )}
-
-        {reportExpanded ? (
-          <div className="report-details">
-            {categoryBars.length > 0 ? (
-              <div className="report-bars">
-                {categoryBars.map((bar) => (
-                  <div key={bar.key} className="report-bar">
-                    <span className="report-bar-label">{bar.label}</span>
-                    <div className="report-bar-track" aria-hidden="true">
-                      <div
-                        className="report-bar-fill"
-                        style={{ width: `${Math.max(bar.pct, 4)}%` }}
-                      />
-                    </div>
-                    <span className="report-bar-count">{bar.count}</span>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-            {today.blocked > 0 ? (
-              <div className="report-actions">
-                <button type="button" className="secondary-inline" onClick={makeCard}>
-                  {t.reportCard}
-                </button>
-                <a className="secondary-inline" href={shareHref} target="_blank" rel="noreferrer">
-                  {t.share} ↗
-                </a>
-              </div>
-            ) : null}
-            {cardUrl ? (
-              <div className="report-card-preview">
-                <img src={cardUrl} alt={t.reportImageAlt} />
-                <a className="text-action" href={cardUrl} download="feedsieve-report.png">
-                  {t.downloadImage}
-                </a>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
       </section>
     </div>
   );

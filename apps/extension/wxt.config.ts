@@ -6,7 +6,10 @@ export default defineConfig({
     name: 'FeedSieve',
     short_name: 'FeedSieve',
     description: 'X 赛博清洁工：黄框标注垃圾账号，一键批量真拉黑。标注永不隐藏内容。',
-    permissions: ['storage'],
+    permissions: ['storage', 'sidePanel'],
+    side_panel: {
+      default_path: 'popup.html',
+    },
     host_permissions: [
       'https://x.com/*',
       // dev 模式放行本地社区 API（wrangler dev）；生产构建不包含 localhost。
