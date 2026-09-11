@@ -5,8 +5,8 @@ import {
   saveHunterProfile,
   verifyHunterEmail,
   type HunterProfileState,
-} from '../../../src/lib/hunter';
-import { UI_COPY, type UiLanguage } from '../../../src/lib/i18n';
+} from '../../../src/lib/community/hunter';
+import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
 
 /**
  * 猎手档案（设置区）：默认匿名上榜，邮箱验证码解锁自定义昵称 / 一句话介绍。

@@ -4,7 +4,7 @@ import {
   getPersistentBlockQueue,
   subscribePersistentBlockQueue,
   type PersistentBlockQueueState,
-} from '../../../src/lib/block-queue-store';
+} from '../../../src/lib/queue/block-queue-store';
 import {
   DEFAULT_PRESET,
   loadSafetyLedger,
@@ -12,9 +12,9 @@ import {
   subscribeSafetyLedger,
   usedInWindow,
   type SafetyLedger,
-} from '../../../src/lib/block-safety';
-import { addAllowlist } from '../../../src/lib/allowlist';
-import { categoryLabel, UI_COPY, type UiLanguage } from '../../../src/lib/i18n';
+} from '../../../src/lib/queue/block-safety';
+import { addAllowlist } from '../../../src/lib/community/allowlist';
+import { categoryLabel, UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
 import { AppIcon, FAILURE_LABELS, type PageMarkedItem } from './shared';
 import QueuePanel from './QueuePanel';
 

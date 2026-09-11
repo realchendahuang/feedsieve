@@ -1,5 +1,5 @@
-import type { PersistentBlockQueueState } from '../../../src/lib/block-queue-store';
-import { UI_COPY, type UiLanguage } from '../../../src/lib/i18n';
+import type { PersistentBlockQueueState } from '../../../src/lib/queue/block-queue-store';
+import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
 
 interface QueuePanelProps {
   language: UiLanguage;

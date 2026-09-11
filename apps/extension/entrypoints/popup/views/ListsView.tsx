@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import type { CommunityEntry } from '@feedsieve/community-lists';
-import { getBlockedAccounts, subscribeBlocked, type BlockedAccount } from '../../../src/lib/blocked-accounts';
+import { getBlockedAccounts, subscribeBlocked, type BlockedAccount } from '../../../src/lib/community/blocked-accounts';
 import {
   addAllowlist,
   getAllowlist,
   removeAllowed,
   subscribeAllowlist,
   type AllowlistItem,
-} from '../../../src/lib/allowlist';
+} from '../../../src/lib/community/allowlist';
 import {
   getFollowingAllowlist,
   getFollowingSyncState,
@@ -15,22 +15,22 @@ import {
   subscribeFollowingSyncState,
   type FollowingAllowlistItem,
   type FollowingSyncState,
-} from '../../../src/lib/following-allowlist';
+} from '../../../src/lib/community/following-allowlist';
 import {
   blockQueueProgress,
   getPersistentBlockQueue,
   subscribePersistentBlockQueue,
   type PersistentBlockQueueState,
-} from '../../../src/lib/block-queue-store';
+} from '../../../src/lib/queue/block-queue-store';
 import {
   DEFAULT_PRESET,
   loadSafetyLedger,
   SAFETY_PRESETS,
   subscribeSafetyLedger,
   type SafetyLedger,
-} from '../../../src/lib/block-safety';
-import { UI_COPY, type UiLanguage } from '../../../src/lib/i18n';
-import type { UnblockBatchResult } from '../../../src/lib/run-unblock-batch';
+} from '../../../src/lib/queue/block-safety';
+import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
+import type { UnblockBatchResult } from '../../../src/lib/queue/run-unblock-batch';
 import {
   allowlistReason,
   AppIcon,

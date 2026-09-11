@@ -15,8 +15,8 @@ import {
   type StoredSnapshot,
   type SyncSource,
 } from '@feedsieve/community-lists';
-import bundledSnapshotJson from '../../../../community/lists/official.json';
-import { API_BASE } from './api-base';
+import bundledSnapshotJson from '../../../../../community/lists/official.json';
+import { API_BASE } from '../platform/api-base';
 
 export const COMMUNITY_API_BASE = API_BASE;
 

@@ -15,7 +15,7 @@ export interface TimeSaved {
   label: string;
 }
 
-import type { UiLanguage } from './i18n';
+import type { UiLanguage } from '../platform/i18n';
 
 export function estimateTimeSaved(
   detected: number,

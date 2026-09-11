@@ -5,7 +5,7 @@
  * content script 热重载或浏览器重启后仍能看到进度并显式恢复。
  */
 
-import { normalizeStrictHandle, sanitizeXUserId } from './xhr-bridge-guard';
+import { normalizeStrictHandle, sanitizeXUserId } from '../platform/xhr-bridge-guard';
 
 export type PersistentBlockQueueSource = 'page-batch' | 'community-batch';
 export type PersistentBlockQueueStatus = 'running' | 'paused' | 'completed' | 'cancelled';

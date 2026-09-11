@@ -6,7 +6,7 @@
  * 加载后立即从地址栏抹除，分享出去的是干净 URL。
  */
 
-import { API_BASE } from './api-base';
+import { API_BASE } from '../platform/api-base';
 import { getInstallationId, peekInstallationId } from './contribute';
 
 export interface HunterStatus {

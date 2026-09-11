@@ -19,10 +19,10 @@ import {
   weakSignalCombo,
 } from '@feedsieve/detector';
 import type { CommunityEntry, MarkStrength } from '@feedsieve/community-lists';
-import type { RuntimeCommunity } from './community-store';
+import type { RuntimeCommunity } from '../community/community-store';
 import { classifyDetection, type DetectionPresentation } from './detection-policy';
-import { categoryLabel, localizedDetectionReason, type UiLanguage } from './i18n';
-import { categoryFromDetection, collectLinkDomains } from './contribute';
+import { categoryLabel, localizedDetectionReason, type UiLanguage } from '../platform/i18n';
+import { categoryFromDetection, collectLinkDomains } from '../community/contribute';
 import type { KeywordPackCatalog } from './keyword-packs';
 
 /** 标注时刻收集的内容证据（上报载荷，见 contribute.ts）。 */

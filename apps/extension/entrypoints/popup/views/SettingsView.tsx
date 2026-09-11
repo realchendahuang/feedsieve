@@ -1,20 +1,20 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { MARK_STRENGTHS, type MarkStrength } from '@feedsieve/community-lists';
-import { getContributionStats, getInstallationId, type ContributionStats } from '../../../src/lib/contribute';
+import { getContributionStats, getInstallationId, type ContributionStats } from '../../../src/lib/community/contribute';
 import HunterProfile from './HunterProfile';
 import {
   getKeywordRuleSettings,
   replaceKeywordRuleSettings,
   subscribeKeywordRules,
   type KeywordRuleSettings,
-} from '../../../src/lib/keyword-rules';
+} from '../../../src/lib/detection/keyword-rules';
 import {
   BUNDLED_KEYWORD_PACK_CATALOG,
   getKeywordPackCatalog,
   subscribeKeywordPackCatalog,
   type KeywordPackCatalog,
-} from '../../../src/lib/keyword-packs';
-import type { CommunitySettings } from '../../../src/lib/community-store';
+} from '../../../src/lib/detection/keyword-packs';
+import type { CommunitySettings } from '../../../src/lib/community/community-store';
 import {
   createPersonalConfigDocument,
   MAX_PERSONAL_CONFIG_BYTES,
@@ -24,8 +24,8 @@ import {
   type PersonalConfigImportMode,
   type PersonalConfigImportResult,
   type PersonalConfigParseError,
-} from '../../../src/lib/personal-config';
-import { setUiLanguage, UI_COPY, type UiLanguage } from '../../../src/lib/i18n';
+} from '../../../src/lib/settings/personal-config';
+import { setUiLanguage, UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
 import { HelpIcon, STRENGTH_LABELS, STRENGTH_HINTS } from './shared';
 
 interface PersonalConfigPreviewState {

@@ -6,10 +6,10 @@
  */
 
 import { resolveUserIdByHandle, runNativeAction } from '@feedsieve/x-adapter';
-import { getBlockedAccounts, removeBlockedAccount } from './blocked-accounts';
-import { bumpStat } from './local-stats';
-import { bumpDaily } from './daily-stats';
-import { getUserId, saveUserIds } from './user-ids';
+import { getBlockedAccounts, removeBlockedAccount } from '../community/blocked-accounts';
+import { bumpStat } from '../stats/local-stats';
+import { bumpDaily } from '../stats/daily-stats';
+import { getUserId, saveUserIds } from '../community/user-ids';
 
 export interface UnblockBatchResult {
   unblocked: string[];

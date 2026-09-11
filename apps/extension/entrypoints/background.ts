@@ -5,10 +5,10 @@ import {
   getCommunityKillSwitch,
   snapshotStore,
   type OfficialPauseState,
-} from '../src/lib/community-store';
-import { flushContributions } from '../src/lib/contribute';
-import { syncKeywordPackCatalog } from '../src/lib/keyword-packs';
-import { getChromeSidePanel } from '../src/lib/sidepanel';
+} from '../src/lib/community/community-store';
+import { flushContributions } from '../src/lib/community/contribute';
+import { syncKeywordPackCatalog } from '../src/lib/detection/keyword-packs';
+import { getChromeSidePanel } from '../src/lib/platform/sidepanel';
 
 export default defineBackground(() => {
   // MV3 service worker 随时可能被回收：这里只做事件入口。

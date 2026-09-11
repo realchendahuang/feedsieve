@@ -4,7 +4,7 @@ import React, { act } from 'react';
 import ReactDOM from 'react-dom/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
-import type { PersistentBlockQueueState } from '../../src/lib/block-queue-store';
+import type { PersistentBlockQueueState } from '../../src/lib/queue/block-queue-store';
 
 let storageSet: ReturnType<typeof vi.fn>;
 let runtimeSendMessage: ReturnType<typeof vi.fn>;

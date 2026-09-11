@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { parseSnapshotBody, type CommunityEntry } from '@feedsieve/community-lists';
 import { shouldPauseDestructive, type XAdapterCapabilities } from '@feedsieve/x-adapter';
-import { getBlockedAccounts, subscribeBlocked } from '../../src/lib/blocked-accounts';
-import { getAllowlist, subscribeAllowlist } from '../../src/lib/allowlist';
-import { getFollowingAllowlist, subscribeFollowingAllowlist } from '../../src/lib/following-allowlist';
+import { getBlockedAccounts, subscribeBlocked } from '../../src/lib/community/blocked-accounts';
+import { getAllowlist, subscribeAllowlist } from '../../src/lib/community/allowlist';
+import { getFollowingAllowlist, subscribeFollowingAllowlist } from '../../src/lib/community/following-allowlist';
 import {
   getCommunityKillSwitch,
   getCommunitySettings,
@@ -12,14 +12,14 @@ import {
   setCommunitySettings,
   subscribeCommunity,
   type CommunitySettings,
-} from '../../src/lib/community-store';
+} from '../../src/lib/community/community-store';
 import {
   defaultUiLanguage,
   getUiLanguage,
   subscribeUiLanguage,
   UI_COPY,
   type UiLanguage,
-} from '../../src/lib/i18n';
+} from '../../src/lib/platform/i18n';
 import CleanView from './views/CleanView';
 import ListsView from './views/ListsView';
 import KeywordsView from './views/KeywordsView';

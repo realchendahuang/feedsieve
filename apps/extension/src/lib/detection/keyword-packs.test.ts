@@ -35,7 +35,8 @@ beforeEach(() => {
 describe('远程关键词包契约', () => {
   it('构建时词库只保留黄推 / 成人引流包（其余行业包已于 2026-09-11 移除）、成人高召回规则和分词组合', () => {
     expect(BUNDLED_KEYWORD_PACK_CATALOG.packs).toHaveLength(1);
-    expect(BUNDLED_KEYWORD_PACK_CATALOG.packs[0].id).toBe('adult_gray_traffic');
+    const [bundledPack] = BUNDLED_KEYWORD_PACK_CATALOG.packs;
+    expect(bundledPack?.id).toBe('adult_gray_traffic');
     expect(BUNDLED_KEYWORD_PACK_CATALOG.pack_version).toBe('2026.09.11.4');
     expect(
       BUNDLED_KEYWORD_PACK_CATALOG.packs.reduce((count, pack) => count + pack.rules.length, 0),

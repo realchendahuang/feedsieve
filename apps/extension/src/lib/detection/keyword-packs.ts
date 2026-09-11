@@ -1,4 +1,4 @@
-import bundledCatalogJson from '../../../../community/keyword-packs/official.json';
+import bundledCatalogJson from '../../../../../community/keyword-packs/official.json';
 import {
   buildSigningMessage,
   compareManifestVersions,
@@ -7,7 +7,7 @@ import {
   type ManifestSignature,
   type TrustedKey,
 } from '@feedsieve/community-lists';
-import { API_BASE } from './api-base';
+import { API_BASE } from '../platform/api-base';
 
 export interface KeywordPackRule {
   id: string;

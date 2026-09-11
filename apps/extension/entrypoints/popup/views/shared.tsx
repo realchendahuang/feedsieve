@@ -1,9 +1,9 @@
 import { useId, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import type { MarkStrength } from '@feedsieve/community-lists';
-import type { AllowlistItem } from '../../../src/lib/allowlist';
-import { normalizeStrictHandle } from '../../../src/lib/xhr-bridge-guard';
-import { localizedDetectionReason, type UiLanguage } from '../../../src/lib/i18n';
+import type { AllowlistItem } from '../../../src/lib/community/allowlist';
+import { normalizeStrictHandle } from '../../../src/lib/platform/xhr-bridge-guard';
+import { localizedDetectionReason, type UiLanguage } from '../../../src/lib/platform/i18n';
 import { formatAgo as sharedFormatAgo } from '@feedsieve/shared';
 
 export type AppIconName =
@@ -281,5 +281,5 @@ export function normalizeManualInput(value: string): string | null {
   return /^[a-z0-9_]{1,15}$/.test(handle) ? handle : null;
 }
 
-export { getChromeSidePanel, type ChromeSidePanelApi } from '../../../src/lib/sidepanel';
+export { getChromeSidePanel, type ChromeSidePanelApi } from '../../../src/lib/platform/sidepanel';
 

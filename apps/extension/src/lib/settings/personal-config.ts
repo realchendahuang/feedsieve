@@ -1,14 +1,14 @@
 import { isMarkStrength, type MarkStrength } from '@feedsieve/community-lists';
-import type { CommunitySettings } from './community-store';
-import type { UiLanguage } from './i18n';
-import type { KeywordPackCatalog } from './keyword-packs';
+import type { CommunitySettings } from '../community/community-store';
+import type { UiLanguage } from '../platform/i18n';
+import type { KeywordPackCatalog } from '../detection/keyword-packs';
 import {
   isValidPhrase,
   MAX_CUSTOM_KEYWORD_RULES,
   normalizeKeywordPhrase,
   type CustomKeywordRule,
   type KeywordRuleSettings,
-} from './keyword-rules';
+} from '../detection/keyword-rules';
 
 /**
  * 用户主动下载的本地配置文件。它不是账号资料、社区名单或第三方规则包。

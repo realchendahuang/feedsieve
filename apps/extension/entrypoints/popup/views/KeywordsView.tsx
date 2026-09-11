@@ -8,14 +8,14 @@ import {
   setOfficialKeywordRuleEnabled,
   subscribeKeywordRules,
   type KeywordRuleSettings,
-} from '../../../src/lib/keyword-rules';
+} from '../../../src/lib/detection/keyword-rules';
 import {
   BUNDLED_KEYWORD_PACK_CATALOG,
   getKeywordPackCatalog,
   subscribeKeywordPackCatalog,
   type KeywordPackCatalog,
-} from '../../../src/lib/keyword-packs';
-import { UI_COPY, type UiLanguage } from '../../../src/lib/i18n';
+} from '../../../src/lib/detection/keyword-packs';
+import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
 import { AppIcon, HelpIcon } from './shared';
 
 interface KeywordsViewProps {

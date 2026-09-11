@@ -10,7 +10,7 @@ import { contentFingerprint, type DetectInput } from '@feedsieve/detector';
 import { afterAll, describe, expect, it } from 'vitest';
 import { communityHitReason, runDetectionPipeline, type DetectionPipelineInput } from './detection-pipeline';
 import { BUNDLED_KEYWORD_PACK_CATALOG } from './keyword-packs';
-import type { RuntimeCommunity } from './community-store';
+import type { RuntimeCommunity } from '../community/community-store';
 import type { CommunityEntry } from '@feedsieve/community-lists';
 
 const ENTRY: CommunityEntry = {

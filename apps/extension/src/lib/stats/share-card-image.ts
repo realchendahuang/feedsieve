@@ -8,7 +8,7 @@
 
 import type { DailyStat } from './daily-stats';
 import { buildReportText } from './share-card';
-import { categoryLabel, type UiLanguage } from './i18n';
+import { categoryLabel, type UiLanguage } from '../platform/i18n';
 import { estimateTimeSaved } from './time-saved';
 
 export const CARD_WIDTH = 1200;

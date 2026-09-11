@@ -1,5 +1,5 @@
 import { mayMatchEndpoint, parseXApiResponse } from '@feedsieve/x-adapter';
-import { createParseThrottle } from '../src/lib/xhr-bridge-guard';
+import { createParseThrottle } from '../src/lib/platform/xhr-bridge-guard';
 
 /**
  * 网络桥（MAIN world）—— 机制来自 PureTwitter（docs/research/PURETWITTER_MECHANISM.md）。

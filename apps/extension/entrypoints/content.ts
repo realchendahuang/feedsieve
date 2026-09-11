@@ -1,6 +1,6 @@
 import { toHandleSet, type Detection } from '@feedsieve/detector';
 import { runQueuedBlocks } from '@feedsieve/block-queue';
-import { PageScanController, scanRevision } from '../src/lib/page-scan-controller';
+import { PageScanController, scanRevision } from '../src/lib/detection/page-scan-controller';
 import {
   contextFromPath,
   extractFeedItem,
@@ -10,36 +10,36 @@ import {
   runNativeAction,
   tweetSelectors,
 } from '@feedsieve/x-adapter';
-import { getBlockedAccounts, markBlocked, subscribeBlocked } from '../src/lib/blocked-accounts';
-import { bumpStat } from '../src/lib/local-stats';
-import { bumpDaily } from '../src/lib/daily-stats';
+import { getBlockedAccounts, markBlocked, subscribeBlocked } from '../src/lib/community/blocked-accounts';
+import { bumpStat } from '../src/lib/stats/local-stats';
+import { bumpDaily } from '../src/lib/stats/daily-stats';
 import {
   HIDDEN_TWEET_CELL_ATTRIBUTE,
   hideCellsSoon,
   mutateWithStableViewport,
-} from '../src/lib/remove-tweets';
-import { runUnblockBatch } from '../src/lib/run-unblock-batch';
-import { getUserId, saveUserIds } from '../src/lib/user-ids';
+} from '../src/lib/platform/remove-tweets';
+import { runUnblockBatch } from '../src/lib/queue/run-unblock-batch';
+import { getUserId, saveUserIds } from '../src/lib/community/user-ids';
 import {
   buildRuntimeCommunity,
   requestOfficialPauseCheck,
   subscribeCommunity,
   type RuntimeCommunity,
-} from '../src/lib/community-store';
+} from '../src/lib/community/community-store';
 import {
   addAllowlist,
   getAllowlist,
   removeAllowed,
   subscribeAllowlist,
-} from '../src/lib/allowlist';
+} from '../src/lib/community/allowlist';
 import {
   contributeBlocks,
   rescueHandle,
   syncLocalLabels,
-} from '../src/lib/contribute';
-import { getCommunitySettings } from '../src/lib/community-store';
-import { runDetectionPipeline, type BlockEvidence } from '../src/lib/detection-pipeline';
-import { recordDetection } from '../src/lib/detection-log';
+} from '../src/lib/community/contribute';
+import { getCommunitySettings } from '../src/lib/community/community-store';
+import { runDetectionPipeline, type BlockEvidence } from '../src/lib/detection/detection-pipeline';
+import { recordDetection } from '../src/lib/detection/detection-log';
 import {
   getFollowingAllowlist,
   getSelfHandle,
@@ -48,20 +48,20 @@ import {
   subscribeFollowingAllowlist,
   subscribeSelfHandle,
   upsertFollowingAccounts,
-} from '../src/lib/following-allowlist';
-import { createFollowingSync } from '../src/lib/following-sync';
+} from '../src/lib/community/following-allowlist';
+import { createFollowingSync } from '../src/lib/community/following-sync';
 import {
   createPersistentBlockQueue,
   getPersistentBlockQueue,
   sanitizeQueueItem,
   setPersistentBlockQueue,
   type PersistentBlockQueueState,
-} from '../src/lib/block-queue-store';
+} from '../src/lib/queue/block-queue-store';
 import {
   createQueueSupervisor,
   QUEUE_HEARTBEAT_KEY,
-} from '../src/lib/queue-supervisor';
-import { sanitizeBridgePayload, STRICT_HANDLE_RE } from '../src/lib/xhr-bridge-guard';
+} from '../src/lib/queue/queue-supervisor';
+import { sanitizeBridgePayload, STRICT_HANDLE_RE } from '../src/lib/platform/xhr-bridge-guard';
 import {
   currentAccountKey,
   DEFAULT_PRESET,
@@ -72,24 +72,24 @@ import {
   recordSafetyEvent,
   shouldPauseForQuota,
   type SafetyPreset,
-} from '../src/lib/block-safety';
+} from '../src/lib/queue/block-safety';
 import {
   getUiLanguage,
   subscribeUiLanguage,
   type UiLanguage,
-} from '../src/lib/i18n';
+} from '../src/lib/platform/i18n';
 import {
   createKeywordHeuristics,
   getKeywordRuleSettings,
   subscribeKeywordRules,
-} from '../src/lib/keyword-rules';
+} from '../src/lib/detection/keyword-rules';
 import {
   BUNDLED_KEYWORD_PACK_CATALOG,
   getKeywordPackCatalog,
   KEYWORD_PACK_SYNC_MAX_AGE_MS,
   subscribeKeywordPackCatalog,
   type KeywordPackCatalog,
-} from '../src/lib/keyword-packs';
+} from '../src/lib/detection/keyword-packs';
 import builtinListJson from '../../../community/lists/official.json';
 
 /**

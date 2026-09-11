@@ -2,22 +2,22 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { runUnblockBatch } from './run-unblock-batch';
 
 // run-unblock-batch 依赖的是 storage 薄包装，全部 mock；只验证执行编排与失败码透传
-vi.mock('./blocked-accounts', () => ({
+vi.mock('../community/blocked-accounts', () => ({
   getBlockedAccounts: vi.fn(),
   removeBlockedAccount: vi.fn(),
 }));
-vi.mock('./local-stats', () => ({ bumpStat: vi.fn() }));
-vi.mock('./daily-stats', () => ({ bumpDaily: vi.fn() }));
-vi.mock('./user-ids', () => ({ getUserId: vi.fn(), saveUserIds: vi.fn() }));
+vi.mock('../stats/local-stats', () => ({ bumpStat: vi.fn() }));
+vi.mock('../stats/daily-stats', () => ({ bumpDaily: vi.fn() }));
+vi.mock('../community/user-ids', () => ({ getUserId: vi.fn(), saveUserIds: vi.fn() }));
 vi.mock('@feedsieve/x-adapter', () => ({
   resolveUserIdByHandle: vi.fn(),
   runNativeAction: vi.fn(),
 }));
 
-import { getBlockedAccounts, removeBlockedAccount } from './blocked-accounts';
-import { bumpDaily } from './daily-stats';
-import { bumpStat } from './local-stats';
-import { getUserId } from './user-ids';
+import { getBlockedAccounts, removeBlockedAccount } from '../community/blocked-accounts';
+import { bumpDaily } from '../stats/daily-stats';
+import { bumpStat } from '../stats/local-stats';
+import { getUserId } from '../community/user-ids';
 import { resolveUserIdByHandle, runNativeAction } from '@feedsieve/x-adapter';
 
 const mockedGetBlocked = vi.mocked(getBlockedAccounts);

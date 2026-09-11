@@ -5,7 +5,7 @@
  * chrome.storage.local 持久化。
  */
 
-import { enqueueStorageWrite } from './storage-mutex';
+import { enqueueStorageWrite } from '../platform/storage-mutex';
 
 export interface BlockedAccount {
   handle: string;

@@ -6,7 +6,7 @@
  */
 
 import type { DailyStat } from './daily-stats';
-import { categoryLabel, type UiLanguage } from './i18n';
+import { categoryLabel, type UiLanguage } from '../platform/i18n';
 import { CATEGORIES as CATEGORY_ORDER } from '@feedsieve/shared';
 
 /** 贡献分类 -> 战报里的中文标签（与社区分类一一对应，2-4 字） */

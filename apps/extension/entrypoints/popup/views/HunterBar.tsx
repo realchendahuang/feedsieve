@@ -3,15 +3,15 @@ import {
   getTodayStat,
   subscribeDaily,
   todayKey,
-} from '../../../src/lib/daily-stats';
+} from '../../../src/lib/stats/daily-stats';
 import {
   loadSafetyLedger,
   remainingQuota,
   rolloverBudget,
   subscribeSafetyLedger,
-} from '../../../src/lib/block-safety';
-import { fetchHunterStatus, openLeaderboard, type HunterStatus } from '../../../src/lib/hunter';
-import { UI_COPY, type UiLanguage } from '../../../src/lib/i18n';
+} from '../../../src/lib/queue/block-safety';
+import { fetchHunterStatus, openLeaderboard, type HunterStatus } from '../../../src/lib/community/hunter';
+import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
 
 /**
  * 战报线（popup 首页底部）：今日猎获 / 子弹余量 / 本周排名。本地数据实时

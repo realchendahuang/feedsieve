@@ -3,8 +3,8 @@
 import { describe, expect, it } from 'vitest';
 import { detect } from '@feedsieve/detector';
 import { extractFeedItem } from '@feedsieve/x-adapter';
-import { HOME_TIMELINE_HTML } from '../../../../fixtures/x/timeline/home-timeline';
-import { SEARCH_F_LIVE_HTML } from '../../../../fixtures/x/timeline/search-f-live';
+import { HOME_TIMELINE_HTML } from '../../../../../fixtures/x/timeline/home-timeline';
+import { SEARCH_F_LIVE_HTML } from '../../../../../fixtures/x/timeline/search-f-live';
 
 function detectAll(html: string): Array<{ handle: string; detection: ReturnType<typeof detect> }> {
   document.body.innerHTML = html;

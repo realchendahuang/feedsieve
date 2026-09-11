@@ -9,7 +9,7 @@
 import { COMMUNITY_API_BASE, getCommunitySettings } from './community-store';
 import { getAllowlist, type FalsePositiveEvidence } from './allowlist';
 import { getBlockedAccounts } from './blocked-accounts';
-import { categoryForKeywordRuleId } from './keyword-rules';
+import { categoryForKeywordRuleId } from '../detection/keyword-rules';
 import { upgradeBlockedCategories } from './category-upgrade';
 
 export interface ContributionItem {

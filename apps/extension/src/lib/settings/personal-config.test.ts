@@ -9,7 +9,7 @@ import {
   type PersonalConfigContext,
   type PersonalConfigDocument,
 } from './personal-config';
-import { BUNDLED_KEYWORD_PACK_CATALOG } from './keyword-packs';
+import { BUNDLED_KEYWORD_PACK_CATALOG } from '../detection/keyword-packs';
 
 function context(overrides: Partial<PersonalConfigContext> = {}): PersonalConfigContext {
   return {
