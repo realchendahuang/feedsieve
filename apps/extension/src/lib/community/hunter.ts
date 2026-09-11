@@ -9,6 +9,49 @@
 import { API_BASE } from '../platform/api-base';
 import { getInstallationId, peekInstallationId } from './contribute';
 
+// 弹窗每次打开都是新页面，内存缓存无效：缓存落 storage.local，跨打开复用。
+// TTL 与服务端榜单新鲜容忍（90s）同量级；网络失败回退陈旧数据而不是空态。
+interface CacheEntry<T> {
+  /** 归属安装 ID：换装/重置不串数据 */
+  installationId: string | null;
+  ts: number;
+  data: T;
+}
+
+const BOARD_CACHE_KEY = 'hunterBoardCache';
+const PROFILE_CACHE_KEY = 'hunterProfileCache';
+const BOARD_TTL_MS = 60_000;
+const PROFILE_TTL_MS = 120_000;
+
+async function readHunterCache<T>(key: string, installationId: string | null, ttl: number): Promise<CacheEntry<T> | null> {
+  try {
+    const stored = await browser.storage.local.get(key);
+    const entry = stored[key] as CacheEntry<T> | undefined;
+    if (!entry || Date.now() - entry.ts > ttl) return null;
+    if (entry.installationId && installationId && entry.installationId !== installationId) return null;
+    return entry;
+  } catch {
+    return null;
+  }
+}
+
+async function writeHunterCache<T>(key: string, installationId: string | null, data: T): Promise<void> {
+  try {
+    await browser.storage.local.set({ [key]: { installationId, ts: Date.now(), data } });
+  } catch {
+    // 存储失败只是丢缓存，不打扰
+  }
+}
+
+/** 档案变化（绑定/验证/保存）后主动失效；不变化时走 TTL。 */
+export async function invalidateHunterCaches(): Promise<void> {
+  try {
+    await browser.storage.local.remove([BOARD_CACHE_KEY, PROFILE_CACHE_KEY]);
+  } catch {
+    // 忽略存储失败
+  }
+}
+
 export interface HunterStatus {
   /** me 高亮前缀（加盐哈希前 12 位 hex）；未上榜（还没开火）为 null */
   mePrefix: string | null;
@@ -49,20 +92,29 @@ export interface HunterBoard {
   me: HunterBoardRow | null;
 }
 
-/** 榜单速览（name/Top10 + 我 + 总人数）。失败返回 null，由调用方降级空态。 */
+/** 榜单速览（name/Top10 + 我 + 总人数）。新鲜走缓存；失败回退陈旧缓存兜底空态。 */
 export async function fetchHunterBoard(): Promise<HunterBoard | null> {
   const installationId = await peekInstallationId();
+  const fresh = await readHunterCache<HunterBoard>(BOARD_CACHE_KEY, installationId, BOARD_TTL_MS);
+  if (fresh) return fresh.data;
   try {
     const res = await fetch(`${API_BASE}/v1/leaderboard`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(installationId ? { installation_id: installationId } : {}),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const stale = await readHunterCache<HunterBoard>(BOARD_CACHE_KEY, installationId, Number.MAX_SAFE_INTEGER);
+      return stale?.data ?? null;
+    }
     const data = (await res.json()) as LeaderboardResponse;
-    return { rows: data.rows.slice(0, 10), total: data.total ?? 0, me: data.me };
+    const board: HunterBoard = { rows: data.rows.slice(0, 10), total: data.total ?? 0, me: data.me };
+    await writeHunterCache(BOARD_CACHE_KEY, installationId, board);
+    return board;
   } catch {
-    return null;
+    // 陈旧也去而没有一点数据的网络/服务端故障 → 陈旧兜底
+    const stale = await readHunterCache<HunterBoard>(BOARD_CACHE_KEY, installationId, Number.MAX_SAFE_INTEGER);
+    return stale?.data ?? null;
   }
 }
 
@@ -98,20 +150,28 @@ export interface HunterProfileState {
   email_verified: boolean;
 }
 
-/** 当前猎手档案（设置区展示）。未绑定过 / 无网时 null，由调用方降级。 */
+/** 当前猎手档案（设置区展示）。失败回退陈旧缓存；无缓存且无安装时 null。 */
 export async function fetchHunterProfile(): Promise<HunterProfileState | null> {
   const installationId = await peekInstallationId();
   if (!installationId) return null;
+  const fresh = await readHunterCache<HunterProfileState>(PROFILE_CACHE_KEY, installationId, PROFILE_TTL_MS);
+  if (fresh) return fresh.data;
   try {
     const res = await fetch(`${API_BASE}/v1/player/me`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ installation_id: installationId }),
     });
-    if (!res.ok) return null;
-    return (await res.json()) as HunterProfileState;
+    if (!res.ok) {
+      const stale = await readHunterCache<HunterProfileState>(PROFILE_CACHE_KEY, installationId, Number.MAX_SAFE_INTEGER);
+      return stale?.data ?? null;
+    }
+    const value = (await res.json()) as HunterProfileState;
+    await writeHunterCache(PROFILE_CACHE_KEY, installationId, value);
+    return value;
   } catch {
-    return null;
+    const stale = await readHunterCache<HunterProfileState>(PROFILE_CACHE_KEY, installationId, Number.MAX_SAFE_INTEGER);
+    return stale?.data ?? null;
   }
 }
 
@@ -131,6 +191,7 @@ export async function bindHunterEmail(email: string): Promise<HunterBindResult> 
     });
     if (!res.ok) return { ok: false, error: await res.json().then((v) => v?.error ?? '').catch(() => '') };
     const value = (await res.json()) as { sent: boolean; dev_code?: string };
+    await invalidateHunterCaches();
     return { ok: true, sent: value.sent, dev_code: value.dev_code };
   } catch {
     return { ok: false, error: 'network_error' };
@@ -148,7 +209,10 @@ export async function verifyHunterEmail(
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ installation_id: installationId, email, code }),
     });
-    if (res.ok) return { ok: true };
+    if (res.ok) {
+      await invalidateHunterCaches();
+      return { ok: true };
+    }
     return { ok: false, error: await res.json().then((v) => v?.error ?? '').catch(() => 'network_error') };
   } catch {
     return { ok: false, error: 'network_error' };
@@ -174,7 +238,9 @@ export async function saveHunterProfile(
       }),
     });
     if (res.status === 400) return { ok: false, invalid: true };
-    return { ok: res.ok };
+    const ok = res.ok;
+    if (ok) await invalidateHunterCaches();
+    return { ok };
   } catch {
     return { ok: false };
   }
