@@ -71,7 +71,7 @@ community/
 fixtures/x/                # X DOM 回归测试
 ```
 
-> 规划中：`packages/shared`（跨端领域词表收敛）。E2E 层（Playwright）见 §14。
+> `packages/shared`（跨端领域词汇收敛）已落地。E2E 层（Playwright，规划中）见 §14。
 
 ## 4. Browser Extension 上下文
 

@@ -206,7 +206,7 @@ PureTwitter 用同一机制跑了数年。桥只读网络响应，不调用页�
 
 ## 8. Block Queue
 
-批量拉黑队列是 v0.1 的核心交付（见 [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) Phase 3），放在独立 package `block-queue`。
+批量拉黑队列是 v0.1 的核心交付（见 [`archive/IMPLEMENTATION_PLAN.md`](archive/IMPLEMENTATION_PLAN.md) Phase 3），放在独立 package `block-queue`。
 
 研究现有共享黑名单脚本后可以确认：
 

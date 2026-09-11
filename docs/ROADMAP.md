@@ -1,6 +1,6 @@
 # FeedSieve Roadmap
 
-> 实施细节见 [`TECHNICAL_SPEC.md`](TECHNICAL_SPEC.md) 与 [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md)。
+> 实施细节见 [`TECHNICAL_SPEC.md`](TECHNICAL_SPEC.md)；开发顺序的历史规划已归档至 [`archive/IMPLEMENTATION_PLAN.md`](archive/IMPLEMENTATION_PLAN.md)。
 
 ## v0.1 — 能真正拉黑
 
