@@ -240,16 +240,16 @@ describe('popup App 渲染冒烟', () => {
     const rootEl = renderApp();
     await new Promise((r) => setTimeout(r, 150));
 
-    await act(async () => buttonWithText(rootEl, '名单').click());
+    await act(async () => buttonWithText(rootEl, '关键词').click());
     const helpIcon = rootEl.querySelector<HTMLElement>(
-      '[aria-label="社区确认的垃圾账号名单；拉黑仍由你一键确认，并自动保护关注、白名单和已拉黑账号。"]',
+      '[aria-label="命中会标黄，是否拉黑由你决定。"]',
     );
     if (!helpIcon) throw new Error('community help icon not found');
 
     await act(async () => {
       helpIcon.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
     });
-    expect(document.body.querySelector('[role="tooltip"]')?.textContent).toContain('社区确认的垃圾账号名单');
+    expect(document.body.querySelector('[role="tooltip"]')?.textContent).toContain('命中会标黄');
 
     await act(async () => {
       helpIcon.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));

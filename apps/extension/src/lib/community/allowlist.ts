@@ -7,6 +7,8 @@
 export interface AllowlistItem {
   handle: string;
   xUserId?: string;
+  /** 当时的账号昵称：白名单行要显示名字，光看 handle 认不出是谁。 */
+  displayName?: string;
   addedAt: number;
   /** 当时的检测证据：用于本机回看误标原因；旧记录没有这些字段也保持兼容。 */
   detectionSource?: string;
@@ -38,6 +40,7 @@ export async function addAllowlist(
   handle: string,
   xUserId?: string,
   evidence?: FalsePositiveEvidence,
+  displayName?: string,
 ): Promise<void> {
   const normalized = normalize(handle);
   if (!normalized) {
@@ -50,6 +53,7 @@ export async function addAllowlist(
   items.push({
     handle: normalized,
     addedAt: Date.now(),
+    ...(displayName ? { displayName } : {}),
     ...(xUserId ? { xUserId } : {}),
     ...(evidence?.detectionSource ? { detectionSource: evidence.detectionSource } : {}),
     ...(evidence?.ruleId ? { ruleId: evidence.ruleId } : {}),

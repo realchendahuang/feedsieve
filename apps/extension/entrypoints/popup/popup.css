@@ -399,31 +399,40 @@ input:focus-visible + span {
   outline-offset: 2px;
 }
 
-.community-clean-metrics {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.community-clean-metrics span {
+/* 名单前端操作区：排序 / 版本 / 刷新（替代原冗余标题+统计条） */
+.list-head-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 11px;
-  border-radius: 10px;
-  background: #fafaf9;
-  border: 1px solid var(--fs-line);
-  color: var(--fs-muted);
-  font-size: 11px;
-  font-weight: 500;
+  justify-content: flex-end;
+  gap: 8px;
+  min-height: 30px;
 }
 
-.community-clean-metrics strong {
-  color: var(--fs-ink);
-  font-size: 14px;
-  font-weight: 750;
-  font-variant-numeric: tabular-nums;
+.sort-toggle {
+  display: inline-flex;
+  border-radius: 8px;
+  border: 1px solid var(--fs-line-strong);
+  overflow: hidden;
+}
+
+.sort-toggle button {
+  border: 0;
+  background: transparent;
+  color: var(--fs-muted);
+  font-size: 11px;
+  font-weight: 650;
+  padding: 4px 9px;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.sort-toggle button + button {
+  border-left: 1px solid var(--fs-line);
+}
+
+.sort-toggle button.is-selected {
+  background: var(--fs-accent-faint);
+  color: var(--fs-accent-strong);
 }
 
 .community-clean-action {

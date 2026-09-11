@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { CommunityEntry } from '@feedsieve/community-lists';
 import { getBlockedAccounts, subscribeBlocked, type BlockedAccount } from '../../../src/lib/community/blocked-accounts';
 import {
@@ -37,7 +37,6 @@ import {
   FAILURE_LABELS,
   formatAgo,
   formatDate,
-  HelpIcon,
   normalizeManualInput,
   type CommunityMeta,
 } from './shared';
@@ -104,6 +103,8 @@ export default function ListsView({
   const [queue, setQueue] = useState<PersistentBlockQueueState | null>(null);
   // 安全额度条：滚动 24h 已用数（暂停原因文案用到预算上限）
   const [safety, setSafety] = useState<SafetyLedger | null>(null);
+  // 社区名单排序：默认票数多→少，可切字母序
+  const [sortMode, setSortMode] = useState<'votes' | 'alpha'>('votes');
 
   async function runManualBlock(): Promise<void> {
     const handle = normalizeManualInput(manualHandle);
@@ -294,7 +295,14 @@ export default function ListsView({
   const cloudEligible = communityEntries.filter((entry) =>
     cloudEligibleSet.has(entry.handle.toLowerCase()),
   );
-  const cloudExcluded = communityEntries.length - cloudEligible.length;
+  const sortedEntries = useMemo(() => {
+    if (sortMode === 'alpha') {
+      return [...communityEntries].sort((a, b) => a.handle.localeCompare(b.handle));
+    }
+    return [...communityEntries].sort(
+      (a, b) => b.net_votes - a.net_votes || a.handle.localeCompare(b.handle),
+    );
+  }, [communityEntries, sortMode]);
   const queueSummary = blockQueueProgress(queue);
   const queueDone = queueSummary.success + queueSummary.failed;
   const queueActive =
@@ -396,43 +404,47 @@ export default function ListsView({
       >
         {listView === 'community' ? (
           <>
-            <div className="section-heading compact">
-              <h2 id="community-clean-title">
-                {t.communityClean} <HelpIcon text={t.communityCleanHint} />
-              </h2>
-              <div className="settings-head-actions">
-                <span
-                  className={`community-meta${communityMeta ? ' is-ready' : ''}`}
-                  title={
-                    communityMeta
-                      ? `v${communityMeta.version} · ${formatAgo(communityMeta.syncedAt, language)}`
-                      : t.listLoading
-                  }
-                >
-                  {communityMeta ? `${communityMeta.count} · v${communityMeta.version}` : '…'}
-                </span>
+            <div className="settings-head-actions list-head-actions">
+              <div className="sort-toggle" role="group" aria-label={`${t.sortVotes}/${t.sortAlpha}`}>
                 <button
                   type="button"
-                  className={`square-action small${syncing ? ' is-spinning' : ''}`}
-                  aria-label={t.syncNow}
-                  title={t.syncNow}
-                  disabled={syncing}
-                  onClick={() => void syncCommunityNow()}
+                  className={sortMode === 'votes' ? 'is-selected' : ''}
+                  aria-pressed={sortMode === 'votes'}
+                  onClick={() => setSortMode('votes')}
                 >
-                  <AppIcon name="refresh" size={18} />
+                  {t.sortVotes}
+                </button>
+                <button
+                  type="button"
+                  className={sortMode === 'alpha' ? 'is-selected' : ''}
+                  aria-pressed={sortMode === 'alpha'}
+                  onClick={() => setSortMode('alpha')}
+                >
+                  {t.sortAlpha}
                 </button>
               </div>
+              <span
+                className={`community-meta${communityMeta ? ' is-ready' : ''}`}
+                title={
+                  communityMeta
+                    ? `v${communityMeta.version} · ${formatAgo(communityMeta.syncedAt, language)}`
+                    : t.listLoading
+                }
+              >
+                {communityMeta ? `${communityMeta.count} · v${communityMeta.version}` : '…'}
+              </span>
+              <button
+                type="button"
+                className={`square-action small${syncing ? ' is-spinning' : ''}`}
+                aria-label={t.syncNow}
+                title={t.syncNow}
+                disabled={syncing}
+                onClick={() => void syncCommunityNow()}
+              >
+                <AppIcon name="refresh" size={18} />
+              </button>
             </div>
             {syncMsg ? <p className="inline-notice">{syncMsg}</p> : null}
-
-            <div className="community-clean-metrics">
-              <span>
-                {t.cloudEligible} <strong>{cloudEligible.length}</strong>
-              </span>
-              <span>
-                {t.cloudProtected} <strong>{cloudExcluded}</strong>
-              </span>
-            </div>
 
             {/* 动作区固定在首屏（统计条之下、名单之上）：一键入口和队列进度
                 不能落到折叠线以下，否则 600px 弹窗里用户根本找不到发起入口。 */}
@@ -486,7 +498,7 @@ export default function ListsView({
 
             {communityEntries.length > 0 ? (
               <ul className="manage-list community-list" aria-label={t.communityClean}>
-                {communityEntries.map((entry) => {
+                {sortedEntries.map((entry) => {
                   const excluded = !cloudEligibleSet.has(entry.handle.toLowerCase());
                   return (
                     <li key={entry.handle} className={`manage-item community-item${excluded ? ' is-excluded' : ''}`}>
@@ -646,7 +658,14 @@ export default function ListsView({
                       {item.handle.slice(0, 1).toUpperCase()}
                     </span>
                     <div className="account-info">
-                      <span className="account-handle">@{item.handle}</span>
+                      <div className="account-line">
+                        <span className="account-handle">@{item.handle}</span>
+                        {item.displayName ? (
+                          <span className="account-name" title={item.displayName}>
+                            {item.displayName}
+                          </span>
+                        ) : null}
+                      </div>
                       <span className="account-meta">{formatDate(item.addedAt, language)}</span>
                       {item.detectionReason ? (
                         <span

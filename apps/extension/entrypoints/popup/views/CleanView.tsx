@@ -200,7 +200,7 @@ export default function CleanView({
       await addAllowlist(item.handle, undefined, {
         detectionSource: 'page-marked',
         detectionReason: item.reason,
-      });
+      }, item.displayName);
       notify(t.allowlistAdded(item.handle));
       await refreshPageMarked();
     } catch {
