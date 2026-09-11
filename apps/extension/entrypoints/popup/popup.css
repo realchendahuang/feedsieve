@@ -406,17 +406,18 @@ input:focus-visible + span {
   gap: 8px;
 }
 
-/* 版本 chip 在窄面板让位：可收缩省略号，完整信息悬浮再见 */
+/* 版本 chip 保持自然宽度不缩；剩余空间给一键拉黑，窄面板按钮内文字省略 */
 .list-head-actions .community-meta {
-  flex: 1;
+  flex: none;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .list-head-actions .community-clean-action {
-  flex: 1 0 auto;
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   min-height: 36px;
   padding: 0 12px;
   font-size: 12.5px;
@@ -2335,11 +2336,11 @@ input:focus-visible + span {
 }
 
 .bottom-nav {
-  flex: 0 0 64px;
+  flex: 0 0 60px;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-  padding: 6px 14px 8px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 2px;
+  padding: 6px 8px 8px;
   border-top: 1px solid rgba(0, 0, 0, 0.06);
   background: rgba(255, 255, 255, 0.86);
   backdrop-filter: blur(20px) saturate(180%);
@@ -2476,39 +2477,71 @@ input:focus-visible + span {
   min-width: 0;
 }
 
-/* 打野 tab：战报 + 周榜速览（流式固定排，禁用视口单位） */
-.hunter-report {
+/* 打野 tab：战报四格（数字大字 + 小标签），流式固定排，禁用视口单位 */
+.hunter-report-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.hunter-stat {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 14px;
-  font-size: 12.5px;
-  color: var(--fs-muted);
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--fs-line);
+  border-radius: var(--fs-radius-md, 10px);
+  background: rgba(255, 255, 255, 0.5);
+  min-width: 0;
   font-variant-numeric: tabular-nums;
 }
 
-.hunter-report .hunter-beaten {
+.hunter-stat-value {
+  font-size: 17px;
+  font-weight: 750;
+  line-height: 1.2;
+  color: var(--fs-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hunter-stat-hero .hunter-stat-value {
+  color: var(--fs-accent-strong);
+}
+
+.hunter-stat-label {
+  font-size: 11px;
   font-weight: 600;
-  color: var(--fs-accent);
+  color: var(--fs-muted);
+}
+
+.hunter-stat-sub {
+  font-size: 11px;
+  color: var(--fs-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .hunter-titles {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 6px;
+  margin-top: 10px;
 }
 
 .hunter-tier,
 .hunter-title-badge {
   font-size: 11.5px;
-  font-weight: 600;
+  font-weight: 650;
   color: #b8860b;
 }
 
 .hunter-title-badge {
   border: 1px solid currentColor;
   border-radius: 10px;
-  padding: 0 8px;
+  padding: 1px 8px;
 }
 
 .hunter-board {
@@ -2530,16 +2563,23 @@ input:focus-visible + span {
 }
 
 .hunter-row.is-me {
-  background: var(--fs-me-bg, rgba(184, 134, 11, 0.08));
-  border-radius: 6px;
+  background: var(--fs-accent-faint);
+  border-radius: 8px;
   border-bottom: 0;
+  padding: 7px 6px;
 }
 
 .hunter-rank {
-  width: 26px;
+  width: 30px;
   text-align: right;
   font-size: 12.5px;
+  font-weight: 650;
   color: var(--fs-muted);
+  flex-shrink: 0;
+}
+
+.hunter-rank.top {
+  color: #b8860b;
 }
 
 .hunter-who {
@@ -2552,7 +2592,7 @@ input:focus-visible + span {
 }
 
 .hunter-name {
-  font-weight: 600;
+  font-weight: 650;
   font-size: 13px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2576,6 +2616,7 @@ input:focus-visible + span {
   white-space: nowrap;
   display: flex;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .hunter-kills {
@@ -2586,6 +2627,8 @@ input:focus-visible + span {
 .hunter-accuracy {
   font-size: 12px;
   color: var(--fs-muted);
+  min-width: 34px;
+  text-align: right;
 }
 
 .hunter-unranked {
