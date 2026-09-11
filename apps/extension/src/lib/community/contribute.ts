@@ -161,8 +161,50 @@ export function contributeBlocks(items: ContributionItem[]): void {
   }
 }
 
-/** background 启动时先兼容补交旧版积压，再同步完整本地黑白名单。 */
-export async function flushContributions(): Promise<void> {
+/**
+ * 关键词贡献（v0.8.1）：用户在关键词页显式把自己的短语提交给运营审阅入库。
+ * 显式动作，但仍尊重 autoContribute 总开关（关 = 不参与社区）。
+ * 只上传短语本身；命中这些短语的账号走既有通用通道，短语不出这条链路。
+ */
+export interface KeywordPhraseContributionOutcome {
+  status: 'recorded' | 'duplicate' | 'failed' | 'community_disabled';
+}
+
+export async function contributeKeywordPhrases(
+  phrases: string[],
+): Promise<KeywordPhraseContributionOutcome> {
+  const settings = await getCommunitySettings();
+  if (!settings.autoContribute) {
+    return { status: 'community_disabled' };
+  }
+  try {
+    const installationId = await getInstallationId();
+    const version = browser.runtime.getManifest().version;
+    const response = await fetch(`${COMMUNITY_API_BASE}/v1/keyword-contributions`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        installation_id: installationId,
+        client_version: version,
+        phrases,
+      }),
+    });
+    if (!response.ok) {
+      return { status: 'failed' };
+    }
+    const body = (await response.json()) as {
+      results?: { status?: string }[];
+    };
+    const statuses = body.results?.map((item) => item.status) ?? [];
+    return statuses.includes('recorded') || statuses.includes('duplicate')
+      ? { status: 'recorded' }
+      : { status: 'failed' };
+  } catch {
+    return { status: 'failed' };
+  }
+}
+
+/** background 启动时先兼容补交旧版积压，再同步完整本地黑白名单。 */ export async function flushContributions(): Promise<void> {
   const settings = await getCommunitySettings();
   if (!settings.autoContribute) {
     return;

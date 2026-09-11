@@ -1914,6 +1914,17 @@ input:focus-visible + span {
   font-size: 16px;
 }
 
+.custom-keyword-list .square-action {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.contributed-mark {
+  flex-shrink: 0;
+  color: var(--fs-accent, #16a34a);
+}
+
 .custom-keyword-list {
   margin-bottom: 8px;
 }

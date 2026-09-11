@@ -15,6 +15,8 @@ import {
   subscribeKeywordPackCatalog,
   type KeywordPackCatalog,
 } from '../../../src/lib/detection/keyword-packs';
+import { getCommunitySettings } from '../../../src/lib/community/community-store';
+import { contributeKeywordPhrases } from '../../../src/lib/community/contribute';
 import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
 import { AppIcon, HelpIcon } from './shared';
 
@@ -32,10 +34,15 @@ export default function KeywordsView({ language, notify }: KeywordsViewProps) {
   const [expandedKeywordCategory, setExpandedKeywordCategory] = useState<string | null>(null);
   const [customKeyword, setCustomKeyword] = useState('');
   const [syncing, setSyncing] = useState(false);
+  const [contributedIds, setContributedIds] = useState<Set<string>>(new Set());
+  const [contributionsOn, setContributionsOn] = useState(false);
 
   useEffect(() => {
     void getKeywordRuleSettings().then(setKeywordRules);
     void getKeywordPackCatalog().then(setKeywordCatalog);
+    void getCommunitySettings().then((settings) => {
+      setContributionsOn(settings.enabled && settings.autoContribute);
+    });
     void browser.runtime
       .sendMessage({ type: 'feedsieve:keyword-packs-sync' })
       .catch(() => undefined);
@@ -62,6 +69,18 @@ export default function KeywordsView({ language, notify }: KeywordsViewProps) {
 
   async function removeCustomKeyword(id: string): Promise<void> {
     setKeywordRules(await removeCustomKeywordRule(id));
+  }
+
+  async function contributeKeyword(id: string, phrase: string): Promise<void> {
+    const outcome = await contributeKeywordPhrases([phrase]);
+    if (outcome.status === 'recorded' || outcome.status === 'duplicate') {
+      setContributedIds((prev) => new Set(prev).add(id));
+      notify(t.keywordContributed);
+    } else if (outcome.status === 'community_disabled') {
+      notify(t.localOnlyHint);
+    } else {
+      notify(t.syncFailed);
+    }
   }
 
   async function toggleOfficialKeyword(id: string, enabled: boolean): Promise<void> {
@@ -132,6 +151,21 @@ export default function KeywordsView({ language, notify }: KeywordsViewProps) {
               {keywordRules.customRules.map((rule) => (
                 <li key={rule.id}>
                   <span title={rule.phrase}>{rule.phrase}</span>
+                  {contributionsOn && !contributedIds.has(rule.id) ? (
+                    <button
+                      type="button"
+                      className="square-action small"
+                      aria-label={`${t.contributeKeyword}: ${rule.phrase}`}
+                      title={t.contributeKeyword}
+                      onClick={() => void contributeKeyword(rule.id, rule.phrase)}
+                    >
+                      <AppIcon name="contribute" size={16} />
+                    </button>
+                  ) : contributedIds.has(rule.id) ? (
+                    <span className="contributed-mark" aria-hidden="true">
+                      <AppIcon name="check" size={14} />
+                    </span>
+                  ) : null}
                   <button
                     type="button"
                     className="remove-action"

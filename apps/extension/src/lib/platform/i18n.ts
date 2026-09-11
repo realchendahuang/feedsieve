@@ -68,7 +68,7 @@ export const UI_COPY = {
     communityClean: '社区',
     cloudProtected: '已排除',
     communityPreview: '本次待拉黑账号预览',
-    communitySourceMaintainer: '维护者认证',
+    communitySourceMaintainer: '推荐白名单',
     votesUnit: '票',
     communityMore: (count: number) => `另有 ${count} 个账号`,
     communityEmpty: '当前没有新增账号需要处理。同步到新名单后会显示在这里。',
@@ -116,6 +116,8 @@ export const UI_COPY = {
     keywordAdded: '已添加关键词，X 页面会立即重新标注',
     keywordInvalid: '关键词不能为空且不能超过 80 个字符',
     keywordLimit: '最多可添加 80 个自定义关键词',
+    contributeKeyword: '贡献给官方词库',
+    keywordContributed: '已匿名提交，官方审阅后会纳入词库',
     personalConfig: '备份与迁移',
     personalConfigHint:
       '只备份个人关键词和显示偏好；不会上传，不包含账号、黑白名单、关注列表或 X 登录信息。',
@@ -186,9 +188,11 @@ export const UI_COPY = {
     upToDate: '已是最新',
     manualSync: '手动刷新',
     dailyBudget: '每日预算',
-    dailyBudgetHint: '批量拉黑是自动化行为，预算越高风控风险越高——被 X 临时锁定、要求验证甚至封号的后果由你自行承担。清空则恢复自适应，干净账号预算会自动逐日爬升。',
+    dailyBudgetHint:
+      '批量拉黑是自动化行为，预算越高风控风险越高——被 X 临时锁定、要求验证甚至封号的后果由你自行承担。清空则恢复自适应，干净账号预算会自动逐日爬升。',
     budgetUpdated: (value: number) => `日预算已设为 ${value}`,
-    budgetHighRisk: (value: number) => `日预算已设为 ${value}。这个量级被 X 临时锁定、强制验证甚至封号的风险显著更高，由此造成的账号后果完全由你自己承担。`,
+    budgetHighRisk: (value: number) =>
+      `日预算已设为 ${value}。这个量级被 X 临时锁定、强制验证甚至封号的风险显著更高，由此造成的账号后果完全由你自己承担。`,
     budgetAdaptive: '已恢复自适应预算：预算随干净日逐日自动爬升，不再封顶',
     budgetInvalid: '日预算需为不小于 1 的数字',
     manualSyncHint: '立即重新拉取社区名单等远端数据；平时自动同步无需手动跑。',
@@ -221,7 +225,8 @@ export const UI_COPY = {
     // 打野排位赛
     statToday: '今日猎获',
     statBullets: '子弹余量',
-    bulletsHint: '滚动 24 小时预算，不是每日一刀切：起点随档位，几天没有风控信号会自动回升；打满时点「仍要继续」即可放行本轮。',
+    bulletsHint:
+      '滚动 24 小时预算，不是每日一刀切：起点随档位，几天没有风控信号会自动回升；打满时点「仍要继续」即可放行本轮。',
     statWeek: '本周排名',
     statBeaten: '打败猎手',
     hunterKillsUnit: '只野',
@@ -253,7 +258,8 @@ export const UI_COPY = {
     hunterXHandle: 'X 账号',
     hunterXHandleInvalid: 'X 账号格式不对（不带 @，1-15 位字母数字下划线）',
     hunterClaimTitle: '认领身份',
-    hunterEmailHint: '绑定并验证邮箱后，昵称 / 简介 / X 账号才会展示到公开榜单；邮箱只用来收验证码，不公开、不入库（只存哈希）',
+    hunterEmailHint:
+      '绑定并验证邮箱后，昵称 / 简介 / X 账号才会展示到公开榜单；邮箱只用来收验证码，不公开、不入库（只存哈希）',
     hunterClose: '关闭',
     hunterProfileLabel: '个人资料',
     hunterNotClaimed: '未认领',
@@ -329,7 +335,7 @@ export const UI_COPY = {
     communityEmpty: 'No new accounts to process. Newly synced entries will appear here.',
     startCommunityClean: (count: number) => `Start cleaning ${count}`,
     queueProgress: (done: number, total: number) => `Progress ${done} / ${total}`,
-    manualBlockHint: 'Not detected? Use the Block button at a post\'s bottom-right',
+    manualBlockHint: "Not detected? Use the Block button at a post's bottom-right",
     sortVotes: 'Votes',
     sortAlpha: 'A–Z',
     queueRunning: 'Running',
@@ -373,6 +379,8 @@ export const UI_COPY = {
     keywordAdded: 'Keyword added; X will be rescanned now',
     keywordInvalid: 'Keywords must be 1–80 characters',
     keywordLimit: 'You can add up to 80 custom keywords',
+    contributeKeyword: 'Contribute to official wordpacks',
+    keywordContributed: 'Submitted anonymously; will be reviewed for official wordpacks',
     personalConfig: 'Backup & migration',
     personalConfigHint:
       'Back up only your keywords and display preferences. Nothing is uploaded; accounts, lists, following, and X sign-in data are excluded.',
@@ -435,7 +443,8 @@ export const UI_COPY = {
     allowlistAdded: (handle: string) => `Added to allowlist: @${handle}`,
     removeAllowlist: 'Remove from allowlist and resume marking',
     openXNotice: 'Open or refresh x.com first',
-    blockUnavailable: 'Block endpoint unavailable (X changed or session expired); detection unaffected',
+    blockUnavailable:
+      'Block endpoint unavailable (X changed or session expired); detection unaffected',
     killSwitchActive: (reason?: string) =>
       reason ? `Blocking paused by maintainers: ${reason}` : 'Blocking paused by maintainers',
     copiedId: 'Installation ID copied',
@@ -447,7 +456,8 @@ export const UI_COPY = {
     dailyBudgetHint:
       'Bulk blocking is an automated behavior — a higher budget means higher risk of temporary lock, verification walls or suspension by X, on you. Clear the field to restore adaptive budget that grows daily without a cap.',
     budgetUpdated: (value: number) => `Daily budget set to ${value}`,
-    budgetHighRisk: (value: number) => `Daily budget set to ${value}. At this level the risk of temporary lock, forced verification or suspension by X rises significantly — any account consequences are entirely yours.`,
+    budgetHighRisk: (value: number) =>
+      `Daily budget set to ${value}. At this level the risk of temporary lock, forced verification or suspension by X rises significantly — any account consequences are entirely yours.`,
     budgetAdaptive: 'Adaptive budget restored: budget now grows daily via clean days with no cap',
     budgetInvalid: 'Daily budget must be a number of at least 1',
     manualSyncHint:
@@ -514,7 +524,8 @@ export const UI_COPY = {
     hunterXHandle: 'X handle',
     hunterXHandleInvalid: 'Invalid X handle (no @, 1-15 letters/digits/underscore)',
     hunterClaimTitle: 'Claim hunter',
-    hunterEmailHint: 'Your name / bio / X handle show on the public board only after email verification; your email is just for the one-time code — never published, stored hashed',
+    hunterEmailHint:
+      'Your name / bio / X handle show on the public board only after email verification; your email is just for the one-time code — never published, stored hashed',
     hunterClose: 'Close',
     hunterProfileLabel: 'Profile',
     hunterNotClaimed: 'Not claimed',

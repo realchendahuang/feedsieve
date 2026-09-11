@@ -67,6 +67,7 @@ import { MAINTAINER_CATEGORIES } from './maintainer-blocklist';
 import { processRetractionBatch } from './labels';
 import { POLICY, processReportBatch, publicPolicy } from './reports';
 import { processRescueBatch } from './rescues';
+import { listKeywordContributions, processKeywordContributions } from './keyword-contributions';
 import {
   buildKillSwitch,
   clearSnapshotDirty,
@@ -289,6 +290,10 @@ export function createApp() {
       packId: c.req.query('pack'),
       limit: 1000,
     })),
+  );
+  // 用户主动贡献的关键词待审列表（0022 迁移）；审阅结果线下决定。
+  app.get('/api/admin/keywords/contributions', async (c) =>
+    c.json(await listKeywordContributions(c.env)),
   );
   // 从 R2 公开词库导入维护者工作区是显式动作，不再挂在列表读取上。
   app.post('/api/admin/keywords/import', async (c) => {
@@ -636,6 +641,17 @@ export function createApp() {
     await markSnapshotDirty(c.env);
     await markLeaderboardDirty(c.env);
     return c.json({ results: result.results, snapshot_version: await getLatestSnapshotVersion(c.env) });
+  });
+
+  // 关键词贡献：用户在关键词页显式提交自定义短语给运营审阅入库。
+  // 短语是用户主动挑选的；不进快照，只出现在运营待审列表。
+  app.post('/v1/keyword-contributions', async (c) => {
+    const body = await c.req.json().catch(() => undefined);
+    const result = await processKeywordContributions(c.env, body);
+    if (!result.ok) {
+      return c.json({ error: result.error }, result.httpStatus);
+    }
+    return c.json({ results: result.results });
   });
 
   app.post('/v1/labels/retract', async (c) => {

@@ -18,6 +18,7 @@ export type AppIconName =
   | 'x'
   | 'check'
   | 'copy'
+  | 'contribute'
   | 'sidepanel';
 
 export function AppIcon({
@@ -102,6 +103,12 @@ export function AppIcon({
       <>
         <rect x="9" y="9" width="11" height="11" rx="2" />
         <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+      </>
+    ),
+    contribute: (
+      <>
+        <path d="M12 14V4M8.5 7.5 12 4l3.5 3.5" />
+        <path d="M5 12v6.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V12" />
       </>
     ),
   };
@@ -245,8 +252,14 @@ export function asPageMarkedList(value: unknown): PageMarkedItem[] {
     const raw = entry as Record<string, unknown>;
     const handle = normalizeStrictHandle(raw.handle);
     if (!handle || typeof raw.category !== 'string' || typeof raw.reason !== 'string') continue;
-    const snippet = typeof raw.snippet === 'string' && raw.snippet.trim().length > 0 ? raw.snippet.trim() : undefined;
-    const displayName = typeof raw.displayName === 'string' && raw.displayName.trim().length > 0 ? raw.displayName.trim() : undefined;
+    const snippet =
+      typeof raw.snippet === 'string' && raw.snippet.trim().length > 0
+        ? raw.snippet.trim()
+        : undefined;
+    const displayName =
+      typeof raw.displayName === 'string' && raw.displayName.trim().length > 0
+        ? raw.displayName.trim()
+        : undefined;
     items.push({
       handle,
       category: raw.category,
@@ -297,4 +310,3 @@ export function normalizeManualInput(value: string): string | null {
 }
 
 export { getChromeSidePanel, type ChromeSidePanelApi } from '../../../src/lib/platform/sidepanel';
-
