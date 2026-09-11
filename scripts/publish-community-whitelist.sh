@@ -150,5 +150,19 @@ PY
 if [ -z "$mode" ]; then
   echo "publishing to D1 ($database)…"
   (cd "$config_dir" && pnpm exec wrangler d1 execute "$database" --remote --config "$config" --file "$sql_file")
-  echo "published. 快照由 cron 按「当日一版」节流发布；想立即生效可在社区后台点显式发布。"
+
+  # D1 同步完成后立即触发快照发布（人工发布通道，绕开当日一版节流）。
+  # 这是唯一的生效入口：脚本直写 D1 不会置快照脏标记，cron 不感知，必须在这里显式收尾。
+  base="${FEEDSIEVE_API:-$(cat "$HOME/.config/feedsieve/api-base" 2>/dev/null || true)}"
+  key="${FEEDSIEVE_AGENT_KEY:-$(cat "${FEEDSIEVE_AGENT_KEY_FILE:-$HOME/.config/feedsieve/agent.key}" 2>/dev/null || true)}"
+  if [ -z "$base" ] || [ -z "$key" ]; then
+    echo "warning: 缺少 agent API 配置，快照未发布——白名单要等下一次 cron 版本号滚动才可见" >&2
+    exit 0
+  fi
+  echo "publishing snapshot…"
+  if ! curl -fsSL -X POST -H "x-agent-key: $key" -H 'content-type: application/json' "$base/api/agent/accounts/publish"; then
+    echo "error: 快照发布失败，白名单已入库但没有随快照可见（重跑本脚本或调用 /api/agent/accounts/publish）" >&2
+    exit 1
+  fi
+  echo "published. 快照与白名单均已生效。"
 fi

@@ -472,6 +472,17 @@ export function createApp() {
     return c.json(await recomputeAllAccountCategories(c.env, `agent:${guard}`));
   });
 
+  // 维护者数据（名单草稿 / 白名单）经脚本或后台改动后触发快照即时发布：
+  // 走人工发布通道（bypassDailyOnce），不落当日一版守卫，运营零额外步骤。
+  app.post('/api/agent/accounts/publish', async (c) => {
+    const guard = c.get('agentIdentity');
+    try {
+      return c.json(await publishAdminAccountDrafts(c.env, `agent:${guard}`));
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : 'publish_failed' }, 400);
+    }
+  });
+
   // --- 词库（关键词名单）---
   app.get('/api/agent/keywords', async (c) => {
     return c.json(await listAgentKeywords(c.env));

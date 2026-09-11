@@ -78,6 +78,7 @@ else:
   kdel)    case "$1" in pack) path=packs ;; rule) path=rules ;; *) echo "kdel: kind must be pack|rule" >&2; exit 1 ;; esac
            curl -fsSL -X DELETE "${AUTH[@]}" "$BASE/api/agent/keywords/$path/$2" ;;
   kpub)    curl -fsSL -X POST "${AUTH[@]}" "$BASE/api/agent/keywords/publish" ;;
+  wpub)    curl -fsSL -X POST "${AUTH[@]}" -H 'content-type: application/json' "$BASE/api/agent/accounts/publish" ;;
   kimport) curl -fsSL -X POST "${AUTH[@]}" "$BASE/api/agent/keywords/import" ;;
 
   *)

@@ -23,6 +23,7 @@
 | DELETE | `/api/agent/keywords/rules/:id` | 停用词库规则 |
 | POST | `/api/agent/keywords/publish` | 发布词库（签名 + R2 产物 + 版本号） |
 | POST | `/api/agent/keywords/import` | 首次导入词库（空库时幂等生效） |
+| POST | `/api/agent/accounts/publish` | 发布维护者快照（名单草稿 + 白名单即时生效，绕开当日一版） |
 | GET | `/api/agent/releases` | 发布记录 |
 | POST | `/api/agent/releases/:id/rollback` | 按记录类型回滚（accounts 用 id，keywords 用版本内容重新发布） |
 | GET | `/api/agent/audit?limit=N` | 审计流水（默认 50，≤500） |
@@ -34,6 +35,7 @@
 1. **巡检**：`m.sh status` 一次拿快照/词库/开关状态；有异常再 `m.sh assets`、`m.sh audit` 定位。
 2. **改名单**：`m.sh find <handle>` 查重 → `m.sh put <handle> <category> <note> [evidence_post_id]` / `m.sh remove <handle>`（拿到举报链接时把 `status/<id>` 的数字作为 evidence 传入，公开快照会带上实锤）。
 3. **改词库**：`m.sh klist` → `m.sh kpack <id> <name> <desc>` / `m.sh krule <id> <pack_id> <phrase>` → **`m.sh kpub` 发布**（改词库必须显式发布才生效）。
+4. **发布快照**：名单/白名单改动后 `m.sh wpub`（或跑 `scripts/publish-community-whitelist.sh` 自动收尾）即时发布，不用去后台点。
 4. **验证**：`m.sh status`（新版本号）或拉取公开产物 `/v1/snapshots/latest`、`/v1/keyword-packs/latest`。
 5. **留档**：名单/词库发布后跑 `scripts/mirror-community-lists.sh` 并提交（GitHub 每日自动镜像兜底）。
 
