@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
   "policy_version": 3,
-  "snapshot_version": "2026.09.10.1",
-  "generated_at": "2026-09-10T00:00:21.951Z",
+  "snapshot_version": "2026.09.11.1",
+  "generated_at": "2026-09-11T00:00:13.077Z",
   "policy": {
     "version": 3,
     "blocklist": {
@@ -14,7 +14,9 @@
       "daily_report_base": 100,
       "daily_rescue_base": 50,
       "daily_min": 10,
-      "max_batch": 50
+      "max_batch": 50,
+      "daily_ip_report_limit": 200,
+      "daily_alias_cap": 10
     },
     "reporter_trust": {
       "default": 1,
@@ -30,18 +32,18 @@
   "files": [
     {
       "path": "official.json",
-      "sha256": "408d60fc8ebc55c8455ad561bb99d613464eb9d9cefc7b8469c6e2a27b5996f7",
-      "entries": 1265
+      "sha256": "8c5ef6cca96e79fa887325b8d0d6d2a5e89638e831d730082af423620276079c",
+      "entries": 2580
     },
     {
       "path": "blocklist.yaml",
-      "sha256": "71a8e067461fad1904d9b71172fca9e88b05f4cf2370284dcca40bed195eefe4",
-      "entries": 1265
+      "sha256": "c8fc9539d27e1b8912c1a72d19100481ae78c8933984e18a9a8df40a4e34d0c4",
+      "entries": 2580
     }
   ],
   "signature": {
     "key_id": "release-1",
     "alg": "ed25519",
-    "sig": "V7iTkmaQh0up2/MzXW7FR3l3ycdPg+4A9DzY31tDGa5tG9P00TUEjxcQ0SrCStykCzT32d00Na6P/ZnfjDDFCA=="
+    "sig": "MA1Bqao01oOdzLb6cw+f1/GA5vokkJH9gOyRmqFoqoK1tH709PpyGtsORaH6U0PygIcHEkI7DOL9TtoFbI8kAg=="
   }
 }
