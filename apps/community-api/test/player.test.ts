@@ -20,10 +20,10 @@ const INSTALL = 'player-0001-ffffff';
 const EMAIL = 'hunter@example.com';
 
 describe('猎手档案：邮箱验证码解锁', () => {
-  it('未验证邮箱改档案 → 403', async () => {
+  it('未验证邮箱也可改档案：随时可写，展示才是邮箱门槛', async () => {
     const res = await post('/v1/player/profile', { installation_id: INSTALL, display_name: '阿黄' });
-    expect(res.status).toBe(403);
-    expect(res.json.error).toBe('email_verification_required');
+    expect(res.status).toBe(200);
+    expect(res.json.display_name).toBe('阿黄');
   });
 
   it('bind → dev_code（未配置 MAIL_WEBHOOK_URL）→ verify → 档案生效', async () => {

@@ -4,11 +4,11 @@
  * 计分完全由服务端从共识数据派生，客户端报数不作数：
  * - 开火 = active_labels 中 label='blocked' 的当前票（每安装每账号一票）。
  * - 确认击杀 = 账号收敛为 strong（净票 >= communityNetThreshold）且不在
- *   维护者白名单。consensus_events 是「当前处于共识内」的锚点：达标时刻
+ *   推荐白名单。consensus_events 是「当前处于共识内」的锚点：达标时刻
  *   写入、翻案回落时删除。确认发生在赛季窗口内且猎手当前仍投 blocked 票
  *   → +1。
  * - 首杀 = 账号最早的上报安装，且上报时间落在同一窗口 → 额外 +1。
- * - 误伤 = 当前票命中 verified（抢救净票 >= 同阈值）或维护者白名单 → 扣分。
+ * - 误伤 = 当前票命中 verified（抢救净票 >= 同阈值）或推荐白名单 → 扣分。
  *   误伤不设窗口：白名单 / 翻案生效即全量结账。
  *
  * 聚合结果写 meta 缓存，脏标记懒重算（markSnapshotDirty 同模式）——没人
@@ -357,14 +357,17 @@ async function aggregateLeaderboard(
     const shotCount = shotsBy.get(iid) ?? 0;
     const profile = profilesBy.get(iid);
     const careerKillCount = careerKillsBy.get(iid) ?? 0;
+    // 公开展示门槛：只有邮箱验证过的猎手，昵称/简介/X 账号才上公开榜；
+    // 未验证的一律匿名码显示（战绩照常计入，不影响排位与称号）。
+    const verified = profile?.email_verified_at != null;
     return {
       id: iid,
-      name: hunterDisplayName(iid, profile?.display_name ?? null),
-      bio: profile?.bio ?? null,
+      name: hunterDisplayName(iid, verified ? (profile?.display_name ?? null) : null),
+      bio: verified ? (profile?.bio ?? null) : null,
       title: profile?.title ?? null,
       tier: ladderTitle(careerKillCount),
       career_kills: careerKillCount,
-      x_handle: profile?.x_handle ?? null,
+      x_handle: verified ? (profile?.x_handle ?? null) : null,
       email_verified: profile?.email_verified_at != null,
       kills: killCount,
       first_bloods: firstBloods,

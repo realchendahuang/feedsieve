@@ -92,7 +92,7 @@ export interface HunterBoard {
   me: HunterBoardRow | null;
 }
 
-/** 榜单速览（name/Top10 + 我 + 总人数）。新鲜走缓存；失败回退陈旧缓存兜底空态。 */
+/** 榜单速览（name/Top榜 + 我 + 总人数）。新鲜走缓存；失败回退陈旧缓存兜底空态。 */
 export async function fetchHunterBoard(): Promise<HunterBoard | null> {
   const installationId = await peekInstallationId();
   const fresh = await readHunterCache<HunterBoard>(BOARD_CACHE_KEY, installationId, BOARD_TTL_MS);
@@ -108,7 +108,8 @@ export async function fetchHunterBoard(): Promise<HunterBoard | null> {
       return stale?.data ?? null;
     }
     const data = (await res.json()) as LeaderboardResponse;
-    const board: HunterBoard = { rows: data.rows.slice(0, 10), total: data.total ?? 0, me: data.me };
+    // 不再截 10 条：榜单区自带滚动，弹窗里能看多少滚多少；数据量由服务端控
+    const board: HunterBoard = { rows: data.rows, total: data.total ?? 0, me: data.me };
     await writeHunterCache(BOARD_CACHE_KEY, installationId, board);
     return board;
   } catch {
@@ -224,7 +225,8 @@ export async function saveHunterProfile(
   bio: string,
   xHandle: string = '',
 ): Promise<{ ok: boolean; invalid?: boolean }> {
-  const installationId = await peekInstallationId();
+  // 与绑定邮箱同口径：此刻才惰性建档——想露脸（哪怕只是写好简介等绑定）即建档
+  const installationId = await getInstallationId();
   if (!installationId) return { ok: false };
   try {
     const res = await fetch(`${API_BASE}/v1/player/profile`, {

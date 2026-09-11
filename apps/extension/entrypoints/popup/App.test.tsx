@@ -126,6 +126,32 @@ function communitySnapshot(
   };
 }
 
+function whitelistSnapshot(entry: { handle: string; note: string }): {
+  snapshot_version: string;
+  synced_at: number;
+  body: string;
+} {
+  return {
+    snapshot_version: '2026.09.12.1',
+    synced_at: Date.now(),
+    body: JSON.stringify({
+      schema_version: 2,
+      snapshot_version: '2026.09.12.1',
+      generated_at: '2026-09-12T00:00:00.000Z',
+      entries: [],
+      verified: [],
+      whitelist: [
+        {
+          handle: entry.handle,
+          x_user_id: null,
+          note: entry.note,
+          added_at: '2026-09-12T00:00:00.000Z',
+        },
+      ],
+    }),
+  };
+}
+
 async function chooseFile(input: HTMLInputElement, file: File): Promise<void> {
   Object.defineProperty(input, 'files', { configurable: true, value: [file] });
   await act(async () => {
@@ -202,7 +228,7 @@ describe('popup App 渲染冒烟', () => {
     expect(rootEl.textContent).toContain('同城上门约炮');
 
     await act(async () => buttonWithText(rootEl, '我的').click());
-    await act(async () => (rootEl.querySelector('button[aria-label="设置"]') as HTMLButtonElement).click());
+    await act(async () => rootEl.querySelector<HTMLButtonElement>('.me-settings-entry')?.click());
     expect(rootEl.textContent).toContain('页面标黄');
     await act(async () => buttonWithText(rootEl, 'EN').click());
     expect(rootEl.textContent).toContain('FeedSieve');
@@ -383,7 +409,7 @@ describe('popup App 渲染冒烟', () => {
     const rootEl = renderApp();
     await new Promise((resolve) => setTimeout(resolve, 150));
     await act(async () => buttonWithText(rootEl, '我的').click());
-    await act(async () => (rootEl.querySelector('button[aria-label="设置"]') as HTMLButtonElement).click());
+    await act(async () => rootEl.querySelector<HTMLButtonElement>('.me-settings-entry')?.click());
     const row = [...rootEl.querySelectorAll<HTMLLabelElement>('label.setting-row')].find(
       (candidate) => candidate.textContent?.includes('仅本地运行'),
     );
@@ -403,7 +429,7 @@ describe('popup App 渲染冒烟', () => {
     const rootEl = renderApp();
     await new Promise((r) => setTimeout(r, 150));
     await act(async () => buttonWithText(rootEl, '我的').click());
-    await act(async () => (rootEl.querySelector('button[aria-label="设置"]') as HTMLButtonElement).click());
+    await act(async () => rootEl.querySelector<HTMLButtonElement>('.me-settings-entry')?.click());
 
     expect(rootEl.textContent).toContain('备份与迁移');
     expect(rootEl.textContent).toContain('导出个人配置');
@@ -449,7 +475,7 @@ describe('popup App 渲染冒烟', () => {
     const rootEl = renderApp();
     await new Promise((r) => setTimeout(r, 150));
     await act(async () => buttonWithText(rootEl, '我的').click());
-    await act(async () => (rootEl.querySelector('button[aria-label="设置"]') as HTMLButtonElement).click());
+    await act(async () => rootEl.querySelector<HTMLButtonElement>('.me-settings-entry')?.click());
 
     const input = rootEl.querySelector<HTMLInputElement>('input[type="file"]');
     if (!input) throw new Error('personal config input not found');
@@ -479,7 +505,7 @@ describe('popup App 渲染冒烟', () => {
     const rootEl = renderApp();
     await new Promise((r) => setTimeout(r, 150));
     await act(async () => buttonWithText(rootEl, 'Me').click());
-    await act(async () => (rootEl.querySelector('button[aria-label="Settings"]') as HTMLButtonElement).click());
+    await act(async () => rootEl.querySelector<HTMLButtonElement>('.me-settings-entry')?.click());
 
     expect(rootEl.textContent).toContain('Backup & migration');
     expect(rootEl.textContent).toContain('Export personal config');
@@ -797,6 +823,50 @@ describe('popup App 渲染冒烟', () => {
     // 死账号与瞬时失败语义分开：前者不用重试，后者等待重试
     expect(rootEl.textContent).toContain('@mtzntzvcuuvan5（账号已不存在）');
     expect(rootEl.textContent).toContain('@petersulli92sm（请求过于频繁）');
+  });
+
+  it('white-list tab 底部推荐白名单默认折叠，展开后展示维护者背书理由', async () => {
+    vi.stubGlobal('browser', {
+      storage: {
+        local: {
+          remove: vi.fn(),
+          get: vi
+              .fn()
+              .mockResolvedValue({
+                uiLanguage: 'zh',
+                communitySnapshotV2: whitelistSnapshot({
+                  handle: 'goodactor',
+                  note: '知名科普博主，多次被模板误标，复核为正常账号',
+                }),
+              }),
+          set: storageSet,
+        },
+        onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+      },
+      tabs: {
+        query: vi.fn().mockResolvedValue([{ id: 1, active: true, url: 'https://x.com/home' }]),
+        sendMessage: tabSendMessage,
+      },
+      runtime: { onMessage: { addListener: vi.fn(), removeListener: vi.fn() }, sendMessage: runtimeSendMessage },
+    });
+
+    const rootEl = renderApp();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    await act(async () => buttonWithText(rootEl, '名单').click());
+    await act(async () => rootEl.querySelector<HTMLButtonElement>('#allowlist-tab')!.click());
+
+    // 折叠态：标题行带数量，备注未展开
+    const toggle = rootEl.querySelector<HTMLButtonElement>('.recommend-list-toggle');
+    expect(toggle?.getAttribute('aria-expanded')).toBe('false');
+    expect(toggle?.textContent).toContain('推荐白名单');
+    expect(toggle?.textContent).toContain('1');
+    // 折叠时不渲染条目正文
+    expect(rootEl.textContent).not.toContain('知名科普博主');
+
+    await act(async () => toggle?.click());
+    const reasonLine = rootEl.querySelector<HTMLElement>('.recommend-list-head + .manage-list .account-reason');
+    expect(reasonLine?.textContent).toBe('知名科普博主，多次被模板误标，复核为正常账号');
+    expect(reasonLine?.getAttribute('title')).toBe('知名科普博主，多次被模板误标，复核为正常账号');
   });
 
   it('支持在当前页面卡片浏览推文帖子正文，并可剔除误伤项后再一键拉黑', async () => {

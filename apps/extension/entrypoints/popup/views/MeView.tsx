@@ -7,15 +7,23 @@ import {
 } from '../../../src/lib/community/hunter';
 import type { CommunitySettings } from '../../../src/lib/community/community-store';
 import type { MarkStrength } from '@feedsieve/community-lists';
+import { getTodayStat, subscribeDaily, todayKey } from '../../../src/lib/stats/daily-stats';
+import {
+  loadSafetyLedger,
+  remainingQuota,
+  rolloverBudget,
+  subscribeSafetyLedger,
+} from '../../../src/lib/queue/block-safety';
 import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
 import { getInstallationId } from '../../../src/lib/community/contribute';
 import { AppIcon } from './shared';
-import HunterProfileModal from './HunterProfile';
+import HunterProfileCard from './HunterProfile';
 import SettingsView from './SettingsView';
 
 /**
- * 「我的」一级入口：最外层是个人主页（昵称 / 称号 / 简介 / X 账号 / 认领状态 /
- * 安装 ID），编辑资料走弹窗；设置降为二级页，齿轮进入。
+ * 「我的」页面：身份头部（昵称 / 称号 / 简介 / X 账号 / 猎手 ID）、当前战绩、
+ * 个人资料编辑（邮箱 / 简介 / X 随时可写可改）。设置是这里的二级页，
+ * 点进才展开，与身份/战绩不在一屏。
  */
 export default function MeView({
   language,
@@ -40,24 +48,45 @@ export default function MeView({
   const [profile, setProfile] = useState<HunterProfileState | null>(null);
   const [board, setBoard] = useState<HunterBoard | null>(null);
   const [installId, setInstallId] = useState('');
-  const [sub, setSub] = useState<'home' | 'settings'>('home');
-  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [todayBlocked, setTodayBlocked] = useState<number | null>(null);
+  const [bullets, setBullets] = useState<{ left: number; total: number } | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     void fetchHunterProfile().then(setProfile);
     void fetchHunterBoard().then(setBoard).catch(() => setBoard(null));
     void getInstallationId().then(setInstallId);
+    void getTodayStat().then((stat) => setTodayBlocked(stat.blocked));
+    const applyLedger = (): void => {
+      void loadSafetyLedger().then((ledger) => {
+        const rolled = rolloverBudget(ledger, Date.now());
+        setBullets({ left: remainingQuota(rolled, Date.now()), total: rolled.budget });
+      });
+    };
+    applyLedger();
+    const unsubs = [
+      subscribeDaily((stats) => setTodayBlocked(stats.days[todayKey()]?.blocked ?? 0)),
+      subscribeSafetyLedger(() => applyLedger()),
+    ];
+    return () => unsubs.forEach((unsub) => unsub());
   }, []);
 
   const refreshProfile = useCallback(() => {
     void fetchHunterProfile().then(setProfile);
+    void fetchHunterBoard().then(setBoard).catch(() => setBoard(null));
   }, []);
 
   const verified = profile?.email_verified ?? false;
   const me = board?.me ?? null;
-  // 未认领时 fallback 成榜上的默认名（猎手#XXXXXX），没有榜单数据则占位
-  const name = (verified ? profile?.display_name : null) || me?.name || '—';
+  // 未认领且未上榜时没有可展示的名字，用弱化的「未认领」占位（资料卡紧随其下）
+  const name = (verified && profile?.display_name) || me?.name || null;
   const xHandle = profile?.x_handle ?? me?.x_handle ?? null;
+  const shortId = installId ? `${installId.slice(0, 8)}…${installId.slice(-4)}` : '…';
+  // 打败百分比 = 1 - 本周排名/总人数；垫底就是 0%，不虚报
+  const beatenPct =
+    me?.rank && board && board.total > 0
+      ? Math.max(0, Math.round((1 - me.rank / board.total) * 100))
+      : null;
 
   async function copyInstallationId(): Promise<void> {
     try {
@@ -68,14 +97,17 @@ export default function MeView({
     }
   }
 
-  if (sub === 'settings') {
+  if (showSettings) {
     return (
-      <div className="view-stack settings-view">
-        <div className="me-subhead">
-          <button type="button" className="text-action me-back" onClick={() => setSub('home')}>
-            ‹ {t.goBack}
+      <div className="view-stack me-subboard">
+        <div className="subpage-head">
+          <button type="button" className="subpage-back" onClick={() => setShowSettings(false)}>
+            <span className="subpage-back-arrow" aria-hidden="true">
+              ‹
+            </span>
+            <span>{t.goBack}</span>
           </button>
-          <strong>{t.settingsTitle}</strong>
+          <h2>{t.settings}</h2>
         </div>
         <SettingsView
           language={language}
@@ -90,50 +122,82 @@ export default function MeView({
   }
 
   return (
-    <div className="view-stack settings-view">
+    <div className="view-stack me-view">
       <section className="settings-card me-card">
-        <button type="button" className="me-gear" onClick={() => setSub('settings')} aria-label={t.settingsTitle}>
-          <AppIcon name="settings" size={18} />
-        </button>
         <div className="me-hero">
           <span className="me-avatar" aria-hidden="true">
             <AppIcon name="hunt" size={22} />
           </span>
           <div className="me-hero-body">
             <div className="me-name-line">
-              <span className="me-name">{name}</span>
+              {name ? (
+                <span className="me-name">{name}</span>
+              ) : (
+                <span className="me-name is-placeholder">{t.hunterNotClaimed}</span>
+              )}
               {me?.tier ? <span className="hunter-tier">{me.tier}</span> : null}
               {me?.title ? <span className="hunter-title-badge">{me.title}</span> : null}
             </div>
             {profile?.bio ? <span className="me-bio">{profile.bio}</span> : null}
             {xHandle ? <span className="me-handle">@{xHandle}</span> : null}
           </div>
-        </div>
-        <button
-          type="button"
-          className="primary-action me-primary"
-          onClick={() => setProfileModalOpen(true)}
-        >
-          {verified ? t.hunterProfileLabel : t.hunterClaimTitle}
-        </button>
-        <div className="me-meta">
-          <span className={verified ? 'me-chip ok' : 'me-chip'}>
-            {verified ? t.verifiedChip : t.hunterNotClaimed}
-          </span>
-          <button type="button" className="me-chip" title={installId} onClick={() => void copyInstallationId()}>
+          <button
+            type="button"
+            className="me-chip me-id"
+            title={installId}
+            onClick={() => void copyInstallationId()}
+          >
             <span aria-hidden="true">{t.hunterSection}ID</span>
-            <span className="me-id-value">{installId || '…'}</span>
+            <span className="me-id-value">{shortId}</span>
+            <AppIcon name="copy" size={12} />
           </button>
+        </div>
+        <div className="hunter-report-grid me-stats">
+          <HunterStat label={t.statToday} value={String(todayBlocked ?? '—')} />
+          <HunterStat label={t.statBullets} value={bullets ? `${bullets.left}/${bullets.total}` : '—'} />
+          <HunterStat
+            label={t.statWeek}
+            value={me?.rank ? `#${me.rank}` : '—'}
+            sub={me ? `${me.kills} ${t.hunterKillsUnit}` : t.hunterUnrankedShort}
+          />
+          <HunterStat
+            label={t.statBeaten}
+            value={beatenPct != null ? `${beatenPct}%` : '—'}
+            hero={beatenPct != null}
+          />
         </div>
       </section>
 
-      <HunterProfileModal
-        language={language}
-        open={profileModalOpen}
-        notify={notify}
-        onClose={() => setProfileModalOpen(false)}
-        onChanged={refreshProfile}
-      />
+      <HunterProfileCard language={language} notify={notify} profile={profile} onChanged={refreshProfile} />
+
+      <button type="button" className="me-settings-entry" onClick={() => setShowSettings(true)}>
+        <AppIcon name="settings" size={16} />
+        <span>{t.settings}</span>
+        <span className="me-settings-entry-arrow" aria-hidden="true">
+          ›
+        </span>
+      </button>
+    </div>
+  );
+}
+
+function HunterStat({
+  label,
+  value,
+  sub,
+  hero,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  /** hero：百分位这种"荣誉值"用主题色放大表现 */
+  hero?: boolean;
+}) {
+  return (
+    <div className={hero ? 'hunter-stat hunter-stat-hero' : 'hunter-stat'}>
+      <span className="hunter-stat-value">{value}</span>
+      <span className="hunter-stat-label">{label}</span>
+      {sub ? <span className="hunter-stat-sub">{sub}</span> : null}
     </div>
   );
 }

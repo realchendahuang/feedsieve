@@ -2484,10 +2484,24 @@ input:focus-visible + span {
 }
 
 /* 打野 tab：战报四格（数字大字 + 小标签），流式固定排，禁用视口单位 */
+.hunting-view {
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: 0;
+}
+
+.hunting-view .settings-card:last-child {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .hunter-report-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 8px;
+  margin-top: 12px;
 }
 
 .hunter-stat {
@@ -2540,22 +2554,40 @@ input:focus-visible + span {
 .hunter-tier,
 .hunter-title-badge {
   flex: none;
-  font-size: 10.5px;
-  font-weight: 700;
-  color: #8a5b00;
+  display: inline-flex;
+  align-items: center;
+  height: 17px;
+  padding: 0 8px;
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: #92400e;
   background: var(--fs-accent-soft);
+  border: 1px solid rgba(245, 158, 11, 0.3);
   border-radius: 999px;
-  padding: 1px 7px;
+  vertical-align: middle;
 }
 
 .hunter-title-badge {
-  background: var(--fs-surface);
-  border: 1px solid currentColor;
+  color: var(--fs-ink-soft);
+  background: rgba(255, 255, 255, 0.72);
+  border-color: var(--fs-line-strong);
 }
 
 .hunter-board {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 6px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.12) transparent;
+}
+
+.hunter-board::-webkit-scrollbar {
+  display: none;
 }
 
 .hunter-row {
@@ -2602,10 +2634,21 @@ input:focus-visible + span {
 }
 
 .hunter-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-weight: 650;
   font-size: 13px;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* 榜行名字里的胶囊（tier/称号）压行高，与文字基线对齐不突兀 */
+.hunter-name .hunter-tier,
+.hunter-name .hunter-title-badge {
+  height: 16px;
+  padding: 0 7px;
+  font-size: 9.5px;
 }
 
 .hunter-handle {
@@ -2667,33 +2710,11 @@ input:focus-visible + span {
   white-space: nowrap;
 }
 
-/* 「我的」页：个人英雄卡 + 二级设置 */
+/* 「我的」页：身份头部 + 认领/档案卡 + 设置，平铺一页 */
 .me-card {
-  position: relative;
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-.me-gear {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  border-radius: var(--fs-radius-sm);
-  background: none;
-  color: var(--fs-muted);
-  cursor: pointer;
-}
-
-.me-gear:hover {
-  background: var(--fs-accent-faint);
-  color: var(--fs-accent-strong);
 }
 
 .me-hero {
@@ -2754,8 +2775,9 @@ input:focus-visible + span {
   font-weight: 600;
 }
 
-.me-primary {
-  width: 100%;
+.me-name.is-placeholder {
+  color: var(--fs-muted);
+  font-weight: 600;
 }
 
 .me-meta {
@@ -2793,56 +2815,28 @@ input:focus-visible + span {
   color: inherit;
 }
 
-.me-chip[title]:hover {
+.me-chip.me-id {
+  cursor: pointer;
+  color: var(--fs-muted);
+}
+
+.me-chip.me-id .app-icon {
+  flex: none;
+}
+
+.me-chip.me-id:hover {
   border-color: var(--fs-line-strong);
+  color: var(--fs-ink-soft);
 }
 
-.me-subhead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 2px;
-}
-
-.me-back {
-  font-size: 13px;
-}
-
-/* 认领身份弹窗（保留旧结构）：fixed 相对弹窗壳（560×600）定位，不用 vw/vh */.hunter-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(24, 24, 27, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  z-index: 60;
-}
-
-.hunter-modal {
-  width: 320px;
-  padding: 16px;
-  background: var(--fs-surface);
-  border: 1px solid var(--fs-line);
-  border-radius: var(--fs-radius-lg);
-  box-shadow: var(--fs-shadow-md);
+/* 认领/档案卡：「我的」页内联卡片，不再走弹窗 */
+.hunter-card {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.hunter-modal-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.hunter-modal-head h2 {
-  margin: 0;
-  font-size: 15px;
-}
-
-.hunter-modal input {
+.hunter-card input {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--fs-line-strong);
@@ -2852,8 +2846,8 @@ input:focus-visible + span {
   color: inherit;
 }
 
-.hunter-modal .text-action {
-  align-self: center;
+.hunter-card .hunter-save {
+  width: 100%;
 }
 
 /* 推荐白名单：白名单 tab 底部的收起式只读标题行 */
@@ -2888,3 +2882,194 @@ input:focus-visible + span {
   margin-top: 4px;
 }
 
+
+/* 设置页每日预算：行内数字输入，宽度按 4 位数收口 */
+.budget-inline {
+  display: inline-flex;
+  align-items: center;
+}
+
+.budget-input {
+  width: 72px;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--fs-line-strong);
+  border-radius: var(--fs-radius-sm);
+  background: #fff;
+  color: var(--fs-ink);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.budget-input:focus {
+  border-color: var(--fs-accent);
+  outline: none;
+}
+
+/* 「我的」页：称号徽章加高亮——金阶渐变胶囊，比榜单行内的小徽章更醒目 */
+.me-name-line .hunter-tier {
+  height: 20px;
+  padding: 0 10px;
+  font-size: 10.5px;
+  font-weight: 750;
+  color: #7c4a03;
+  background: linear-gradient(135deg, #fef3c7 0%, #fcd34d 100%);
+  border: 1px solid rgba(217, 119, 6, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.me-name-line .hunter-title-badge {
+  height: 20px;
+  padding: 0 10px;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.me-stats {
+  border-top: 1px solid var(--fs-line);
+  padding-top: 12px;
+}
+
+/* 设置二级页：返回头 + 页面标题 */
+.subpage-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.subpage-head h2 {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.subpage-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px 4px 4px;
+  border: 0;
+  background: none;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fs-ink-soft);
+  cursor: pointer;
+}
+
+.subpage-back:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.subpage-back-arrow {
+  font-size: 17px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+/* 「我的」页底部：设置入口行（点进二级页） */
+.me-settings-entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--fs-line);
+  border-radius: var(--fs-radius, 12px);
+  background: var(--fs-card, #fff);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--fs-ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.me-settings-entry:hover {
+  border-color: var(--fs-line-strong);
+}
+
+.me-settings-entry .app-icon {
+  color: var(--fs-muted);
+}
+
+.me-settings-entry-arrow {
+  margin-left: auto;
+  color: var(--fs-faint);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* 邮箱绑定区（资料卡内）：绑定态一行展示，绑定/换绑流程内联展开 */
+.hunter-claim-hint {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--fs-muted);
+}
+
+.hunter-email-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--fs-line);
+  color: var(--fs-success);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.hunter-email-row .hunter-email-state {
+  margin-right: auto;
+}
+
+.hunter-email-row .text-action {
+  font-size: 12px;
+  padding: 0;
+}
+
+.hunter-email-bind {
+  align-self: flex-start;
+  font-size: 12px;
+}
+
+.hunter-email-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--fs-line);
+}
+
+.hunter-email-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 打野榜：官网大入口（榜单本体之外的唯一出口） */
+.hunter-site-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 11px 14px;
+  border: 0;
+  border-radius: var(--fs-radius, 12px);
+  background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.hunter-site-cta:hover {
+  filter: brightness(1.05);
+}

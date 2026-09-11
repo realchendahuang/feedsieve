@@ -434,14 +434,20 @@ export async function updateProfile(
     return { ok: false, httpStatus: 400, error: 'invalid_x_handle' };
   }
 
-  const row = await env.DB.prepare(
-    'SELECT email_verified_at FROM installations WHERE id = ?1',
+  // 档案随时可写：写不写公开榜由 email_verified_at 门控，编辑本身不设门槛
+  // （未建档时顺带建行，安装哈希即凭证）；last_seen 同步维护。
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(
+    `INSERT INTO installations (id, first_seen_at, last_seen_at, display_name, bio, x_handle)
+     VALUES (?1, ?2, ?2, ?3, ?4, ?5)
+     ON CONFLICT(id) DO UPDATE SET
+       last_seen_at = excluded.last_seen_at,
+       display_name = excluded.display_name,
+       bio = excluded.bio,
+       x_handle = excluded.x_handle`,
   )
-    .bind(installHash)
-    .first<{ email_verified_at: number | null }>();
-  if (!row || row.email_verified_at == null) {
-    return { ok: false, httpStatus: 403, error: 'email_verification_required' };
-  }
+    .bind(installHash, now, displayName, bio, xHandle)
+    .run();
 
   await env.DB.prepare(
     'UPDATE installations SET display_name = ?2, bio = ?3, x_handle = ?4 WHERE id = ?1',

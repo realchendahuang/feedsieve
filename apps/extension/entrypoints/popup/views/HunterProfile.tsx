@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
   bindHunterEmail,
-  fetchHunterProfile,
   saveHunterProfile,
   verifyHunterEmail,
   type HunterProfileState,
@@ -10,8 +9,8 @@ import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
 import { AppIcon } from './shared';
 
 /**
- * 个人资料弹窗（设置页入口）：未验证 = 邮箱认领（验证码一次性绑定）；
- * 已验证 = 编辑昵称 / 一句话简介 / X handle，保存即上新榜（打野榜展示 bio）。
+ * 个人资料卡（「我的」页）：昵称 / 简介 / X 账号随时可写可改（无需先绑定）；
+ * 邮箱区负责绑定/换绑——绑定并验证后资料才展示到公开榜单（服务端口径一致）。
  * 无密码无会话——安装 ID 即凭证，绑定后免登录。
  */
 function bindErrorText(t: (typeof UI_COPY)[UiLanguage], error: string): string {
@@ -31,23 +30,21 @@ function bindErrorText(t: (typeof UI_COPY)[UiLanguage], error: string): string {
   }
 }
 
-export default function HunterProfileModal({
+export default function HunterProfileCard({
   language,
-  open,
   notify,
-  onClose,
+  profile,
   onChanged,
 }: {
   language: UiLanguage;
-  open: boolean;
   notify: (message: string | null) => void;
-  onClose: () => void;
-  /** 档案变化（绑定/保存）后回调，父级可刷新列表行展示 */
+  profile: HunterProfileState | null;
+  /** 档案变化（绑定/保存）后回调，父级刷新头部展示 */
   onChanged?: () => void;
 }) {
   const t = UI_COPY[language];
-  const [profile, setProfile] = useState<HunterProfileState | null>(null);
-  const [stage, setStage] = useState<'email' | 'code'>('email');
+  // null = 档案编辑态；'email'/'code' = 绑定（或换绑）流程
+  const [stage, setStage] = useState<'email' | 'code' | null>(null);
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
@@ -56,27 +53,11 @@ export default function HunterProfileModal({
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
-    void fetchHunterProfile().then((value) => {
-      if (!value) return;
-      setProfile(value);
-      setName(value.display_name ?? '');
-      setBio(value.bio ?? '');
-      setXHandle(value.x_handle ?? '');
-    });
-    const onKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') close();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- close 仅用 setState，无需入 deps
-  }, [open]);
-
-  function close(): void {
-    onClose();
-    setStage('email');
-    setCode('');
-  }
+    if (!profile) return;
+    setName(profile.display_name ?? '');
+    setBio(profile.bio ?? '');
+    setXHandle(profile.x_handle ?? '');
+  }, [profile?.email_verified, profile?.display_name, profile?.bio, profile?.x_handle]);
 
   async function sendCode(): Promise<void> {
     if (!email.trim() || busy) return;
@@ -103,13 +84,14 @@ export default function HunterProfileModal({
     setBusy(true);
     try {
       const result = await verifyHunterEmail(email.trim(), code.trim());
-      if (!result.ok) {
-        notify(bindErrorText(t, result.error ?? ''));
+      if (result.ok) {
+        setStage(null);
+        setCode('');
+        notify(t.hunterVerified);
+        onChanged?.();
         return;
       }
-      setProfile(await fetchHunterProfile());
-      notify(t.hunterVerified);
-      onChanged?.();
+      notify(bindErrorText(t, result.error ?? ''));
     } finally {
       setBusy(false);
     }
@@ -123,85 +105,99 @@ export default function HunterProfileModal({
       const handle = xHandle.trim().replace(/^@+/, '');
       const result = await saveHunterProfile(name.trim(), bio.trim(), handle);
       notify(result.ok ? t.hunterProfileSaved : result.invalid ? t.hunterXHandleInvalid : t.hunterError);
-      if (result.ok) setProfile(await fetchHunterProfile());
       onChanged?.();
     } finally {
       setBusy(false);
     }
   }
 
-  if (!open) return null;
   const verified = profile?.email_verified ?? false;
   return (
-    <div className="hunter-modal-overlay" onClick={close}>
-      <div
-        className="hunter-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label={verified ? t.hunterSection : t.hunterClaimTitle}
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="hunter-modal-head">
-          <h2>{verified ? t.hunterSection : t.hunterClaimTitle}</h2>
-          <button type="button" className="square-action" onClick={close} aria-label={t.hunterClose}>
-            <AppIcon name="x" size={18} />
+    <section className="settings-card hunter-card" aria-label={t.hunterProfileLabel}>
+      <input
+        type="text"
+        value={name}
+        maxLength={16}
+        placeholder={t.hunterDisplayName}
+        onChange={(event) => setName(event.target.value)}
+      />
+      <input
+        type="text"
+        value={bio}
+        maxLength={60}
+        placeholder={t.hunterBio}
+        onChange={(event) => setBio(event.target.value)}
+      />
+      <input
+        type="text"
+        value={xHandle}
+        maxLength={15}
+        placeholder={t.hunterXHandle}
+        onChange={(event) => setXHandle(event.target.value)}
+      />
+      <button type="button" className="primary-action hunter-save" onClick={() => void save()} disabled={busy}>
+        {t.hunterSave}
+      </button>
+      {!verified ? <p className="hunter-claim-hint">{t.hunterClaimHelp}</p> : null}
+
+      {verified ? (
+        <div className="hunter-email-row">
+          <AppIcon name="check" size={13} />
+          <span className="hunter-email-state">{t.hunterVerified}</span>
+          <button type="button" className="text-action" onClick={() => setStage('email')}>
+            {t.hunterChangeEmail}
           </button>
         </div>
-        {verified ? (
-          <>
-            <input
-              type="text"
-              value={name}
-              maxLength={16}
-              placeholder={t.hunterDisplayName}
-              onChange={(event) => setName(event.target.value)}
-            />
-            <input
-              type="text"
-              value={bio}
-              maxLength={60}
-              placeholder={t.hunterBio}
-              onChange={(event) => setBio(event.target.value)}
-            />
-            <input
-              type="text"
-              value={xHandle}
-              maxLength={15}
-              placeholder={t.hunterXHandle}
-              onChange={(event) => setXHandle(event.target.value)}
-            />
-            <button type="button" className="primary-action" onClick={() => void save()} disabled={busy}>
-              {t.hunterSave}
-            </button>
-          </>
-        ) : stage === 'email' ? (
-          <>
-            <input
-              type="email"
-              value={email}
-              placeholder={t.hunterEmailPlaceholder}
-              onChange={(event) => setEmail(event.target.value)}
-            />
+      ) : stage === null ? (
+        <button type="button" className="text-action hunter-email-bind" onClick={() => setStage('email')}>
+          {t.hunterBindEmail}
+        </button>
+      ) : stage === 'email' ? (
+        <div className="hunter-email-flow">
+          <input
+            type="email"
+            value={email}
+            placeholder={t.hunterEmailPlaceholder}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+          <div className="hunter-email-actions">
             <button
               type="button"
-              className="primary-action"
+              className="primary-action hunter-save"
               onClick={() => void sendCode()}
               disabled={busy || !email.trim()}
             >
               {busy ? t.processing : t.hunterSendCode}
             </button>
-          </>
-        ) : (
-          <>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={code}
-              maxLength={6}
-              placeholder={t.hunterCodePlaceholder}
-              onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
-            />
-            <button type="button" className="primary-action" onClick={() => void verify()} disabled={busy}>
+            <button
+              type="button"
+              className="text-action"
+              onClick={() => {
+                setStage(null);
+                setCode('');
+              }}
+            >
+              {t.hunterClose}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="hunter-email-flow">
+          <input
+            type="text"
+            inputMode="numeric"
+            value={code}
+            maxLength={6}
+            placeholder={t.hunterCodePlaceholder}
+            onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
+          />
+          <div className="hunter-email-actions">
+            <button
+              type="button"
+              className="primary-action hunter-save"
+              onClick={() => void verify()}
+              disabled={busy}
+            >
               {busy ? t.processing : t.hunterVerify}
             </button>
             <button
@@ -214,9 +210,9 @@ export default function HunterProfileModal({
             >
               {t.hunterChangeEmail}
             </button>
-          </>
-        )}
-      </div>
-    </div>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
