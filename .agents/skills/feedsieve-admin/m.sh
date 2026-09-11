@@ -75,7 +75,8 @@ else:
            curl -fsSL -X PUT "${AUTH[@]}" -H 'content-type: application/json' \
              -d "{\"id\":\"$id\",\"pack_id\":\"$pack_id\",\"phrase\":\"$phrase\"}" \
              "$BASE/api/agent/keywords/rules/$id" ;;
-  kdel)    curl -fsSL -X DELETE "${AUTH[@]}" "$BASE/api/agent/keywords/$1/$2" ;;
+  kdel)    case "$1" in pack) path=packs ;; rule) path=rules ;; *) echo "kdel: kind must be pack|rule" >&2; exit 1 ;; esac
+           curl -fsSL -X DELETE "${AUTH[@]}" "$BASE/api/agent/keywords/$path/$2" ;;
   kpub)    curl -fsSL -X POST "${AUTH[@]}" "$BASE/api/agent/keywords/publish" ;;
   kimport) curl -fsSL -X POST "${AUTH[@]}" "$BASE/api/agent/keywords/import" ;;
 

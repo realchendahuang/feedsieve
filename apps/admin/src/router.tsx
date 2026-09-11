@@ -1,6 +1,7 @@
 import { createRoute, createRootRoute, createRouter } from '@tanstack/react-router';
 import { Layout } from './components/layout';
 import { AccountsPage } from './pages/AccountsPage';
+import { ApplicationsPage } from './pages/ApplicationsPage';
 import { CommunityAccountsPage } from './pages/CommunityAccountsPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { FeedbackPage } from './pages/FeedbackPage';
@@ -32,6 +33,11 @@ const verifiedRoute = createRoute({
   path: 'verified',
   component: VerifiedPage,
 });
+const applicationsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'applications',
+  component: ApplicationsPage,
+});
 const keywordsRoute = createRoute({ getParentRoute: () => rootRoute, path: 'keywords', component: KeywordsPage });
 const feedbackRoute = createRoute({ getParentRoute: () => rootRoute, path: 'feedback', component: FeedbackPage });
 const releasesRoute = createRoute({ getParentRoute: () => rootRoute, path: 'releases', component: ReleasesPage });
@@ -42,6 +48,7 @@ const routeTree = rootRoute.addChildren([
   accountsRoute,
   communityRoute,
   verifiedRoute,
+  applicationsRoute,
   keywordsRoute,
   feedbackRoute,
   releasesRoute,

@@ -13,8 +13,15 @@ import {
 } from './admin-accounts';
 import { verifyAccess } from './lib/access';
 import { hashInstallationId } from './lib/hash';
+import {
+  decideApplication,
+  listApplications,
+  submitApplication,
+  verifyApplication,
+} from './applications';
 import { listCommunityCandidates } from './candidates';
 import { listVerifiedAccounts } from './verified';
+import { getPublicRoster } from './roster';
 import { getDashboardMetrics } from './dashboard';
 import {
   disableAdminKeyword,
@@ -44,6 +51,7 @@ import {
   upsertAgentMaintainerEntry,
 } from './agent-admin';
 import { hunterPageHtml } from './hunter-page';
+import { homePageHtml, listsPageHtml } from './site-pages';
 import { LEADERBOARD, getLeaderboard, markLeaderboardDirty, settleDueSeasons } from './leaderboard';
 import { bindEmail, getProfile, updateProfile, verifyEmail } from './player';
 import { MAINTAINER_CATEGORIES } from './maintainer-blocklist';
@@ -65,9 +73,19 @@ import {
   SNAPSHOT_PACK,
 } from './snapshot';
 
-function isAdminHost(request: Request, env: Cloudflare.Env): boolean {
-  const configured = env.ADMIN_HOST?.trim().toLowerCase();
+/** 注意：默认值返回 false —— 未配置对应主机名时，对应域名一律不生效。 */
+function isConfiguredHost(request: Request, env: Cloudflare.Env, variable: 'ADMIN_HOST' | 'SITE_HOST'): boolean {
+  const configured = env[variable]?.trim().toLowerCase();
   return Boolean(configured) && new URL(request.url).hostname.toLowerCase() === configured;
+}
+
+function isAdminHost(request: Request, env: Cloudflare.Env): boolean {
+  return isConfiguredHost(request, env, 'ADMIN_HOST');
+}
+
+/** 官网公开页域名（首页 / 名单公示）。 */
+function isSiteHost(request: Request, env: Cloudflare.Env): boolean {
+  return isConfiguredHost(request, env, 'SITE_HOST');
 }
 
 function staticAssetRequest(request: Request): Request {
@@ -198,6 +216,32 @@ export function createApp() {
       }),
     );
   });
+  // 名单公示申请队列：邮箱已验证（verified）与未验证（pending）都可见，维护者裁决。
+  app.get('/api/admin/applications', async (c) => {
+    const limit = Number(c.req.query('limit') ?? 200);
+    return c.json(
+      await listApplications(c.env, {
+        status: c.req.query('status') || undefined,
+        limit: Number.isFinite(limit) ? Math.trunc(limit) : 200,
+      }),
+    );
+  });
+  app.post('/api/admin/applications/:id/decide', async (c) => {
+    const id = Number(c.req.param('id'));
+    if (!Number.isInteger(id)) return c.json({ error: 'invalid_application_id' }, 400);
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+    const decision = typeof body.decision === 'string' ? body.decision : '';
+    const note = typeof body.note === 'string' ? body.note : null;
+    const result = await decideApplication(c.env, id, decision, note, c.get('maintainerEmail'));
+    if (!result.ok) return c.json({ error: result.error }, 400);
+    await recordAdminAudit(c.env, c.get('maintainerEmail'), 'application_decision', 'application', String(id), {
+      decision,
+      handle: typeof body.handle === 'string' ? body.handle : undefined,
+      kind: typeof body.kind === 'string' ? body.kind : undefined,
+    });
+    return c.json({ changed: true });
+  });
+
   app.post('/api/admin/accounts', async (c) => {
     const result = await saveAdminAccountDraft(c.env, await c.req.json().catch(() => undefined));
     if (!result.ok) return c.json({ error: result.error }, 400);
@@ -488,6 +532,15 @@ export function createApp() {
     return c.body(body, 200, { 'content-type': 'application/json' });
   });
 
+  // 官网名单公示数据：与扩展执行的名单同源（最新快照），只保留公示字段，
+  // 不含指纹 / 域名 / 证据帖等对抗敏感细节。短缓存与快照端点对齐。
+  app.get('/v1/roster/latest', async (c) => {
+    const roster = await getPublicRoster(c.env);
+    if (!roster) return c.json({ error: 'no_snapshot' }, 404);
+    c.header('Cache-Control', 'public, max-age=300');
+    return c.json(roster);
+  });
+
   // 关键词包和账号社区名单分开：前者是公开、可订阅的“黄标规则”，
   // 不承载举报或账号身份数据。R2 保留版本文件，latest manifest 只短缓存。
   app.get('/v1/keyword-packs/latest', async (c) => {
@@ -600,6 +653,24 @@ export function createApp() {
     return c.json(result.value);
   });
 
+  // 名单公示申请：提交（发邮箱验证码）→ 验证 → 进维护者队列。无安装语义。
+  app.post('/v1/applications', async (c) => {
+    const result = await submitApplication(
+      c.env,
+      await c.req.json().catch(() => undefined),
+      c.req.header('cf-connecting-ip'),
+    );
+    if (!result.ok) return c.json({ error: result.error }, result.httpStatus);
+    c.header('Cache-Control', 'no-store');
+    return c.json(result.value);
+  });
+  app.post('/v1/applications/verify', async (c) => {
+    const result = await verifyApplication(c.env, await c.req.json().catch(() => undefined));
+    if (!result.ok) return c.json({ error: result.error }, result.httpStatus);
+    c.header('Cache-Control', 'no-store');
+    return c.json(result.value);
+  });
+
   // 打野周榜公开页：静态壳 + 客户端拉取，与 /v1/leaderboard 同一份数据。
   app.get('/leaderboard', (c) => {
     c.header('Cache-Control', 'no-store');
@@ -655,8 +726,38 @@ export function createApp() {
     });
   });
 
-  // 只有独立后台域名会落到前端资产；公开 API 域名不再暴露管理界面。
+  // 官网公开页：与社区 API 同一 Worker、同一域名（不再有独立静态站）。
+  // 首页/公示页是代码内嵌 HTML，样式与图片走 ASSETS（打包在 admin/dist）。
+  // 公示页数据请求从原来的跨域改为此域同源，/leaderboard 路由在上方对所有
+  // host 生效，因此 feedsieve.win/leaderboard 与 API 域名行为一致。
   app.get('*', async (c) => {
+    const path = c.req.path;
+    // 早期链接手册里出现过 /lists.html 形式，归一到无扩展名路径。
+    if (path === '/lists.html') {
+      c.header('Cache-Control', 'no-store');
+      return c.redirect('/lists', 301);
+    }
+    if (isSiteHost(c.req.raw, c.env)) {
+      // 页面本身是静态壳，数据全部客户端拉取；显式 no-store 防止边缘把
+      // 过渡窗口的错误响应缓存成"正式版" publics。
+      if (path === '/') {
+        c.header('Cache-Control', 'no-store');
+        return c.html(homePageHtml());
+      }
+      if (path === '/lists') {
+        c.header('Cache-Control', 'no-store');
+        return c.html(listsPageHtml());
+      }
+      if (!c.env.ASSETS) {
+        return c.json({ error: 'not_found' }, 404);
+      }
+      if (path === '/styles.css' || path.startsWith('/assets/')) {
+        return c.env.ASSETS.fetch(staticAssetRequest(c.req.raw));
+      }
+      // 官网域名上不暴露管理端 SPA 兜底，未知路径一律 404。
+      return c.json({ error: 'not_found' }, 404);
+    }
+    // 只有独立后台域名会落到前端资产；公开 API 域名不再暴露管理界面。
     if (!isAdminHost(c.req.raw, c.env) || !c.env.ASSETS) {
       return c.json({ error: 'not_found' }, 404);
     }

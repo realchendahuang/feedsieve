@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, Outlet } from '@tanstack/react-router';
 import {
+  ClipboardList,
   History,
   Inbox,
   LayoutDashboard,
@@ -21,6 +22,7 @@ const navigation = [
   { to: '/accounts', label: '账号', icon: UserRoundX },
   { to: '/community', label: '候选', icon: UserSearch },
   { to: '/verified', label: '验证正常', icon: ShieldCheck },
+  { to: '/applications', label: '公示申请', icon: ClipboardList },
   { to: '/keywords', label: '词库', icon: MessageSquareWarning },
   { to: '/feedback', label: '反馈', icon: Inbox },
   { to: '/releases', label: '发布', icon: History },

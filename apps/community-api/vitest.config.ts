@@ -14,6 +14,7 @@ export default defineConfig(async () => {
           bindings: {
             TEST_MIGRATIONS: migrations,
             ADMIN_HOST: 'admin.feedsieve-api.chendahuang.com',
+            SITE_HOST: 'feedsieve.test',
             ACCESS_AUD: 'feedsieve-test-aud',
             ACCESS_JWKS_URL: 'https://jwks.test/.well-known/jwks.json',
             ACCESS_ALLOWED_EMAILS: 'maintainer@example.com',

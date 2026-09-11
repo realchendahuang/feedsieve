@@ -166,6 +166,16 @@ type MarkVerdict = {
 
 每个标注必须可解释——用户点击黄框就能看到「为什么」。
 
+### 6.1 引擎与证据分离（2026-09-11 起的升级节奏）
+
+判定逻辑按「换血频率」分三层，前三层都不随扩展发版：
+
+- **小时级 · 数据包（已上线）**：官方词库 + 社区名单快照，签名发布，扩展 ≤15 分钟自动拉取。词库命中同时是词沙拉/弱信号组合层的账号侧佐证（`keywordCorroborated` 在 detect 的规则顺序内传播）。
+- **天级 · 计分配置（预留）**：`DETECTOR_CONFIG`（乱码双征阈值、数字锚点权重表、词沙拉形状区间、组合门槛）已集中到单一导出常量；下一轮把这份配置搬进签名规则包（schema v2）即可热更新，无需发版。
+- **月级 · 引擎代码（随发版）**：规则解释器与形状/锚点原语本身（`wordSaladShapeStrength`、`isGarbledBatchHandle` 等）。解释器稳定、参数热更、原语小步转发版。
+
+对外演化纪律：新批次样本先写金标语料（正样本 + 误伤守卫，见 corpus/cases.json），指标（`CORPUS_REPORT=1`）全绿后再动参数。
+
 ## 7. 黄框标注 UI
 
 - 黄框 + 理由标签（如「名单命中 · bot_spam」）
@@ -230,12 +240,23 @@ POST /v1/rescues
 POST /v1/labels/retract
 GET  /v1/snapshots/latest
 GET  /v1/blocklist/latest.yaml
+GET  /v1/roster/latest          (官网名单公示数据：黑名单 + 白名单，字段收敛)
+POST /v1/applications           (公示申请：白名单自荐 / 误伤申诉，邮箱验证码)
+POST /v1/applications/verify
 GET|POST|DELETE /api/admin/* (仅管理域 + Cloudflare Access)
 ```
 
 不负责替用户操作 X，也不需要用户 X OAuth。
 
 只上传用户主动贡献的数据，不上传完整浏览历史。
+
+官网公开页（feedsieve.win：首页、名单公示页 `/lists`、打野周榜
+`/leaderboard`）由同一个 Worker 渲染（HTML 内嵌在代码里），公示页消费
+`GET /v1/roster/latest` 渲染公示面并提供申请表单，与 API 同域名同源；公示
+内容与扩展执行的名单同源（同一份签名快照），免责声明见仓库根
+[`DISCLAIMER.md`](../DISCLAIMER.md)。
+没有独立静态站；styles 与图片随 admin 前端资产一起从 `apps/admin/public/`
+进 assets 绑定。
 
 ## 11. X Action Adapter
 

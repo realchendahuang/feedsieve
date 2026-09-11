@@ -128,6 +128,23 @@ export interface VerifiedResponse {
   }>;
 }
 
+export interface ApplicationEntry {
+  id: number;
+  handle: string;
+  kind: string;
+  statement: string;
+  status: string;
+  created_at: number;
+  verified_at: number | null;
+  decided_at: number | null;
+  decided_by: string | null;
+  decision_note: string | null;
+}
+
+export interface ApplicationsResponse {
+  entries: ApplicationEntry[];
+}
+
 /**
  * 响应结构运行时校验：服务端字段漂移（改名/类型变化）应当在数据进 UI 之前
  * 被拒绝为 invalid_response，而不是静默渲染成 —。仅覆盖主要读取端点；
@@ -253,6 +270,20 @@ const verifiedEntrySchema = z.object({
 });
 const verifiedSchema = z.object({ entries: z.array(verifiedEntrySchema) });
 
+const applicationEntrySchema = z.object({
+  id: z.number(),
+  handle: z.string(),
+  kind: z.string(),
+  statement: z.string(),
+  status: z.string(),
+  created_at: z.number(),
+  verified_at: z.number().nullable(),
+  decided_at: z.number().nullable(),
+  decided_by: z.string().nullable(),
+  decision_note: z.string().nullable(),
+});
+const applicationsSchema = z.object({ entries: z.array(applicationEntrySchema) });
+
 async function request<T>(
   path: string,
   init: RequestInit = {},
@@ -351,6 +382,17 @@ export const getCommunityCandidates = (params: {
 };
 export const getKeywords = () => request<KeywordsResponse>('/keywords', {}, keywordsSchema);
 export const getFeedback = () => request<FeedbackResponse>('/feedback', {}, feedbackSchema);
+export const getApplications = (params: { status?: string } = {}) =>
+  request<ApplicationsResponse>(
+    `/applications${params.status ? `?status=${encodeURIComponent(params.status)}` : ''}`,
+    {},
+    applicationsSchema,
+  );
+export const decideApplication = (id: number, decision: 'approved' | 'rejected', note?: string) =>
+  request<{ changed: boolean }>(`/applications/${id}/decide`, {
+    method: 'POST',
+    body: JSON.stringify({ decision, note }),
+  });
 export const getReleases = async () =>
   (await request<{ releases: Release[] }>('/releases', {}, releasesSchema)).releases;
 export const getMe = () => request<{ email: string }>('/me');

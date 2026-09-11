@@ -13,6 +13,8 @@ declare namespace Cloudflare {
     ACCESS_TEAM_DOMAIN?: string;
     /** 仅这个 hostname 可访问 React 维护端；公开 API host 永远不回退到静态后台。 */
     ADMIN_HOST?: string;
+    /** 官网公开页（/ /lists /styles.css /assets）仅服务这个 hostname；缺省 = 该域名 404。 */
+    SITE_HOST?: string;
     INSTALLATION_SALT: string;
     /** 快照与词库发布者私钥（PKCS8 DER base64，见 scripts/keygen.mjs）；缺省 = 不签名 */
     SIGNING_PRIVATE_KEY?: string;
