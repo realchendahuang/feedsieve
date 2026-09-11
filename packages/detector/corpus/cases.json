@@ -319,6 +319,36 @@
       "note": "误伤守卫（同上）：「私房菜」昵称不再是引流隐语",
       "input": { "handle": "chef_liu", "displayName": "私房菜主理人", "text": "some days feel 🖤 hollow" },
       "expected": null
+    },
+    {
+      "id": "word-salad-suffix-digit-handle",
+      "note": "2026-09-11 真机批次（evidence_post_id 2098330313420161117）：纯字母乱码段 + 尾缀数字（ohbfwzyzopkkt2 型），上批纯字母规则发布后的最小变异绕开，随尾缀容忍修复收口",
+      "input": { "handle": "ohbfwzyzopkkt1", "text": "likely mango banana 🍋 butter open wide" },
+      "expected": "word-salad"
+    },
+    {
+      "id": "combo-suffix-digit-weak-shape",
+      "note": "同批极简变体：两英文词 + 两 emoji 行的弱形状，只作为乱码锚点的组合佐证",
+      "input": { "handle": "ohbfwzyzopkkt2", "text": "shielding 🍋 🤤 compensation" },
+      "expected": "weak-signal-combo"
+    },
+    {
+      "id": "word-salad-keyword-corroborated",
+      "note": "失守 2 收口：官方词库当轮命中（keywordCorroborated）背书无乱码 handle 的词沙拉，词库热更新短语不再依赖写死隐语表",
+      "input": { "handle": "mimo_garden", "displayName": "茉见月花园", "text": "likely mango banana 🍋 butter open wide", "keywordCorroborated": true },
+      "expected": "word-salad"
+    },
+    {
+      "id": "word-salad-realname-suffix-digit-guard",
+      "note": "误伤守卫：真实姓名 handle + 尾缀数字（elizabethkader2 型）乱码双征不成立，弱形状文本不入锚点",
+      "input": { "handle": "elizabethkader2", "displayName": "Elizabeth", "text": "quiet 🌙 ☕ monday" },
+      "expected": null
+    },
+    {
+      "id": "word-salad-weak-shape-clean-handle-guard",
+      "note": "误伤守卫：两词 + 两 emoji 正常心情贴（弱形状）配干净 handle，无锚点无佐证不标",
+      "input": { "handle": "monday_coffee", "text": "quiet 🌙 ☕ monday" },
+      "expected": null
     }
 ]
 }

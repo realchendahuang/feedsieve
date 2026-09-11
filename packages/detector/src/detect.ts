@@ -27,6 +27,12 @@ export interface DetectInput {
   bio?: string;
   /** hostname 由 Reader 预先解析好，Detector 不做 URL 解析。 */
   links?: ReadonlyArray<{ href: string; hostname?: string; display?: string }>;
+  /**
+   * 官方词库已佐证（调用方或 detect() 在前面 keyword:*official* 规则命中后
+   * 置位）。把「账号说了引流话术」从写死小词表解耦到线上词库通道：
+   * 词库当天新增的短语可直接背书词沙拉/组合层判定。
+   */
+  keywordCorroborated?: boolean;
 }
 
 /** 名单条目的最小形状：协议里只有 handle 是必需的。 */
@@ -153,10 +159,16 @@ export function detect(
   }
 
   const heuristics = options.heuristics ?? DEFAULT_HEURISTICS;
+  // 词库佐证沿规则顺序向前传播：keyword:*official* 命中后，后面的 word-salad /
+  // weak-signal-combo 能以线上词库当轮命中作为账号侧佐证（词库 15 分钟热更新）。
+  let keywordCorroborated = input.keywordCorroborated ?? false;
   for (const rule of heuristics) {
     let matched: string | null;
     try {
-      matched = rule.check({ ...input, handle });
+      matched = rule.check({ ...input, handle, keywordCorroborated });
+      if (matched && rule.id.startsWith('keyword:official:')) {
+        keywordCorroborated = true;
+      }
     } catch {
       // 单条规则异常不拖垮整个检测
       continue;

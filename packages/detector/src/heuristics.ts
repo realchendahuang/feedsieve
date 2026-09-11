@@ -112,6 +112,47 @@ const templatedText: HeuristicRule = {
  */
 const WORD_SALAD_TOKEN_RE = /^[a-z]{2,12}$/;
 const WORD_SALAD_SYMBOL_RE = /^[\p{S}]{1,3}$/u;
+
+/**
+ * 判定参数集中配置（计分制基座第一步：常量都在一处，便于下一轮整体搬进
+ * 签名规则包做热更新——引擎（本文件的解释器代码）与证据（参数/语料）分离）。
+ */
+export const DETECTOR_CONFIG = {
+  /** 乱码批量号锚点：纯字母段 + 尾缀数字容忍许两征。 */
+  garbledHandle: {
+    /** 连续纯小写字母的最短段长（真人姓名上不设限或加数字尾缀都达不到）。 */
+    minLetterRun: 12,
+    /** 段尾允许的数字位数（ohbfwzyzopkkt2 型批次变体的最小修正面）。 */
+    trailingDigits: 2,
+    rareLetterCount: 2,
+    maxConsonantRun: 4,
+  },
+  /** 数字形态批量号锚点的子信号权重（求和制，阈下不成立）。 */
+  digitAnchorWeights: {
+    digitCluster5: 2,
+    alternation: 3,
+    digitRatio: 1,
+    minLength12: 1,
+    noVowelLetters: 2,
+    threshold: 3,
+  },
+  wordSalad: {
+    minTokens: 5,
+    maxTokens: 9,
+    /** 强证据：≥ strongMinWords 个英文词 + ≥1 个 emoji（经典单词沙拉）。 */
+    strongMinWords: 4,
+    /** 弱证据：只在组合层参与佐证，永不单独定案。 */
+    weakMinTokens: 4,
+    weakMinWords: 2,
+    weakMinSymbols: 2,
+    weakMaxTokens: 12,
+  },
+  combo: {
+    minNameEmoji: 2,
+  },
+} as const;
+
+const weakShapeConfig = DETECTOR_CONFIG.wordSalad;
 /**
  * 黄推引流隐语佐证表。只收多字词与明确组合：
  * 单字「约」/「私」会误中「约稿」「私房菜」等正常昵称（2026-09-09 修正），
@@ -128,13 +169,27 @@ const WORD_SALAD_TRAFFIC_HINT_RE =
  * weak-signal-combo（乱码/数字形态锚点 + 形状佐证）各自收口。
  */
 export function isWordSaladShape(text: string): boolean {
+  return wordSaladShapeStrength(text) === 'strong';
+}
+
+/**
+ * 词沙拉形状证据强度（2026-09-11 失守修正：原单布尔门只认 5–9 token 且 ≥4 词，
+ * 极简变体（两词 + 两 emoji 行）被挡在门外。弱证据从不单独定案——只在
+ * weakSignalCombo 里作为「锚点 + 至少一条内容佐证」的佐证之一。）
+ * 任一 token 含数字/标点/大写/中文链接 → 不是该形状。
+ */
+export type WordSaladStrength = 'strong' | 'weak';
+
+export function wordSaladShapeStrength(text: string): WordSaladStrength | null {
   const trimmed = text?.trim();
   if (!trimmed) {
-    return false;
+    return null;
   }
-  const tokens = trimmed.split(/\s+/);
-  if (tokens.length < 5 || tokens.length > 9) {
-    return false;
+  const tokens = trimmed.split(/\s+/).filter(Boolean);
+  const { maxTokens, strongMinWords, weakMinTokens, weakMinWords, weakMinSymbols, weakMaxTokens } =
+    weakShapeConfig;
+  if (tokens.length < weakMinTokens || tokens.length > weakMaxTokens) {
+    return null;
   }
   let words = 0;
   let symbols = 0;
@@ -147,21 +202,30 @@ export function isWordSaladShape(text: string): boolean {
       symbols += 1;
       continue;
     }
-    // 任一 token 含数字/标点/大写/中文 → 不是该形状
-    return false;
+    return null;
   }
-  return words >= 4 && symbols >= 1;
+  if (words >= strongMinWords && symbols >= 1 && tokens.length <= maxTokens) {
+    return 'strong';
+  }
+  if (words >= weakMinWords && symbols >= weakMinSymbols) {
+    return 'weak';
+  }
+  return null;
 }
 
 /**
- * 乱码 handle 佐证 = 连续 ≥12 个纯小写字母（无数字/下划线/分隔）+ 乱码双征：
- * 稀有字母 ≥2（j/q/v/x/z）且最长辅音串 ≥4。均匀随机字母块两条都会撞上；
+ * 乱码 handle 锚点 = 字母段 ≥12 位纯小写字母 + 乱码双征：稀有字母 ≥2
+ * （j/q/v/x/z）且最长辅音串 ≥4。均匀随机字母块两条都会撞上；
  * 真人姓名 handle（javierzuniga、juarezvazquez、johnsmith、schwarzenegger）
  * 至多满足其一。稀有集合不收 w/k/y——真实姓名里太常见（wayne/wong/kim）。
+ * 尾缀数字容忍 ≤2 位（2026-09-11 真机样本 ohbfwzyzopkkt2 型批次：上批纯字母
+ * 规则发布后，该批仅加一位数字尾缀即绕开判定；字母段双征不变）。
  */
-const WORD_SALAD_GARBLE_HANDLE_RE = /^[a-z]{12,}$/;
 const WORD_SALAD_RARE_LETTER_RE = /[jqvxz]/g;
 const WORD_SALAD_VOWEL_RE = /[aeiou]/;
+const WORD_SALAD_DIGIT_SUFFIX_RE = new RegExp(
+  `^[a-z]{${DETECTOR_CONFIG.garbledHandle.minLetterRun},}\\d{0,${DETECTOR_CONFIG.garbledHandle.trailingDigits}}$`,
+);
 
 function maxConsonantRun(handle: string): number {
   let max = 0;
@@ -179,11 +243,12 @@ function maxConsonantRun(handle: string): number {
 
 function isGarbledBatchHandle(handle: string | undefined): boolean {
   const normalized = handle?.trim().replace(/^@+/, '').toLowerCase() ?? '';
-  if (!WORD_SALAD_GARBLE_HANDLE_RE.test(normalized)) {
+  if (!WORD_SALAD_DIGIT_SUFFIX_RE.test(normalized)) {
     return false;
   }
   const rare = normalized.match(WORD_SALAD_RARE_LETTER_RE)?.length ?? 0;
-  return rare >= 2 && maxConsonantRun(normalized) >= 4;
+  return rare >= DETECTOR_CONFIG.garbledHandle.rareLetterCount &&
+    maxConsonantRun(normalized) >= DETECTOR_CONFIG.garbledHandle.maxConsonantRun;
 }
 
 const wordSalad: HeuristicRule = {
@@ -193,11 +258,18 @@ const wordSalad: HeuristicRule = {
     if (!text || (input.links?.length ?? 0) > 0) {
       return null;
     }
-    if (!isWordSaladShape(text)) {
+    if (wordSaladShapeStrength(text) !== 'strong') {
       return null;
     }
+    // 佐证双通道：① 官方词库已在本轮 detect 里命中任一字段
+    //（keywordCorroborated 由 detect() 按规则顺序传播，昵称/简介里「无偿约」
+    //  这类未进小词表的话术也能背书）；② 原硬编码隐语表，离线兜底。
     const side = [input.displayName, input.bio].filter(Boolean).join(' ');
-    if (!WORD_SALAD_TRAFFIC_HINT_RE.test(side) && !isGarbledBatchHandle(input.handle)) {
+    if (
+      !WORD_SALAD_TRAFFIC_HINT_RE.test(side) &&
+      !input.keywordCorroborated &&
+      !isGarbledBatchHandle(input.handle)
+    ) {
       return null;
     }
     return '英文单词沙拉模板（随机词 + emoji），疑似引流黄推';
@@ -311,25 +383,26 @@ export function isDigitPatternBatchHandle(handle: string | undefined): boolean {
     return false;
   }
   let suspicion = 0;
+  const w = DETECTOR_CONFIG.digitAnchorWeights;
   const clusters = normalized.match(DIGIT_CLUSTER_RE) ?? [];
   if (Math.max(...clusters.map((d) => d.length)) >= 5) {
-    suspicion += 2;
+    suspicion += w.digitCluster5;
   }
   if (ALTERNATION_RE.test(normalized)) {
-    suspicion += 3;
+    suspicion += w.alternation;
   }
   const digitCount = clusters.reduce((sum, d) => sum + d.length, 0);
   if (digitCount / normalized.length > 0.45) {
-    suspicion += 1;
+    suspicion += w.digitRatio;
   }
   if (normalized.length >= 12) {
-    suspicion += 1;
+    suspicion += w.minLength12;
   }
   const lettersOnly = normalized.replace(/\d+/g, '');
   if (lettersOnly.length >= 5 && !/[aeiou]/.test(lettersOnly)) {
-    suspicion += 2;
+    suspicion += w.noVowelLetters;
   }
-  return suspicion >= 3;
+  return suspicion >= w.threshold;
 }
 
 /** 组合层锚点：乱码批量号或数字形态批量号。 */
@@ -355,13 +428,16 @@ const weakSignalCombo: HeuristicRule = {
       }
       if (isWordSaladShape(text)) {
         evidence.push('英文单词沙拉形状');
+      } else if (wordSaladShapeStrength(text) === 'weak') {
+        // 弱形状（2–3 词 + ≥2 emoji）永不单独定案，仅在锚点成立时作为佐证之一
+        evidence.push('英文单词沙拉弱形状');
       }
       if (hasRepeatedChars(text)) {
         evidence.push('重复灌水字符');
       }
     }
     const nameEmoji = countEmoji(input.displayName?.trim() ?? '');
-    if (nameEmoji >= 2) {
+    if (nameEmoji >= DETECTOR_CONFIG.combo.minNameEmoji) {
       evidence.push(`装饰昵称（${nameEmoji} 个 emoji）`);
     }
     if (evidence.length === 0) {

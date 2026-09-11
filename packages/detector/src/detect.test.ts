@@ -473,3 +473,53 @@ describe('heuristic: weak-signal-combo 数字形态锚点与沙拉佐证', () =>
     ).toBe('word-salad');
   });
 });
+
+describe('2026-09-11 失守修复：尾缀数字锚点 + 词库佐证 + 弱形状计分', () => {
+  it('garbled letter run with trailing digits anchors (ohbfwzyzopkkt2 batch)', () => {
+    // 字母段双征成立 + ≤2 位尾缀数字 → 乱码锚点，转发词沙拉样本经 word-salad 发
+    expect(
+      detect({ handle: 'ohbfwzyzopkkt1', text: 'likely mango banana 🍋 butter open wide' })
+        ?.ruleId,
+    ).toBe('word-salad');
+    expect(
+      detect({ handle: 'ohbfwzyzopkkt2', text: 'shielding 🍋 🤤 compensation' })?.ruleId,
+    ).toBe('weak-signal-combo');
+    // 尾缀 3 位以上不再给锚点：数字变异面不能无限放宽
+    expect(
+      detect({ handle: 'ohbfwzyzopkkt123', text: 'shielding 🍋 🤤 compensation' }),
+    ).toBeNull();
+  });
+
+  it('real-name handles with digit suffixes still stay clean', () => {
+    // 真人姓名 + 尾缀数字：字母段够长但双征不成立，弱形状文本无佐证
+    expect(
+      detect({ handle: 'elizabethkader2', displayName: 'Elizabeth', text: 'quiet 🌙 ☕ monday' }),
+    ).toBeNull();
+    // john2024 型守卫在尾缀容忍加宽后仍未变（字母段 <12 够不上乱码阈值面）
+    expect(
+      detect({ handle: 'john2024', displayName: 'John', text: '🍑🍑🍑🍑🍑' }),
+    ).toBeNull();
+  });
+
+  it('official keyword hit earlier in the round corroborates salad-shaped text', () => {
+    // 词库佐证：官方词库当轮命中传给后面的 word-salad，隐语小词表不再是唯一来源
+    expect(
+      detect({
+        handle: 'mimo_garden',
+        displayName: '茉见月花园',
+        text: 'likely mango banana 🍋 butter open wide',
+        keywordCorroborated: true,
+      })?.ruleId,
+    ).toBe('word-salad');
+    // 无佐证时同样的干净 handle 不标
+    expect(
+      detect({ handle: 'mimo_garden', displayName: '茉见月花园', text: 'likely mango banana 🍋 butter open wide' }),
+    ).toBeNull();
+  });
+
+  it('weak salad shapes count as combo evidence only with a batch anchor', () => {
+    const weakShape = 'quiet 🌙 ☕ monday';
+    expect(detect({ handle: 'mhmsezruwzxjwl', text: weakShape })?.ruleId).toBe('weak-signal-combo');
+    expect(detect({ handle: 'monday_coffee', text: weakShape })).toBeNull();
+  });
+});
