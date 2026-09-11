@@ -180,7 +180,7 @@ export interface RuntimeCommunity {
    */
   verifiedSet: ReadonlySet<string>;
   /**
-   * 公开白名单（whitelist）：维护者在 GitHub 公开维护、随快照下发的账号。
+   * 推荐白名单（whitelist）：维护者在 GitHub 公开维护、随快照下发的账号。
    * 一票否决，优先级最高——任何检测来源（名单/指纹/域名/词库）都不得标注或拉黑。
    */
   whitelistSet: ReadonlySet<string>;
@@ -222,7 +222,7 @@ export async function buildRuntimeCommunity(): Promise<RuntimeCommunity | null> 
   // 社区白名单：与黑名单条目数学互斥（±3 净票无交集），仍独立成集合
   // 供检测管线在一切识别之前豁免（防御性先查，防服务端异常双发）。
   const verifiedSet = new Set((parsed.value.verified ?? []).map((entry) => entry.handle));
-  // 公开白名单（维护者 GitHub 维护）：优先级最高的一票豁免来源。
+  // 推荐白名单（维护者 GitHub 维护）：优先级最高的一票豁免来源。
   const whitelistSet = new Set((parsed.value.whitelist ?? []).map((entry) => entry.handle));
   // 指纹/域名是比名单弱的间接证据（换号复用话术、垃圾域名），
   // 按用户拍板只在「大扫除」档启用；最终账号名单不受启发式强度筛选。

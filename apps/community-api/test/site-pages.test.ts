@@ -29,6 +29,16 @@ describe('site host 公开页', () => {
     expect(await res.text()).toContain('名单公示');
   });
 
+  it('公示页排位赛 tab：周榜/总榜切换与 X ID/称号阶梯渲染', async () => {
+    const html = await (await worker.fetch(siteRequest('/lists'), env)).text();
+    expect(html).toContain('id="ranked-tab-week"');
+    expect(html).toContain('id="ranked-tab-all"');
+    expect(html).toContain('rankedScope');
+    expect(html).toContain('huluBadge');
+    expect(html).toContain("row.x_handle");
+    expect(html).toContain("row.tier");
+  });
+
   it('/lists.html 301 归一到 /lists', async () => {
     const res = await worker.fetch(siteRequest('/lists.html'), env);
     expect(res.status).toBe(301);

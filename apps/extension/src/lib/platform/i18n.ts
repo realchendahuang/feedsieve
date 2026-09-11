@@ -253,7 +253,7 @@ export const UI_COPY = {
     hunterXHandle: 'X 账号',
     hunterXHandleInvalid: 'X 账号格式不对（不带 @，1-15 位字母数字下划线）',
     hunterClaimTitle: '认领身份',
-    hunterClaimHelp: '昵称 / 简介 / X 账号随时可写可改；绑定邮箱后才会展示到公开榜单',
+    hunterEmailHint: '绑定并验证邮箱后，昵称 / 简介 / X 账号才会展示到公开榜单；邮箱只用来收验证码，不公开、不入库（只存哈希）',
     hunterClose: '关闭',
     hunterProfileLabel: '个人资料',
     hunterNotClaimed: '未认领',
@@ -263,7 +263,7 @@ export const UI_COPY = {
     hunterTooManyAttempts: '错码太多，请重新发码',
     hunterCodeInvalid: '验证码不对或已过期',
     hunterChangeEmail: '换个邮箱',
-    hunterBindEmail: '绑定邮箱（绑定后展示到公开榜）',
+    hunterBindEmail: '绑定邮箱',
   },
   en: {
     brand: 'FeedSieve',
@@ -514,7 +514,7 @@ export const UI_COPY = {
     hunterXHandle: 'X handle',
     hunterXHandleInvalid: 'Invalid X handle (no @, 1-15 letters/digits/underscore)',
     hunterClaimTitle: 'Claim hunter',
-    hunterClaimHelp: 'Name / bio / X handle are editable any time; they show on the public board once your email is bound',
+    hunterEmailHint: 'Your name / bio / X handle show on the public board only after email verification; your email is just for the one-time code — never published, stored hashed',
     hunterClose: 'Close',
     hunterProfileLabel: 'Profile',
     hunterNotClaimed: 'Not claimed',
@@ -524,7 +524,7 @@ export const UI_COPY = {
     hunterTooManyAttempts: 'Too many wrong codes, request a new one',
     hunterCodeInvalid: 'Code invalid or expired',
     hunterChangeEmail: 'Change email',
-    hunterBindEmail: 'Bind email (shows your profile on the public board)',
+    hunterBindEmail: 'Bind email',
   },
 } as const;
 

@@ -139,7 +139,7 @@ describe('打野排位赛 /v1/leaderboard', () => {
     expect(rowA.score).toBe(-2);
   });
 
-  it('维护者白名单一票否决：命中白名单的票按误伤计', async () => {
+  it('推荐白名单一票否决：命中白名单的票按误伤计', async () => {
     await expireRecomputeThrottle();
     await report('wl-a-0001-ffffff', 'wl_1');
     await report('wl-b-0002-ffffff', 'wl_1');

@@ -56,6 +56,7 @@ export function homePageHtml(): string {
     </section>
 
     <section class="links">
+      <a href="/guide">使用教程</a>
       <a href="/lists">名单公示</a>
       <a href="https://github.com/realchendahuang/feedsieve/blob/main/CHANGELOG.md">更新日志</a>
       <a href="https://github.com/realchendahuang/feedsieve/blob/main/PRIVACY.md">隐私政策</a>
@@ -69,6 +70,101 @@ export function homePageHtml(): string {
   </main>
 
   <footer>
+    <span>福滤娃 FeedSieve</span>
+    <span>MIT · 开源</span>
+  </footer>
+</body>
+</html>
+`;
+}
+
+export function guidePageHtml(): string {
+  return `<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>使用教程 — 福滤娃 FeedSieve</title>
+  <meta name="description" content="FeedSieve 使用教程：安装、上手四步、打野排位、设置项、批量拉黑安全边界与常见问题。" />
+  <link rel="icon" type="image/png" href="/assets/avatar.png" />
+  <meta property="og:title" content="使用教程 — 福滤娃 FeedSieve" />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://feedsieve.win/guide" />
+  <link rel="stylesheet" href="/styles.css" />
+  <style>
+    .guide { max-width: 720px; margin: 0 auto; padding: 32px 20px 64px; }
+    .guide h1 { font-size: 28px; margin: 0 0 8px; }
+    .guide .lede { opacity: .7; margin: 0 0 24px; }
+    .guide h2 { font-size: 20px; margin: 36px 0 12px; }
+    .guide h3 { font-size: 16px; margin: 20px 0 8px; }
+    .guide p, .guide li { line-height: 1.75; }
+    .guide table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+    .guide td, .guide th { text-align: left; padding: 8px 10px; border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent); vertical-align: top; }
+    .guide code { font-family: ui-monospace, monospace; background: color-mix(in srgb, currentColor 10%, transparent); border-radius: 6px; padding: 2px 6px; font-size: .9em; }
+    .guide .toc { margin: 16px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 8px; }
+    .guide .toc a { text-decoration: none; opacity: .8; }
+  </style>
+</head>
+<body>
+  <div class="nav">
+    <div class="nav-inner">
+      <a class="nav-brand" href="/">
+        <img src="/assets/avatar.png" width="30" height="30" alt="福滤娃头像" />
+        <span class="nav-brand-name">福滤娃 FeedSieve</span>
+      </a>
+    </div>
+  </div>
+
+  <main class="guide">
+    <h1>使用教程</h1>
+    <p class="lede">从安装到上榜，五分钟读完。</p>
+    <ul class="toc">
+      <li><a href="#install">安装</a></li>
+      <li><a href="#start">上手四步</a></li>
+      <li><a href="#hunting">打野排位</a></li>
+      <li><a href="#settings">设置</a></li>
+      <li><a href="#safety">批量拉黑安全</a></li>
+      <li><a href="#faq">常见问题</a></li>
+    </ul>
+
+    <h2 id="install">安装</h2>
+    <table>
+      <tr><td>Chrome 应用商店（推荐）</td><td><a href="https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph">点「添加至 Chrome」，自动更新</a></td></tr>
+      <tr><td>GitHub Releases</td><td><a href="https://github.com/realchendahuang/feedsieve/releases">下载 ZIP 解压</a> → <code>chrome://extensions</code> 开发者模式 → 加载已解压的扩展程序</td></tr>
+      <tr><td>从源码构建</td><td><code>pnpm install &amp;&amp; pnpm build:extension</code>，加载 <code>apps/extension/.output/chrome-mv3</code></td></tr>
+    </table>
+    <p>Edge / Brave 等 Chromium 浏览器可用后两种方式。装好即用，无需注册任何账号。</p>
+
+    <h2 id="start">上手四步</h2>
+    <p><strong>刷 X，看黄框。</strong>打开 x.com 正常滚动，高置信垃圾账号被黄框标出，下方一行显示判定理由，内容不隐藏。</p>
+    <p><strong>单个送走。</strong>黄框上点「顺手拉黑」：走你已登录 X 会话的内部 Block 接口，与手动点屏蔽同一条请求，手机端即刻同步消失。</p>
+    <p><strong>攒一批一起送走。</strong>黄标账号自动进待拉黑列表，点「一键拉黑 N 个」逐个执行；成功移除，失败如实保留并给出原因。</p>
+    <p><strong>漏网的自己补。</strong>任意推文操作栏点「标记垃圾并拉黑」，不需要理解检测规则。误伤了，已拉黑列表点「放回来」一键撤销。</p>
+
+    <h2 id="hunting">打野排位</h2>
+    <p>弹窗「打野」tab：<strong>战报</strong>（击杀 / 命中率 / 称号）、<strong>榜单速览</strong>（Top 10 + 你的排位）、完整<a href="/lists#ranked">周榜公示</a>。上榜默认匿名，想露脸需在弹窗认领档案并完成邮箱验证，可自愿绑定 @handle。</p>
+    <p>计分：确认击杀 +1 · 首杀 +1 · 误伤 −2。按共识击杀计分，误拉黑不计分反而扣分。周赛季 ISO 周结算，Top 3 且命中率 ≥80% 获永久称号「猎黄人」。</p>
+
+    <h2 id="settings">设置</h2>
+    <p><strong>同步关注列表</strong>：把你的关注存为本地保护名单，自动排除在一切清理之外，永不上传。</p>
+    <p><strong>关键词规则</strong>：官方 8 个词库包共 778 条公开规则，默认只开「黄推 / 成人引流」，其余按需订阅；全文<a href="/lists#keywords">公示在官网词库</a>。</p>
+    <p><strong>识别强度</strong>：清爽 / 标准 / 大扫除 三档，只调证据用量；黄框标注在任何档位都永不自动批量拉黑。</p>
+    <p><strong>备份与迁移</strong>：导出 JSON 在新设备合并，不含任何 X 登录态。</p>
+
+    <h2 id="safety">批量拉黑的安全边界</h2>
+    <p>拉黑走你的 X 登录会话，与手动点屏蔽是同一条请求。队列内置 <strong>400 条 / 24 小时</strong>滚动额度，用尽自动暂停（可选择继续）；连续 429 触发风暴降级（暂停 + 预算砍半），认证失效当天额度清零。大名单请让它分几天跑完，不要指望一个晚上清零。</p>
+
+    <h2 id="faq">常见问题</h2>
+    <p><strong>为什么是拉黑，而不是隐藏？</strong>本地隐藏只骗过你这一个浏览器；X 原生 Block 全端生效，被拉黑的号再也无法回复 / @ / 关注你。</p>
+    <p><strong>需要 X 开发者 API 吗？</strong>不需要，拉黑全程在你已登录的 X 会话内完成，FeedSieve 服务器碰不到你的 X 账号。</p>
+    <p><strong>推文会被上传吗？</strong>不会，推文原文永不出设备；社区上报只含账号名、分类、话术指纹哈希与外链域名。</p>
+    <p><strong>被误标了怎么办？</strong>走<a href="/lists#apply">官网申诉</a>，邮箱验证后进维护者复核队列。</p>
+    <p><strong>换号还能被识别吗？</strong>能：话术指纹、外链域名、换号别名追踪，换号不换模板照样命中。</p>
+    <p>更细的口径与机制：工程文档见 <a href="https://github.com/realchendahuang/feedsieve/tree/main/docs">GitHub docs/</a>。</p>
+  </main>
+
+  <footer>
+    <span><a href="/">首页</a></span>
     <span>福滤娃 FeedSieve</span>
     <span>MIT · 开源</span>
   </footer>

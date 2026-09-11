@@ -74,7 +74,7 @@ const cases: LayerCase[] = [
     expected: { presentation: 'ignore' },
   },
   {
-    id: '公开白名单（whitelist）→ ignore（维护者一票豁免，优先级最高）',
+    id: '推荐白名单（whitelist）→ ignore（维护者一票豁免，优先级最高）',
     input: {
       input: { handle: 'maintainer_vouched', text: 'dm me for crypto signals 福利在主页' },
       community: fakeCommunity({ whitelistSet: new Set(['maintainer_vouched']) }),

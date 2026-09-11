@@ -825,6 +825,30 @@ tr.detail-row td {
   overflow: hidden;
 }
 
+.ranked-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.ranked-tab {
+  padding: 4px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: none;
+  color: var(--fog);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ranked-tab.is-active {
+  background: rgba(255, 214, 10, 0.08);
+  color: var(--signal);
+  border-color: currentColor;
+}
+
 .ranked-row {
   position: relative;
   display: flex;
@@ -891,12 +915,45 @@ tr.detail-row td {
   margin-right: 6px;
 }
 
+.ranked-tier {
+  color: var(--fog);
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.ranked-hulu {
+  color: var(--signal);
+  font-weight: 600;
+  margin-right: 5px;
+}
+
+.ranked-hulu.mid {
+  color: var(--fog);
+}
+
+.ranked-meta {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
 .ranked-bio {
   color: var(--fog);
   font-size: 12.5px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.ranked-handle {
+  color: #1d9bf0;
+  font-size: 12.5px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.ranked-handle:hover {
+  text-decoration: underline;
 }
 
 .ranked-stats {

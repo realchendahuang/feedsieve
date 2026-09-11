@@ -6,7 +6,7 @@ import {
   type HunterProfileState,
 } from '../../../src/lib/community/hunter';
 import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
-import { AppIcon } from './shared';
+import { HelpIcon, AppIcon } from './shared';
 
 /**
  * 个人资料卡（「我的」页）：昵称 / 简介 / X 账号随时可写可改（无需先绑定）；
@@ -138,8 +138,6 @@ export default function HunterProfileCard({
       <button type="button" className="primary-action hunter-save" onClick={() => void save()} disabled={busy}>
         {t.hunterSave}
       </button>
-      {!verified ? <p className="hunter-claim-hint">{t.hunterClaimHelp}</p> : null}
-
       {verified ? (
         <div className="hunter-email-row">
           <AppIcon name="check" size={13} />
@@ -149,9 +147,12 @@ export default function HunterProfileCard({
           </button>
         </div>
       ) : stage === null ? (
-        <button type="button" className="text-action hunter-email-bind" onClick={() => setStage('email')}>
-          {t.hunterBindEmail}
-        </button>
+        <div className="hunter-email-bind-row">
+          <button type="button" className="text-action hunter-email-bind" onClick={() => setStage('email')}>
+            {t.hunterBindEmail}
+          </button>
+          <HelpIcon text={t.hunterEmailHint} />
+        </div>
       ) : stage === 'email' ? (
         <div className="hunter-email-flow">
           <input

@@ -62,11 +62,44 @@ const snapshotBody = JSON.stringify({
     updated_at: '2026-09-01T00:00:00Z',
     evidence_post_ids: [],
   })),
+  // 推荐白名单预览：名单页折叠区 + 背书理由行
+  whitelist: [
+    {
+      handle: 'goodactor',
+      x_user_id: null,
+      note: '知名科普博主，多次被模板误标，复核为正常账号',
+      added_at: '2026-09-08T00:00:00.000Z',
+    },
+  ],
 });
+
+const hunterBoardRows = Array.from({ length: 14 }, (_, index) => ({
+  id: `hunter_${index}`,
+  name: `猎手#${(0xa0f98f + index * 0x12345).toString(16).toUpperCase().slice(0, 6)}`,
+  bio: index % 4 === 0 ? '专注清理成人引流与诈骗链' : null,
+  title: index % 3 === 0 ? '金标猎手' : null,
+  tier: '滤福侠',
+  x_handle: null,
+  kills: 220 - index * 9,
+  score: (220 - index * 9) * 3,
+  accuracy: 0.94 - index * 0.02,
+  rank: index + 1,
+}));
+
+const hunterBoardCache = {
+  installationId: 'preview-installation-id',
+  ts: now,
+  data: {
+    rows: hunterBoardRows,
+    total: 42,
+    me: { ...hunterBoardRows[4], isMe: true },
+  },
+};
 
 const storageData = {
   uiLanguage: new URLSearchParams(location.search).get('lang') === 'en' ? 'en' : 'zh',
   installationId: 'preview-installation-id',
+  hunterBoardCache,
   communitySettings: {
     enabled: true,
     strength: 'standard',

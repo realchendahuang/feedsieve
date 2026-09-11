@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { parseSnapshotBody, type CommunityEntry } from '@feedsieve/community-lists';
+import {
+  parseSnapshotBody,
+  type CommunityEntry,
+  type WhitelistEntry,
+} from '@feedsieve/community-lists';
 import { shouldPauseDestructive, type XAdapterCapabilities } from '@feedsieve/x-adapter';
 import { getBlockedAccounts, subscribeBlocked } from '../../src/lib/community/blocked-accounts';
 import { getAllowlist, subscribeAllowlist } from '../../src/lib/community/allowlist';
@@ -65,6 +69,9 @@ export default function App() {
   const [capabilities, setCapabilities] = useState<XAdapterCapabilities | null>(null);
   const [community, setCommunity] = useState<CommunitySettings | null>(null);
   const [communityEntries, setCommunityEntries] = useState<CommunityEntry[]>([]);
+  // 推荐白名单：快照 whitelist 段随名单一起下发，只读展示不做任何操作；
+  // note 是维护者的公开背书理由（仓库 whitelist.yaml 强制字段），名单页直接展示
+  const [recommendList, setRecommendList] = useState<WhitelistEntry[]>([]);
   // 名单 tab 徽章需要计算「社区候选中未被保护」的数量，轻量订阅三份名单。
   const [blocked, setBlocked] = useState<Array<{ handle: string }>>([]);
   const [allowlist, setAllowlist] = useState<Array<{ handle: string }>>([]);
@@ -78,11 +85,13 @@ export default function App() {
     (snapshot: Awaited<ReturnType<typeof getCommunitySnapshot>>): void => {
       if (!snapshot) {
         setCommunityEntries([]);
+        setRecommendList([]);
         return;
       }
       const parsed = parseSnapshotBody(snapshot.body);
       if (!parsed.ok) {
         setCommunityEntries([]);
+        setRecommendList([]);
         return;
       }
       // 展示与批量拉黑都用这个顺序：净票高的排前面（票面主序稳定，同人并列按 handle）
@@ -90,6 +99,9 @@ export default function App() {
         (a, b) => b.net_votes - a.net_votes || a.handle.localeCompare(b.handle),
       );
       setCommunityEntries(sorted);
+      setRecommendList(
+        (parsed.value.whitelist ?? []).sort((a, b) => a.handle.localeCompare(b.handle)),
+      );
     },
     [],
   );
@@ -330,6 +342,7 @@ export default function App() {
               refreshPageMarked={refreshPageMarked}
               pauseDestructive={pauseDestructive}
               communityEntries={communityEntries}
+              recommendList={recommendList}
             />
           </>
         ) : null}

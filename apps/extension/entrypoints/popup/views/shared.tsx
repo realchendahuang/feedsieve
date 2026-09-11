@@ -17,6 +17,7 @@ export type AppIconName =
   | 'plus'
   | 'x'
   | 'check'
+  | 'copy'
   | 'sidepanel';
 
 export function AppIcon({
@@ -95,6 +96,12 @@ export function AppIcon({
     check: (
       <>
         <path d="m4.5 12.5 5 5 10-11" />
+      </>
+    ),
+    copy: (
+      <>
+        <rect x="9" y="9" width="11" height="11" rx="2" />
+        <path d="M5 15V5a2 2 0 0 1 2-2h10" />
       </>
     ),
   };
