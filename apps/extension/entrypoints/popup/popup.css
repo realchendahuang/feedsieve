@@ -2631,3 +2631,7 @@ input:focus-visible + span {
   font-size: 12.5px;
   padding: 6px 2px;
 }
+
+.hunter-primary {
+  width: 100%;
+}

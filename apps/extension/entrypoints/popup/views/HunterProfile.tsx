@@ -7,11 +7,29 @@ import {
   type HunterProfileState,
 } from '../../../src/lib/community/hunter';
 import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
+import { HelpIcon } from './shared';
 
 /**
- * 猎手档案（名单区，紧跟战报条）：默认匿名上榜，邮箱验证码解锁自定义昵称 / 一句话介绍。
- * 无密码无会话——安装 ID 即凭证，邮箱只用于发码。
+ * 猎手档案（打野 tab 页）：默认匿名上榜，验证一次邮箱解锁自定义昵称 / 简介 /
+ * X handle（一次性绑定，之后免登录）。无密码无会话——安装 ID 即凭证。
  */
+function bindErrorText(t: (typeof UI_COPY)[UiLanguage], error: string): string {
+  switch (error) {
+    case 'invalid_email':
+      return t.hunterInvalidEmail;
+    case 'too_many_code_requests':
+      return t.hunterRateLimited;
+    case 'mail_unconfigured':
+      return t.hunterMailUnavailable;
+    case 'too_many_attempts':
+      return t.hunterTooManyAttempts;
+    case 'invalid_or_expired_code':
+      return t.hunterCodeInvalid;
+    default:
+      return t.hunterError;
+  }
+}
+
 export default function HunterProfile({
   language,
   notify,
@@ -45,7 +63,7 @@ export default function HunterProfile({
     try {
       const result = await bindHunterEmail(email.trim());
       if (!result.ok) {
-        notify(t.hunterError);
+        notify(bindErrorText(t, result.error));
         return;
       }
       if (!result.sent && result.dev_code) {
@@ -63,9 +81,9 @@ export default function HunterProfile({
     if (!code.trim() || busy) return;
     setBusy(true);
     try {
-      const ok = await verifyHunterEmail(email.trim(), code.trim());
-      if (!ok) {
-        notify(t.hunterError);
+      const result = await verifyHunterEmail(email.trim(), code.trim());
+      if (!result.ok) {
+        notify(bindErrorText(t, result.error ?? ''));
         return;
       }
       setProfile(await fetchHunterProfile());
@@ -89,13 +107,15 @@ export default function HunterProfile({
     }
   }
 
+  const verified = profile?.email_verified ?? false;
   return (
     <section className="settings-card">
       <div className="settings-card-head">
-        <h2>{t.hunterSection}</h2>
+        <h2>{verified ? t.hunterSection : t.hunterClaimTitle}</h2>
+        {verified ? null : <HelpIcon text={t.hunterClaimHelp} />}
       </div>
       <div className="settings-fields">
-        {profile?.email_verified ? (
+        {verified ? (
           <>
             <label className="setting-row">
               <span className="setting-copy">
@@ -133,7 +153,7 @@ export default function HunterProfile({
                 onChange={(event) => setXHandle(event.target.value)}
               />
             </label>
-            <button type="button" className="text-action" onClick={() => void save()} disabled={busy}>
+            <button type="button" className="primary-action hunter-primary" onClick={() => void save()} disabled={busy}>
               {t.hunterSave}
             </button>
           </>
@@ -147,7 +167,12 @@ export default function HunterProfile({
                 onChange={(event) => setEmail(event.target.value)}
               />
             </div>
-            <button type="button" className="text-action" onClick={() => void sendCode()} disabled={busy}>
+            <button
+              type="button"
+              className="primary-action hunter-primary"
+              onClick={() => void sendCode()}
+              disabled={busy || !email.trim()}
+            >
               {t.hunterSendCode}
             </button>
           </>
@@ -163,8 +188,18 @@ export default function HunterProfile({
                 onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
               />
             </div>
-            <button type="button" className="text-action" onClick={() => void verify()} disabled={busy}>
+            <button type="button" className="primary-action hunter-primary" onClick={() => void verify()} disabled={busy}>
               {t.hunterVerify}
+            </button>
+            <button
+              type="button"
+              className="text-action"
+              onClick={() => {
+                setStage('email');
+                setCode('');
+              }}
+            >
+              {t.hunterChangeEmail}
             </button>
           </>
         )}
