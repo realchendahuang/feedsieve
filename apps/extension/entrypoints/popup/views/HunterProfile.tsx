@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   bindHunterEmail,
   saveHunterProfile,
@@ -7,6 +7,13 @@ import {
 } from '../../../src/lib/community/hunter';
 import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
 import { HelpIcon, AppIcon } from './shared';
+
+/** 表单同步指纹：档案身份字段拼接，变化才覆写编辑态初值。 */
+function profileKey(profile: HunterProfileState | null): string | null {
+  return profile
+    ? `${profile.email_verified}|${profile.display_name ?? ''}|${profile.bio ?? ''}|${profile.x_handle ?? ''}`
+    : null;
+}
 
 /**
  * 个人资料卡（「我的」页）：昵称 / 简介 / X 账号随时可写可改（无需先绑定）；
@@ -47,17 +54,20 @@ export default function HunterProfileCard({
   const [stage, setStage] = useState<'email' | 'code' | null>(null);
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
-  const [name, setName] = useState('');
-  const [bio, setBio] = useState('');
-  const [xHandle, setXHandle] = useState('');
+  const [name, setName] = useState(() => profile?.display_name ?? '');
+  const [bio, setBio] = useState(() => profile?.bio ?? '');
+  const [xHandle, setXHandle] = useState(() => profile?.x_handle ?? '');
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    if (!profile) return;
+  // 档案字段变化（绑邮箱 / 改名回来）时同步表单初值：render 期按上一值比较，
+  // 用户正在输入的字段只有服务端值真正变化才被覆盖。
+  const [syncedFrom, setSyncedFrom] = useState<string | null>(profileKey(profile));
+  if (profile && profileKey(profile) !== syncedFrom) {
+    setSyncedFrom(profileKey(profile));
     setName(profile.display_name ?? '');
     setBio(profile.bio ?? '');
     setXHandle(profile.x_handle ?? '');
-  }, [profile?.email_verified, profile?.display_name, profile?.bio, profile?.x_handle]);
+  }
 
   async function sendCode(): Promise<void> {
     if (!email.trim() || busy) return;

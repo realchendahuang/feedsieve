@@ -205,7 +205,7 @@ export function listsPageHtml(): string {
           <summary aria-label="免责声明">!</summary>
           <div class="disclaimer-body">
             <p>
-              黑名单是举报与抢救投票的聚合（拉黑票 − 误标票 ≥ 3），白名单是维护者认证与博主自荐——都反映社区意见，
+              黑名单是举报与抢救投票的聚合（拉黑票 − 误标票 ≥ 3），白名单是推荐白名单与博主自荐——都反映社区意见，
               不构成对任何账号的事实认定；拉黑始终由扩展用户本人执行。
             </p>
             <a href="https://github.com/realchendahuang/feedsieve/blob/main/DISCLAIMER.md" target="_blank" rel="noopener noreferrer">完整免责声明 →</a>
@@ -256,7 +256,7 @@ export function listsPageHtml(): string {
     </section>
 
     <section class="panel" id="panel-whitelist" role="tabpanel" hidden>
-      <div class="panel-toolbar"><span class="panel-note">维护者认证 · 一票豁免任何标注</span></div>
+      <div class="panel-toolbar"><span class="panel-note">推荐白名单 · 一票豁免任何标注</span></div>
       <div class="table-card">
         <table id="whitelist-table">
           <thead>
@@ -264,7 +264,7 @@ export function listsPageHtml(): string {
           </thead>
           <tbody></tbody>
         </table>
-        <p class="empty" id="whitelist-empty" hidden>暂无认证账号</p>
+        <p class="empty" id="whitelist-empty" hidden>暂无推荐白名单账号</p>
       </div>
       <div class="panel-toolbar spaced"><span class="panel-note">社区抢救 · 被验证为「误标正常」的账号</span></div>
       <div class="table-card">

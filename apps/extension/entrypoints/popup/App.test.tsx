@@ -346,7 +346,7 @@ describe('popup App 渲染冒烟', () => {
     expect(rootEl.textContent).toContain('3');
     expect(rootEl.textContent).toContain('票');
     expect(rootEl.textContent).toContain('@maintained');
-    expect(rootEl.textContent).toContain('维护者认证');
+    expect(rootEl.textContent).toContain('推荐白名单');
 
     // 一键入口必须排在名单列表之前（否则在 600px 弹窗里落到折叠线以下不可见）
     const cleanAction = rootEl.querySelector('.community-clean-action');

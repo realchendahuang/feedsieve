@@ -14,7 +14,7 @@
 - **黑名单**：FeedSieve 用户举报（拉黑票）与抢救（误标票）的聚合结果，加上维护者明确维护的条目。
   入榜公式公开：`拉黑票 - 误标票 ≥ 3`，一安装一票。它反映的是社区意见的聚合，**不构成 FeedSieve
   或任何一方对账号性质的事实认定或指控**。
-- **白名单**：两部分——维护者认证（维护者公开背书并附入册说明）与博主自荐（博主本人提交宣言、
+- **白名单**：两部分——推荐白名单（维护者公开背书并附入册说明）与博主自荐（博主本人提交宣言、
   经邮箱验证与维护者确认后入册）。入册反映的是该账号被社区或维护者认可的现状，**不构成担保**。
 - **社区抢救**：被社区投票验证为「误标正常」的账号。
 
@@ -43,9 +43,10 @@
   `block votes - false-positive votes >= 3`, one vote per installation. It reflects aggregated
   community opinion and **does not constitute a factual claim or accusation** about any account
   by FeedSieve or anyone else.
-- **Whitelist**: two parts — maintainer-endorsed entries (with a public note) and self-nominated
-  entries (submitted by the account owner as a declaration, verified via email and confirmed by
-  a maintainer). Inclusion reflects current community/maintainer recognition and **is not a warranty**.
+- **Whitelist**: two parts — recommended-whitelist entries (each with a maintainer endorsement and a
+  public note) and self-nominated entries (submitted by the account owner as a declaration, verified
+  via email and confirmed by a maintainer). Inclusion reflects current community/maintainer
+  recognition and **is not a warranty**.
 - **Verified (community-rescued)**: accounts the community has voted to confirm as wrongly flagged.
 
 ### Boundaries
