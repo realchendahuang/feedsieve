@@ -55,7 +55,6 @@ import {
   readAgentKeywordDetectorConfig,
   writeAgentKeywordDetectorConfig,
 } from './agent-admin';
-import { hunterPageHtml } from './hunter-page';
 import { LEADERBOARD, getLeaderboard, markLeaderboardDirty } from './leaderboard';
 import { runScheduledCron } from './scheduled';
 import { bindEmail, getProfile, updateProfile, verifyEmail } from './player';
@@ -867,12 +866,6 @@ export function createApp() {
     if (!result.ok) return c.json({ error: result.error }, result.httpStatus);
     c.header('Cache-Control', 'no-store');
     return c.json(result.value);
-  });
-
-  // 打野周榜公开页：静态壳 + 客户端拉取，与 /v1/leaderboard 同一份数据。
-  app.get('/leaderboard', (c) => {
-    c.header('Cache-Control', 'no-store');
-    return c.html(hunterPageHtml());
   });
 
   // 我的贡献统计（v0.6）：按安装哈希查累计上报 / 被采纳 / 抢救数。

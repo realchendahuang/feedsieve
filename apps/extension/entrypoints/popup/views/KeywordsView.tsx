@@ -18,7 +18,7 @@ import {
 import { getCommunitySettings } from '../../../src/lib/community/community-store';
 import { contributeKeywordPhrases } from '../../../src/lib/community/contribute';
 import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
-import { AppIcon, HelpIcon } from './shared';
+import { AppIcon, HelpIcon, OfficialLinkIcon } from './shared';
 
 interface KeywordsViewProps {
   language: UiLanguage;
@@ -195,6 +195,7 @@ export default function KeywordsView({ language, notify }: KeywordsViewProps) {
             {t.officialKeywords} <HelpIcon text={t.keywordRulesHint} />
           </h2>
           <div className="settings-head-actions">
+            <OfficialLinkIcon target="keywords" label={t.siteKeywords} />
             <button
               type="button"
               className={`square-action small${syncing ? ' is-spinning' : ''}`}

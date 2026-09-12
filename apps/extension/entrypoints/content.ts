@@ -993,8 +993,7 @@ export default defineContentScript({
       // 抢救：只对社区名单命中的条目出现（显式投票，名单不是永久刑罚）
       const rescueBtn =
         detection.source === 'community-list' && autoContribute
-          ? (() => {
-              const btn = document.createElement('button');
+          ? (() => {              const btn = document.createElement('button');
               btn.className = 'fs-allow';
               btn.type = 'button';
               btn.textContent = uiLanguage === 'zh' ? '抢救' : 'Rescue';
@@ -1033,7 +1032,25 @@ export default defineContentScript({
             })()
           : null;
 
-      secondaryGroup.append(...(rescueBtn ? [rescueBtn] : []), allowBtn);
+      // 抢救公示引流：正在投票抢救时，旁边给出官网抢救名单镜像入口
+      const rescueSiteLink =
+        detection.source === 'community-list' && autoContribute
+          ? (() => {
+              const link = document.createElement('a');
+              link.className = 'fs-allow';
+              link.href = 'https://feedsieve.win/lists/rescue';
+              link.target = '_blank';
+              link.rel = 'noopener noreferrer';
+              link.textContent = uiLanguage === 'zh' ? '公示' : 'Cases';
+              return link;
+            })()
+          : null;
+
+      secondaryGroup.append(
+        ...[rescueBtn, rescueSiteLink, allowBtn].filter(
+          (el): el is HTMLAnchorElement | HTMLButtonElement => el != null,
+        ),
+      );
 
       badge.append(label, primaryGroup, secondaryGroup);
       // cellInnerDiv 是普通块容器：徽章作为新块级子元素排在推文下方，

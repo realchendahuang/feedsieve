@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import type { MarkStrength } from '@feedsieve/community-lists';
 import type { AllowlistItem } from '../../../src/lib/community/allowlist';
 import { normalizeStrictHandle } from '../../../src/lib/platform/xhr-bridge-guard';
+import { openOfficialPage, SITE_URLS, type SiteList } from '../../../src/lib/platform/site-links';
 import { localizedDetectionReason, type UiLanguage } from '../../../src/lib/platform/i18n';
 import { formatAgo as sharedFormatAgo } from '@feedsieve/shared';
 
@@ -310,3 +311,28 @@ export function normalizeManualInput(value: string): string | null {
 }
 
 export { getChromeSidePanel, type ChromeSidePanelApi } from '../../../src/lib/platform/sidepanel';
+
+/**
+ * 官网公示页图标入口：按 tab 对应官网同名公示页引流（黑名单/白名单/词库）。
+ * 图标即控件，靠 aria-label 表达去处。
+ */
+export function OfficialLinkIcon({
+  target,
+  label,
+}: {
+  target: SiteList;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      className="official-link-icon"
+      aria-label={label}
+      title={label}
+      onClick={() => void openOfficialPage(SITE_URLS[target])}
+    >
+      <AppIcon name="sidepanel" size={13} />
+    </button>
+  );
+}
+

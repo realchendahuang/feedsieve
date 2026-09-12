@@ -35,6 +35,7 @@ import {
   allowlistReason,
   AppIcon,
   FAILURE_LABELS,
+  OfficialLinkIcon,
   formatDate,
   HelpIcon,
   normalizeManualInput,
@@ -409,6 +410,7 @@ export default function ListsView({
                   {t.sortAlpha}
                 </button>
               </div>
+              <OfficialLinkIcon target="blacklist" label={t.siteBlacklist} />
             </div>
 
             {/* 动作区固定在首屏：这里是队列进度与失败转述 */}
@@ -690,6 +692,7 @@ export default function ListsView({
                 <span className="account-meta">{t.recommendListTitle}</span>
                 <em className="account-meta">{recommendList.length}</em>
               </button>
+              <OfficialLinkIcon target="whitelist" label={t.siteWhitelist} />
             </div>
             {showRecommended ? (
               recommendList.length > 0 ? (

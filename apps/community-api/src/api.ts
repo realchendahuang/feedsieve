@@ -1,6 +1,6 @@
 /**
  * Worker 分发层（剥离自 index.ts 的 catch-all）：
- * API 家族（/v1/* /api/* /healthz）与 /leaderboard 走 Hono；
+ * API 家族（/v1/* /api/* /healthz）走 Hono；
  * OG 分享图、robots.txt、sitemap.xml 在这里直出；
  * 其余路径返回 null —— 交给 TanStack Start SSR（server.ts）。
  */
@@ -21,12 +21,11 @@ export async function handleWorkerRoutes(
 ): Promise<Response | null> {
   const { pathname, origin } = new URL(request.url);
 
-  // API 家族与打野榜页（所有 host 通用，沿用 index.ts 的行为）
+  // API 家族（所有 host 通用，沿用 index.ts 的行为）
   if (
     pathname.startsWith('/v1/') ||
     pathname.startsWith('/api/') ||
-    pathname === '/healthz' ||
-    pathname === '/leaderboard'
+    pathname === '/healthz'
   ) {
     return apiApp.fetch(request, env);
   }
@@ -49,18 +48,15 @@ const SITE_PAGES = [
   { path: '/lists/keywords', title: '关键词词库公示' },
   { path: '/lists/ranked', title: '打野排位赛周榜' },
   { path: '/lists/apply', title: '入册申请与误伤申诉' },
-  { path: '/leaderboard', title: '打野周榜（观看页）' },
 ] as const;
 
 function robotsTxt(): Response {
-  // /leaderboard 保持 noindex（纯观看页，扩展内未匿名榜不面向搜索）
   return new Response(
     `# FeedSieve 官网公示站
 User-agent: *
 Allow: /
 Disallow: /v1/
 Disallow: /api/
-Disallow: /leaderboard
 `,
     { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=3600' } },
   );

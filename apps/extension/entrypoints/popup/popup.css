@@ -3163,6 +3163,27 @@ input:focus-visible + span {
   filter: brightness(1.05);
 }
 
+/* 官网公示页图标入口：黑名单/白名单/词库页头的弱化跳转控件 */
+.official-link-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  opacity: 0.5;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.official-link-icon:hover {
+  opacity: 1;
+}
+
 /* 榜单状态三态分离：加载/失败同一弱化样式，失败额外给重试按钮 */
 .hunter-board-error {
   display: flex;

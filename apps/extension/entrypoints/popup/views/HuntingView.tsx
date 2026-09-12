@@ -47,8 +47,8 @@ export default function HuntingView({
   }, []);
 
   const openFullBoard = useCallback(() => {
-    void openLeaderboard(board?.me?.id ?? null);
-  }, [board]);
+    void openLeaderboard();
+  }, []);
 
   const openXProfile = useCallback((handle: string): void => {
     void browser.tabs.create({ url: `https://x.com/${handle}` });

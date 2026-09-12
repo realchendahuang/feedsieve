@@ -2,11 +2,11 @@
  * 打野排位赛客户端：榜单状态查询与榜单页跳转。
  *
  * 身份 = 本机安装 ID（服务端只见加盐哈希，见 contribute.ts）。查询走
- * POST body，ID 不进 URL；跳转榜单页只带不可逆的哈希前缀（me），榜单页
- * 加载后立即从地址栏抹除，分享出去的是干净 URL。
+ * POST body，ID 不进 URL；榜单页跳转一律去官网 /lists/ranked。
  */
 
 import { API_BASE } from '../platform/api-base';
+import { openOfficialPage, SITE_URLS } from '../platform/site-links';
 import { getInstallationId, peekInstallationId } from './contribute';
 
 // 弹窗每次打开都是新页面，内存缓存无效：缓存落 storage.local，跨打开复用。
@@ -119,8 +119,11 @@ export async function fetchHunterBoard(): Promise<HunterBoard | null> {
   }
 }
 
-export function leaderboardUrl(mePrefix?: string | null): string {
-  return mePrefix ? `${API_BASE}/leaderboard?me=${mePrefix}` : `${API_BASE}/leaderboard`;
+/**
+ * 打野榜完整页：官网 /lists/ranked（旧 API 观看页已下线）。
+ */
+export function leaderboardUrl(): string {
+  return SITE_URLS.ranked;
 }
 
 /** 榜单状态（战报卡片订阅；失败静默为空态，不打扰）。 */
@@ -139,8 +142,8 @@ export async function fetchHunterStatus(): Promise<HunterStatus> {
   };
 }
 
-export async function openLeaderboard(mePrefix?: string | null): Promise<void> {
-  await browser.tabs.create({ url: leaderboardUrl(mePrefix) });
+export async function openLeaderboard(): Promise<void> {
+  await openOfficialPage(SITE_URLS.ranked);
 }
 
 export interface HunterProfileState {
