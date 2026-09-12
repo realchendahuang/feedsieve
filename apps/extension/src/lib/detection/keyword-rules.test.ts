@@ -205,4 +205,17 @@ describe('本地关键词规则', () => {
     );
     expect(rule?.check({ handle: 'bait', text: '我·福 🔥 不 黑，不信你看' })).toContain('我福不黑');
   });
+
+  it('字间拆入不可见格式字符（U+2060 词连接符等）仍命中（真机样本）', async () => {
+    const settings = await getKeywordRuleSettings();
+    const rule = createKeywordHeuristics(settings).find(
+      (candidate) => candidate.id === 'keyword:official:adult-fu-not-black',
+    );
+    expect(rule).toBeDefined();
+    const sample = [
+      '应没没人比我玩的开了吧🍀🙉',
+      '我\u2060\u200C\u200D福\u200C\u2060不\u2060黑\u200D不信\u200C你看',
+    ].join('');
+    expect(rule?.check({ handle: 'bait', text: sample })).toContain('我福不黑');
+  });
 });

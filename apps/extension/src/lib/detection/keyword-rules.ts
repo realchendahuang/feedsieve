@@ -71,7 +71,10 @@ export function normalizeKeywordPhrase(value: string): string {
   return value
     .trim()
     .normalize('NFKC')
-    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    // 零宽规避不止 200B-200D：U+2060 词连接符、U+00AD 软连字符、双向控制符等
+    // 全部是 Cf（格式字符），实战样本已被用来拆「我福不黑不信你看」。
+    // 按 Unicode 类别整类剥掉，再剥变体选择符（FE0E/FE0F，跟在 emoji 后残留）。
+    .replace(/[\p{Cf}\u{FE00}-\u{FE0F}]/gu, '')
     .toLocaleLowerCase();
 }
 function textForMatch(value: string): string {
