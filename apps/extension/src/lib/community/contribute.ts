@@ -23,6 +23,8 @@ export interface ContributionItem {
   linkDomains?: string[];
   /** 判断来源（v0.7.6）：手动标记 = manual，检测器命中 = 对应来源 */
   detectionSource?: string;
+  /** 击杀时刻探活结果（#2）：现场 UserByScreenName 解析得来的存活观测；缓存命中时缺省 */
+  liveness?: 'alive' | 'dead';
 }
 
 const INSTALLATION_KEY = 'installationId';
@@ -40,6 +42,7 @@ type LocalLabel =
       contentFingerprint?: string;
       linkDomains?: string[];
       detectionSource?: string;
+      liveness?: 'alive' | 'dead';
     }
   | {
       label: 'allowed';
@@ -344,6 +347,7 @@ async function runLocalLabelSync(): Promise<LabelSyncSummary> {
             contentFingerprint: label.contentFingerprint,
             linkDomains: label.linkDomains,
             detectionSource: label.detectionSource,
+            liveness: label.liveness,
           }),
         ),
       },
@@ -436,6 +440,7 @@ async function collectLocalLabels(): Promise<Map<string, LocalLabel>> {
       ...(item.contentFingerprint ? { contentFingerprint: item.contentFingerprint } : {}),
       ...(item.linkDomains?.length ? { linkDomains: item.linkDomains } : {}),
       ...(item.detectionSource ? { detectionSource: item.detectionSource } : {}),
+      ...(item.liveness ? { liveness: item.liveness } : {}),
     });
   }
   for (const item of allowed) {
@@ -466,6 +471,7 @@ function labelSignature(label: LocalLabel): string {
           label.contentFingerprint ?? '',
           [...(label.linkDomains ?? [])].sort(),
           label.detectionSource ?? '',
+          label.liveness ?? '',
         ]
       : [
           label.label,
@@ -515,6 +521,7 @@ function reportPayload(item: ContributionItem): Record<string, unknown> {
     ...(item.contentFingerprint ? { content_fingerprint: item.contentFingerprint } : {}),
     ...(item.linkDomains?.length ? { link_domains: item.linkDomains } : {}),
     ...(item.detectionSource ? { detection_source: item.detectionSource } : {}),
+    ...(item.liveness ? { liveness: item.liveness } : {}),
   };
 }
 

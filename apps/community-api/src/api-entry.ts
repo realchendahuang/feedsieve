@@ -5,6 +5,7 @@
  */
 import { createApp } from './index';
 import { scheduledAutoPublish, settleSeasonsScheduled } from './scheduled';
+import { probeAccountHealthScheduled } from './prober';
 
 // 路由表与中间件链只构建一次；每请求重建纯属浪费 CPU（env 每次调用传入）。
 const app = createApp();
@@ -18,5 +19,6 @@ export default {
   async scheduled(_controller: ScheduledController, env: Cloudflare.Env) {
     await scheduledAutoPublish(env);
     await settleSeasonsScheduled(env);
+    await probeAccountHealthScheduled(env);
   },
 } satisfies ExportedHandler<Cloudflare.Env>;

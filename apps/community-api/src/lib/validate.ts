@@ -16,6 +16,8 @@ export interface ValidReport {
   linkDomains: string[];
   /** 检测来源（v0.7.6）：手动标记 = manual；检测器命中标记各自来源；旧客户端缺省为 null */
   detectionSource: string | null;
+  /** 击杀时刻探活结果（#2 定稿）：扩展在用户浏览器对该 handle 做的一次 guest 存活探测；旧客户端缺省为 null */
+  liveness: 'alive' | 'dead' | null;
 }
 
 const HANDLE_RE = HANDLE_INPUT_RE; // 共享正则（与 admin 表单、extension 手动输入同源）
@@ -107,6 +109,14 @@ export function validateReport(raw: unknown): ReportValidation {
     detectionSource = r.detection_source;
   }
 
+  let liveness: 'alive' | 'dead' | null = null;
+  if (r.liveness !== undefined && r.liveness !== null) {
+    if (r.liveness !== 'alive' && r.liveness !== 'dead') {
+      return { ok: false, error: 'invalid_liveness' };
+    }
+    liveness = r.liveness;
+  }
+
   return {
     ok: true,
     report: {
@@ -117,6 +127,7 @@ export function validateReport(raw: unknown): ReportValidation {
       contentFingerprint,
       linkDomains: domains.domains,
       detectionSource,
+      liveness,
     },
   };
 }

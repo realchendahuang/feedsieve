@@ -23,6 +23,9 @@ export interface BlockedAccount {
   linkDomains?: string[];
   /** 这次判断的来源；手动标记 = manual，与检测器命中区分开（规则质量分析用）。 */
   detectionSource?: string;
+  /** 击杀时刻探活（#2）：本次拉黑伴随的 UserByScreenName 现场解析结果；缓存命中或未解析时缺省。
+   * 只表达观测，不做清理决策；官方名单失效口径在服务端 account_health。 */
+  liveness?: 'alive' | 'dead';
 }
 
 export type BlockOrigin =
@@ -36,6 +39,7 @@ export interface BlockedAccountEvidence {
   origin?: BlockOrigin;
   communityVote?: boolean;
   batchId?: string;
+  liveness?: 'alive' | 'dead';
 }
 
 const STORAGE_KEY = 'blockedAccounts';
@@ -77,6 +81,7 @@ export async function markBlocked(
         existing.origin = evidence.origin ?? existing.origin;
         existing.communityVote = evidence.communityVote ?? existing.communityVote;
         existing.batchId = evidence.batchId ?? existing.batchId;
+        existing.liveness = evidence.liveness ?? existing.liveness;
         changed = true;
       }
       if (changed) {
@@ -96,6 +101,7 @@ export async function markBlocked(
         ? { communityVote: evidence.communityVote }
         : {}),
       ...(evidence?.batchId ? { batchId: evidence.batchId } : {}),
+      ...(evidence?.liveness ? { liveness: evidence.liveness } : {}),
       blockedAt: Date.now(),
     });
     await browser.storage.local.set({ [STORAGE_KEY]: accounts });

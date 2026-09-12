@@ -1,5 +1,6 @@
 import { validateReport, type ValidReport } from './lib/validate';
 import { hashIp } from './lib/hash';
+import { recordHealthObservations, type HealthObservation } from './lib/account-health';
 import {
   installationHash,
   refreshAccountsFromLabels,
@@ -394,6 +395,25 @@ export async function processReportBatch(
     }
     touchedHandles.set(canonical, { ...r, handle: canonical });
   }
+
+  // 击杀时刻探活结果（#2 定稿）：随开火票写 account_health。
+  // dead 是服务端对官方名单/计分口径的输入，不改变本张票的真实意图——票照常记入。
+  // 键取正主（canonical），探测物理对象是用户上报的 handle：换号别名场景下
+  // 两者经 x_user_id 关联，正主一条足以表达存活口径。
+  if (valid.some(({ report }) => report.liveness !== null)) {
+    const healthObservations: HealthObservation[] = [];
+    for (const [, report] of touchedHandles) {
+      if (report.liveness === null) continue;
+      healthObservations.push({
+        handle: report.handle,
+        xUserId: report.xUserId,
+        state: report.liveness satisfies 'alive' | 'dead',
+        source: 'kill-report',
+      });
+    }
+    writeStatements.push(...recordHealthObservations(env, healthObservations, now));
+  }
+
   await batchStatements(env, writeStatements);
 
   // 先保证账号存在，再从 active_labels 全量重算当前正票、负票与分类。

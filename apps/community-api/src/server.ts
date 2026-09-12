@@ -10,6 +10,7 @@ import handler from '@tanstack/react-start/server-entry';
 import { handleWorkerRoutes } from './api';
 import { isAdminHost, isSiteHost } from './lib/hosts';
 import { scheduledAutoPublish, settleSeasonsScheduled } from './scheduled';
+import { probeAccountHealthScheduled } from './prober';
 
 // Nitro 入口的 fetch 在 Cloudflare 上接收 (request, env, ctx)，
 // 其自带类型按通用平台声明为 (request, opts)，这里做一次桥接
@@ -109,5 +110,6 @@ export default {
   async scheduled(event: ScheduledController, env: Cloudflare.Env) {
     await scheduledAutoPublish(env);
     await settleSeasonsScheduled(env);
+    await probeAccountHealthScheduled(env);
   },
 } satisfies ExportedHandler<Cloudflare.Env>;

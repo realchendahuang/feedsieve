@@ -1027,10 +1027,15 @@ export default defineContentScript({
       let xUserId: string | undefined | null = trustCachedId
         ? (item.xUserId ?? (await getUserId(handle)))
         : undefined;
+      // 击杀时刻探活（#2 定稿）：仅当本次现场解析了 UserByScreenName（队列拉黑不信任缓存，
+      // 必然要解一次）才把存活观测随票上报；缓存命中不构成新鲜存活证据，缺省不上报。
+      // dead（no_user）在下方解析失败分支如实处理——X 不接受拉黑不存在的账号，票不产出。
+      let liveness: 'alive' | 'dead' | undefined;
       if (!xUserId) {
         const resolved = await resolveUserIdByHandle(handle);
         if (resolved.ok) {
           xUserId = resolved.xUserId;
+          liveness = 'alive';
           void saveUserIds([{ handle, xUserId }]).catch(() => {
             // 回填失败不影响本次拉黑
           });
@@ -1063,6 +1068,7 @@ export default defineContentScript({
       await markBlocked(handle, xUserId, {
         category: item.category,
         ...item.evidence,
+        ...(liveness ? { liveness } : {}),
         ...(options.origin ? { origin: options.origin } : {}),
         ...(typeof options.communityVote === 'boolean'
           ? { communityVote: options.communityVote }
@@ -1076,7 +1082,15 @@ export default defineContentScript({
       await recordSafetyEvent(currentAccountKey());
       // 摩擦设计：拉黑成功即自动贡献社区（无弹窗；全局开关在 contributeBlocks 内判断）
       if (options.communityVote !== false && !options.deferContribution) {
-        contributeBlocks([{ handle, xUserId, category: item.category, ...item.evidence }]);
+        contributeBlocks([
+          {
+            handle,
+            xUserId,
+            category: item.category,
+            ...item.evidence,
+            ...(liveness ? { liveness } : {}),
+          },
+        ]);
       }
       return { ok: true };
     }
