@@ -67,15 +67,49 @@ export const OFFICIAL_KEYWORD_RULES: readonly OfficialKeywordRule[] = flattenOff
  * 自定义词的稳定比较键：导入/合并也必须和实际匹配使用同一套归一化，
  * 否则“ＡＢＣ”和“abc”会在备份恢复时重复出现。
  */
+/** 规避变体映射数据（scripts/build-variant-tables.mjs 生成，随包构建；只收权威来源，禁止手补）。 */
+import variantTablesJson from './variant-tables.json';
+
+interface VariantTableShape {
+  trad_simp: Record<string, string>;
+  radicals: Record<string, string>;
+  confusables: Record<string, string>;
+}
+const VARIANT_MAPS = variantTablesJson satisfies VariantTableShape;
+// 三张表的链路统一收敛：confusable → 部首正字 → 简体；重复进入循环直到不动点（≤3 轮足够）。
+const VARIANT_BY_CODEPOINT = new Map<number, string>();
+for (const map of [VARIANT_MAPS.confusables, VARIANT_MAPS.radicals, VARIANT_MAPS.trad_simp]) {
+  for (const [key, value] of Object.entries(map)) {
+    VARIANT_BY_CODEPOINT.set(key.codePointAt(0)!, value);
+  }
+}
+function applyVariantMaps(value: string): string {
+  let previous = value;
+  for (let round = 0; round < 3; round += 1) {
+    let mapped = '';
+    for (const char of previous) {
+      mapped += VARIANT_BY_CODEPOINT.get(char.codePointAt(0)!) ?? char;
+    }
+    if (mapped === previous) break;
+    previous = mapped;
+  }
+  return previous;
+}
+
 export function normalizeKeywordPhrase(value: string): string {
-  return value
-    .trim()
-    .normalize('NFKC')
-    // 零宽规避不止 200B-200D：U+2060 词连接符、U+00AD 软连字符、双向控制符等
-    // 全部是 Cf（格式字符），实战样本已被用来拆「我福不黑不信你看」。
-    // 按 Unicode 类别整类剥掉，再剥变体选择符（FE0E/FE0F，跟在 emoji 后残留）。
-    .replace(/[\p{Cf}\u{FE00}-\u{FE0F}]/gu, '')
-    .toLocaleLowerCase();
+  return (
+    applyVariantMaps(
+      applyVariantMaps(value.trim())
+        .normalize('NFKC') // 全角、上标、数学字母、兼容汉字在此归并
+        // 零宽规避不止 200B-200D：U+2060 词连接符、U+00AD 软连字符、双向控制符等
+        // 全部是 Cf（格式字符），实战样本已被用来拆「我福不黑不信你看」，整类剥掉。
+        .replace(/[\p{Cf}\u{FE00}-\u{FE0F}]/gu, ''),
+    ) // NFKC 消不掉、先映射后 NFKC 可能再次产生的变体，第二轮映射补位
+      // NFKC 消不下的残余组合附加符只剩 Zalgo 装饰一类，一并剥；
+      // 韩文填充符（U+3164/U+115F/U+1160）写作空白但属 Lo，标点剥离碰不到。
+      .replace(/[\p{Mn}\u{3164}\u{115F}\u{1160}]/gu, '')
+      .toLocaleLowerCase()
+  );
 }
 function textForMatch(value: string): string {
   // 去掉空白、标点、emoji/符号，处理“同·城 上-门”“福 利”等规避写法。

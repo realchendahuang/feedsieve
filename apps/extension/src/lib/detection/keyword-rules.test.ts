@@ -218,4 +218,34 @@ describe('本地关键词规则', () => {
     ].join('');
     expect(rule?.check({ handle: 'bait', text: sample })).toContain('我福不黑');
   });
+
+  it('变体矩阵：不可见附加符/填充符/繁体/部首/同形异源字均可命中', async () => {
+    const settings = await getKeywordRuleSettings();
+    const heuristics = createKeywordHeuristics(settings);
+    const fuRule = heuristics.find(
+      (candidate) => candidate.id === 'keyword:official:adult-fu-not-black',
+    );
+    const cityRule = heuristics.find((candidate) => candidate.id.includes('adult-terms-local-door'));
+
+    // Zalgo 组合附加符（Mn 类，NFKC 消不掉）
+    expect(fuRule?.check({ handle: 'bait', text: '我\u0301\u0316福不黑不信你看' })).toContain(
+      '我福不黑',
+    );
+    // 韩文填充符（U+3164/115F/1160，Lo 类空白）
+    expect(fuRule?.check({ handle: 'bait', text: '我\u3164福\u115F不黑不信你看' })).toContain(
+      '我福不黑',
+    );
+    // 繁体写法：官方简体词条要能在繁体样本上命中（opencc 映射）
+    expect(fuRule?.check({ handle: 'bait', text: '同城裏面誰都不信，快看我福不黑不信你看' })).toContain(
+      '我福不黑',
+    );
+    expect(cityRule?.check({ handle: 'bait', text: '同城上門服務' })).toContain('同城 + 上门');
+    // CJK 补充部首替字（⻔→门 等，CJKRadicals.txt 映射）
+    expect(cityRule?.check({ handle: 'bait', text: '同城上\u2ED4服務' })).toContain('同城 + 上门');
+    // 同形异源字（confusables 映射：西里尔 а）
+    const adultRule = heuristics.find(
+      (candidate) => candidate.id === 'keyword:official:adult-gray-traffic-7fdc3e8038e87ff5',
+    );
+    expect(adultRule?.check({ handle: 'bait', text: '\u0430dult 看过来' })).toContain('adult');
+  });
 });
