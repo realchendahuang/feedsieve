@@ -21,4 +21,7 @@ coverage/
 apps/community-api/src/routeTree.gen.ts
 
 # wxt officialJsonPlugin 构建时从 community/lists/ 拷入（产物，不入库）
-public/community/
+**/public/community/
+
+# rollup visualizer 打包体积分析产物（本地排查用）
+stats.html
