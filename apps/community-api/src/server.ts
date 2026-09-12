@@ -87,10 +87,16 @@ export default {
     if (workerRes) return withSecurityHeaders(workerRes);
 
     // host 门控与原来 index.ts catch-all 完全一致：
-    // - 官网 host：TanStack SSR（/_shell 页面族）
+    // - 官网 host：先接住静态资产（assets run_worker_first 会把 /assets /fonts 也送进
+    //   Worker，直接转 ASSETS；漏了这一步 SSR 会把 CSS/字体吞成 404），再 SSR 其余路径
+    //   （TanStack SSR 路由树）
     // - 管理 host：ASSETS 绑定（admin SPA 单页兜底）
     // - 未配置 host / API host：JSON 404，不暴露管理 SPA
     if (isSiteHost(request, env)) {
+      const { pathname } = new URL(request.url);
+      if ((pathname.startsWith('/assets/') || pathname.startsWith('/fonts/')) && env.ASSETS) {
+        return withSecurityHeaders(await env.ASSETS.fetch(request));
+      }
       return cachedHtml(request, async () =>
         withSecurityHeaders(await ssrFetch(request, env, ctx)),
       );
