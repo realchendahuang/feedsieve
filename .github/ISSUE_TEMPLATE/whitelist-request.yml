@@ -1,0 +1,41 @@
+name: 推荐白名单申请
+description: 请求把一个 X 账号加入 FeedSieve 推荐白名单（命中后永不标注/拉黑）
+labels: ['whitelist-request']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        申请进入 **推荐白名单**（金刚防护罩）。入册账号在任何识别强度下都不会被 FeedSieve 标注或拉黑，
+        因此审核从严：需要可核验的「为何值得豁免」说明（误伤申诉经核实、知名正常账号等）。
+        提交后由仓库所有者**手动**定期拉取：合规申请会写进候选文件复核，才真正入册生效。
+  - type: input
+    id: handle
+    attributes:
+      label: X 账号 handle
+      description: 只填用户名，@ 可省略（例：kosx_note）
+      placeholder: kosx_note
+    validations:
+      required: true
+  - type: input
+    id: name
+    attributes:
+      label: 显示昵称
+      description: 选填；公示卡上展示的名字（最长 40 字）
+  - type: input
+    id: avatar_url
+    attributes:
+      label: X 公开头像链接
+      description: 选填；pbs.twimg.com/profile_images/ 开头的图片直链（公示卡上展示）
+      placeholder: https://pbs.twimg.com/profile_images/...
+  - type: textarea
+    id: note
+    attributes:
+      label: 入册说明 / 简介
+      description: 4-240 字。博主做什么内容、为什么值得豁免（会随公示页公开）
+    validations:
+      required: true
+  - type: input
+    id: x_user_id
+    attributes:
+      label: X 数字 ID
+      description: 选填；账号数字 ID，改名后仍可识别

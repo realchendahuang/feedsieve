@@ -9,6 +9,12 @@
 #   3. 合并后运行 scripts/publish-community-whitelist.sh 发布，下一次快照即生效
 #      （快照按「当日一版」节流，白名单变化也会触发新版本）
 #
+# Issue 自助通道（仓库所有者手动拉取，无定时、无自动收录）：
+#   填 Issue 模板「推荐白名单申请」→ 所有者本地跑 scripts/ingest-whitelist-issues.mjs
+#   把合规 Issue 直接写进本文件（issue 自动打标/回帖）→ 看 diff → 按第 3 步发布。
+#   不排任何定时任务：本文件是永不标注的强豁免名单，收录必须人亲手过目。
+#   PR 之外的黑产防线：handle/note/头像在 ingest 与 publish 两层都会校验。
+#
 # entries 字段：
 #   handle      必填。@ 后面的用户名（@ 可带可不带，脚本自动归一为小写）
 #   note        必填。博主简介/为什么值得豁免（会随快照公开），短简介也收
