@@ -1,4 +1,5 @@
-import bundledCatalogJson from '../../../../../community/keyword-packs/official.json';
+import fs from 'node:fs';
+import { join, resolve } from 'node:path';
 import {
   buildSigningMessage,
   compareManifestVersions,
@@ -181,12 +182,66 @@ function syncDetectorOverride(catalog: KeywordPackCatalog | null): void {
   void applyDetectorConfigOverride(catalog?.detector_config ?? null);
 }
 
-export const BUNDLED_KEYWORD_PACK_CATALOG = (() => {
-  const parsed = parseKeywordPackCatalog(bundledCatalogJson);
-  if (!parsed) throw new Error('invalid bundled keyword packs');
+/** 词库目录的随包资源路径（与名单快照同策略：不进 JS bundle，运行时 fetch）。 */
+const BUNDLED_PACK_URL = '/community/keyword-packs/official.json';
+/**
+ * 未加载时的诚实占位：目录为空 → 官方规则不生效，只保留用户自定义词与
+ * 内置启发式。所有真实消费方（content 初始化 / popup 视图）都会在拿到
+ * getKeywordPackCatalog() 结果后重建规则，这个空目录只存在于首屏间隙。
+ */
+const EMPTY_BUNDLED_CATALOG: KeywordPackCatalog = {
+  schema_version: 1,
+  pack_version: '0.0.0',
+  generated_at: null,
+  packs: [],
+};
+
+export let BUNDLED_KEYWORD_PACK_CATALOG: KeywordPackCatalog = EMPTY_BUNDLED_CATALOG;
+
+function installBundledCatalog(parsed: KeywordPackCatalog): KeywordPackCatalog {
+  BUNDLED_KEYWORD_PACK_CATALOG = parsed;
   syncDetectorOverride(parsed);
   return parsed;
-})();
+}
+
+let bundledLoad: Promise<KeywordPackCatalog> | null = null;
+/**
+ * 非扩展环境（vitest / lint）没有 browser.runtime，退回从仓库源同步读。
+ * 用 cwd 定位（import.meta.url 在 vitest 里可能是非 file 协议）：
+ * 仓库根跑 vitest → cwd/apps/extension；应用目录直接跑 → cwd。
+ */
+function readBundledCatalogFromSource(): KeywordPackCatalog {
+  const candidates = [resolve(process.cwd(), 'apps/extension'), process.cwd()];
+  const found = candidates
+    .map((base) => join(base, 'community/keyword-packs/official.json'))
+    .find((p) => fs.existsSync(p));
+  if (!found) throw new Error('bundled keyword packs source not found');
+  const parsed = parseKeywordPackCatalog(
+    JSON.parse(fs.readFileSync(found, 'utf8')) as unknown,
+  );
+  if (!parsed) throw new Error('invalid bundled keyword packs');
+  return installBundledCatalog(parsed);
+}
+/** 加载随包词库目录（runtime 资源，无网络依赖）；结果进程内缓存。 */
+export function loadBundledKeywordPackCatalog(): Promise<KeywordPackCatalog> {
+  if (!bundledLoad) {
+    bundledLoad =
+      typeof (globalThis as { browser?: { runtime?: { getURL?: unknown } } }).browser?.runtime?.getURL === 'function'
+        ? (async () => {
+            const res = await fetch(browser.runtime.getURL(BUNDLED_PACK_URL));
+            const parsed = parseKeywordPackCatalog(res.ok ? await res.json() : null);
+            if (!parsed) throw new Error('invalid bundled keyword packs');
+            return installBundledCatalog(parsed);
+          })()
+        : Promise.resolve(readBundledCatalogFromSource());
+  }
+  return bundledLoad;
+}
+// Node 工具链态（vitest / lint）：同步预装，保证 BUNDLED_KEYWORD_PACK_CATALOG
+// 在测试里拿到的就是真实目录，无须 async 装配。
+if (typeof (globalThis as { browser?: { runtime?: { getURL?: unknown } } }).browser?.runtime?.getURL !== 'function') {
+  readBundledCatalogFromSource();
+}
 function parseManifest(value: unknown): KeywordPackManifest | null {
   if (!value || typeof value !== 'object') return null;
   const raw = value as Record<string, unknown>;
@@ -257,10 +312,8 @@ function parseStored(value: unknown): StoredKeywordPackCatalog | null {
 export async function getKeywordPackCatalog(): Promise<KeywordPackCatalog> {
   void cleanupLegacyStorage();
   const stored = parseStored((await browser.storage.local.get(STORAGE_KEY))[STORAGE_KEY]);
-  if (!stored) {
-    syncDetectorOverride(BUNDLED_KEYWORD_PACK_CATALOG);
-    return BUNDLED_KEYWORD_PACK_CATALOG;
-  }
+  // 本地无 last-known-good 或缓存损坏：回退随包目录（runtime fetch 加载）
+  if (!stored) return loadBundledKeywordPackCatalog();
   try {
     const parsed = parseKeywordPackCatalog(JSON.parse(stored.body));
     if (parsed?.pack_version !== stored.pack_version) throw new Error('version mismatch');
@@ -268,7 +321,7 @@ export async function getKeywordPackCatalog(): Promise<KeywordPackCatalog> {
     return parsed;
   } catch {
     syncDetectorOverride(null);
-    return BUNDLED_KEYWORD_PACK_CATALOG;
+    return loadBundledKeywordPackCatalog();
   }
 }
 async function sha256Hex(value: string): Promise<string> {

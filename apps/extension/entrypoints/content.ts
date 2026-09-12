@@ -74,6 +74,7 @@ import {
 import { getUiLanguage, subscribeUiLanguage, type UiLanguage } from '../src/lib/platform/i18n';
 import {
   createKeywordHeuristics,
+  ensureVariantTables,
   getKeywordRuleSettings,
   subscribeKeywordRules,
 } from '../src/lib/detection/keyword-rules';
@@ -560,6 +561,7 @@ export default defineContentScript({
     }
 
     async function refreshKeywordHeuristics(): Promise<void> {
+      await ensureVariantTables();
       keywordCatalog = await getKeywordPackCatalog();
       keywordHeuristics = createKeywordHeuristics(await getKeywordRuleSettings(), keywordCatalog);
       controller.fullRescan();

@@ -6,10 +6,10 @@
   "scripts": {
     "dev": "wxt",
     "preview:popup": "vite --config vite.preview.config.mjs",
-    "build": "wxt build",
+    "build": "node scripts/copy-runtime-data.mjs && wxt build",
     "zip": "wxt zip",
-    "postinstall": "wxt prepare",
-    "typecheck": "tsc --noEmit"
+    "postinstall": "node scripts/copy-runtime-data.mjs && wxt prepare",
+    "typecheck": "node scripts/copy-runtime-data.mjs && tsc --noEmit"
   },
   "devDependencies": {
     "@types/react": "^19.2.18",

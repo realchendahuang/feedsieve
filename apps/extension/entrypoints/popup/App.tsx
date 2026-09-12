@@ -5,6 +5,7 @@ import {
   type WhitelistEntry,
 } from '@feedsieve/community-lists';
 import { shouldPauseDestructive, type XAdapterCapabilities } from '@feedsieve/x-adapter';
+import { ensureVariantTables } from '../../src/lib/detection/keyword-rules';
 import { getBlockedAccounts, subscribeBlocked } from '../../src/lib/community/blocked-accounts';
 import { getAllowlist, subscribeAllowlist } from '../../src/lib/community/allowlist';
 import { getFollowingAllowlist, subscribeFollowingAllowlist } from '../../src/lib/community/following-allowlist';
@@ -156,6 +157,8 @@ export default function App() {
   );
 
   useEffect(() => {
+    // 变体映射是随包资源：弹窗内自定义词去重/校验依赖它，进弹窗先预热
+    void ensureVariantTables();
     void getUiLanguage().then(setLanguage);
     void getCommunitySettings().then(setCommunity);
     void getCommunitySnapshot().then(applyCommunitySnapshotState);

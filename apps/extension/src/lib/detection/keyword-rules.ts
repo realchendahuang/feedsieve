@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import { join, resolve } from 'node:path';
 import type { HeuristicRule } from '@feedsieve/detector';
 import {
   BUNDLED_KEYWORD_PACK_CATALOG,
@@ -68,20 +70,59 @@ export const OFFICIAL_KEYWORD_RULES: readonly OfficialKeywordRule[] = flattenOff
  * 否则“ＡＢＣ”和“abc”会在备份恢复时重复出现。
  */
 /** 规避变体映射数据（scripts/build-variant-tables.mjs 生成，随包构建；只收权威来源，禁止手补）。 */
-import variantTablesJson from './variant-tables.json';
+// 与名单快照/词库同策略：不进 JS bundle，扩展运行时 runtime.getURL + fetch 读取；
+// Node 工具链态（vitest / lint）退回从源文件同步读，保持测试同步可用。
+const VARIANT_TABLES_URL = '/community/keyword-packs/variant-tables.json';
 
 interface VariantTableShape {
   trad_simp: Record<string, string>;
   radicals: Record<string, string>;
   confusables: Record<string, string>;
 }
-const VARIANT_MAPS = variantTablesJson satisfies VariantTableShape;
+export let VARIANT_TABLES: VariantTableShape | null = null;
+let variantLoad: Promise<void> | null = null;
+function buildVariantIndex(): void {
+  VARIANT_BY_CODEPOINT.clear();
+  const maps = VARIANT_TABLES;
+  if (!maps) return;
+  // 三张表的链路统一收敛：confusable → 部首正字 → 简体；重复进入循环直到不动点（≤3 轮足够）。
+  for (const map of [maps.confusables, maps.radicals, maps.trad_simp]) {
+    for (const [key, value] of Object.entries(map)) {
+      VARIANT_BY_CODEPOINT.set(key.codePointAt(0)!, value);
+    }
+  }
+}
+/** 扩展运行时加载变体映射；须在依赖 normalizeKeywordPhrase 的检测/校验前 await。 */
+export function ensureVariantTables(): Promise<void> {
+  if (!variantLoad) {
+    variantLoad =
+      typeof (globalThis as { browser?: { runtime?: { getURL?: unknown } } }).browser?.runtime?.getURL === 'function'
+        ? (async () => {
+            const res = await fetch(browser.runtime.getURL(VARIANT_TABLES_URL));
+            const raw = (res.ok ? await res.json() : null) as VariantTableShape | null;
+            if (!raw?.trad_simp || !raw?.radicals || !raw?.confusables) {
+              throw new Error('invalid variant tables');
+            }
+            VARIANT_TABLES = raw;
+            buildVariantIndex();
+          })()
+        : Promise.resolve(); // Node 工具链态已在模块加载时同步装入
+  }
+  return variantLoad;
+}
 // 三张表的链路统一收敛：confusable → 部首正字 → 简体；重复进入循环直到不动点（≤3 轮足够）。
 const VARIANT_BY_CODEPOINT = new Map<number, string>();
-for (const map of [VARIANT_MAPS.confusables, VARIANT_MAPS.radicals, VARIANT_MAPS.trad_simp]) {
-  for (const [key, value] of Object.entries(map)) {
-    VARIANT_BY_CODEPOINT.set(key.codePointAt(0)!, value);
-  }
+// Node 工具链态（vitest / lint）没有 browser.runtime：从源文件同步装入，保证
+// normalizeKeywordPhrase 在测试里用的就是全量变体表；扩展运行时改走
+// ensureVariantTables()（随包 runtime 资源）。
+if (typeof (globalThis as { browser?: { runtime?: { getURL?: unknown } } }).browser?.runtime?.getURL !== 'function') {
+  const candidates = [resolve(process.cwd(), 'apps/extension'), process.cwd()];
+  const found = candidates
+    .map((base) => join(base, 'src/lib/detection/variant-tables.json'))
+    .find((p) => fs.existsSync(p));
+  if (!found) throw new Error('variant tables source not found');
+  VARIANT_TABLES = JSON.parse(fs.readFileSync(found, 'utf8'));
+  buildVariantIndex();
 }
 function applyVariantMaps(value: string): string {
   let previous = value;
