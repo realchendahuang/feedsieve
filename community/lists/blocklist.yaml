@@ -1,57 +1,68 @@
 # FeedSieve 公开社区黑名单
 # 拉黑仍需用户在扩展中明确点击；社区批量拉黑不会反向增加票数。
 schema_version: 2
-version: "2026.09.12.1"
-generated_at: "2026-09-12T00:00:19.530Z"
+version: "2026.09.12.2"
+generated_at: "2026-09-12T06:39:23.863Z"
 rule:
   formula: "block_votes - false_positive_votes"
   min_net_votes: 3
 summary:
-  accounts: 2973
+  accounts: 3108
 entries:
   - handle: "__erwinmar"
     x_user_id: "818676523"
     category: "adult_gray_traffic"
     sources: ["community"]
     votes:
-      block: 33
+      block: 34
       false_positive: 0
-      net: 33
+      net: 34
     first_seen_at: "2026-09-07T03:11:51.000Z"
-    updated_at: "2026-09-11T14:28:46.000Z"
+    updated_at: "2026-09-12T03:21:57.000Z"
     evidence_post_ids: []
   - handle: "__nastyk"
     x_user_id: "861604832192475136"
     category: "other"
     sources: ["community"]
     votes:
-      block: 11
+      block: 12
       false_positive: 0
-      net: 11
+      net: 12
     first_seen_at: "2026-09-07T09:02:21.000Z"
-    updated_at: "2026-09-11T14:46:16.000Z"
+    updated_at: "2026-09-12T03:22:04.000Z"
     evidence_post_ids: []
   - handle: "__youturnmeon"
     x_user_id: "844589628"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 22
+      block: 23
       false_positive: 0
-      net: 22
+      net: 23
     first_seen_at: "2026-09-08T00:38:02.000Z"
-    updated_at: "2026-09-11T15:19:39.000Z"
+    updated_at: "2026-09-12T03:22:04.000Z"
+    evidence_post_ids: []
+  - handle: "_angelarub9"
+    x_user_id: "491796888"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-12T01:06:39.000Z"
+    updated_at: "2026-09-12T02:26:49.000Z"
     evidence_post_ids: []
   - handle: "_carieew"
     x_user_id: "965022901"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 17
+      block: 18
       false_positive: 0
-      net: 17
+      net: 18
     first_seen_at: "2026-09-07T20:10:57.000Z"
-    updated_at: "2026-09-11T15:13:55.000Z"
+    updated_at: "2026-09-12T03:22:09.000Z"
     evidence_post_ids: []
   - handle: "_devonroderique"
     x_user_id: "118929886"
@@ -69,11 +80,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 25
+      block: 26
       false_positive: 0
-      net: 25
+      net: 26
     first_seen_at: "2026-09-08T01:26:09.000Z"
-    updated_at: "2026-09-11T15:12:00.000Z"
+    updated_at: "2026-09-12T04:30:38.000Z"
     evidence_post_ids: []
   - handle: "_krzysexckool"
     x_user_id: "218219233"
@@ -91,11 +102,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 29
+      block: 30
       false_positive: 0
-      net: 29
+      net: 30
     first_seen_at: "2026-09-07T03:52:45.000Z"
-    updated_at: "2026-09-11T14:28:46.000Z"
+    updated_at: "2026-09-12T03:22:25.000Z"
     evidence_post_ids: []
   - handle: "_mzooony"
     x_user_id: "1025181884"
@@ -106,18 +117,29 @@ entries:
       false_positive: 0
       net: 6
     first_seen_at: "2026-09-07T00:52:01.000Z"
-    updated_at: "2026-09-10T12:38:48.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
+    evidence_post_ids: []
+  - handle: "_tee10"
+    x_user_id: "192432750"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T09:59:40.000Z"
+    updated_at: "2026-09-12T06:31:34.000Z"
     evidence_post_ids: []
   - handle: "_xdessss"
     x_user_id: "462385136"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 24
+      block: 27
       false_positive: 0
-      net: 24
+      net: 27
     first_seen_at: "2026-09-07T20:10:57.000Z"
-    updated_at: "2026-09-11T15:10:41.000Z"
+    updated_at: "2026-09-12T04:38:23.000Z"
     evidence_post_ids: []
   - handle: "_youngsavid"
     x_user_id: "409782256"
@@ -135,11 +157,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-10T12:38:45.000Z"
-    updated_at: "2026-09-11T02:43:19.000Z"
+    updated_at: "2026-09-12T03:22:44.000Z"
     evidence_post_ids: []
   - handle: "073nano"
     x_user_id: "729964867"
@@ -168,11 +190,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-11T03:51:36.000Z"
-    updated_at: "2026-09-11T06:36:55.000Z"
+    updated_at: "2026-09-12T03:22:52.000Z"
     evidence_post_ids: []
   - handle: "0noktasinda"
     x_user_id: "760132426500833280"
@@ -229,6 +251,17 @@ entries:
     first_seen_at: "2026-09-10T08:04:53.000Z"
     updated_at: "2026-09-11T00:54:24.000Z"
     evidence_post_ids: []
+  - handle: "1565g"
+    x_user_id: "1615099520"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-11T16:32:38.000Z"
+    updated_at: "2026-09-12T03:47:56.000Z"
+    evidence_post_ids: []
   - handle: "1992sarona"
     x_user_id: "1113453889"
     category: "copy_paste"
@@ -256,11 +289,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-07T08:37:04.000Z"
-    updated_at: "2026-09-10T09:27:01.000Z"
+    updated_at: "2026-09-12T03:23:11.000Z"
     evidence_post_ids: []
   - handle: "1tachi7"
     x_user_id: "1277333365457289216"
@@ -289,11 +322,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 35
+      block: 36
       false_positive: 0
-      net: 35
+      net: 36
     first_seen_at: "2026-09-07T01:50:37.000Z"
-    updated_at: "2026-09-11T14:28:42.000Z"
+    updated_at: "2026-09-12T03:23:21.000Z"
     evidence_post_ids: []
   - handle: "2030spectsne"
     x_user_id: "1671000906924539904"
@@ -388,33 +421,33 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-08T01:33:17.000Z"
-    updated_at: "2026-09-10T15:12:49.000Z"
+    updated_at: "2026-09-12T03:23:44.000Z"
     evidence_post_ids: []
   - handle: "7mt2k64ceaqqihg"
     x_user_id: "985411733048082432"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 5
+      block: 6
       false_positive: 0
-      net: 5
+      net: 6
     first_seen_at: "2026-09-07T13:44:25.000Z"
-    updated_at: "2026-09-10T18:11:11.000Z"
+    updated_at: "2026-09-12T03:23:49.000Z"
     evidence_post_ids: []
   - handle: "8245020ad1fa455"
     x_user_id: "3243196240"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-10T07:13:10.000Z"
-    updated_at: "2026-09-10T18:40:28.000Z"
+    updated_at: "2026-09-12T03:23:53.000Z"
     evidence_post_ids: []
   - handle: "8erreww"
     x_user_id: "1449786914794614789"
@@ -432,11 +465,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-10T09:51:01.000Z"
-    updated_at: "2026-09-10T12:09:09.000Z"
+    updated_at: "2026-09-12T03:23:59.000Z"
     evidence_post_ids: []
   - handle: "9hgiuhqvntj4phl"
     x_user_id: "1548551995807924224"
@@ -458,7 +491,7 @@ entries:
       false_positive: 0
       net: 26
     first_seen_at: "2026-09-08T02:12:33.000Z"
-    updated_at: "2026-09-11T13:05:39.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "aajmp238"
     x_user_id: "2071156291695747072"
@@ -520,11 +553,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 5
+      block: 6
       false_positive: 0
-      net: 5
+      net: 6
     first_seen_at: "2026-09-11T09:11:39.000Z"
-    updated_at: "2026-09-11T11:03:56.000Z"
+    updated_at: "2026-09-12T03:24:19.000Z"
     evidence_post_ids: []
   - handle: "aautrrqfcrfpan"
     x_user_id: "2069790709066907648"
@@ -553,22 +586,22 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 5
+      block: 6
       false_positive: 0
-      net: 5
+      net: 6
     first_seen_at: "2026-09-11T06:02:40.000Z"
-    updated_at: "2026-09-11T08:11:27.000Z"
+    updated_at: "2026-09-12T03:24:29.000Z"
     evidence_post_ids: []
   - handle: "abcdefgxvvp"
     x_user_id: "2059742677206552576"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-10T09:14:49.000Z"
-    updated_at: "2026-09-10T15:56:07.000Z"
+    updated_at: "2026-09-12T03:24:36.000Z"
     evidence_post_ids: []
   - handle: "abdullahalslami"
     x_user_id: "755205422869540868"
@@ -581,16 +614,27 @@ entries:
     first_seen_at: "2026-09-10T04:38:01.000Z"
     updated_at: "2026-09-10T10:44:02.000Z"
     evidence_post_ids: []
-  - handle: "abeeeshi"
-    x_user_id: "945472471"
+  - handle: "abdulrasheednd1"
+    x_user_id: "1479154619938975756"
     category: "copy_paste"
     sources: ["community"]
     votes:
       block: 3
       false_positive: 0
       net: 3
+    first_seen_at: "2026-09-10T19:12:01.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
+    evidence_post_ids: []
+  - handle: "abeeeshi"
+    x_user_id: "945472471"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
     first_seen_at: "2026-09-11T13:19:04.000Z"
-    updated_at: "2026-09-11T14:33:41.000Z"
+    updated_at: "2026-09-12T03:24:46.000Z"
     evidence_post_ids: []
   - handle: "abeljackc3"
     x_user_id: "2087490276243693568"
@@ -608,33 +652,44 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-09T05:46:43.000Z"
-    updated_at: "2026-09-10T14:11:31.000Z"
+    updated_at: "2026-09-12T02:33:18.000Z"
+    evidence_post_ids: []
+  - handle: "abhijeetsahai"
+    x_user_id: "77515503"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T19:09:18.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "abhilash33sing"
     x_user_id: "1248497420943515651"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 11
+      block: 12
       false_positive: 0
-      net: 11
+      net: 12
     first_seen_at: "2026-09-07T06:38:51.000Z"
-    updated_at: "2026-09-10T11:25:25.000Z"
+    updated_at: "2026-09-12T03:24:55.000Z"
     evidence_post_ids: []
   - handle: "abrazamigurumi"
     x_user_id: "917738573641678848"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 21
+      block: 22
       false_positive: 0
-      net: 21
+      net: 22
     first_seen_at: "2026-09-07T07:06:24.000Z"
-    updated_at: "2026-09-11T07:57:43.000Z"
+    updated_at: "2026-09-12T03:25:00.000Z"
     evidence_post_ids: []
   - handle: "abu_nyxl"
     x_user_id: "1423999615"
@@ -669,16 +724,27 @@ entries:
     first_seen_at: "2026-09-09T21:58:16.000Z"
     updated_at: "2026-09-10T15:34:42.000Z"
     evidence_post_ids: []
-  - handle: "acwpndcjpccyjgg"
-    x_user_id: "1302971813610233856"
+  - handle: "actionb64800341"
+    x_user_id: "1346105999078264834"
     category: "copy_paste"
     sources: ["community"]
     votes:
       block: 3
       false_positive: 0
       net: 3
+    first_seen_at: "2026-09-10T11:55:35.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
+    evidence_post_ids: []
+  - handle: "acwpndcjpccyjgg"
+    x_user_id: "1302971813610233856"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
     first_seen_at: "2026-09-08T04:06:51.000Z"
-    updated_at: "2026-09-10T15:34:57.000Z"
+    updated_at: "2026-09-12T03:25:12.000Z"
     evidence_post_ids: []
   - handle: "adalineholba"
     x_user_id: "2087775547179085824"
@@ -689,7 +755,7 @@ entries:
       false_positive: 0
       net: 4
     first_seen_at: "2026-09-09T21:46:56.000Z"
-    updated_at: "2026-09-10T16:34:31.000Z"
+    updated_at: "2026-09-12T01:06:00.000Z"
     evidence_post_ids: []
   - handle: "adamc529281"
     x_user_id: "2088445863181869056"
@@ -751,11 +817,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 14
+      block: 15
       false_positive: 0
-      net: 14
+      net: 15
     first_seen_at: "2026-09-06T10:47:24.000Z"
-    updated_at: "2026-09-11T00:53:56.000Z"
+    updated_at: "2026-09-12T03:25:29.000Z"
     evidence_post_ids: []
   - handle: "adigoukifouli"
     x_user_id: "1566855093651230720"
@@ -817,11 +883,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 48
+      block: 49
       false_positive: 0
-      net: 48
+      net: 49
     first_seen_at: "2026-09-07T04:11:14.000Z"
-    updated_at: "2026-09-11T18:16:05.000Z"
+    updated_at: "2026-09-12T03:25:44.000Z"
     evidence_post_ids: []
   - handle: "afriza_lestari"
     x_user_id: "993868971723051011"
@@ -861,11 +927,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-11T10:48:50.000Z"
-    updated_at: "2026-09-11T13:08:37.000Z"
+    updated_at: "2026-09-12T03:25:57.000Z"
     evidence_post_ids: []
   - handle: "agoosogas"
     x_user_id: "955581024"
@@ -894,22 +960,22 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 28
+      block: 29
       false_positive: 0
-      net: 28
+      net: 29
     first_seen_at: "2026-09-07T17:18:40.000Z"
-    updated_at: "2026-09-10T13:40:54.000Z"
+    updated_at: "2026-09-12T03:26:08.000Z"
     evidence_post_ids: []
   - handle: "agyldyvj6jijhya"
     x_user_id: "1379504079655694336"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 5
+      block: 6
       false_positive: 0
-      net: 5
+      net: 6
     first_seen_at: "2026-09-07T05:14:43.000Z"
-    updated_at: "2026-09-11T02:42:46.000Z"
+    updated_at: "2026-09-12T03:26:13.000Z"
     evidence_post_ids: []
   - handle: "ahmadayoubs1"
     x_user_id: "719346118811893760"
@@ -949,11 +1015,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-10T20:59:49.000Z"
-    updated_at: "2026-09-11T12:35:05.000Z"
+    updated_at: "2026-09-12T03:26:26.000Z"
     evidence_post_ids: []
   - handle: "ahmetpolat6rz1"
     x_user_id: "2086483859714031617"
@@ -1037,11 +1103,11 @@ entries:
     category: "adult_gray_traffic"
     sources: ["community"]
     votes:
-      block: 24
+      block: 25
       false_positive: 1
-      net: 23
+      net: 24
     first_seen_at: "2026-09-06T18:09:50.000Z"
-    updated_at: "2026-09-11T13:33:31.000Z"
+    updated_at: "2026-09-12T03:26:44.000Z"
     evidence_post_ids: []
   - handle: "ailegoslxuflej"
     x_user_id: "2070266689225158656"
@@ -1059,22 +1125,22 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 37
+      block: 38
       false_positive: 0
-      net: 37
+      net: 38
     first_seen_at: "2026-09-07T06:39:18.000Z"
-    updated_at: "2026-09-11T07:35:23.000Z"
+    updated_at: "2026-09-12T03:26:54.000Z"
     evidence_post_ids: []
   - handle: "aisha_fx"
     x_user_id: "1466753791"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 17
+      block: 18
       false_positive: 0
-      net: 17
+      net: 18
     first_seen_at: "2026-09-07T17:17:14.000Z"
-    updated_at: "2026-09-11T15:19:52.000Z"
+    updated_at: "2026-09-12T03:27:01.000Z"
     evidence_post_ids: []
   - handle: "aito1117"
     x_user_id: "161074888"
@@ -1109,27 +1175,38 @@ entries:
     first_seen_at: "2026-09-09T10:49:42.000Z"
     updated_at: "2026-09-10T15:01:40.000Z"
     evidence_post_ids: []
+  - handle: "ajinkyaterkar"
+    x_user_id: "76397711"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T19:09:00.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
+    evidence_post_ids: []
   - handle: "ajjuyadav123"
     x_user_id: "884813728461410304"
     category: "adult_gray_traffic"
     sources: ["community"]
     votes:
-      block: 29
+      block: 30
       false_positive: 0
-      net: 29
+      net: 30
     first_seen_at: "2026-09-07T01:50:37.000Z"
-    updated_at: "2026-09-11T14:28:42.000Z"
+    updated_at: "2026-09-12T03:27:11.000Z"
     evidence_post_ids: []
   - handle: "ajmalvirk"
     x_user_id: "99536235"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 39
+      block: 40
       false_positive: 0
-      net: 39
+      net: 40
     first_seen_at: "2026-09-07T04:13:49.000Z"
-    updated_at: "2026-09-11T06:42:21.000Z"
+    updated_at: "2026-09-12T03:27:15.000Z"
     evidence_post_ids: []
   - handle: "ajtfs356"
     x_user_id: "2070590106583355392"
@@ -1147,22 +1224,22 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 5
+      block: 6
       false_positive: 0
-      net: 5
+      net: 6
     first_seen_at: "2026-09-09T09:04:35.000Z"
-    updated_at: "2026-09-09T22:22:38.000Z"
+    updated_at: "2026-09-12T03:27:24.000Z"
     evidence_post_ids: []
   - handle: "akdmeqrdpn2dsz"
     x_user_id: "2068791772793159680"
     category: "other"
     sources: ["community"]
     votes:
-      block: 3
+      block: 5
       false_positive: 0
-      net: 3
+      net: 5
     first_seen_at: "2026-09-11T04:10:55.000Z"
-    updated_at: "2026-09-11T10:12:51.000Z"
+    updated_at: "2026-09-12T05:21:00.000Z"
     evidence_post_ids: []
   - handle: "akkxhjxsxlyq12"
     x_user_id: "2070311709160435712"
@@ -1180,11 +1257,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-09T15:51:52.000Z"
-    updated_at: "2026-09-10T16:59:45.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "akxijmnkjqgbt9"
     x_user_id: "2070274784240209920"
@@ -1202,11 +1279,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-11T05:22:33.000Z"
-    updated_at: "2026-09-11T09:47:46.000Z"
+    updated_at: "2026-09-12T03:27:42.000Z"
     evidence_post_ids: []
   - handle: "alanleelf3l"
     x_user_id: "2088606133418143744"
@@ -1224,22 +1301,22 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 11
+      block: 12
       false_positive: 0
-      net: 11
+      net: 12
     first_seen_at: "2026-09-10T02:37:55.000Z"
-    updated_at: "2026-09-10T14:54:12.000Z"
+    updated_at: "2026-09-12T03:27:49.000Z"
     evidence_post_ids: []
   - handle: "albadolinsbx"
     x_user_id: "2089277574954483712"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-11T04:04:12.000Z"
-    updated_at: "2026-09-11T09:48:13.000Z"
+    updated_at: "2026-09-12T03:27:55.000Z"
     evidence_post_ids: []
   - handle: "albertreyedzzw"
     x_user_id: "2086485512961822720"
@@ -1268,11 +1345,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 14
+      block: 16
       false_positive: 1
-      net: 13
+      net: 15
     first_seen_at: "2026-09-08T13:31:56.000Z"
-    updated_at: "2026-09-11T20:31:01.000Z"
+    updated_at: "2026-09-12T04:38:59.000Z"
     evidence_post_ids: []
   - handle: "alenedayal"
     x_user_id: "2089413406197428224"
@@ -1411,11 +1488,22 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-11T09:11:20.000Z"
+    updated_at: "2026-09-12T03:28:37.000Z"
+    evidence_post_ids: []
+  - handle: "alfonsospipdst"
+    x_user_id: "2089021937897050112"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
       block: 3
       false_positive: 0
       net: 3
-    first_seen_at: "2026-09-11T09:11:20.000Z"
-    updated_at: "2026-09-11T11:00:55.000Z"
+    first_seen_at: "2026-09-12T00:29:26.000Z"
+    updated_at: "2026-09-12T05:51:28.000Z"
     evidence_post_ids: []
   - handle: "alfredyosknnh"
     x_user_id: "2087777210899795969"
@@ -1433,33 +1521,33 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-10T02:43:17.000Z"
-    updated_at: "2026-09-10T04:56:29.000Z"
+    updated_at: "2026-09-12T03:28:45.000Z"
     evidence_post_ids: []
   - handle: "alikilicxkww"
     x_user_id: "2088377659508092928"
     category: "other"
     sources: ["community"]
     votes:
-      block: 6
+      block: 7
       false_positive: 0
-      net: 6
+      net: 7
     first_seen_at: "2026-09-10T07:47:37.000Z"
-    updated_at: "2026-09-10T09:05:38.000Z"
+    updated_at: "2026-09-12T03:28:50.000Z"
     evidence_post_ids: []
   - handle: "alimiaaan"
     x_user_id: "3224625157"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 37
+      block: 38
       false_positive: 0
-      net: 37
+      net: 38
     first_seen_at: "2026-09-07T04:26:44.000Z"
-    updated_at: "2026-09-11T15:11:00.000Z"
+    updated_at: "2026-09-12T03:28:57.000Z"
     evidence_post_ids: []
   - handle: "alinelohn2002"
     x_user_id: "2742066363"
@@ -1488,11 +1576,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-11T09:41:43.000Z"
-    updated_at: "2026-09-11T13:46:28.000Z"
+    updated_at: "2026-09-12T03:29:07.000Z"
     evidence_post_ids: []
   - handle: "alitekinykg8"
     x_user_id: "2086484491871113216"
@@ -1510,11 +1598,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-07T10:52:23.000Z"
-    updated_at: "2026-09-10T14:05:51.000Z"
+    updated_at: "2026-09-12T03:29:14.000Z"
     evidence_post_ids: []
   - handle: "aliyildizgyro"
     x_user_id: "2088614491680313344"
@@ -1554,11 +1642,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 38
+      block: 39
       false_positive: 0
-      net: 38
+      net: 39
     first_seen_at: "2026-09-07T05:47:40.000Z"
-    updated_at: "2026-09-11T14:45:40.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "allthtisrandom"
     x_user_id: "369660357"
@@ -1609,22 +1697,22 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 7
+      block: 8
       false_positive: 0
-      net: 7
+      net: 8
     first_seen_at: "2026-09-11T08:12:17.000Z"
-    updated_at: "2026-09-11T14:45:40.000Z"
+    updated_at: "2026-09-12T03:29:38.000Z"
     evidence_post_ids: []
   - handle: "alouk_riha"
     x_user_id: "170930687"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 20
+      block: 21
       false_positive: 1
-      net: 19
+      net: 20
     first_seen_at: "2026-09-07T17:17:13.000Z"
-    updated_at: "2026-09-11T15:19:32.000Z"
+    updated_at: "2026-09-12T03:29:45.000Z"
     evidence_post_ids: []
   - handle: "alperkocabua"
     x_user_id: "399776893"
@@ -1648,16 +1736,27 @@ entries:
     first_seen_at: "2026-09-07T10:42:43.000Z"
     updated_at: "2026-09-08T10:10:52.000Z"
     evidence_post_ids: []
-  - handle: "alvaecklankkz"
-    x_user_id: "2088400815954288640"
-    category: "other"
+  - handle: "altonculleomyu"
+    x_user_id: "2089015355025010688"
+    category: "copy_paste"
     sources: ["community"]
     votes:
       block: 3
       false_positive: 0
       net: 3
+    first_seen_at: "2026-09-12T02:34:46.000Z"
+    updated_at: "2026-09-12T06:02:49.000Z"
+    evidence_post_ids: []
+  - handle: "alvaecklankkz"
+    x_user_id: "2088400815954288640"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
     first_seen_at: "2026-09-11T13:11:30.000Z"
-    updated_at: "2026-09-11T22:11:20.000Z"
+    updated_at: "2026-09-12T03:29:56.000Z"
     evidence_post_ids: []
   - handle: "alvalinnemev"
     x_user_id: "2087828022028365824"
@@ -1719,11 +1818,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 26
+      block: 27
       false_positive: 0
-      net: 26
+      net: 27
     first_seen_at: "2026-09-07T06:33:10.000Z"
-    updated_at: "2026-09-11T14:46:16.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "amariuqmkd"
     x_user_id: "2086888233208565760"
@@ -1785,22 +1884,22 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 19
+      block: 21
       false_positive: 0
-      net: 19
+      net: 21
     first_seen_at: "2026-09-07T16:23:13.000Z"
-    updated_at: "2026-09-11T15:22:16.000Z"
+    updated_at: "2026-09-12T03:30:26.000Z"
     evidence_post_ids: []
   - handle: "ameenriyas1"
     x_user_id: "739864999707844608"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 24
+      block: 27
       false_positive: 0
-      net: 24
+      net: 27
     first_seen_at: "2026-09-08T14:39:07.000Z"
-    updated_at: "2026-09-10T02:47:31.000Z"
+    updated_at: "2026-09-12T03:30:32.000Z"
     evidence_post_ids: []
   - handle: "ameliadvhygt"
     x_user_id: "2086602160448364545"
@@ -1855,7 +1954,7 @@ entries:
       false_positive: 0
       net: 6
     first_seen_at: "2026-09-06T12:39:03.000Z"
-    updated_at: "2026-09-10T09:32:45.000Z"
+    updated_at: "2026-09-12T04:30:38.000Z"
     evidence_post_ids: []
   - handle: "aminulh74102550"
     x_user_id: "1353997421903134721"
@@ -1867,6 +1966,17 @@ entries:
       net: 3
     first_seen_at: "2026-09-09T15:38:50.000Z"
     updated_at: "2026-09-10T16:07:29.000Z"
+    evidence_post_ids: []
+  - handle: "amirmah20340056"
+    x_user_id: "969475734963027968"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 22
+      false_positive: 2
+      net: 20
+    first_seen_at: "2026-09-08T14:22:58.000Z"
+    updated_at: "2026-09-12T06:31:59.000Z"
     evidence_post_ids: []
   - handle: "amn1234561"
     x_user_id: "575241380"
@@ -1884,11 +1994,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-08T09:23:55.000Z"
-    updated_at: "2026-09-10T13:48:03.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "amtrky777539721"
     x_user_id: "1449403562627379206"
@@ -1928,22 +2038,22 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 18
+      block: 19
       false_positive: 0
-      net: 18
+      net: 19
     first_seen_at: "2026-09-07T16:15:44.000Z"
-    updated_at: "2026-09-11T13:19:48.000Z"
+    updated_at: "2026-09-12T03:30:58.000Z"
     evidence_post_ids: []
   - handle: "amymooregslp"
     x_user_id: "2088600761324232704"
     category: "other"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-11T05:31:02.000Z"
-    updated_at: "2026-09-11T06:45:19.000Z"
+    updated_at: "2026-09-12T03:31:05.000Z"
     evidence_post_ids: []
   - handle: "anabelmica3ujc"
     x_user_id: "2087777188854874112"
@@ -1972,11 +2082,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-09T10:19:20.000Z"
-    updated_at: "2026-09-10T07:51:18.000Z"
+    updated_at: "2026-09-12T03:31:14.000Z"
     evidence_post_ids: []
   - handle: "anaviall"
     x_user_id: "1133297211301912576"
@@ -2027,11 +2137,22 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-10T14:05:53.000Z"
+    updated_at: "2026-09-12T03:31:27.000Z"
+    evidence_post_ids: []
+  - handle: "andreamorrpb2p"
+    x_user_id: "2089181774538539008"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
       block: 3
       false_positive: 0
       net: 3
-    first_seen_at: "2026-09-10T14:05:53.000Z"
-    updated_at: "2026-09-10T14:55:38.000Z"
+    first_seen_at: "2026-09-12T03:06:23.000Z"
+    updated_at: "2026-09-12T06:29:25.000Z"
     evidence_post_ids: []
   - handle: "andregrabill"
     x_user_id: "2087829239576121344"
@@ -2060,22 +2181,22 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 6
+      block: 7
       false_positive: 0
-      net: 6
+      net: 7
     first_seen_at: "2026-09-10T06:37:27.000Z"
-    updated_at: "2026-09-10T12:09:22.000Z"
+    updated_at: "2026-09-12T03:31:36.000Z"
     evidence_post_ids: []
   - handle: "andrewgraykuay"
     x_user_id: "2088857372122820608"
     category: "other"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-11T02:17:11.000Z"
-    updated_at: "2026-09-11T10:21:03.000Z"
+    updated_at: "2026-09-12T03:31:42.000Z"
     evidence_post_ids: []
   - handle: "andytuck123"
     x_user_id: "104283781"
@@ -2093,11 +2214,33 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-07T00:55:24.000Z"
-    updated_at: "2026-09-11T04:33:11.000Z"
+    updated_at: "2026-09-12T04:30:38.000Z"
+    evidence_post_ids: []
+  - handle: "angelabutlssaw"
+    x_user_id: "2088291805737418753"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T20:11:33.000Z"
+    updated_at: "2026-09-12T02:49:51.000Z"
+    evidence_post_ids: []
+  - handle: "angelaward7l1k"
+    x_user_id: "2088280387654930432"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T16:04:08.000Z"
+    updated_at: "2026-09-12T05:03:47.000Z"
     evidence_post_ids: []
   - handle: "angelitaolso5o"
     x_user_id: "2087828822129303552"
@@ -2126,22 +2269,22 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 13
+      block: 16
       false_positive: 1
-      net: 12
+      net: 15
     first_seen_at: "2026-09-08T13:39:41.000Z"
-    updated_at: "2026-09-11T10:23:09.000Z"
+    updated_at: "2026-09-12T03:31:57.000Z"
     evidence_post_ids: []
   - handle: "aniruddhsinh143"
     x_user_id: "367791626"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 39
+      block: 40
       false_positive: 0
-      net: 39
+      net: 40
     first_seen_at: "2026-09-07T03:29:49.000Z"
-    updated_at: "2026-09-11T14:58:35.000Z"
+    updated_at: "2026-09-12T03:32:02.000Z"
     evidence_post_ids: []
   - handle: "anirudh_jaihind"
     x_user_id: "1103031755651440641"
@@ -2242,6 +2385,17 @@ entries:
     first_seen_at: "2026-09-06T19:29:02.000Z"
     updated_at: "2026-09-08T23:36:51.000Z"
     evidence_post_ids: []
+  - handle: "annemarieb0n"
+    x_user_id: "2089015901333098496"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-12T02:37:03.000Z"
+    updated_at: "2026-09-12T03:58:53.000Z"
+    evidence_post_ids: []
   - handle: "annitareyec2"
     x_user_id: "2087844023792783360"
     category: "other"
@@ -2258,33 +2412,33 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 45
+      block: 48
       false_positive: 1
-      net: 44
+      net: 47
     first_seen_at: "2026-09-07T19:30:23.000Z"
-    updated_at: "2026-09-11T15:35:32.000Z"
+    updated_at: "2026-09-12T04:38:59.000Z"
     evidence_post_ids: []
   - handle: "anoukaudnsslyx"
     x_user_id: "2069984817836331008"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 5
+      block: 6
       false_positive: 0
-      net: 5
+      net: 6
     first_seen_at: "2026-09-10T15:13:03.000Z"
-    updated_at: "2026-09-11T05:18:07.000Z"
+    updated_at: "2026-09-12T03:32:32.000Z"
     evidence_post_ids: []
   - handle: "anselsgrl"
     x_user_id: "796422367018942464"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-09T15:50:57.000Z"
-    updated_at: "2026-09-10T16:02:08.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "anthonyacwkv"
     x_user_id: "2086704410969645057"
@@ -2307,6 +2461,17 @@ entries:
       net: 3
     first_seen_at: "2026-09-06T19:29:42.000Z"
     updated_at: "2026-09-09T01:54:31.000Z"
+    evidence_post_ids: []
+  - handle: "anthonyrey3bbv"
+    x_user_id: "2089184512387207168"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-12T03:06:15.000Z"
+    updated_at: "2026-09-12T06:39:31.000Z"
     evidence_post_ids: []
   - handle: "anthonyuxbvul"
     x_user_id: "2086719732774813696"
@@ -2445,44 +2610,44 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-11T10:00:50.000Z"
-    updated_at: "2026-09-11T18:02:31.000Z"
+    updated_at: "2026-09-12T03:33:08.000Z"
     evidence_post_ids: []
   - handle: "aqyvnckrzlc9jq2"
     x_user_id: "1353957278810992640"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-07T03:55:09.000Z"
-    updated_at: "2026-09-08T02:06:22.000Z"
+    updated_at: "2026-09-12T03:33:13.000Z"
     evidence_post_ids: []
   - handle: "araara6978"
     x_user_id: "2529234710"
     category: "other"
     sources: ["community"]
     votes:
-      block: 10
+      block: 11
       false_positive: 0
-      net: 10
+      net: 11
     first_seen_at: "2026-09-06T11:36:50.000Z"
-    updated_at: "2026-09-11T00:53:56.000Z"
+    updated_at: "2026-09-12T03:33:17.000Z"
     evidence_post_ids: []
   - handle: "aracelikocian"
     x_user_id: "2089900327294418944"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-11T13:53:18.000Z"
-    updated_at: "2026-09-11T15:15:18.000Z"
+    updated_at: "2026-09-12T03:33:22.000Z"
     evidence_post_ids: []
   - handle: "arbhosale17"
     x_user_id: "1271131486922539008"
@@ -2544,22 +2709,44 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 5
-      false_positive: 0
+      block: 6
+      false_positive: 1
       net: 5
     first_seen_at: "2026-09-11T12:10:43.000Z"
-    updated_at: "2026-09-11T17:33:57.000Z"
+    updated_at: "2026-09-12T03:33:38.000Z"
+    evidence_post_ids: []
+  - handle: "arifure_ads"
+    x_user_id: "1850708619811278848"
+    category: "scam_phishing"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-09T08:11:23.000Z"
+    updated_at: "2026-09-12T04:33:08.000Z"
+    evidence_post_ids: []
+  - handle: "ariyahdkngq"
+    x_user_id: "2090117153114423296"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T12:47:14.000Z"
+    updated_at: "2026-09-12T02:22:34.000Z"
     evidence_post_ids: []
   - handle: "arizonadede"
     x_user_id: "2874675551"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 5
+      block: 6
       false_positive: 0
-      net: 5
+      net: 6
     first_seen_at: "2026-09-11T08:42:18.000Z"
-    updated_at: "2026-09-11T12:56:33.000Z"
+    updated_at: "2026-09-12T03:33:42.000Z"
     evidence_post_ids: []
   - handle: "army_atiny233"
     x_user_id: "1041588379878453249"
@@ -2577,11 +2764,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-11T09:44:08.000Z"
-    updated_at: "2026-09-11T13:50:59.000Z"
+    updated_at: "2026-09-12T03:33:52.000Z"
     evidence_post_ids: []
   - handle: "artlohn"
     x_user_id: "2087844237589241856"
@@ -2599,11 +2786,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 17
+      block: 18
       false_positive: 0
-      net: 17
+      net: 18
     first_seen_at: "2026-09-07T05:26:46.000Z"
-    updated_at: "2026-09-11T15:13:15.000Z"
+    updated_at: "2026-09-12T03:34:01.000Z"
     evidence_post_ids: []
   - handle: "arupthecoolest"
     x_user_id: "69316805"
@@ -2698,11 +2885,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 30
+      block: 31
       false_positive: 0
-      net: 30
+      net: 31
     first_seen_at: "2026-09-07T03:11:46.000Z"
-    updated_at: "2026-09-11T05:12:12.000Z"
+    updated_at: "2026-09-12T03:34:22.000Z"
     evidence_post_ids: []
   - handle: "aslhn_kya"
     x_user_id: "724279011728363520"
@@ -2742,44 +2929,55 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 6
+      block: 7
       false_positive: 0
-      net: 6
+      net: 7
     first_seen_at: "2026-09-10T07:51:21.000Z"
-    updated_at: "2026-09-11T00:53:59.000Z"
+    updated_at: "2026-09-12T03:34:34.000Z"
     evidence_post_ids: []
   - handle: "asyakayan4oc"
     x_user_id: "2088610853855604736"
     category: "other"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-11T01:27:08.000Z"
-    updated_at: "2026-09-11T04:41:18.000Z"
+    updated_at: "2026-09-12T03:34:41.000Z"
     evidence_post_ids: []
   - handle: "atelierssaveurs"
     x_user_id: "245843408"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 33
+      block: 34
       false_positive: 1
-      net: 32
+      net: 33
     first_seen_at: "2026-09-07T05:47:42.000Z"
-    updated_at: "2026-09-11T14:28:42.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "atharvaherbal"
     x_user_id: "78261841"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 14
+      block: 16
       false_positive: 1
-      net: 13
+      net: 15
     first_seen_at: "2026-09-07T16:10:38.000Z"
-    updated_at: "2026-09-11T15:19:39.000Z"
+    updated_at: "2026-09-12T04:55:33.000Z"
+    evidence_post_ids: []
+  - handle: "athenakvqww"
+    x_user_id: "2090063841761562624"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T14:49:29.000Z"
+    updated_at: "2026-09-12T02:21:05.000Z"
     evidence_post_ids: []
   - handle: "atjfnhbgbm3iup"
     x_user_id: "2071161147101769729"
@@ -2797,44 +2995,55 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-11T07:46:07.000Z"
-    updated_at: "2026-09-11T10:41:28.000Z"
+    updated_at: "2026-09-12T03:35:01.000Z"
     evidence_post_ids: []
   - handle: "audpc444"
     x_user_id: "2071206754591883264"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 9
+      block: 10
       false_positive: 0
-      net: 9
+      net: 10
     first_seen_at: "2026-09-11T09:36:06.000Z"
-    updated_at: "2026-09-11T16:58:18.000Z"
+    updated_at: "2026-09-12T03:35:06.000Z"
     evidence_post_ids: []
   - handle: "audrey_the_one"
     x_user_id: "1515665916163461122"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 15
+      block: 18
       false_positive: 0
-      net: 15
+      net: 18
     first_seen_at: "2026-09-07T18:10:41.000Z"
-    updated_at: "2026-09-11T08:52:20.000Z"
+    updated_at: "2026-09-12T04:37:35.000Z"
+    evidence_post_ids: []
+  - handle: "audreyskel9uzn"
+    x_user_id: "2089024450771746816"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-12T01:48:05.000Z"
+    updated_at: "2026-09-12T06:10:19.000Z"
     evidence_post_ids: []
   - handle: "augustaxuio"
     x_user_id: "2088399523538153472"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 7
+      block: 8
       false_positive: 0
-      net: 7
+      net: 8
     first_seen_at: "2026-09-11T05:18:04.000Z"
-    updated_at: "2026-09-11T10:51:34.000Z"
+    updated_at: "2026-09-12T03:35:20.000Z"
     evidence_post_ids: []
   - handle: "aulqg615"
     x_user_id: "2070618898773192704"
@@ -2858,27 +3067,38 @@ entries:
     first_seen_at: "2026-09-10T10:38:35.000Z"
     updated_at: "2026-09-10T17:01:36.000Z"
     evidence_post_ids: []
-  - handle: "autumn_frommer"
-    x_user_id: "2873151015"
-    category: "copy_paste"
-    sources: ["community"]
-    votes:
-      block: 42
-      false_positive: 1
-      net: 41
-    first_seen_at: "2026-09-07T04:11:14.000Z"
-    updated_at: "2026-09-10T13:58:44.000Z"
-    evidence_post_ids: []
-  - handle: "avauoyng"
-    x_user_id: "2090162539984228352"
+  - handle: "austineqokwn"
+    x_user_id: "2090052554939936768"
     category: "copy_paste"
     sources: ["community"]
     votes:
       block: 3
       false_positive: 0
       net: 3
+    first_seen_at: "2026-09-11T17:39:35.000Z"
+    updated_at: "2026-09-12T01:25:50.000Z"
+    evidence_post_ids: []
+  - handle: "autumn_frommer"
+    x_user_id: "2873151015"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 43
+      false_positive: 1
+      net: 42
+    first_seen_at: "2026-09-07T04:11:14.000Z"
+    updated_at: "2026-09-12T03:35:30.000Z"
+    evidence_post_ids: []
+  - handle: "avauoyng"
+    x_user_id: "2090162539984228352"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
     first_seen_at: "2026-09-11T15:34:29.000Z"
-    updated_at: "2026-09-11T18:58:59.000Z"
+    updated_at: "2026-09-12T03:35:35.000Z"
     evidence_post_ids: []
   - handle: "avwjul791"
     x_user_id: "2069814071738650624"
@@ -2900,7 +3120,7 @@ entries:
       false_positive: 0
       net: 8
     first_seen_at: "2026-09-10T14:56:54.000Z"
-    updated_at: "2026-09-10T18:45:59.000Z"
+    updated_at: "2026-09-12T06:34:55.000Z"
     evidence_post_ids: []
   - handle: "awande_nondaba"
     x_user_id: "1159154304839749639"
@@ -2918,11 +3138,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 6
+      block: 7
       false_positive: 0
-      net: 6
+      net: 7
     first_seen_at: "2026-09-06T10:47:06.000Z"
-    updated_at: "2026-09-10T18:11:11.000Z"
+    updated_at: "2026-09-12T03:35:49.000Z"
     evidence_post_ids: []
   - handle: "awfspuddlxuk0x"
     x_user_id: "2069817792413716487"
@@ -3028,11 +3248,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 33
+      block: 34
       false_positive: 0
-      net: 33
+      net: 34
     first_seen_at: "2026-09-07T03:29:35.000Z"
-    updated_at: "2026-09-11T15:10:00.000Z"
+    updated_at: "2026-09-12T03:36:12.000Z"
     evidence_post_ids: []
   - handle: "aysebozkurnl8n"
     x_user_id: "2086718163635347456"
@@ -3061,11 +3281,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 5
+      block: 6
       false_positive: 0
-      net: 5
+      net: 6
     first_seen_at: "2026-09-10T06:58:42.000Z"
-    updated_at: "2026-09-11T11:49:23.000Z"
+    updated_at: "2026-09-12T03:36:21.000Z"
     evidence_post_ids: []
   - handle: "aytgkteezfwtun"
     x_user_id: "2069767188899344384"
@@ -3083,11 +3303,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-11T07:52:30.000Z"
-    updated_at: "2026-09-11T15:23:33.000Z"
+    updated_at: "2026-09-12T03:36:31.000Z"
     evidence_post_ids: []
   - handle: "ayulestariramli"
     x_user_id: "2286025411"
@@ -3138,11 +3358,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 5
+      block: 6
       false_positive: 0
-      net: 5
+      net: 6
     first_seen_at: "2026-09-11T05:28:53.000Z"
-    updated_at: "2026-09-11T11:04:31.000Z"
+    updated_at: "2026-09-12T03:36:45.000Z"
     evidence_post_ids: []
   - handle: "azrayildirs5xg"
     x_user_id: "2086483989401858049"
@@ -3182,33 +3402,33 @@ entries:
     category: "adult_gray_traffic"
     sources: ["community"]
     votes:
-      block: 34
+      block: 35
       false_positive: 0
-      net: 34
+      net: 35
     first_seen_at: "2026-09-07T01:50:37.000Z"
-    updated_at: "2026-09-11T14:28:42.000Z"
+    updated_at: "2026-09-12T03:36:58.000Z"
     evidence_post_ids: []
   - handle: "babetteenderlin"
     x_user_id: "2085487571425980416"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-10T20:58:09.000Z"
-    updated_at: "2026-09-11T07:22:10.000Z"
+    updated_at: "2026-09-12T03:37:05.000Z"
     evidence_post_ids: []
   - handle: "babiij93"
     x_user_id: "56385848"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 6
+      block: 7
       false_positive: 0
-      net: 6
+      net: 7
     first_seen_at: "2026-09-11T15:50:47.000Z"
-    updated_at: "2026-09-11T18:14:07.000Z"
+    updated_at: "2026-09-12T03:37:11.000Z"
     evidence_post_ids: []
   - handle: "babimsouza"
     x_user_id: "62579597"
@@ -3230,7 +3450,7 @@ entries:
       false_positive: 0
       net: 23
     first_seen_at: "2026-09-08T01:24:36.000Z"
-    updated_at: "2026-09-11T15:11:30.000Z"
+    updated_at: "2026-09-12T04:30:38.000Z"
     evidence_post_ids: []
   - handle: "baffalo64"
     x_user_id: "241099881"
@@ -3281,11 +3501,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 9
+      block: 10
       false_positive: 0
-      net: 9
+      net: 10
     first_seen_at: "2026-09-10T08:04:05.000Z"
-    updated_at: "2026-09-11T01:47:12.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "bandboipee"
     x_user_id: "911347021"
@@ -3331,6 +3551,17 @@ entries:
     first_seen_at: "2026-09-10T14:44:50.000Z"
     updated_at: "2026-09-10T15:43:27.000Z"
     evidence_post_ids: []
+  - handle: "baofuzailushang"
+    x_user_id: "1333930078053363712"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-10T14:56:46.000Z"
+    updated_at: "2026-09-12T05:54:50.000Z"
+    evidence_post_ids: []
   - handle: "baptbaptlebanni"
     x_user_id: "1158023881573187584"
     category: "copy_paste"
@@ -3353,6 +3584,19 @@ entries:
     first_seen_at: "2026-09-09T15:45:54.000Z"
     updated_at: "2026-09-10T10:25:00.000Z"
     evidence_post_ids: []
+  - handle: "barberafaru3j"
+    x_user_id: "2088294227814096896"
+    category: "adult_gray_traffic"
+    sources: ["maintainer"]
+    votes:
+      block: 1
+      false_positive: 0
+      net: 1
+    maintainer_note: "娇妻媚儿单男勾引话术 + 正文 11 位手机号引流（2026-09-12 变体家族）"
+    first_seen_at: "2026-09-12T06:36:39.000Z"
+    updated_at: "2026-09-12T06:39:23.000Z"
+    evidence_post_ids:
+      - "2098434182515224884"
   - handle: "barrettspeae9"
     x_user_id: "2089276661162467328"
     category: "copy_paste"
@@ -3402,11 +3646,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 5
+      block: 6
       false_positive: 0
-      net: 5
+      net: 6
     first_seen_at: "2026-09-10T01:52:10.000Z"
-    updated_at: "2026-09-11T12:49:17.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "bayyankutuk"
     x_user_id: "1179557240"
@@ -3417,7 +3661,7 @@ entries:
       false_positive: 1
       net: 33
     first_seen_at: "2026-09-07T05:48:25.000Z"
-    updated_at: "2026-09-11T14:28:46.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "bboptreetop"
     x_user_id: "48532841"
@@ -3571,18 +3815,29 @@ entries:
       false_positive: 0
       net: 5
     first_seen_at: "2026-09-10T15:39:16.000Z"
-    updated_at: "2026-09-11T04:12:32.000Z"
+    updated_at: "2026-09-12T01:06:00.000Z"
     evidence_post_ids: []
   - handle: "benjaminblocks"
     x_user_id: "1328212995118252032"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 20
+      block: 21
       false_positive: 0
-      net: 20
+      net: 21
     first_seen_at: "2026-09-07T07:18:11.000Z"
-    updated_at: "2026-09-11T07:12:24.000Z"
+    updated_at: "2026-09-12T04:22:54.000Z"
+    evidence_post_ids: []
+  - handle: "benjaminghzmo"
+    x_user_id: "2090124896726638592"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T17:41:06.000Z"
+    updated_at: "2026-09-12T04:47:26.000Z"
     evidence_post_ids: []
   - handle: "benjaminhovk5x"
     x_user_id: "2088592353825095680"
@@ -3616,6 +3871,17 @@ entries:
       net: 4
     first_seen_at: "2026-09-09T13:25:45.000Z"
     updated_at: "2026-09-10T16:03:46.000Z"
+    evidence_post_ids: []
+  - handle: "bentleydolaeb"
+    x_user_id: "2090143966968594432"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T18:17:58.000Z"
+    updated_at: "2026-09-12T02:52:41.000Z"
     evidence_post_ids: []
   - handle: "beratb07"
     x_user_id: "1533777818005413888"
@@ -3688,11 +3954,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 11
+      block: 14
       false_positive: 0
-      net: 11
+      net: 14
     first_seen_at: "2026-09-08T13:31:44.000Z"
-    updated_at: "2026-09-11T15:09:39.000Z"
+    updated_at: "2026-09-12T04:40:31.000Z"
     evidence_post_ids: []
   - handle: "bettearthuua9n"
     x_user_id: "2087776942275559424"
@@ -3704,6 +3970,17 @@ entries:
       net: 5
     first_seen_at: "2026-09-10T08:32:06.000Z"
     updated_at: "2026-09-10T12:10:32.000Z"
+    evidence_post_ids: []
+  - handle: "bettyanngikt"
+    x_user_id: "2089023618122702848"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 10
+      false_positive: 0
+      net: 10
+    first_seen_at: "2026-09-12T00:16:07.000Z"
+    updated_at: "2026-09-12T05:26:43.000Z"
     evidence_post_ids: []
   - handle: "bettywlazl0rpr"
     x_user_id: "2087775471622586368"
@@ -3848,6 +4125,17 @@ entries:
     first_seen_at: "2026-09-10T01:43:41.000Z"
     updated_at: "2026-09-11T05:40:05.000Z"
     evidence_post_ids: []
+  - handle: "bigfishfilms"
+    x_user_id: "24758662"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T11:07:46.000Z"
+    updated_at: "2026-09-12T04:58:55.000Z"
+    evidence_post_ids: []
   - handle: "biggie_smallzy"
     x_user_id: "34380889"
     category: "copy_paste"
@@ -3890,7 +4178,7 @@ entries:
       false_positive: 0
       net: 7
     first_seen_at: "2026-09-07T01:22:20.000Z"
-    updated_at: "2026-09-10T09:43:20.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "biriamadegil"
     x_user_id: "912223773688045568"
@@ -3903,38 +4191,27 @@ entries:
     first_seen_at: "2026-09-09T13:25:58.000Z"
     updated_at: "2026-09-11T01:55:33.000Z"
     evidence_post_ids: []
-  - handle: "bitdeer_ai"
-    x_user_id: "1780530750066208768"
-    category: "scam_phishing"
-    sources: ["community"]
-    votes:
-      block: 3
-      false_positive: 0
-      net: 3
-    first_seen_at: "2026-09-07T22:15:26.000Z"
-    updated_at: "2026-09-11T21:14:17.000Z"
-    evidence_post_ids: []
   - handle: "bitmissin_aleyy"
     x_user_id: "1535593702713958400"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-07T01:50:37.000Z"
-    updated_at: "2026-09-10T08:33:39.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "bitolily"
     x_user_id: "755052684"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 15
+      block: 16
       false_positive: 0
-      net: 15
+      net: 16
     first_seen_at: "2026-09-08T12:35:22.000Z"
-    updated_at: "2026-09-11T16:15:23.000Z"
+    updated_at: "2026-09-12T01:06:08.000Z"
     evidence_post_ids: []
   - handle: "bivzub870"
     x_user_id: "2070222716649562112"
@@ -4046,6 +4323,17 @@ entries:
     first_seen_at: "2026-09-06T12:01:03.000Z"
     updated_at: "2026-09-08T01:31:14.000Z"
     evidence_post_ids: []
+  - handle: "blakelyuxeffw"
+    x_user_id: "2090131225885212672"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-11T23:08:53.000Z"
+    updated_at: "2026-09-12T05:41:25.000Z"
+    evidence_post_ids: []
   - handle: "blanchshale2nr"
     x_user_id: "2088400022362898432"
     category: "copy_paste"
@@ -4062,11 +4350,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 6
+      block: 7
       false_positive: 0
-      net: 6
+      net: 7
     first_seen_at: "2026-09-10T02:45:03.000Z"
-    updated_at: "2026-09-10T13:21:03.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "blueplanetpr"
     x_user_id: "3370647975"
@@ -4194,11 +4482,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 11
+      block: 12
       false_positive: 0
-      net: 11
+      net: 12
     first_seen_at: "2026-09-09T20:25:13.000Z"
-    updated_at: "2026-09-10T19:16:59.000Z"
+    updated_at: "2026-09-12T02:33:18.000Z"
     evidence_post_ids: []
   - handle: "bookercozine"
     x_user_id: "2089753676957016064"
@@ -4210,6 +4498,17 @@ entries:
       net: 4
     first_seen_at: "2026-09-11T11:58:58.000Z"
     updated_at: "2026-09-11T15:59:41.000Z"
+    evidence_post_ids: []
+  - handle: "borislaurefbpz"
+    x_user_id: "2089278618606186496"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T17:40:13.000Z"
+    updated_at: "2026-09-12T04:34:53.000Z"
     evidence_post_ids: []
   - handle: "botdandadan"
     x_user_id: "744707106482249729"
@@ -4282,11 +4581,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 6
+      block: 7
       false_positive: 0
-      net: 6
+      net: 7
     first_seen_at: "2026-09-10T01:37:52.000Z"
-    updated_at: "2026-09-11T11:49:23.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "brackman4topeka"
     x_user_id: "1165009208"
@@ -4331,6 +4630,50 @@ entries:
       net: 21
     first_seen_at: "2026-09-07T06:22:06.000Z"
     updated_at: "2026-09-11T14:46:06.000Z"
+    evidence_post_ids: []
+  - handle: "braxtonbipkv"
+    x_user_id: "2090166877800607744"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 6
+      false_positive: 0
+      net: 6
+    first_seen_at: "2026-09-11T22:51:59.000Z"
+    updated_at: "2026-09-12T06:02:54.000Z"
+    evidence_post_ids: []
+  - handle: "braxtongqnmzw"
+    x_user_id: "2090061948314324992"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T23:08:53.000Z"
+    updated_at: "2026-09-12T05:41:02.000Z"
+    evidence_post_ids: []
+  - handle: "braxtonislpyl"
+    x_user_id: "2090107633957027840"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T23:08:53.000Z"
+    updated_at: "2026-09-12T05:41:25.000Z"
+    evidence_post_ids: []
+  - handle: "braydenbrhsv"
+    x_user_id: "2090119736898039808"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T22:52:12.000Z"
+    updated_at: "2026-09-12T06:28:23.000Z"
     evidence_post_ids: []
   - handle: "braydengraham_"
     x_user_id: "1314438625787097089"
@@ -4425,11 +4768,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 13
+      block: 14
       false_positive: 0
-      net: 13
+      net: 14
     first_seen_at: "2026-09-10T09:27:21.000Z"
-    updated_at: "2026-09-11T03:25:32.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "briancwilkins"
     x_user_id: "1368195842"
@@ -4452,6 +4795,28 @@ entries:
       net: 4
     first_seen_at: "2026-09-10T16:13:34.000Z"
     updated_at: "2026-09-10T17:53:36.000Z"
+    evidence_post_ids: []
+  - handle: "briannabochwt"
+    x_user_id: "2090150063674626048"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 5
+      false_positive: 0
+      net: 5
+    first_seen_at: "2026-09-11T22:52:08.000Z"
+    updated_at: "2026-09-12T05:41:25.000Z"
+    evidence_post_ids: []
+  - handle: "briannasbfeiq"
+    x_user_id: "2090064525772914688"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T23:26:55.000Z"
+    updated_at: "2026-09-12T06:12:38.000Z"
     evidence_post_ids: []
   - handle: "briannemat6nhn"
     x_user_id: "2087485221880893441"
@@ -4513,11 +4878,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-10T01:51:58.000Z"
-    updated_at: "2026-09-10T14:07:46.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "brolhlaxfnxwgq"
     x_user_id: "2069798869093810176"
@@ -4568,11 +4933,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 19
+      block: 21
       false_positive: 0
-      net: 19
+      net: 21
     first_seen_at: "2026-09-08T13:21:24.000Z"
-    updated_at: "2026-09-11T15:10:00.000Z"
+    updated_at: "2026-09-12T04:55:28.000Z"
     evidence_post_ids: []
   - handle: "brucesullif9bo"
     x_user_id: "2088985959484256257"
@@ -4660,7 +5025,7 @@ entries:
       false_positive: 0
       net: 6
     first_seen_at: "2026-09-07T15:04:01.000Z"
-    updated_at: "2026-09-10T13:58:46.000Z"
+    updated_at: "2026-09-12T04:30:38.000Z"
     evidence_post_ids: []
   - handle: "btnmkze605"
     x_user_id: "2069750542818025472"
@@ -4755,11 +5120,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 5
+      block: 6
       false_positive: 0
-      net: 5
+      net: 6
     first_seen_at: "2026-09-09T05:45:53.000Z"
-    updated_at: "2026-09-10T14:11:02.000Z"
+    updated_at: "2026-09-12T02:33:18.000Z"
     evidence_post_ids: []
   - handle: "buseaydin6s6n"
     x_user_id: "2088707260331515904"
@@ -4881,6 +5246,17 @@ entries:
       net: 4
     first_seen_at: "2026-09-10T17:34:37.000Z"
     updated_at: "2026-09-10T22:12:05.000Z"
+    evidence_post_ids: []
+  - handle: "by15268360h"
+    x_user_id: "1462346165484023808"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-10T11:15:24.000Z"
+    updated_at: "2026-09-12T02:33:18.000Z"
     evidence_post_ids: []
   - handle: "byrne2build"
     x_user_id: "2719328455"
@@ -5019,11 +5395,11 @@ entries:
     category: "adult_gray_traffic"
     sources: ["community"]
     votes:
-      block: 31
+      block: 32
       false_positive: 0
-      net: 31
+      net: 32
     first_seen_at: "2026-09-07T06:06:49.000Z"
-    updated_at: "2026-09-11T15:13:37.000Z"
+    updated_at: "2026-09-12T03:03:23.000Z"
     evidence_post_ids: []
   - handle: "calvinl42618319"
     x_user_id: "1568486254752448512"
@@ -5052,11 +5428,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 21
+      block: 22
       false_positive: 0
-      net: 21
+      net: 22
     first_seen_at: "2026-09-08T13:31:51.000Z"
-    updated_at: "2026-09-11T10:23:09.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "camiloacostap1"
     x_user_id: "1386704169743044616"
@@ -5228,11 +5604,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-11T10:56:11.000Z"
-    updated_at: "2026-09-11T13:43:28.000Z"
+    updated_at: "2026-09-12T00:43:35.000Z"
     evidence_post_ids: []
   - handle: "carolinaaberson"
     x_user_id: "2087844552736735232"
@@ -5322,6 +5698,17 @@ entries:
     first_seen_at: "2026-09-10T13:19:38.000Z"
     updated_at: "2026-09-11T02:04:35.000Z"
     evidence_post_ids: []
+  - handle: "caseyboxerd5"
+    x_user_id: "2089013795901288448"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T18:40:15.000Z"
+    updated_at: "2026-09-12T05:54:54.000Z"
+    evidence_post_ids: []
   - handle: "caseyfeehmq3"
     x_user_id: "2088924246042902528"
     category: "copy_paste"
@@ -5349,11 +5736,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-11T11:23:19.000Z"
-    updated_at: "2026-09-11T14:58:45.000Z"
+    updated_at: "2026-09-12T00:43:35.000Z"
     evidence_post_ids: []
   - handle: "cassiewegi5b"
     x_user_id: "2087832428102508545"
@@ -5376,6 +5763,17 @@ entries:
       net: 43
     first_seen_at: "2026-09-07T03:37:31.000Z"
     updated_at: "2026-09-11T00:55:47.000Z"
+    evidence_post_ids: []
+  - handle: "catheybiellg"
+    x_user_id: "2089753266686984192"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T11:08:27.000Z"
+    updated_at: "2026-09-12T02:35:36.000Z"
     evidence_post_ids: []
   - handle: "catheydietehwa"
     x_user_id: "2089276870378303488"
@@ -5580,11 +5978,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 7
+      block: 8
       false_positive: 1
-      net: 6
+      net: 7
     first_seen_at: "2026-09-08T14:23:10.000Z"
-    updated_at: "2026-09-11T13:33:27.000Z"
+    updated_at: "2026-09-12T04:55:28.000Z"
     evidence_post_ids: []
   - handle: "cetcdhnpoutnyx"
     x_user_id: "2070245771388076032"
@@ -5596,17 +5994,6 @@ entries:
       net: 28
     first_seen_at: "2026-09-10T05:11:23.000Z"
     updated_at: "2026-09-11T19:15:58.000Z"
-    evidence_post_ids: []
-  - handle: "cfb54555646"
-    x_user_id: "992500883047972864"
-    category: "copy_paste"
-    sources: ["community"]
-    votes:
-      block: 3
-      false_positive: 0
-      net: 3
-    first_seen_at: "2026-09-11T08:35:18.000Z"
-    updated_at: "2026-09-11T13:53:09.000Z"
     evidence_post_ids: []
   - handle: "cfuccz556"
     x_user_id: "2071375565588987904"
@@ -5657,11 +6044,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-07T10:40:21.000Z"
-    updated_at: "2026-09-10T14:10:16.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "chaha01"
     x_user_id: "1319290986929876993"
@@ -5690,11 +6077,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-09T12:34:57.000Z"
-    updated_at: "2026-09-10T14:12:21.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "chariaisaac"
     x_user_id: "1057379618401984512"
@@ -5822,11 +6209,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 8
+      block: 9
       false_positive: 0
-      net: 8
+      net: 9
     first_seen_at: "2026-09-10T07:51:04.000Z"
-    updated_at: "2026-09-11T04:26:28.000Z"
+    updated_at: "2026-09-12T02:33:18.000Z"
     evidence_post_ids: []
   - handle: "cheryljamewrda"
     x_user_id: "2086482504924471296"
@@ -5855,11 +6242,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 19
+      block: 20
       false_positive: 0
-      net: 19
+      net: 20
     first_seen_at: "2026-09-08T13:31:51.000Z"
-    updated_at: "2026-09-11T15:22:12.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "chichoooo00"
     x_user_id: "2538285007"
@@ -5981,9 +6368,20 @@ entries:
       net: 6
     maintainer_note: "用户举报黄推引流：擦边引语+emoji话术"
     first_seen_at: "2026-09-07T03:15:35.000Z"
-    updated_at: "2026-09-11T18:29:26.000Z"
+    updated_at: "2026-09-12T06:39:23.000Z"
     evidence_post_ids:
       - "2096790296478847257"
+  - handle: "christinewe2i4"
+    x_user_id: "2088283593252433920"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T18:38:35.000Z"
+    updated_at: "2026-09-12T04:50:45.000Z"
+    evidence_post_ids: []
   - handle: "christinma3mh"
     x_user_id: "2087776668287217664"
     category: "copy_paste"
@@ -6093,6 +6491,17 @@ entries:
       net: 25
     first_seen_at: "2026-09-07T17:35:31.000Z"
     updated_at: "2026-09-11T15:09:25.000Z"
+    evidence_post_ids: []
+  - handle: "claricecolj41"
+    x_user_id: "2089014505875423232"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-12T02:33:51.000Z"
+    updated_at: "2026-09-12T06:02:00.000Z"
     evidence_post_ids: []
   - handle: "clarisseledu"
     x_user_id: "2414629382"
@@ -6303,6 +6712,17 @@ entries:
     first_seen_at: "2026-09-11T11:08:08.000Z"
     updated_at: "2026-09-11T14:33:45.000Z"
     evidence_post_ids: []
+  - handle: "cogdillaangela"
+    x_user_id: "1536395413"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-12T01:06:22.000Z"
+    updated_at: "2026-09-12T06:31:16.000Z"
+    evidence_post_ids: []
   - handle: "cohjoictvccioz"
     x_user_id: "2069754178453344257"
     category: "other"
@@ -6389,7 +6809,7 @@ entries:
       false_positive: 0
       net: 7
     first_seen_at: "2026-09-07T01:22:40.000Z"
-    updated_at: "2026-09-09T13:47:47.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "corettavanwl8r"
     x_user_id: "2087777279279505408"
@@ -6429,11 +6849,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-10T09:09:38.000Z"
-    updated_at: "2026-09-10T10:46:58.000Z"
+    updated_at: "2026-09-12T02:33:18.000Z"
     evidence_post_ids: []
   - handle: "coxsufdzgkit5l"
     x_user_id: "2069812764508569600"
@@ -6445,6 +6865,17 @@ entries:
       net: 4
     first_seen_at: "2026-09-07T17:11:11.000Z"
     updated_at: "2026-09-09T00:54:17.000Z"
+    evidence_post_ids: []
+  - handle: "coymarenoec"
+    x_user_id: "2089021985367994368"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 5
+      false_positive: 0
+      net: 5
+    first_seen_at: "2026-09-12T01:27:43.000Z"
+    updated_at: "2026-09-12T04:06:35.000Z"
     evidence_post_ids: []
   - handle: "cpplwsx022"
     x_user_id: "2071212814136463360"
@@ -6495,11 +6926,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 19
+      block: 20
       false_positive: 0
-      net: 19
+      net: 20
     first_seen_at: "2026-09-07T18:11:30.000Z"
-    updated_at: "2026-09-11T15:35:22.000Z"
+    updated_at: "2026-09-12T04:55:33.000Z"
     evidence_post_ids: []
   - handle: "cresmarino1"
     x_user_id: "1196061622655041541"
@@ -6511,6 +6942,17 @@ entries:
       net: 6
     first_seen_at: "2026-09-06T20:13:39.000Z"
     updated_at: "2026-09-08T23:44:11.000Z"
+    evidence_post_ids: []
+  - handle: "criseldape3zs"
+    x_user_id: "2089019011929714688"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-12T02:29:20.000Z"
+    updated_at: "2026-09-12T03:58:53.000Z"
     evidence_post_ids: []
   - handle: "crissonali"
     x_user_id: "4278967216"
@@ -6627,11 +7069,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 18
-      false_positive: 0
-      net: 18
+      block: 20
+      false_positive: 1
+      net: 19
     first_seen_at: "2026-09-08T13:21:20.000Z"
-    updated_at: "2026-09-11T13:33:31.000Z"
+    updated_at: "2026-09-12T03:02:49.000Z"
     evidence_post_ids: []
   - handle: "curetonjaden"
     x_user_id: "1240809672929574914"
@@ -6671,11 +7113,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-11T08:42:23.000Z"
-    updated_at: "2026-09-11T12:53:41.000Z"
+    updated_at: "2026-09-12T05:52:15.000Z"
     evidence_post_ids: []
   - handle: "curtisalek7pz"
     x_user_id: "2089277935173685248"
@@ -6721,6 +7163,17 @@ entries:
     first_seen_at: "2026-09-09T09:38:32.000Z"
     updated_at: "2026-09-10T15:20:36.000Z"
     evidence_post_ids: []
+  - handle: "cynthiasobvc"
+    x_user_id: "2089278976690683904"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-12T02:08:49.000Z"
+    updated_at: "2026-09-12T03:26:05.000Z"
+    evidence_post_ids: []
   - handle: "czgnyfkfso2rvv"
     x_user_id: "2070309471214272512"
     category: "copy_paste"
@@ -6763,7 +7216,7 @@ entries:
       false_positive: 0
       net: 21
     first_seen_at: "2026-09-07T13:23:50.000Z"
-    updated_at: "2026-09-11T15:11:30.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "dainatrosen"
     x_user_id: "2089276770889646080"
@@ -6908,6 +7361,17 @@ entries:
     first_seen_at: "2026-09-10T11:13:53.000Z"
     updated_at: "2026-09-10T14:12:30.000Z"
     evidence_post_ids: []
+  - handle: "daravoriscp"
+    x_user_id: "2089022886191210496"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-12T02:30:02.000Z"
+    updated_at: "2026-09-12T05:26:48.000Z"
+    evidence_post_ids: []
   - handle: "darinchuta7e1"
     x_user_id: "2087777850388582400"
     category: "other"
@@ -7012,11 +7476,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 7
+      block: 8
       false_positive: 0
-      net: 7
+      net: 8
     first_seen_at: "2026-09-10T06:50:46.000Z"
-    updated_at: "2026-09-11T01:47:12.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "ddxnoqtugtlwao"
     x_user_id: "2069813484637069312"
@@ -7122,11 +7586,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 22
+      block: 23
       false_positive: 1
-      net: 21
+      net: 22
     first_seen_at: "2026-09-08T02:11:42.000Z"
-    updated_at: "2026-09-11T18:07:35.000Z"
+    updated_at: "2026-09-12T01:06:40.000Z"
     evidence_post_ids: []
   - handle: "deepakg60465518"
     x_user_id: "1273493524613226496"
@@ -7419,11 +7883,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 17
+      block: 18
       false_positive: 0
-      net: 17
+      net: 18
     first_seen_at: "2026-09-07T18:01:16.000Z"
-    updated_at: "2026-09-11T13:19:48.000Z"
+    updated_at: "2026-09-12T01:07:20.000Z"
     evidence_post_ids: []
   - handle: "diazzanya"
     x_user_id: "1230152912145276928"
@@ -7447,6 +7911,17 @@ entries:
     first_seen_at: "2026-09-07T19:30:19.000Z"
     updated_at: "2026-09-10T01:31:37.000Z"
     evidence_post_ids: []
+  - handle: "diedremarchell"
+    x_user_id: "2089023121856593920"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-12T00:37:47.000Z"
+    updated_at: "2026-09-12T06:10:42.000Z"
+    evidence_post_ids: []
   - handle: "dillingham1010"
     x_user_id: "2089341194589581312"
     category: "copy_paste"
@@ -7468,6 +7943,17 @@ entries:
       net: 8
     first_seen_at: "2026-09-07T11:37:39.000Z"
     updated_at: "2026-09-09T12:57:29.000Z"
+    evidence_post_ids: []
+  - handle: "dinkcult"
+    x_user_id: "885634811016163328"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T08:10:13.000Z"
+    updated_at: "2026-09-12T00:47:15.000Z"
     evidence_post_ids: []
   - handle: "divinamarstr"
     x_user_id: "2088400552174436352"
@@ -7623,6 +8109,17 @@ entries:
     first_seen_at: "2026-09-08T08:10:04.000Z"
     updated_at: "2026-09-08T09:08:43.000Z"
     evidence_post_ids: []
+  - handle: "douglasmar7p1h"
+    x_user_id: "2088298528036519937"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T22:10:10.000Z"
+    updated_at: "2026-09-12T02:55:19.000Z"
+    evidence_post_ids: []
   - handle: "doyleengledwql"
     x_user_id: "2089428949419913216"
     category: "copy_paste"
@@ -7683,11 +8180,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 7
+      block: 8
       false_positive: 0
-      net: 7
+      net: 8
     first_seen_at: "2026-09-10T07:03:53.000Z"
-    updated_at: "2026-09-11T11:49:23.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "dqtwwzuhlsvubj"
     x_user_id: "2070566746738548736"
@@ -7854,6 +8351,17 @@ entries:
     first_seen_at: "2026-09-10T10:04:54.000Z"
     updated_at: "2026-09-10T23:54:17.000Z"
     evidence_post_ids: []
+  - handle: "dxovqedkijcr6i"
+    x_user_id: "2069842539775946752"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-08T12:22:48.000Z"
+    updated_at: "2026-09-12T00:43:35.000Z"
+    evidence_post_ids: []
   - handle: "dxsau180"
     x_user_id: "2069821518406623232"
     category: "other"
@@ -7870,11 +8378,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 16
+      block: 17
       false_positive: 0
-      net: 16
+      net: 17
     first_seen_at: "2026-09-10T05:41:31.000Z"
-    updated_at: "2026-09-10T18:49:46.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "dymtybl918"
     x_user_id: "2069831299414818816"
@@ -8233,11 +8741,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 18
+      block: 19
       false_positive: 0
-      net: 18
+      net: 19
     first_seen_at: "2026-09-07T16:10:47.000Z"
-    updated_at: "2026-09-11T14:45:59.000Z"
+    updated_at: "2026-09-12T01:08:10.000Z"
     evidence_post_ids: []
   - handle: "edwardmorrhkaq"
     x_user_id: "2088275501240479744"
@@ -8501,7 +9009,7 @@ entries:
       false_positive: 0
       net: 7
     first_seen_at: "2026-09-06T12:37:11.000Z"
-    updated_at: "2026-09-09T12:34:54.000Z"
+    updated_at: "2026-09-12T04:30:38.000Z"
     evidence_post_ids: []
   - handle: "elijahgilroy15"
     x_user_id: "1543700293963186176"
@@ -8589,7 +9097,7 @@ entries:
       false_positive: 0
       net: 38
     first_seen_at: "2026-09-07T05:48:25.000Z"
-    updated_at: "2026-09-11T15:11:06.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "elizabethjibok"
     x_user_id: "2088606049217449984"
@@ -8657,6 +9165,17 @@ entries:
     first_seen_at: "2026-09-10T01:49:53.000Z"
     updated_at: "2026-09-11T12:49:12.000Z"
     evidence_post_ids: []
+  - handle: "elliottsca4gyj"
+    x_user_id: "2089278845283442688"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-12T01:47:50.000Z"
+    updated_at: "2026-09-12T02:42:34.000Z"
+    evidence_post_ids: []
   - handle: "ellybruleykj"
     x_user_id: "2087773164289814528"
     category: "copy_paste"
@@ -8668,6 +9187,17 @@ entries:
     first_seen_at: "2026-09-09T05:01:28.000Z"
     updated_at: "2026-09-09T09:44:13.000Z"
     evidence_post_ids: []
+  - handle: "ellystickrlj"
+    x_user_id: "2089022149029953536"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-12T00:16:07.000Z"
+    updated_at: "2026-09-12T05:51:30.000Z"
+    evidence_post_ids: []
   - handle: "elmerespina8"
     x_user_id: "1346848083548594177"
     category: "copy_paste"
@@ -8678,6 +9208,17 @@ entries:
       net: 3
     first_seen_at: "2026-09-10T01:00:28.000Z"
     updated_at: "2026-09-11T12:49:12.000Z"
+    evidence_post_ids: []
+  - handle: "elnahinkenes3"
+    x_user_id: "2088400686832582657"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-11T11:13:42.000Z"
+    updated_at: "2026-09-12T02:13:22.000Z"
     evidence_post_ids: []
   - handle: "elnalyasmvur"
     x_user_id: "2088399943178264576"
@@ -8843,6 +9384,17 @@ entries:
       net: 3
     first_seen_at: "2026-09-10T17:25:28.000Z"
     updated_at: "2026-09-10T20:45:44.000Z"
+    evidence_post_ids: []
+  - handle: "emmittcrydfhow"
+    x_user_id: "2089428264322555904"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-09T17:07:35.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "emogenelac2f0g"
     x_user_id: "2087487716212568064"
@@ -9042,6 +9594,17 @@ entries:
     first_seen_at: "2026-09-06T20:05:05.000Z"
     updated_at: "2026-09-08T12:40:48.000Z"
     evidence_post_ids: []
+  - handle: "ettasweetixb"
+    x_user_id: "2088400651801784322"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T10:52:28.000Z"
+    updated_at: "2026-09-12T00:43:35.000Z"
+    evidence_post_ids: []
   - handle: "ettatrahin"
     x_user_id: "2088399439824146432"
     category: "copy_paste"
@@ -9085,6 +9648,17 @@ entries:
       net: 4
     first_seen_at: "2026-09-10T16:13:44.000Z"
     updated_at: "2026-09-10T17:53:34.000Z"
+    evidence_post_ids: []
+  - handle: "eugeniogolder"
+    x_user_id: "2089024311017254912"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-12T00:16:00.000Z"
+    updated_at: "2026-09-12T06:13:00.000Z"
     evidence_post_ids: []
   - handle: "eukaloke"
     x_user_id: "2183594195"
@@ -9201,11 +9775,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-09T16:08:09.000Z"
-    updated_at: "2026-09-10T08:09:54.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "evelynebur0n"
     x_user_id: "2088400537767010305"
@@ -9223,11 +9797,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-11T11:13:27.000Z"
-    updated_at: "2026-09-11T14:20:50.000Z"
+    updated_at: "2026-09-12T06:00:42.000Z"
     evidence_post_ids: []
   - handle: "evfbvjcvhvhlqq"
     x_user_id: "2070342087464079360"
@@ -9333,11 +9907,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 6
+      block: 7
       false_positive: 0
-      net: 6
+      net: 7
     first_seen_at: "2026-09-10T12:03:05.000Z"
-    updated_at: "2026-09-11T00:13:57.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "extra4us"
     x_user_id: "169023328"
@@ -9443,11 +10017,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-11T11:13:42.000Z"
-    updated_at: "2026-09-11T14:20:50.000Z"
+    updated_at: "2026-09-12T06:00:42.000Z"
     evidence_post_ids: []
   - handle: "facts___ouridol"
     x_user_id: "1048876994"
@@ -9667,7 +10241,7 @@ entries:
       false_positive: 0
       net: 30
     first_seen_at: "2026-09-07T05:47:36.000Z"
-    updated_at: "2026-09-11T14:28:42.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "fernandamuruab"
     x_user_id: "391764367"
@@ -9768,6 +10342,17 @@ entries:
     first_seen_at: "2026-09-06T11:34:24.000Z"
     updated_at: "2026-09-09T13:32:22.000Z"
     evidence_post_ids: []
+  - handle: "florencioaz1"
+    x_user_id: "2089750248683909120"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T13:43:36.000Z"
+    updated_at: "2026-09-12T02:16:42.000Z"
+    evidence_post_ids: []
   - handle: "florenecioua"
     x_user_id: "2088923874645725184"
     category: "copy_paste"
@@ -9811,6 +10396,17 @@ entries:
       net: 3
     first_seen_at: "2026-09-06T14:27:43.000Z"
     updated_at: "2026-09-08T14:00:16.000Z"
+    evidence_post_ids: []
+  - handle: "floysrey"
+    x_user_id: "2088400640146042880"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T13:18:17.000Z"
+    updated_at: "2026-09-12T04:42:36.000Z"
     evidence_post_ids: []
   - handle: "flwcdpk902"
     x_user_id: "2070543321357774849"
@@ -9872,11 +10468,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 5
+      block: 6
       false_positive: 0
-      net: 5
+      net: 6
     first_seen_at: "2026-09-10T08:45:27.000Z"
-    updated_at: "2026-09-11T01:47:12.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "fookahh"
     x_user_id: "989700312595300353"
@@ -10092,11 +10688,22 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-07T10:40:21.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
+    evidence_post_ids: []
+  - handle: "fromsc"
+    x_user_id: "84761514"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
       block: 3
       false_positive: 0
       net: 3
-    first_seen_at: "2026-09-07T10:40:21.000Z"
-    updated_at: "2026-09-10T14:12:14.000Z"
+    first_seen_at: "2026-09-11T10:31:44.000Z"
+    updated_at: "2026-09-12T06:06:00.000Z"
     evidence_post_ids: []
   - handle: "fsabd186"
     x_user_id: "2070324108793896960"
@@ -10554,11 +11161,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 6
+      block: 7
       false_positive: 0
-      net: 6
+      net: 7
     first_seen_at: "2026-09-10T08:45:16.000Z"
-    updated_at: "2026-09-10T16:13:29.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "gicchi46"
     x_user_id: "1367300356540010503"
@@ -10609,11 +11216,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 27
+      block: 28
       false_positive: 0
-      net: 27
+      net: 28
     first_seen_at: "2026-09-07T01:50:37.000Z"
-    updated_at: "2026-09-11T07:35:36.000Z"
+    updated_at: "2026-09-12T04:22:54.000Z"
     evidence_post_ids: []
   - handle: "gilbrannluna"
     x_user_id: "743142008391229441"
@@ -10906,11 +11513,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 14
+      block: 15
       false_positive: 0
-      net: 14
+      net: 15
     first_seen_at: "2026-09-08T14:26:04.000Z"
-    updated_at: "2026-09-11T09:34:09.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "goodsell1l"
     x_user_id: "89641180"
@@ -11098,6 +11705,17 @@ entries:
       net: 8
     first_seen_at: "2026-09-10T00:33:26.000Z"
     updated_at: "2026-09-10T16:34:31.000Z"
+    evidence_post_ids: []
+  - handle: "gully_the_great"
+    x_user_id: "832080846"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-12T00:51:00.000Z"
+    updated_at: "2026-09-12T06:31:21.000Z"
     evidence_post_ids: []
   - handle: "gumgumgumilar5"
     x_user_id: "1110511448910778368"
@@ -11308,6 +11926,17 @@ entries:
     first_seen_at: "2026-09-06T19:29:10.000Z"
     updated_at: "2026-09-08T23:36:51.000Z"
     evidence_post_ids: []
+  - handle: "hafsakmk"
+    x_user_id: "596292531"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-11T08:48:26.000Z"
+    updated_at: "2026-09-12T06:33:06.000Z"
+    evidence_post_ids: []
   - handle: "hahloz476"
     x_user_id: "2070307276934549505"
     category: "other"
@@ -11449,7 +12078,7 @@ entries:
       false_positive: 1
       net: 41
     first_seen_at: "2026-09-07T04:55:33.000Z"
-    updated_at: "2026-09-11T14:28:42.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "hanneloredwv"
     x_user_id: "2088400108983603200"
@@ -11527,6 +12156,17 @@ entries:
       net: 3
     first_seen_at: "2026-09-07T03:49:22.000Z"
     updated_at: "2026-09-08T01:28:50.000Z"
+    evidence_post_ids: []
+  - handle: "harrysurriv4b"
+    x_user_id: "2089021672640634881"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-12T01:57:30.000Z"
+    updated_at: "2026-09-12T06:29:19.000Z"
     evidence_post_ids: []
   - handle: "hartchris12"
     x_user_id: "1337990941064499200"
@@ -11632,11 +12272,22 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 31
+      block: 32
       false_positive: 0
-      net: 31
+      net: 32
     first_seen_at: "2026-09-07T17:01:37.000Z"
-    updated_at: "2026-09-11T09:18:40.000Z"
+    updated_at: "2026-09-12T01:06:48.000Z"
+    evidence_post_ids: []
+  - handle: "hazelgoetts5"
+    x_user_id: "2089023801057021952"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-12T01:28:27.000Z"
+    updated_at: "2026-09-12T06:10:34.000Z"
     evidence_post_ids: []
   - handle: "hbapdsehxgg0ub"
     x_user_id: "2071158037763825664"
@@ -11665,11 +12316,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 5
+      block: 6
       false_positive: 0
-      net: 5
+      net: 6
     first_seen_at: "2026-09-10T06:09:05.000Z"
-    updated_at: "2026-09-10T13:06:05.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "hckqboz154"
     x_user_id: "2071190575563313152"
@@ -11944,18 +12595,18 @@ entries:
       false_positive: 0
       net: 9
     first_seen_at: "2026-09-10T13:20:57.000Z"
-    updated_at: "2026-09-10T22:10:46.000Z"
+    updated_at: "2026-09-12T06:34:55.000Z"
     evidence_post_ids: []
   - handle: "hhytkxaascui3h"
     x_user_id: "2070339530494746624"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 17
+      block: 18
       false_positive: 0
-      net: 17
+      net: 18
     first_seen_at: "2026-09-10T00:39:49.000Z"
-    updated_at: "2026-09-11T01:22:48.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "highon_me"
     x_user_id: "233163453"
@@ -11967,17 +12618,6 @@ entries:
       net: 7
     first_seen_at: "2026-09-06T11:34:28.000Z"
     updated_at: "2026-09-08T10:26:47.000Z"
-    evidence_post_ids: []
-  - handle: "highschoolads"
-    x_user_id: "1927671248211030016"
-    category: "scam_phishing"
-    sources: ["community"]
-    votes:
-      block: 3
-      false_positive: 0
-      net: 3
-    first_seen_at: "2026-09-10T13:35:59.000Z"
-    updated_at: "2026-09-11T12:54:09.000Z"
     evidence_post_ids: []
   - handle: "hijymmtmnh9fgg"
     x_user_id: "2070301164046819328"
@@ -12006,11 +12646,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 9
+      block: 11
       false_positive: 0
-      net: 9
+      net: 11
     first_seen_at: "2026-09-08T14:22:25.000Z"
-    updated_at: "2026-09-11T13:33:31.000Z"
+    updated_at: "2026-09-12T04:38:55.000Z"
     evidence_post_ids: []
   - handle: "hiro_hirotti"
     x_user_id: "4338430692"
@@ -12193,11 +12833,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 5
+      block: 6
       false_positive: 0
-      net: 5
+      net: 6
     first_seen_at: "2026-09-07T06:08:11.000Z"
-    updated_at: "2026-09-08T10:11:44.000Z"
+    updated_at: "2026-09-12T04:22:54.000Z"
     evidence_post_ids: []
   - handle: "hortensestork"
     x_user_id: "1314182493671755778"
@@ -12303,11 +12943,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 12
+      block: 13
       false_positive: 0
-      net: 12
+      net: 13
     first_seen_at: "2026-09-10T10:49:17.000Z"
-    updated_at: "2026-09-10T22:31:46.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "htevbd272"
     x_user_id: "2070341844374794240"
@@ -12318,7 +12958,7 @@ entries:
       false_positive: 0
       net: 13
     first_seen_at: "2026-09-10T01:02:03.000Z"
-    updated_at: "2026-09-10T16:34:31.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "hubkq423"
     x_user_id: "2069821728348385281"
@@ -12474,6 +13114,17 @@ entries:
     first_seen_at: "2026-09-10T12:39:33.000Z"
     updated_at: "2026-09-11T13:05:39.000Z"
     evidence_post_ids: []
+  - handle: "hyf98334204"
+    x_user_id: "1437983687543599104"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-07T02:25:01.000Z"
+    updated_at: "2026-09-12T06:08:39.000Z"
+    evidence_post_ids: []
   - handle: "hyfabhat_84"
     x_user_id: "1333371510531133440"
     category: "copy_paste"
@@ -12560,7 +13211,7 @@ entries:
       false_positive: 0
       net: 11
     first_seen_at: "2026-09-08T14:22:09.000Z"
-    updated_at: "2026-09-11T09:48:00.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "iavodyzbfzg5b8"
     x_user_id: "2069810426083155968"
@@ -12747,7 +13398,7 @@ entries:
       false_positive: 0
       net: 8
     first_seen_at: "2026-09-06T13:20:33.000Z"
-    updated_at: "2026-09-10T11:25:25.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "ingermatarp2"
     x_user_id: "2087490220195266560"
@@ -12776,11 +13427,22 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 5
+      block: 6
       false_positive: 0
-      net: 5
+      net: 6
     first_seen_at: "2026-09-10T09:59:22.000Z"
-    updated_at: "2026-09-10T18:49:46.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
+    evidence_post_ids: []
+  - handle: "inocenciasgp"
+    x_user_id: "2089430408064565248"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-10T04:24:54.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "invrwcdcazbkbc"
     x_user_id: "2069797342111289344"
@@ -12802,7 +13464,7 @@ entries:
       false_positive: 0
       net: 13
     first_seen_at: "2026-09-10T00:55:31.000Z"
-    updated_at: "2026-09-10T10:04:09.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "iolapinaljk"
     x_user_id: "2087478101756309505"
@@ -12848,6 +13510,17 @@ entries:
     first_seen_at: "2026-09-11T08:44:30.000Z"
     updated_at: "2026-09-11T11:04:06.000Z"
     evidence_post_ids: []
+  - handle: "irisedis"
+    x_user_id: "2089020988138659840"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-12T02:35:28.000Z"
+    updated_at: "2026-09-12T03:44:46.000Z"
+    evidence_post_ids: []
   - handle: "irving_aguirre7"
     x_user_id: "602965543"
     category: "copy_paste"
@@ -12870,6 +13543,17 @@ entries:
     first_seen_at: "2026-09-10T03:57:23.000Z"
     updated_at: "2026-09-11T04:57:25.000Z"
     evidence_post_ids: []
+  - handle: "isaacbinsfeld"
+    x_user_id: "2089014978732871681"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T18:40:32.000Z"
+    updated_at: "2026-09-12T02:41:09.000Z"
+    evidence_post_ids: []
   - handle: "isabianecki"
     x_user_id: "420699885"
     category: "copy_paste"
@@ -12891,6 +13575,17 @@ entries:
       net: 7
     first_seen_at: "2026-09-10T16:20:21.000Z"
     updated_at: "2026-09-10T19:35:32.000Z"
+    evidence_post_ids: []
+  - handle: "iselalabogq1"
+    x_user_id: "2089024031794028544"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 6
+      false_positive: 0
+      net: 6
+    first_seen_at: "2026-09-12T00:38:06.000Z"
+    updated_at: "2026-09-12T02:49:17.000Z"
     evidence_post_ids: []
   - handle: "isobeleyestone"
     x_user_id: "2088399415916503040"
@@ -12924,6 +13619,17 @@ entries:
       net: 33
     first_seen_at: "2026-09-07T03:36:35.000Z"
     updated_at: "2026-09-11T15:09:53.000Z"
+    evidence_post_ids: []
+  - handle: "itsdirtysanchez"
+    x_user_id: "381881250"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T22:22:57.000Z"
+    updated_at: "2026-09-12T06:31:21.000Z"
     evidence_post_ids: []
   - handle: "itsglpgwvotvlb"
     x_user_id: "2069819579241521152"
@@ -13051,11 +13757,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 6
+      block: 7
       false_positive: 0
-      net: 6
+      net: 7
     first_seen_at: "2026-09-10T13:01:22.000Z"
-    updated_at: "2026-09-11T00:13:30.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "iyako1"
     x_user_id: "567241507"
@@ -13161,11 +13867,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 5
+      block: 6
       false_positive: 0
-      net: 5
+      net: 6
     first_seen_at: "2026-09-07T22:15:11.000Z"
-    updated_at: "2026-09-11T12:49:12.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "jackquelinjn4"
     x_user_id: "2088399418747969536"
@@ -13365,6 +14071,17 @@ entries:
     first_seen_at: "2026-09-09T19:20:52.000Z"
     updated_at: "2026-09-10T03:35:08.000Z"
     evidence_post_ids: []
+  - handle: "jamisonalugnp"
+    x_user_id: "2089022091739734016"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 5
+      false_positive: 0
+      net: 5
+    first_seen_at: "2026-09-12T01:22:18.000Z"
+    updated_at: "2026-09-12T05:26:43.000Z"
+    evidence_post_ids: []
   - handle: "jamshaidalijam1"
     x_user_id: "724510852058103809"
     category: "copy_paste"
@@ -13396,18 +14113,18 @@ entries:
       false_positive: 0
       net: 9
     first_seen_at: "2026-09-08T14:31:22.000Z"
-    updated_at: "2026-09-10T16:14:14.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "janiellycunha21"
     x_user_id: "2750626791"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 18
+      block: 19
       false_positive: 0
-      net: 18
+      net: 19
     first_seen_at: "2026-09-07T16:15:02.000Z"
-    updated_at: "2026-09-11T19:23:19.000Z"
+    updated_at: "2026-09-12T01:07:56.000Z"
     evidence_post_ids: []
   - handle: "janlickliter"
     x_user_id: "2088400308087234560"
@@ -13519,6 +14236,17 @@ entries:
     first_seen_at: "2026-09-11T09:57:25.000Z"
     updated_at: "2026-09-11T14:45:40.000Z"
     evidence_post_ids: []
+  - handle: "jaydenlatham"
+    x_user_id: "1265726733942247428"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 5
+      false_positive: 0
+      net: 5
+    first_seen_at: "2026-09-12T05:48:51.000Z"
+    updated_at: "2026-09-12T06:29:54.000Z"
+    evidence_post_ids: []
   - handle: "jayinsano"
     x_user_id: "297969154"
     category: "copy_paste"
@@ -13606,6 +14334,17 @@ entries:
       net: 3
     first_seen_at: "2026-09-10T12:10:44.000Z"
     updated_at: "2026-09-10T15:01:37.000Z"
+    evidence_post_ids: []
+  - handle: "jeanenemcgpz"
+    x_user_id: "2088400269847457792"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T11:06:45.000Z"
+    updated_at: "2026-09-12T02:45:44.000Z"
     evidence_post_ids: []
   - handle: "jeanettegagr6"
     x_user_id: "2089277155922296832"
@@ -13705,6 +14444,17 @@ entries:
       net: 3
     first_seen_at: "2026-09-07T22:16:04.000Z"
     updated_at: "2026-09-10T13:48:21.000Z"
+    evidence_post_ids: []
+  - handle: "jenevamimatb"
+    x_user_id: "2088400404434558976"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T11:06:49.000Z"
+    updated_at: "2026-09-12T03:25:20.000Z"
     evidence_post_ids: []
   - handle: "jenny21262335"
     x_user_id: "1122153617836912640"
@@ -13838,6 +14588,17 @@ entries:
     first_seen_at: "2026-09-07T14:07:56.000Z"
     updated_at: "2026-09-08T13:07:42.000Z"
     evidence_post_ids: []
+  - handle: "jessicawatyssa"
+    x_user_id: "2088292998681329665"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T20:11:33.000Z"
+    updated_at: "2026-09-12T02:49:58.000Z"
+    evidence_post_ids: []
   - handle: "jgslouzada"
     x_user_id: "3120431655"
     category: "other"
@@ -13882,6 +14643,17 @@ entries:
     first_seen_at: "2026-09-11T14:10:52.000Z"
     updated_at: "2026-09-11T18:11:47.000Z"
     evidence_post_ids: []
+  - handle: "jimgsansone"
+    x_user_id: "538430255"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T11:07:46.000Z"
+    updated_at: "2026-09-12T04:59:01.000Z"
+    evidence_post_ids: []
   - handle: "jjbuay755"
     x_user_id: "2069796011413770240"
     category: "copy_paste"
@@ -13909,11 +14681,22 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 11
+      block: 12
       false_positive: 0
-      net: 11
+      net: 12
     first_seen_at: "2026-09-10T08:45:27.000Z"
-    updated_at: "2026-09-11T11:51:11.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
+    evidence_post_ids: []
+  - handle: "jkm07543281"
+    x_user_id: "1234703589538435072"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-09T22:38:28.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "jksiotrmdrerfd"
     x_user_id: "2069977013574660096"
@@ -13986,11 +14769,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 29
+      block: 30
       false_positive: 0
-      net: 29
+      net: 30
     first_seen_at: "2026-09-07T04:31:57.000Z"
-    updated_at: "2026-09-11T14:28:42.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "joacko_mtz"
     x_user_id: "355860693"
@@ -14080,6 +14863,17 @@ entries:
     first_seen_at: "2026-09-06T12:48:43.000Z"
     updated_at: "2026-09-10T09:32:45.000Z"
     evidence_post_ids: []
+  - handle: "johnniedinf1gp"
+    x_user_id: "2089753428981678084"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-11T11:54:48.000Z"
+    updated_at: "2026-09-12T05:01:21.000Z"
+    evidence_post_ids: []
   - handle: "johnrobinsrpbt"
     x_user_id: "2088538696609832960"
     category: "other"
@@ -14137,14 +14931,14 @@ entries:
     evidence_post_ids: []
   - handle: "jopzsbmyaqyjhk"
     x_user_id: "2069812024255655936"
-    category: "other"
+    category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-08T03:16:45.000Z"
-    updated_at: "2026-09-09T13:03:28.000Z"
+    updated_at: "2026-09-12T00:43:35.000Z"
     evidence_post_ids: []
   - handle: "jordanmancheno"
     x_user_id: "1267873855"
@@ -14283,11 +15077,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 9
+      block: 10
       false_positive: 0
-      net: 9
+      net: 10
     first_seen_at: "2026-09-10T02:10:08.000Z"
-    updated_at: "2026-09-10T11:18:41.000Z"
+    updated_at: "2026-09-12T00:03:56.000Z"
     evidence_post_ids: []
   - handle: "jqwxrwq178"
     x_user_id: "2069811875039100928"
@@ -14327,11 +15121,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 9
-      false_positive: 0
+      block: 10
+      false_positive: 1
       net: 9
     first_seen_at: "2026-09-06T08:53:42.000Z"
-    updated_at: "2026-09-11T13:16:02.000Z"
+    updated_at: "2026-09-12T03:18:57.000Z"
     evidence_post_ids: []
   - handle: "jsfrpsvscnb45i"
     x_user_id: "2069829452058492928"
@@ -14343,6 +15137,17 @@ entries:
       net: 3
     first_seen_at: "2026-09-08T02:02:22.000Z"
     updated_at: "2026-09-09T05:02:02.000Z"
+    evidence_post_ids: []
+  - handle: "jtalk2em"
+    x_user_id: "133164929"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 14
+      false_positive: 0
+      net: 14
+    first_seen_at: "2026-09-12T02:31:32.000Z"
+    updated_at: "2026-09-12T05:45:21.000Z"
     evidence_post_ids: []
   - handle: "jtfldg395"
     x_user_id: "2070575896193351680"
@@ -14426,11 +15231,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-10T07:42:23.000Z"
-    updated_at: "2026-09-10T12:15:08.000Z"
+    updated_at: "2026-09-12T02:33:18.000Z"
     evidence_post_ids: []
   - handle: "juantor43397680"
     x_user_id: "568687598"
@@ -14569,11 +15374,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 18
+      block: 20
       false_positive: 1
-      net: 17
+      net: 19
     first_seen_at: "2026-09-08T01:24:36.000Z"
-    updated_at: "2026-09-11T16:15:19.000Z"
+    updated_at: "2026-09-12T04:40:31.000Z"
     evidence_post_ids: []
   - handle: "junemalia1"
     x_user_id: "1095659179"
@@ -14639,7 +15444,18 @@ entries:
       false_positive: 0
       net: 33
     first_seen_at: "2026-09-07T06:32:31.000Z"
-    updated_at: "2026-09-11T15:10:27.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
+    evidence_post_ids: []
+  - handle: "juzgtrxlyfk0x7"
+    x_user_id: "2070314426104963072"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-10T07:55:52.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "jwggroupessex"
     x_user_id: "4063231636"
@@ -14685,17 +15501,6 @@ entries:
     first_seen_at: "2026-09-07T15:17:44.000Z"
     updated_at: "2026-09-09T13:32:22.000Z"
     evidence_post_ids: []
-  - handle: "jyd_alali"
-    x_user_id: "1842989680633221120"
-    category: "copy_paste"
-    sources: ["community"]
-    votes:
-      block: 3
-      false_positive: 0
-      net: 3
-    first_seen_at: "2026-09-10T08:30:01.000Z"
-    updated_at: "2026-09-11T01:13:37.000Z"
-    evidence_post_ids: []
   - handle: "jyl_shop"
     x_user_id: "1258125780778975238"
     category: "copy_paste"
@@ -14712,11 +15517,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 11
+      block: 12
       false_positive: 0
-      net: 11
+      net: 12
     first_seen_at: "2026-09-10T08:13:41.000Z"
-    updated_at: "2026-09-11T13:54:16.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "k_na0121"
     x_user_id: "3074579041"
@@ -14811,11 +15616,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 42
+      block: 43
       false_positive: 0
-      net: 42
+      net: 43
     first_seen_at: "2026-09-07T20:10:57.000Z"
-    updated_at: "2026-09-11T05:52:29.000Z"
+    updated_at: "2026-09-12T01:07:24.000Z"
     evidence_post_ids: []
   - handle: "kamalhu53150626"
     x_user_id: "1301394023731482626"
@@ -14888,11 +15693,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 5
+      block: 6
       false_positive: 0
-      net: 5
+      net: 6
     first_seen_at: "2026-09-09T15:51:25.000Z"
-    updated_at: "2026-09-11T05:20:11.000Z"
+    updated_at: "2026-09-12T03:48:45.000Z"
     evidence_post_ids: []
   - handle: "karylsteegekdb"
     x_user_id: "2089275383786967040"
@@ -15141,11 +15946,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 8
+      block: 9
       false_positive: 0
-      net: 8
+      net: 9
     first_seen_at: "2026-09-10T13:09:18.000Z"
-    updated_at: "2026-09-10T22:31:13.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "keelorlen_vlog"
     x_user_id: "4710470276"
@@ -15168,6 +15973,17 @@ entries:
       net: 20
     first_seen_at: "2026-09-07T13:01:49.000Z"
     updated_at: "2026-09-11T14:28:46.000Z"
+    evidence_post_ids: []
+  - handle: "keithlewiscea9"
+    x_user_id: "2088305642507296768"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-12T00:14:52.000Z"
+    updated_at: "2026-09-12T06:24:25.000Z"
     evidence_post_ids: []
   - handle: "kelfxcajoff301"
     x_user_id: "2069749026216435712"
@@ -15196,11 +16012,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-11T08:46:09.000Z"
-    updated_at: "2026-09-11T15:16:54.000Z"
+    updated_at: "2026-09-12T06:12:09.000Z"
     evidence_post_ids: []
   - handle: "kemarionhender2"
     x_user_id: "1229851464773906432"
@@ -15306,11 +16122,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-09T13:27:10.000Z"
-    updated_at: "2026-09-10T16:58:00.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "kevinwoodffpu"
     x_user_id: "2086607174638120960"
@@ -15376,7 +16192,7 @@ entries:
       false_positive: 0
       net: 37
     first_seen_at: "2026-09-07T06:32:38.000Z"
-    updated_at: "2026-09-11T15:10:49.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "khgjh992"
     x_user_id: "2070370559007830016"
@@ -15398,7 +16214,7 @@ entries:
       false_positive: 0
       net: 10
     first_seen_at: "2026-09-07T00:50:20.000Z"
-    updated_at: "2026-09-09T12:45:46.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "kiamyint"
     x_user_id: "2086230209888428032"
@@ -15427,11 +16243,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 9
+      block: 10
       false_positive: 0
-      net: 9
+      net: 10
     first_seen_at: "2026-09-08T12:41:22.000Z"
-    updated_at: "2026-09-11T13:47:08.000Z"
+    updated_at: "2026-09-12T03:03:04.000Z"
     evidence_post_ids: []
   - handle: "kicchan66497342"
     x_user_id: "1413867338705752072"
@@ -15488,6 +16304,17 @@ entries:
     first_seen_at: "2026-09-07T16:10:38.000Z"
     updated_at: "2026-09-11T14:46:10.000Z"
     evidence_post_ids: []
+  - handle: "kimlyjonesb"
+    x_user_id: "2088286530112462848"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T20:27:50.000Z"
+    updated_at: "2026-09-12T00:18:32.000Z"
+    evidence_post_ids: []
   - handle: "kingjaylen_11"
     x_user_id: "1145528474402217984"
     category: "copy_paste"
@@ -15526,11 +16353,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 18
+      block: 20
       false_positive: 1
-      net: 17
+      net: 19
     first_seen_at: "2026-09-08T03:42:35.000Z"
-    updated_at: "2026-09-11T13:05:39.000Z"
+    updated_at: "2026-09-12T01:19:02.000Z"
     evidence_post_ids: []
   - handle: "kitcrawhorssvb"
     x_user_id: "2089430666345631746"
@@ -15570,11 +16397,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 17
+      block: 18
       false_positive: 0
-      net: 17
+      net: 18
     first_seen_at: "2026-09-10T01:02:06.000Z"
-    updated_at: "2026-09-11T03:59:15.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "kjqnwki274"
     x_user_id: "2070345185142415360"
@@ -15629,7 +16456,7 @@ entries:
       false_positive: 0
       net: 14
     first_seen_at: "2026-09-10T14:07:09.000Z"
-    updated_at: "2026-09-11T04:57:25.000Z"
+    updated_at: "2026-09-12T06:34:55.000Z"
     evidence_post_ids: []
   - handle: "klacy22"
     x_user_id: "626017613"
@@ -15669,11 +16496,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 13
+      block: 14
       false_positive: 0
-      net: 13
+      net: 14
     first_seen_at: "2026-09-09T21:48:36.000Z"
-    updated_at: "2026-09-10T12:23:53.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "knblgaffrelsrm"
     x_user_id: "2070056042726137856"
@@ -15959,7 +16786,7 @@ entries:
       false_positive: 0
       net: 16
     first_seen_at: "2026-09-07T13:29:33.000Z"
-    updated_at: "2026-09-11T15:10:41.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "kriszurowsew"
     x_user_id: "2086988295947378688"
@@ -16203,17 +17030,6 @@ entries:
     first_seen_at: "2026-09-06T13:09:26.000Z"
     updated_at: "2026-09-11T00:53:59.000Z"
     evidence_post_ids: []
-  - handle: "kusuriya_kiinfo"
-    x_user_id: "1991786858863529985"
-    category: "scam_phishing"
-    sources: ["community"]
-    votes:
-      block: 4
-      false_positive: 0
-      net: 4
-    first_seen_at: "2026-09-08T07:34:09.000Z"
-    updated_at: "2026-09-11T15:10:25.000Z"
-    evidence_post_ids: []
   - handle: "kutprtdbkfchkm"
     x_user_id: "2070464259625259008"
     category: "other"
@@ -16274,11 +17090,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 6
+      block: 7
       false_positive: 0
-      net: 6
+      net: 7
     first_seen_at: "2026-09-09T09:38:36.000Z"
-    updated_at: "2026-09-10T15:01:40.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "kwzddfkjsvimfp"
     x_user_id: "2069973565877739520"
@@ -16395,11 +17211,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 19
+      block: 21
       false_positive: 0
-      net: 19
+      net: 21
     first_seen_at: "2026-09-08T13:02:07.000Z"
-    updated_at: "2026-09-11T11:35:50.000Z"
+    updated_at: "2026-09-12T03:03:04.000Z"
     evidence_post_ids: []
   - handle: "l_sabbs"
     x_user_id: "2933274569"
@@ -16450,11 +17266,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 20
+      block: 21
       false_positive: 0
-      net: 20
+      net: 21
     first_seen_at: "2026-09-08T13:39:16.000Z"
-    updated_at: "2026-09-11T13:33:27.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "ladysalvasuq"
     x_user_id: "2087775909352771584"
@@ -16549,11 +17365,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-10T09:19:27.000Z"
-    updated_at: "2026-09-10T15:06:22.000Z"
+    updated_at: "2026-09-12T02:33:18.000Z"
     evidence_post_ids: []
   - handle: "lang_wan56174"
     x_user_id: "1729005868346445824"
@@ -16598,6 +17414,17 @@ entries:
       net: 9
     first_seen_at: "2026-09-10T08:13:06.000Z"
     updated_at: "2026-09-10T16:12:06.000Z"
+    evidence_post_ids: []
+  - handle: "largemouth_lass"
+    x_user_id: "809308782"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-11T12:36:46.000Z"
+    updated_at: "2026-09-12T06:05:26.000Z"
     evidence_post_ids: []
   - handle: "larrylovely"
     x_user_id: "863742138"
@@ -16652,7 +17479,7 @@ entries:
       false_positive: 0
       net: 6
     first_seen_at: "2026-09-06T12:38:24.000Z"
-    updated_at: "2026-09-08T13:47:48.000Z"
+    updated_at: "2026-09-12T04:30:38.000Z"
     evidence_post_ids: []
   - handle: "laura_haase81"
     x_user_id: "323625323"
@@ -16697,6 +17524,17 @@ entries:
       net: 4
     first_seen_at: "2026-09-06T10:16:23.000Z"
     updated_at: "2026-09-10T12:47:13.000Z"
+    evidence_post_ids: []
+  - handle: "laurelovfald"
+    x_user_id: "2089023227238424576"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 8
+      false_positive: 0
+      net: 8
+    first_seen_at: "2026-09-12T00:19:00.000Z"
+    updated_at: "2026-09-12T05:26:53.000Z"
     evidence_post_ids: []
   - handle: "lauriehofacker"
     x_user_id: "2089287500602789888"
@@ -16751,7 +17589,7 @@ entries:
       false_positive: 0
       net: 7
     first_seen_at: "2026-09-06T13:40:32.000Z"
-    updated_at: "2026-09-09T13:32:22.000Z"
+    updated_at: "2026-09-12T04:30:38.000Z"
     evidence_post_ids: []
   - handle: "lavellestec7rp"
     x_user_id: "2087776643607916544"
@@ -16912,22 +17750,33 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 18
+      block: 19
       false_positive: 0
-      net: 18
+      net: 19
     first_seen_at: "2026-09-07T16:11:03.000Z"
-    updated_at: "2026-09-11T15:20:32.000Z"
+    updated_at: "2026-09-12T04:40:22.000Z"
+    evidence_post_ids: []
+  - handle: "leonardherring"
+    x_user_id: "125858175"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-12T00:51:00.000Z"
+    updated_at: "2026-09-12T06:31:21.000Z"
     evidence_post_ids: []
   - handle: "leonidaguihhc"
     x_user_id: "2089430656170246144"
-    category: "other"
+    category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-10T02:40:40.000Z"
-    updated_at: "2026-09-10T19:16:12.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "leoniegitthens"
     x_user_id: "2087777444409311232"
@@ -17011,11 +17860,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 13
+      block: 14
       false_positive: 0
-      net: 13
+      net: 14
     first_seen_at: "2026-09-10T01:20:49.000Z"
-    updated_at: "2026-09-10T10:50:18.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "lhamagladiadora"
     x_user_id: "42939339"
@@ -17070,7 +17919,7 @@ entries:
       false_positive: 0
       net: 8
     first_seen_at: "2026-09-06T13:40:32.000Z"
-    updated_at: "2026-09-09T12:34:54.000Z"
+    updated_at: "2026-09-12T04:30:38.000Z"
     evidence_post_ids: []
   - handle: "liccatty0216"
     x_user_id: "3246415178"
@@ -17115,6 +17964,17 @@ entries:
       net: 3
     first_seen_at: "2026-09-11T04:14:11.000Z"
     updated_at: "2026-09-11T06:09:40.000Z"
+    evidence_post_ids: []
+  - handle: "lillianatrhvb"
+    x_user_id: "2089022854335766528"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 6
+      false_positive: 0
+      net: 6
+    first_seen_at: "2026-09-12T00:38:06.000Z"
+    updated_at: "2026-09-12T06:10:09.000Z"
     evidence_post_ids: []
   - handle: "limit_snow_yuu"
     x_user_id: "3316089991"
@@ -17312,7 +18172,7 @@ entries:
       false_positive: 0
       net: 12
     first_seen_at: "2026-09-07T04:55:23.000Z"
-    updated_at: "2026-09-11T15:10:13.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "llqkz177"
     x_user_id: "2069759944031633408"
@@ -17407,11 +18267,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 11
+      block: 12
       false_positive: 0
-      net: 11
+      net: 12
     first_seen_at: "2026-09-08T14:22:45.000Z"
-    updated_at: "2026-09-11T15:35:08.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "lolsilentsteps"
     x_user_id: "877023024645521408"
@@ -17521,7 +18381,18 @@ entries:
       false_positive: 0
       net: 7
     first_seen_at: "2026-09-06T13:34:40.000Z"
-    updated_at: "2026-09-10T10:45:57.000Z"
+    updated_at: "2026-09-12T04:30:38.000Z"
+    evidence_post_ids: []
+  - handle: "louievarosc8"
+    x_user_id: "2089022761561935872"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 5
+      false_positive: 0
+      net: 5
+    first_seen_at: "2026-09-12T00:16:03.000Z"
+    updated_at: "2026-09-12T02:49:11.000Z"
     evidence_post_ids: []
   - handle: "louisbutlem8rq"
     x_user_id: "2086618309596712961"
@@ -17543,18 +18414,18 @@ entries:
       false_positive: 0
       net: 4
     first_seen_at: "2026-09-07T03:38:08.000Z"
-    updated_at: "2026-09-10T13:47:31.000Z"
+    updated_at: "2026-09-12T04:30:38.000Z"
     evidence_post_ids: []
   - handle: "louisusassyfuck"
     x_user_id: "189542734"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 14
+      block: 15
       false_positive: 0
-      net: 14
+      net: 15
     first_seen_at: "2026-09-07T13:27:13.000Z"
-    updated_at: "2026-09-11T14:28:46.000Z"
+    updated_at: "2026-09-12T04:52:06.000Z"
     evidence_post_ids: []
   - handle: "louktan_a"
     x_user_id: "2597355684"
@@ -17588,6 +18459,17 @@ entries:
       net: 4
     first_seen_at: "2026-09-08T06:08:37.000Z"
     updated_at: "2026-09-10T11:45:51.000Z"
+    evidence_post_ids: []
+  - handle: "lovettastrfx9"
+    x_user_id: "2089756240335249408"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T09:27:40.000Z"
+    updated_at: "2026-09-12T05:28:15.000Z"
     evidence_post_ids: []
   - handle: "loveveee221"
     x_user_id: "1868322742593855488"
@@ -17814,11 +18696,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 23
+      block: 24
       false_positive: 0
-      net: 23
+      net: 24
     first_seen_at: "2026-09-07T17:10:59.000Z"
-    updated_at: "2026-09-11T18:07:38.000Z"
+    updated_at: "2026-09-12T01:08:17.000Z"
     evidence_post_ids: []
   - handle: "luchoo_manino"
     x_user_id: "2769908714"
@@ -17863,6 +18745,17 @@ entries:
       net: 4
     first_seen_at: "2026-09-09T15:50:54.000Z"
     updated_at: "2026-09-11T03:59:15.000Z"
+    evidence_post_ids: []
+  - handle: "luke__fogg"
+    x_user_id: "469576143"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-06T10:46:05.000Z"
+    updated_at: "2026-09-12T04:48:58.000Z"
     evidence_post_ids: []
   - handle: "lukecrawley3"
     x_user_id: "1965471230"
@@ -17963,16 +18856,27 @@ entries:
     first_seen_at: "2026-09-08T07:18:05.000Z"
     updated_at: "2026-09-09T20:26:14.000Z"
     evidence_post_ids: []
+  - handle: "luv_jasmin"
+    x_user_id: "2624376130"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T14:24:23.000Z"
+    updated_at: "2026-09-12T06:05:35.000Z"
+    evidence_post_ids: []
   - handle: "luv17y_m"
     x_user_id: "2347725529"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 11
+      block: 12
       false_positive: 0
-      net: 11
+      net: 12
     first_seen_at: "2026-09-08T11:26:55.000Z"
-    updated_at: "2026-09-10T19:17:56.000Z"
+    updated_at: "2026-09-12T02:33:18.000Z"
     evidence_post_ids: []
   - handle: "luvlyevar0c9"
     x_user_id: "231153364"
@@ -17990,11 +18894,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 10
+      block: 11
       false_positive: 0
-      net: 10
+      net: 11
     first_seen_at: "2026-09-10T01:37:08.000Z"
-    updated_at: "2026-09-10T11:38:56.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "luz_cespedes02"
     x_user_id: "2958675471"
@@ -18016,7 +18920,7 @@ entries:
       false_positive: 1
       net: 6
     first_seen_at: "2026-09-07T00:58:31.000Z"
-    updated_at: "2026-09-10T09:43:40.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "lvgubqfvjyymbe"
     x_user_id: "2069758783698477056"
@@ -18419,11 +19323,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-10T11:31:04.000Z"
-    updated_at: "2026-09-10T12:55:31.000Z"
+    updated_at: "2026-09-12T02:33:18.000Z"
     evidence_post_ids: []
   - handle: "maisaluis"
     x_user_id: "306568051"
@@ -18529,11 +19433,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 26
+      block: 28
       false_positive: 0
-      net: 26
+      net: 28
     first_seen_at: "2026-09-07T07:00:03.000Z"
-    updated_at: "2026-09-11T06:03:45.000Z"
+    updated_at: "2026-09-12T04:22:54.000Z"
     evidence_post_ids: []
   - handle: "mami_hkksfamily"
     x_user_id: "721957065174855680"
@@ -18810,6 +19714,17 @@ entries:
     first_seen_at: "2026-09-06T12:32:39.000Z"
     updated_at: "2026-09-11T05:12:12.000Z"
     evidence_post_ids: []
+  - handle: "marianoive9ajp"
+    x_user_id: "2089027879644327936"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-12T06:22:47.000Z"
+    updated_at: "2026-09-12T06:39:25.000Z"
+    evidence_post_ids: []
   - handle: "marianomurwt"
     x_user_id: "2088400423216381952"
     category: "copy_paste"
@@ -18854,6 +19769,17 @@ entries:
     first_seen_at: "2026-09-10T14:27:43.000Z"
     updated_at: "2026-09-10T18:02:39.000Z"
     evidence_post_ids: []
+  - handle: "mariesanderjst"
+    x_user_id: "2088279354899906560"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T17:55:56.000Z"
+    updated_at: "2026-09-12T04:52:25.000Z"
+    evidence_post_ids: []
   - handle: "marilynjammyyo"
     x_user_id: "2088592430215933952"
     category: "other"
@@ -18870,11 +19796,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 5
+      block: 6
       false_positive: 0
-      net: 5
+      net: 6
     first_seen_at: "2026-09-11T07:42:19.000Z"
-    updated_at: "2026-09-11T10:41:24.000Z"
+    updated_at: "2026-09-12T06:12:09.000Z"
     evidence_post_ids: []
   - handle: "marinwater0a5"
     x_user_id: "2089277433488756736"
@@ -18969,11 +19895,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 14
+      block: 15
       false_positive: 0
-      net: 14
+      net: 15
     first_seen_at: "2026-09-10T08:06:14.000Z"
-    updated_at: "2026-09-10T17:01:58.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "martafrank5f"
     x_user_id: "2088399505548771328"
@@ -19013,11 +19939,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 26
+      block: 28
       false_positive: 0
-      net: 26
+      net: 28
     first_seen_at: "2026-09-07T18:11:00.000Z"
-    updated_at: "2026-09-11T12:37:08.000Z"
+    updated_at: "2026-09-12T04:40:31.000Z"
     evidence_post_ids: []
   - handle: "martinez_seli"
     x_user_id: "2491888004"
@@ -19112,11 +20038,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-07T19:10:20.000Z"
-    updated_at: "2026-09-10T18:37:27.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "maryfosterzhrx"
     x_user_id: "2086023160109903872"
@@ -19239,6 +20165,17 @@ entries:
     first_seen_at: "2026-09-09T05:59:37.000Z"
     updated_at: "2026-09-10T13:09:15.000Z"
     evidence_post_ids: []
+  - handle: "masooda_bano"
+    x_user_id: "374453893"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-11T14:04:31.000Z"
+    updated_at: "2026-09-12T06:31:31.000Z"
+    evidence_post_ids: []
   - handle: "masudra56618988"
     x_user_id: "1269557251036991488"
     category: "copy_paste"
@@ -19255,11 +20192,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-10T12:51:19.000Z"
-    updated_at: "2026-09-10T14:12:29.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "matheusrg1005"
     x_user_id: "704819492858232832"
@@ -19321,11 +20258,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 6
+      block: 7
       false_positive: 0
-      net: 6
+      net: 7
     first_seen_at: "2026-09-10T04:37:03.000Z"
-    updated_at: "2026-09-10T15:10:24.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "matthewlonkdn8"
     x_user_id: "2086661672127676416"
@@ -19347,7 +20284,7 @@ entries:
       false_positive: 0
       net: 13
     first_seen_at: "2026-09-08T13:21:24.000Z"
-    updated_at: "2026-09-11T01:06:54.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "mauriciomoce"
     x_user_id: "2087834403024039936"
@@ -19591,16 +20528,27 @@ entries:
     first_seen_at: "2026-09-10T09:54:35.000Z"
     updated_at: "2026-09-10T21:43:40.000Z"
     evidence_post_ids: []
+  - handle: "md1smith"
+    x_user_id: "49522896"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T08:52:15.000Z"
+    updated_at: "2026-09-12T06:33:33.000Z"
+    evidence_post_ids: []
   - handle: "mdakash45062059"
     x_user_id: "1464190058286755841"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-10T09:13:39.000Z"
-    updated_at: "2026-09-11T00:54:24.000Z"
+    updated_at: "2026-09-12T02:33:18.000Z"
     evidence_post_ids: []
   - handle: "mdamiruddin2004"
     x_user_id: "1397855185372729347"
@@ -19651,11 +20599,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 8
+      block: 9
       false_positive: 0
-      net: 8
+      net: 9
     first_seen_at: "2026-09-10T09:08:28.000Z"
-    updated_at: "2026-09-11T12:49:12.000Z"
+    updated_at: "2026-09-12T02:33:18.000Z"
     evidence_post_ids: []
   - handle: "mdrakib20387286"
     x_user_id: "1459086981443379202"
@@ -19673,11 +20621,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 8
+      block: 9
       false_positive: 0
-      net: 8
+      net: 9
     first_seen_at: "2026-09-10T09:09:35.000Z"
-    updated_at: "2026-09-11T05:34:18.000Z"
+    updated_at: "2026-09-12T02:33:18.000Z"
     evidence_post_ids: []
   - handle: "mdsohag25063833"
     x_user_id: "1328650703074586626"
@@ -19937,11 +20885,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 20
+      block: 21
       false_positive: 0
-      net: 20
+      net: 21
     first_seen_at: "2026-09-08T13:32:01.000Z"
-    updated_at: "2026-09-11T15:08:57.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "merlelocknog"
     x_user_id: "2088399471084277760"
@@ -20058,11 +21006,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 12
+      block: 13
       false_positive: 0
-      net: 12
+      net: 13
     first_seen_at: "2026-09-10T08:00:22.000Z"
-    updated_at: "2026-09-10T14:40:56.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "mhmsezruwzxjwl"
     x_user_id: "2069827254448750592"
@@ -20074,7 +21022,7 @@ entries:
       net: 1
     maintainer_note: "单词沙拉黄推模板：正文随机英文词+emoji，乱码昵称无简介"
     first_seen_at: "2026-09-08T08:19:08.000Z"
-    updated_at: "2026-09-11T18:29:26.000Z"
+    updated_at: "2026-09-12T06:39:23.000Z"
     evidence_post_ids:
       - "2097214636760211788"
   - handle: "mi_akari77"
@@ -20187,6 +21135,17 @@ entries:
     first_seen_at: "2026-09-06T21:02:30.000Z"
     updated_at: "2026-09-09T12:34:45.000Z"
     evidence_post_ids: []
+  - handle: "mikoko0716649"
+    x_user_id: "1471153489866747904"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-10T11:55:32.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
+    evidence_post_ids: []
   - handle: "mil_boi"
     x_user_id: "1315658947534045184"
     category: "copy_paste"
@@ -20225,11 +21184,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 33
+      block: 34
       false_positive: 0
-      net: 33
+      net: 34
     first_seen_at: "2026-09-10T13:44:48.000Z"
-    updated_at: "2026-09-11T13:33:37.000Z"
+    updated_at: "2026-09-12T03:02:55.000Z"
     evidence_post_ids: []
   - handle: "mimo0442502"
     x_user_id: "1458849932480159748"
@@ -20274,6 +21233,17 @@ entries:
       net: 5
     first_seen_at: "2026-09-09T16:17:35.000Z"
     updated_at: "2026-09-10T05:22:41.000Z"
+    evidence_post_ids: []
+  - handle: "mintaaltobell"
+    x_user_id: "2089025270405890049"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 6
+      false_positive: 0
+      net: 6
+    first_seen_at: "2026-09-12T01:28:18.000Z"
+    updated_at: "2026-09-12T05:26:43.000Z"
     evidence_post_ids: []
   - handle: "miqueloviaibip"
     x_user_id: "2087778200311013376"
@@ -20346,11 +21316,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 15
+      block: 16
       false_positive: 0
-      net: 15
+      net: 16
     first_seen_at: "2026-09-07T17:03:18.000Z"
-    updated_at: "2026-09-11T23:15:12.000Z"
+    updated_at: "2026-09-12T04:38:28.000Z"
     evidence_post_ids: []
   - handle: "mishaceruantes"
     x_user_id: "2087776011999981568"
@@ -20605,6 +21575,17 @@ entries:
     first_seen_at: "2026-09-07T10:34:59.000Z"
     updated_at: "2026-09-10T08:34:03.000Z"
     evidence_post_ids: []
+  - handle: "mokkaringo"
+    x_user_id: "2070491050398081024"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-10T09:16:19.000Z"
+    updated_at: "2026-09-12T06:32:20.000Z"
+    evidence_post_ids: []
   - handle: "morecheezftw"
     x_user_id: "3296513065"
     category: "other"
@@ -20621,11 +21602,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 14
+      block: 16
       false_positive: 0
-      net: 14
+      net: 16
     first_seen_at: "2026-09-08T14:22:53.000Z"
-    updated_at: "2026-09-11T06:05:49.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "morganyachx7"
     x_user_id: "2087781845295366144"
@@ -20706,14 +21687,14 @@ entries:
     evidence_post_ids: []
   - handle: "mqjvjatzojnkph"
     x_user_id: "2069828319319674880"
-    category: "other"
+    category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 10
+      block: 12
       false_positive: 0
-      net: 10
+      net: 12
     first_seen_at: "2026-09-10T08:53:19.000Z"
-    updated_at: "2026-09-10T18:49:46.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "mqpust753"
     x_user_id: "2070255060710232064"
@@ -20753,11 +21734,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 14
+      block: 15
       false_positive: 0
-      net: 14
+      net: 15
     first_seen_at: "2026-09-09T21:48:22.000Z"
-    updated_at: "2026-09-10T10:50:01.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "mrlmyzsupiidip"
     x_user_id: "2070310110623109120"
@@ -20791,6 +21772,17 @@ entries:
       net: 13
     first_seen_at: "2026-09-06T12:14:15.000Z"
     updated_at: "2026-09-11T00:53:59.000Z"
+    evidence_post_ids: []
+  - handle: "mscarpetti15"
+    x_user_id: "286986827"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-12T06:28:38.000Z"
+    updated_at: "2026-09-12T06:34:05.000Z"
     evidence_post_ids: []
   - handle: "msdiana_styles"
     x_user_id: "89438354"
@@ -20891,6 +21883,17 @@ entries:
     first_seen_at: "2026-09-06T14:02:15.000Z"
     updated_at: "2026-09-09T01:54:31.000Z"
     evidence_post_ids: []
+  - handle: "murielbregyxad"
+    x_user_id: "2089706225621495808"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T15:26:41.000Z"
+    updated_at: "2026-09-12T05:48:48.000Z"
+    evidence_post_ids: []
   - handle: "murraystateagr"
     x_user_id: "783182971"
     category: "copy_paste"
@@ -20918,11 +21921,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 10
+      block: 12
       false_positive: 2
-      net: 8
+      net: 10
     first_seen_at: "2026-09-08T14:22:18.000Z"
-    updated_at: "2026-09-11T16:04:32.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "muvusdxcmznh69"
     x_user_id: "2069817498715721728"
@@ -20990,16 +21993,16 @@ entries:
     first_seen_at: "2026-09-06T15:56:02.000Z"
     updated_at: "2026-09-09T06:12:29.000Z"
     evidence_post_ids: []
-  - handle: "mycodemc"
-    x_user_id: "2039513121866366977"
-    category: "scam_phishing"
+  - handle: "myandreelfve"
+    x_user_id: "2089751913810329602"
+    category: "other"
     sources: ["community"]
     votes:
       block: 3
       false_positive: 0
       net: 3
-    first_seen_at: "2026-09-11T00:49:56.000Z"
-    updated_at: "2026-09-11T21:54:58.000Z"
+    first_seen_at: "2026-09-11T13:19:38.000Z"
+    updated_at: "2026-09-12T02:41:47.000Z"
     evidence_post_ids: []
   - handle: "mydalil521"
     x_user_id: "2069786920788307968"
@@ -21050,11 +22053,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 5
+      block: 6
       false_positive: 0
-      net: 5
+      net: 6
     first_seen_at: "2026-09-10T08:03:06.000Z"
-    updated_at: "2026-09-10T13:54:12.000Z"
+    updated_at: "2026-09-12T02:33:18.000Z"
     evidence_post_ids: []
   - handle: "myworldisperfec"
     x_user_id: "504522242"
@@ -21149,22 +22152,22 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-10T11:24:44.000Z"
-    updated_at: "2026-09-11T03:59:15.000Z"
+    updated_at: "2026-09-12T02:33:18.000Z"
     evidence_post_ids: []
   - handle: "nadusha_d_"
     x_user_id: "4839296595"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 27
+      block: 28
       false_positive: 0
-      net: 27
+      net: 28
     first_seen_at: "2026-09-01T10:13:08.000Z"
-    updated_at: "2026-09-10T11:21:44.000Z"
+    updated_at: "2026-09-12T04:22:54.000Z"
     evidence_post_ids: []
   - handle: "nafiyzedmoilqi"
     x_user_id: "2069824266497835008"
@@ -21193,11 +22196,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 31
+      block: 32
       false_positive: 0
-      net: 31
+      net: 32
     first_seen_at: "2026-09-07T17:23:49.000Z"
-    updated_at: "2026-09-11T18:00:47.000Z"
+    updated_at: "2026-09-12T01:06:57.000Z"
     evidence_post_ids: []
   - handle: "nakialanteigne"
     x_user_id: "2088400271726514176"
@@ -21264,17 +22267,6 @@ entries:
       net: 11
     first_seen_at: "2026-09-10T11:50:32.000Z"
     updated_at: "2026-09-11T19:15:58.000Z"
-    evidence_post_ids: []
-  - handle: "napoleonbueti"
-    x_user_id: "2087783709684776961"
-    category: "other"
-    sources: ["community"]
-    votes:
-      block: 3
-      false_positive: 0
-      net: 3
-    first_seen_at: "2026-09-11T15:34:58.000Z"
-    updated_at: "2026-09-11T16:30:52.000Z"
     evidence_post_ids: []
   - handle: "nataliawloxdso"
     x_user_id: "2089314285801410560"
@@ -21402,11 +22394,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 8
+      block: 9
       false_positive: 0
-      net: 8
+      net: 9
     first_seen_at: "2026-09-10T09:14:02.000Z"
-    updated_at: "2026-09-11T05:34:18.000Z"
+    updated_at: "2026-09-12T02:33:18.000Z"
     evidence_post_ids: []
   - handle: "nazri20001"
     x_user_id: "1285651464874979329"
@@ -21439,7 +22431,7 @@ entries:
       false_positive: 1
       net: 28
     first_seen_at: "2026-09-07T01:50:37.000Z"
-    updated_at: "2026-09-11T14:28:46.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "ndwyrqzzlgq78o"
     x_user_id: "2070216814047490048"
@@ -21538,7 +22530,7 @@ entries:
       false_positive: 0
       net: 27
     first_seen_at: "2026-09-07T06:08:09.000Z"
-    updated_at: "2026-09-11T13:33:27.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "ngacaraxyk"
     x_user_id: "2089415286071910400"
@@ -21637,7 +22629,7 @@ entries:
       false_positive: 0
       net: 23
     first_seen_at: "2026-09-07T06:08:18.000Z"
-    updated_at: "2026-09-11T14:28:42.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "nickyjaaaam"
     x_user_id: "1147190423066042369"
@@ -21649,6 +22641,28 @@ entries:
       net: 3
     first_seen_at: "2026-09-07T01:19:35.000Z"
     updated_at: "2026-09-07T23:16:32.000Z"
+    evidence_post_ids: []
+  - handle: "nicolawastm4"
+    x_user_id: "2089023335069884416"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 5
+      false_positive: 0
+      net: 5
+    first_seen_at: "2026-09-12T01:28:02.000Z"
+    updated_at: "2026-09-12T04:15:26.000Z"
+    evidence_post_ids: []
+  - handle: "nicolbaston"
+    x_user_id: "2089278856821682176"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T18:39:39.000Z"
+    updated_at: "2026-09-12T03:08:18.000Z"
     evidence_post_ids: []
   - handle: "nidiabenne6ms"
     x_user_id: "2089276653126189056"
@@ -21670,7 +22684,7 @@ entries:
       false_positive: 0
       net: 34
     first_seen_at: "2026-09-07T05:47:17.000Z"
-    updated_at: "2026-09-11T15:11:30.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "niicaurys"
     x_user_id: "405702156"
@@ -21798,11 +22812,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-10T02:52:07.000Z"
-    updated_at: "2026-09-10T06:37:43.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "njvdqbcjqxrwd6"
     x_user_id: "2069817989965242368"
@@ -21875,11 +22889,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 7
+      block: 9
       false_positive: 0
-      net: 7
+      net: 9
     first_seen_at: "2026-09-10T05:58:13.000Z"
-    updated_at: "2026-09-11T05:34:18.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "no_pardons"
     x_user_id: "1392308591953006594"
@@ -21947,6 +22961,17 @@ entries:
     first_seen_at: "2026-09-10T02:56:47.000Z"
     updated_at: "2026-09-10T14:24:52.000Z"
     evidence_post_ids: []
+  - handle: "norinemust"
+    x_user_id: "2089022748127297536"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-12T01:28:12.000Z"
+    updated_at: "2026-09-12T06:39:29.000Z"
+    evidence_post_ids: []
   - handle: "normabrookmv28"
     x_user_id: "2089277083633557504"
     category: "copy_paste"
@@ -21967,7 +22992,7 @@ entries:
       false_positive: 0
       net: 11
     first_seen_at: "2026-09-10T01:02:06.000Z"
-    updated_at: "2026-09-10T16:34:31.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "nozvhsmsfeezif"
     x_user_id: "2069820305057439744"
@@ -22084,11 +23109,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 16
+      block: 17
       false_positive: 0
-      net: 16
+      net: 17
     first_seen_at: "2026-09-10T09:10:46.000Z"
-    updated_at: "2026-09-11T00:13:57.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "ntcqyvfclpyqwq"
     x_user_id: "2069848928263032832"
@@ -22100,6 +23125,17 @@ entries:
       net: 3
     first_seen_at: "2026-09-08T13:09:26.000Z"
     updated_at: "2026-09-08T18:25:12.000Z"
+    evidence_post_ids: []
+  - handle: "nusratera5"
+    x_user_id: "1404489325501419537"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-10T09:54:34.000Z"
+    updated_at: "2026-09-12T02:33:18.000Z"
     evidence_post_ids: []
   - handle: "nwbgwhswldu2l9"
     x_user_id: "2069789470094667776"
@@ -22342,7 +23378,7 @@ entries:
       net: 5
     maintainer_note: "成人引流黄推：昵称带「无偿约」，正文单词沙拉（英文随机词+🍋🤤 emoji 行）"
     first_seen_at: "2026-09-11T08:47:44.000Z"
-    updated_at: "2026-09-11T18:29:26.000Z"
+    updated_at: "2026-09-12T06:39:23.000Z"
     evidence_post_ids:
       - "2098330313420161117"
   - handle: "ohxdwlfsteotts"
@@ -22691,11 +23727,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-10T07:58:02.000Z"
-    updated_at: "2026-09-10T08:48:12.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "otjqttcbwxyce7"
     x_user_id: "2069803812542394368"
@@ -22713,11 +23749,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 10
+      block: 11
       false_positive: 0
-      net: 10
+      net: 11
     first_seen_at: "2026-09-11T11:25:06.000Z"
-    updated_at: "2026-09-11T16:32:39.000Z"
+    updated_at: "2026-09-12T01:55:00.000Z"
     evidence_post_ids: []
   - handle: "otlrwjdgnzxdhk"
     x_user_id: "2070227091237322752"
@@ -22790,11 +23826,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 6
+      block: 7
       false_positive: 0
-      net: 6
+      net: 7
     first_seen_at: "2026-09-10T08:37:36.000Z"
-    updated_at: "2026-09-10T14:11:47.000Z"
+    updated_at: "2026-09-12T02:33:18.000Z"
     evidence_post_ids: []
   - handle: "owhzsfjmhimhsd"
     x_user_id: "2069852462647853056"
@@ -22878,22 +23914,22 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 6
+      block: 7
       false_positive: 0
-      net: 6
+      net: 7
     first_seen_at: "2026-09-09T10:19:20.000Z"
-    updated_at: "2026-09-10T16:26:13.000Z"
+    updated_at: "2026-09-12T02:33:18.000Z"
     evidence_post_ids: []
   - handle: "ozjlaihnpfaj7a"
     x_user_id: "2069848038646984704"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 12
+      block: 13
       false_positive: 0
-      net: 12
+      net: 13
     first_seen_at: "2026-09-08T13:02:28.000Z"
-    updated_at: "2026-09-11T00:13:21.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "ozjspugizp3sla"
     x_user_id: "2069823493575761921"
@@ -22905,6 +23941,17 @@ entries:
       net: 5
     first_seen_at: "2026-09-07T20:59:10.000Z"
     updated_at: "2026-09-10T19:12:02.000Z"
+    evidence_post_ids: []
+  - handle: "p_phitsanu"
+    x_user_id: "3312637184"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-12T05:49:09.000Z"
+    updated_at: "2026-09-12T06:22:36.000Z"
     evidence_post_ids: []
   - handle: "pabloblough"
     x_user_id: "2089277936872443905"
@@ -22977,11 +24024,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 9
+      block: 10
       false_positive: 0
-      net: 9
+      net: 10
     first_seen_at: "2026-09-10T09:12:05.000Z"
-    updated_at: "2026-09-11T05:34:18.000Z"
+    updated_at: "2026-09-12T02:33:18.000Z"
     evidence_post_ids: []
   - handle: "pannrezmarquel"
     x_user_id: "393330366"
@@ -23015,6 +24062,17 @@ entries:
       net: 10
     first_seen_at: "2026-09-06T13:54:46.000Z"
     updated_at: "2026-09-11T13:05:39.000Z"
+    evidence_post_ids: []
+  - handle: "papa_smurphy123"
+    x_user_id: "913436934"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-11T16:31:31.000Z"
+    updated_at: "2026-09-12T06:31:52.000Z"
     evidence_post_ids: []
   - handle: "papatya_oreilly"
     x_user_id: "1326860123730567169"
@@ -23235,7 +24293,7 @@ entries:
       net: 14
     maintainer_note: "用户举报黄推引流号：随机ID+emoji灌水话术"
     first_seen_at: "2026-09-06T21:47:10.000Z"
-    updated_at: "2026-09-11T18:29:26.000Z"
+    updated_at: "2026-09-12T06:39:23.000Z"
     evidence_post_ids:
       - "2096654611319083171"
   - handle: "pearlezunoqm"
@@ -23314,6 +24372,17 @@ entries:
       net: 3
     first_seen_at: "2026-09-10T09:12:12.000Z"
     updated_at: "2026-09-10T18:37:24.000Z"
+    evidence_post_ids: []
+  - handle: "perlitalabonita"
+    x_user_id: "260888457"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-12T00:47:02.000Z"
+    updated_at: "2026-09-12T03:02:01.000Z"
     evidence_post_ids: []
   - handle: "petersulli92sm"
     x_user_id: "2086614648246116352"
@@ -23397,11 +24466,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 10
+      block: 11
       false_positive: 0
-      net: 10
+      net: 11
     first_seen_at: "2026-09-10T10:31:40.000Z"
-    updated_at: "2026-09-11T00:13:19.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "phakdro"
     x_user_id: "1490359247393021955"
@@ -23491,6 +24560,17 @@ entries:
     first_seen_at: "2026-09-07T13:57:17.000Z"
     updated_at: "2026-09-10T07:19:52.000Z"
     evidence_post_ids: []
+  - handle: "pinkymoscow"
+    x_user_id: "180705707"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-12T06:12:59.000Z"
+    updated_at: "2026-09-12T06:39:23.000Z"
+    evidence_post_ids: []
   - handle: "pintuku44454114"
     x_user_id: "1487254726672482304"
     category: "copy_paste"
@@ -23540,11 +24620,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-06T15:55:55.000Z"
-    updated_at: "2026-09-09T01:54:31.000Z"
+    updated_at: "2026-09-12T00:43:35.000Z"
     evidence_post_ids: []
   - handle: "pkrsqreooclbcb"
     x_user_id: "2070546247274897408"
@@ -23744,6 +24824,17 @@ entries:
     first_seen_at: "2026-09-09T13:58:25.000Z"
     updated_at: "2026-09-10T16:21:13.000Z"
     evidence_post_ids: []
+  - handle: "prsuperstar1"
+    x_user_id: "1236950040"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 5
+      false_positive: 0
+      net: 5
+    first_seen_at: "2026-09-11T08:48:28.000Z"
+    updated_at: "2026-09-12T06:33:33.000Z"
+    evidence_post_ids: []
   - handle: "prszmkvopcthkt"
     x_user_id: "2070460662149529600"
     category: "copy_paste"
@@ -23936,11 +25027,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 9
+      block: 10
       false_positive: 0
-      net: 9
+      net: 10
     first_seen_at: "2026-09-10T01:20:49.000Z"
-    updated_at: "2026-09-10T07:31:55.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "qaankoc"
     x_user_id: "1212686561050890240"
@@ -23963,6 +25054,28 @@ entries:
       net: 10
     first_seen_at: "2026-09-07T17:13:50.000Z"
     updated_at: "2026-09-11T04:33:11.000Z"
+    evidence_post_ids: []
+  - handle: "qamarinasulaini"
+    x_user_id: "244844328"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 21
+      false_positive: 0
+      net: 21
+    first_seen_at: "2026-09-12T02:17:56.000Z"
+    updated_at: "2026-09-12T06:33:18.000Z"
+    evidence_post_ids: []
+  - handle: "qazprayer"
+    x_user_id: "2358860796"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 5
+      false_positive: 0
+      net: 5
+    first_seen_at: "2026-09-12T05:48:47.000Z"
+    updated_at: "2026-09-12T06:29:57.000Z"
     evidence_post_ids: []
   - handle: "qbayflipaheswi"
     x_user_id: "2070331603805470721"
@@ -24096,6 +25209,17 @@ entries:
     first_seen_at: "2026-09-10T13:01:17.000Z"
     updated_at: "2026-09-11T00:13:28.000Z"
     evidence_post_ids: []
+  - handle: "qklyahrslodnzo"
+    x_user_id: "2070239859407474688"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-10T15:20:21.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
+    evidence_post_ids: []
   - handle: "qliuiywxxwekwh"
     x_user_id: "2070247163523657728"
     category: "other"
@@ -24200,11 +25324,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-09T17:08:08.000Z"
-    updated_at: "2026-09-10T09:49:15.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "qsekecc170"
     x_user_id: "2069823108731502592"
@@ -24222,11 +25346,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 16
+      block: 17
       false_positive: 0
-      net: 16
+      net: 17
     first_seen_at: "2026-09-09T21:48:36.000Z"
-    updated_at: "2026-09-10T11:03:06.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "quarter_gal"
     x_user_id: "2189530034"
@@ -24271,6 +25395,17 @@ entries:
       net: 4
     first_seen_at: "2026-09-07T13:00:13.000Z"
     updated_at: "2026-09-08T10:42:28.000Z"
+    evidence_post_ids: []
+  - handle: "quinnwurzer"
+    x_user_id: "29085337"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-11T13:53:08.000Z"
+    updated_at: "2026-09-12T06:30:31.000Z"
     evidence_post_ids: []
   - handle: "quwsttnhppr0wh"
     x_user_id: "2070285320424157184"
@@ -24347,7 +25482,7 @@ entries:
       false_positive: 0
       net: 9
     first_seen_at: "2026-09-10T01:01:57.000Z"
-    updated_at: "2026-09-10T09:43:28.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "qyxinry157"
     x_user_id: "2071170390580166656"
@@ -24470,6 +25605,17 @@ entries:
     first_seen_at: "2026-09-10T22:33:22.000Z"
     updated_at: "2026-09-11T12:55:05.000Z"
     evidence_post_ids: []
+  - handle: "ramiroburle0"
+    x_user_id: "2089019306860261376"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-12T02:36:56.000Z"
+    updated_at: "2026-09-12T03:44:22.000Z"
+    evidence_post_ids: []
   - handle: "ramonawoolums"
     x_user_id: "2089277877871169536"
     category: "copy_paste"
@@ -24556,7 +25702,7 @@ entries:
       false_positive: 2
       net: 20
     first_seen_at: "2026-09-07T06:32:57.000Z"
-    updated_at: "2026-09-11T13:33:37.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "rayallday44"
     x_user_id: "1068273427176402945"
@@ -24765,7 +25911,7 @@ entries:
       false_positive: 0
       net: 9
     first_seen_at: "2026-09-10T14:22:14.000Z"
-    updated_at: "2026-09-10T19:15:28.000Z"
+    updated_at: "2026-09-12T06:34:55.000Z"
     evidence_post_ids: []
   - handle: "rgazg899"
     x_user_id: "2069981089553145856"
@@ -24799,6 +25945,17 @@ entries:
       net: 18
     first_seen_at: "2026-09-10T00:40:17.000Z"
     updated_at: "2026-09-10T16:34:31.000Z"
+    evidence_post_ids: []
+  - handle: "richardgonkvmn"
+    x_user_id: "2088306316821327872"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T22:10:07.000Z"
+    updated_at: "2026-09-12T02:55:14.000Z"
     evidence_post_ids: []
   - handle: "richardwernett"
     x_user_id: "2087478194844618752"
@@ -24876,6 +26033,17 @@ entries:
       net: 10
     first_seen_at: "2026-09-09T21:46:21.000Z"
     updated_at: "2026-09-10T12:16:12.000Z"
+    evidence_post_ids: []
+  - handle: "riofeu1"
+    x_user_id: "2063454505589694464"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-10T12:46:32.000Z"
+    updated_at: "2026-09-12T06:32:42.000Z"
     evidence_post_ids: []
   - handle: "rirjxtw659"
     x_user_id: "2069749536986173440"
@@ -25031,6 +26199,17 @@ entries:
     first_seen_at: "2026-09-07T12:08:14.000Z"
     updated_at: "2026-09-09T05:02:02.000Z"
     evidence_post_ids: []
+  - handle: "rnoblemusic"
+    x_user_id: "879212491"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-12T05:00:11.000Z"
+    updated_at: "2026-09-12T06:31:44.000Z"
+    evidence_post_ids: []
   - handle: "rnrrsynhqu5zt1"
     x_user_id: "2069830058433236992"
     category: "copy_paste"
@@ -25058,11 +26237,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 16
+      block: 18
       false_positive: 0
-      net: 16
+      net: 18
     first_seen_at: "2026-09-08T14:22:18.000Z"
-    updated_at: "2026-09-11T06:15:22.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "robert918usa"
     x_user_id: "195873951"
@@ -25146,11 +26325,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-10T10:43:47.000Z"
-    updated_at: "2026-09-11T05:40:05.000Z"
+    updated_at: "2026-09-12T02:33:18.000Z"
     evidence_post_ids: []
   - handle: "romanawiedcxhg"
     x_user_id: "2087478047079370752"
@@ -25377,11 +26556,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 11
+      block: 12
       false_positive: 0
-      net: 11
+      net: 12
     first_seen_at: "2026-09-10T13:29:15.000Z"
-    updated_at: "2026-09-10T22:30:30.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "rtobadj473"
     x_user_id: "2069809890189557760"
@@ -25393,7 +26572,7 @@ entries:
       net: 2
     maintainer_note: "用户举报黄推：英文单词沙拉模板正文+昵称专业牵线/全国覆盖引流话术"
     first_seen_at: "2026-09-07T15:49:47.000Z"
-    updated_at: "2026-09-11T18:29:26.000Z"
+    updated_at: "2026-09-12T06:39:23.000Z"
     evidence_post_ids:
       - "2096980721512718728"
   - handle: "rubys8845"
@@ -25654,11 +26833,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 20
+      block: 21
       false_positive: 1
-      net: 19
+      net: 20
     first_seen_at: "2026-09-08T08:08:21.000Z"
-    updated_at: "2026-09-11T06:05:53.000Z"
+    updated_at: "2026-09-12T04:40:31.000Z"
     evidence_post_ids: []
   - handle: "sabramccarkwm"
     x_user_id: "2089278099846279168"
@@ -25676,11 +26855,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 12
+      block: 13
       false_positive: 0
-      net: 12
+      net: 13
     first_seen_at: "2026-09-08T13:21:24.000Z"
-    updated_at: "2026-09-11T10:23:09.000Z"
+    updated_at: "2026-09-12T01:08:58.000Z"
     evidence_post_ids: []
   - handle: "sadecardimino"
     x_user_id: "2087780358322348032"
@@ -25768,7 +26947,7 @@ entries:
       false_positive: 0
       net: 7
     first_seen_at: "2026-09-06T19:10:51.000Z"
-    updated_at: "2026-09-09T13:50:47.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "sandrakelleu0v"
     x_user_id: "2088473290855653376"
@@ -25830,11 +27009,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 26
+      block: 29
       false_positive: 0
-      net: 26
+      net: 29
     first_seen_at: "2026-09-08T14:22:45.000Z"
-    updated_at: "2026-09-10T11:25:47.000Z"
+    updated_at: "2026-09-12T04:40:31.000Z"
     evidence_post_ids: []
   - handle: "santakubert"
     x_user_id: "2088924017608773632"
@@ -25979,6 +27158,17 @@ entries:
     first_seen_at: "2026-09-06T13:05:33.000Z"
     updated_at: "2026-09-11T14:28:42.000Z"
     evidence_post_ids: []
+  - handle: "savannahegizi"
+    x_user_id: "2089023440493977600"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 5
+      false_positive: 0
+      net: 5
+    first_seen_at: "2026-09-12T00:29:26.000Z"
+    updated_at: "2026-09-12T06:29:29.000Z"
+    evidence_post_ids: []
   - handle: "sayrecheyenne"
     x_user_id: "2944325743"
     category: "copy_paste"
@@ -26034,6 +27224,17 @@ entries:
     first_seen_at: "2026-09-09T18:17:00.000Z"
     updated_at: "2026-09-10T09:49:33.000Z"
     evidence_post_ids: []
+  - handle: "scottfostehvgh"
+    x_user_id: "2088299860411723776"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-12T00:14:56.000Z"
+    updated_at: "2026-09-12T06:24:17.000Z"
+    evidence_post_ids: []
   - handle: "scottieyacaop"
     x_user_id: "2088326957817798656"
     category: "copy_paste"
@@ -26067,6 +27268,17 @@ entries:
     first_seen_at: "2026-09-07T01:50:37.000Z"
     updated_at: "2026-09-11T14:45:54.000Z"
     evidence_post_ids: []
+  - handle: "seandeanus"
+    x_user_id: "303761076"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 5
+      false_positive: 0
+      net: 5
+    first_seen_at: "2026-09-11T10:01:57.000Z"
+    updated_at: "2026-09-12T06:31:59.000Z"
+    evidence_post_ids: []
   - handle: "seemamaustoh"
     x_user_id: "2088400156341276672"
     category: "copy_paste"
@@ -26087,7 +27299,7 @@ entries:
       false_positive: 0
       net: 9
     first_seen_at: "2026-09-06T13:32:27.000Z"
-    updated_at: "2026-09-10T12:38:01.000Z"
+    updated_at: "2026-09-12T04:30:38.000Z"
     evidence_post_ids: []
   - handle: "selenaykrkt"
     x_user_id: "1873039042503229440"
@@ -26132,6 +27344,17 @@ entries:
       net: 11
     first_seen_at: "2026-09-06T12:04:19.000Z"
     updated_at: "2026-09-10T18:11:11.000Z"
+    evidence_post_ids: []
+  - handle: "sensualbananas"
+    x_user_id: "20566762"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T15:15:11.000Z"
+    updated_at: "2026-09-12T01:08:42.000Z"
     evidence_post_ids: []
   - handle: "seoexon"
     x_user_id: "142067814"
@@ -26342,6 +27565,17 @@ entries:
     first_seen_at: "2026-09-07T15:13:20.000Z"
     updated_at: "2026-09-09T13:32:22.000Z"
     evidence_post_ids: []
+  - handle: "sharonturnbmf5"
+    x_user_id: "2088274123029929984"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T14:41:13.000Z"
+    updated_at: "2026-09-12T01:28:25.000Z"
+    evidence_post_ids: []
   - handle: "sharylconely"
     x_user_id: "2088399615129190400"
     category: "copy_paste"
@@ -26534,11 +27768,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 7
+      block: 8
       false_positive: 0
-      net: 7
+      net: 8
     first_seen_at: "2026-09-06T11:36:44.000Z"
-    updated_at: "2026-09-10T19:16:59.000Z"
+    updated_at: "2026-09-12T02:33:18.000Z"
     evidence_post_ids: []
   - handle: "shirleenesuc1p"
     x_user_id: "2088398343567560704"
@@ -26600,11 +27834,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-10T09:13:54.000Z"
-    updated_at: "2026-09-11T00:54:24.000Z"
+    updated_at: "2026-09-12T02:33:18.000Z"
     evidence_post_ids: []
   - handle: "shreefm15979887"
     x_user_id: "932367785015078912"
@@ -26612,10 +27846,10 @@ entries:
     sources: ["community"]
     votes:
       block: 32
-      false_positive: 0
-      net: 32
+      false_positive: 1
+      net: 31
     first_seen_at: "2026-09-07T05:07:03.000Z"
-    updated_at: "2026-09-10T10:45:57.000Z"
+    updated_at: "2026-09-12T01:07:47.000Z"
     evidence_post_ids: []
   - handle: "shuhniece"
     x_user_id: "3828718949"
@@ -26633,11 +27867,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 8
+      block: 9
       false_positive: 0
-      net: 8
+      net: 9
     first_seen_at: "2026-09-10T09:11:58.000Z"
-    updated_at: "2026-09-11T05:34:18.000Z"
+    updated_at: "2026-09-12T02:33:18.000Z"
     evidence_post_ids: []
   - handle: "siddheshdate1"
     x_user_id: "1407520172584230916"
@@ -26754,11 +27988,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 19
+      block: 20
       false_positive: 0
-      net: 19
+      net: 20
     first_seen_at: "2026-09-08T12:35:13.000Z"
-    updated_at: "2026-09-11T15:11:52.000Z"
+    updated_at: "2026-09-12T05:01:25.000Z"
     evidence_post_ids: []
   - handle: "sjjraxj430"
     x_user_id: "2070489585663045633"
@@ -26846,7 +28080,7 @@ entries:
       false_positive: 0
       net: 22
     first_seen_at: "2026-09-07T13:27:21.000Z"
-    updated_at: "2026-09-11T15:09:39.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "slickslump"
     x_user_id: "1022521869340209152"
@@ -26897,11 +28131,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 15
+      block: 16
       false_positive: 0
-      net: 15
+      net: 16
     first_seen_at: "2026-09-08T13:31:48.000Z"
-    updated_at: "2026-09-11T10:23:09.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "smiledamiley"
     x_user_id: "245165071"
@@ -27100,6 +28334,17 @@ entries:
       net: 29
     first_seen_at: "2026-09-07T06:19:42.000Z"
     updated_at: "2026-09-11T15:09:46.000Z"
+    evidence_post_ids: []
+  - handle: "srtavani"
+    x_user_id: "2393480276"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T08:52:15.000Z"
+    updated_at: "2026-09-12T01:20:44.000Z"
     evidence_post_ids: []
   - handle: "ssaanngguuu"
     x_user_id: "1270350771670773761"
@@ -27359,11 +28604,22 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 7
+      block: 8
       false_positive: 0
-      net: 7
+      net: 8
     first_seen_at: "2026-09-10T02:17:14.000Z"
-    updated_at: "2026-09-10T13:12:20.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
+    evidence_post_ids: []
+  - handle: "stone_kbaseball"
+    x_user_id: "1472779614498050052"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-11T13:39:17.000Z"
+    updated_at: "2026-09-12T01:20:42.000Z"
     evidence_post_ids: []
   - handle: "strap_otto"
     x_user_id: "1446451422145437703"
@@ -27431,16 +28687,27 @@ entries:
     first_seen_at: "2026-09-08T14:23:10.000Z"
     updated_at: "2026-09-11T09:48:00.000Z"
     evidence_post_ids: []
-  - handle: "suraj_lodiya"
-    x_user_id: "1321319400574652416"
+  - handle: "sunainakavi"
+    x_user_id: "46311631"
     category: "copy_paste"
     sources: ["community"]
     votes:
       block: 3
       false_positive: 0
       net: 3
+    first_seen_at: "2026-09-12T00:47:14.000Z"
+    updated_at: "2026-09-12T06:31:52.000Z"
+    evidence_post_ids: []
+  - handle: "suraj_lodiya"
+    x_user_id: "1321319400574652416"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
     first_seen_at: "2026-09-10T09:14:12.000Z"
-    updated_at: "2026-09-11T00:54:24.000Z"
+    updated_at: "2026-09-12T02:33:18.000Z"
     evidence_post_ids: []
   - handle: "sureshj23861838"
     x_user_id: "1308493428968140800"
@@ -27623,22 +28890,22 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 32
+      block: 33
       false_positive: 0
-      net: 32
+      net: 33
     first_seen_at: "2026-09-08T00:49:10.000Z"
-    updated_at: "2026-09-11T18:07:40.000Z"
+    updated_at: "2026-09-12T01:08:21.000Z"
     evidence_post_ids: []
   - handle: "ta9amym"
     x_user_id: "1056570572"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 21
+      block: 22
       false_positive: 0
-      net: 21
+      net: 22
     first_seen_at: "2026-09-07T18:10:28.000Z"
-    updated_at: "2026-09-11T15:13:55.000Z"
+    updated_at: "2026-09-12T01:07:43.000Z"
     evidence_post_ids: []
   - handle: "taetaebbx"
     x_user_id: "1062457230"
@@ -27672,6 +28939,17 @@ entries:
       net: 3
     first_seen_at: "2026-09-10T03:57:19.000Z"
     updated_at: "2026-09-10T04:53:49.000Z"
+    evidence_post_ids: []
+  - handle: "tambranjanqr"
+    x_user_id: "2089010835825758208"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T17:34:35.000Z"
+    updated_at: "2026-09-12T02:53:00.000Z"
     evidence_post_ids: []
   - handle: "tameikaferxyjb"
     x_user_id: "2089275854954336256"
@@ -27849,6 +29127,17 @@ entries:
     first_seen_at: "2026-09-06T22:00:14.000Z"
     updated_at: "2026-09-09T00:25:23.000Z"
     evidence_post_ids: []
+  - handle: "tawnarixieicbc"
+    x_user_id: "2089022567990571008"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 8
+      false_positive: 0
+      net: 8
+    first_seen_at: "2026-09-12T01:22:08.000Z"
+    updated_at: "2026-09-12T06:39:31.000Z"
+    evidence_post_ids: []
   - handle: "tayaya01"
     x_user_id: "1132036531"
     category: "copy_paste"
@@ -27876,22 +29165,22 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 6
+      block: 7
       false_positive: 0
-      net: 6
+      net: 7
     first_seen_at: "2026-09-09T16:24:46.000Z"
-    updated_at: "2026-09-11T12:49:12.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "tbbwmjkgowzfvc"
     x_user_id: "2069979556711124993"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 14
+      block: 15
       false_positive: 0
-      net: 14
+      net: 15
     first_seen_at: "2026-09-10T07:35:13.000Z"
-    updated_at: "2026-09-11T00:13:48.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "tdbld23"
     x_user_id: "379487264"
@@ -27909,11 +29198,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 18
+      block: 19
       false_positive: 2
-      net: 16
+      net: 17
     first_seen_at: "2026-09-07T20:10:57.000Z"
-    updated_at: "2026-09-11T15:41:14.000Z"
+    updated_at: "2026-09-12T04:30:38.000Z"
     evidence_post_ids: []
   - handle: "teamfiuza"
     x_user_id: "912891829"
@@ -27997,11 +29286,22 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 19
+      block: 20
       false_positive: 0
-      net: 19
+      net: 20
     first_seen_at: "2026-09-08T12:35:18.000Z"
-    updated_at: "2026-09-11T16:15:23.000Z"
+    updated_at: "2026-09-12T00:43:35.000Z"
+    evidence_post_ids: []
+  - handle: "tenblocks"
+    x_user_id: "173548474"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-12T06:29:17.000Z"
+    updated_at: "2026-09-12T06:39:25.000Z"
     evidence_post_ids: []
   - handle: "tennilleeddu"
     x_user_id: "2087840171509039104"
@@ -28035,6 +29335,17 @@ entries:
       net: 5
     first_seen_at: "2026-09-09T05:46:28.000Z"
     updated_at: "2026-09-10T13:58:44.000Z"
+    evidence_post_ids: []
+  - handle: "terrencereazo"
+    x_user_id: "2088398441718181888"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-10T15:46:33.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "terrythompz0yr"
     x_user_id: "2088654803526197248"
@@ -28122,7 +29433,18 @@ entries:
       false_positive: 0
       net: 11
     first_seen_at: "2026-09-06T16:11:27.000Z"
-    updated_at: "2026-09-09T12:45:50.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
+    evidence_post_ids: []
+  - handle: "thenick_0ftime"
+    x_user_id: "783236143"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-11T08:42:27.000Z"
+    updated_at: "2026-09-12T05:03:24.000Z"
     evidence_post_ids: []
   - handle: "therealtlovan"
     x_user_id: "132077565"
@@ -28366,6 +29688,17 @@ entries:
     first_seen_at: "2026-09-07T04:11:42.000Z"
     updated_at: "2026-09-11T15:35:13.000Z"
     evidence_post_ids: []
+  - handle: "tmzsi996"
+    x_user_id: "2071169280578600960"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-10T07:13:02.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
+    evidence_post_ids: []
   - handle: "tmztdqrscbod7a"
     x_user_id: "2070366713049124864"
     category: "other"
@@ -28481,11 +29814,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 15
+      block: 16
       false_positive: 0
-      net: 15
+      net: 16
     first_seen_at: "2026-09-07T17:34:02.000Z"
-    updated_at: "2026-09-10T13:06:05.000Z"
+    updated_at: "2026-09-12T03:03:23.000Z"
     evidence_post_ids: []
   - handle: "tommiewhyev5"
     x_user_id: "2088400537503080448"
@@ -28563,6 +29896,17 @@ entries:
       net: 3
     first_seen_at: "2026-09-06T17:25:13.000Z"
     updated_at: "2026-09-08T04:06:19.000Z"
+    evidence_post_ids: []
+  - handle: "torontobigface"
+    x_user_id: "1477342523555135490"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-10T06:50:15.000Z"
+    updated_at: "2026-09-12T02:50:16.000Z"
     evidence_post_ids: []
   - handle: "tovacarlisgej"
     x_user_id: "2089276599510429696"
@@ -28718,6 +30062,17 @@ entries:
     first_seen_at: "2026-09-06T13:19:11.000Z"
     updated_at: "2026-09-10T12:38:01.000Z"
     evidence_post_ids: []
+  - handle: "tubayldrm14"
+    x_user_id: "346547736"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 8
+      false_positive: 0
+      net: 8
+    first_seen_at: "2026-09-11T10:24:42.000Z"
+    updated_at: "2026-09-12T05:23:52.000Z"
+    evidence_post_ids: []
   - handle: "tucqzbpzlexdnw"
     x_user_id: "2069814215229980672"
     category: "other"
@@ -28734,11 +30089,33 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 6
+      block: 7
       false_positive: 0
-      net: 6
+      net: 7
     first_seen_at: "2026-09-10T07:51:04.000Z"
-    updated_at: "2026-09-11T04:26:28.000Z"
+    updated_at: "2026-09-12T02:33:18.000Z"
+    evidence_post_ids: []
+  - handle: "tumdoustsdtb0w"
+    x_user_id: "2070320245919690752"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-10T02:56:31.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
+    evidence_post_ids: []
+  - handle: "tutucremonez"
+    x_user_id: "69659235"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-11T13:43:30.000Z"
+    updated_at: "2026-09-12T01:07:36.000Z"
     evidence_post_ids: []
   - handle: "tvmzlrxsgswqe1"
     x_user_id: "2070485022725869568"
@@ -28833,11 +30210,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 10
+      block: 11
       false_positive: 0
-      net: 10
+      net: 11
     first_seen_at: "2026-09-10T11:28:58.000Z"
-    updated_at: "2026-09-11T00:13:21.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "tzjekckikrnbox"
     x_user_id: "2069759606004334592"
@@ -28860,7 +30237,7 @@ entries:
       net: 17
     maintainer_note: "用户举报黄推引流号：随机ID+emoji灌水话术"
     first_seen_at: "2026-09-06T21:19:27.000Z"
-    updated_at: "2026-09-11T18:29:26.000Z"
+    updated_at: "2026-09-12T06:39:23.000Z"
     evidence_post_ids: []
   - handle: "uayqbtgniot20l"
     x_user_id: "2069804587318489088"
@@ -29197,11 +30574,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 9
+      block: 10
       false_positive: 0
-      net: 9
+      net: 10
     first_seen_at: "2026-09-10T07:47:04.000Z"
-    updated_at: "2026-09-10T16:13:29.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "utxxytb36nsnuvg"
     x_user_id: "1296436070016409601"
@@ -29291,6 +30668,17 @@ entries:
     first_seen_at: "2026-09-07T10:35:51.000Z"
     updated_at: "2026-09-10T03:54:43.000Z"
     evidence_post_ids: []
+  - handle: "vaan236"
+    x_user_id: "625283199"
+    category: "other"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-11T17:39:06.000Z"
+    updated_at: "2026-09-12T03:47:42.000Z"
+    evidence_post_ids: []
   - handle: "vaibhav88796188"
     x_user_id: "1506101234771836928"
     category: "copy_paste"
@@ -29307,11 +30695,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 13
+      block: 14
       false_positive: 1
-      net: 12
+      net: 13
     first_seen_at: "2026-09-07T17:12:28.000Z"
-    updated_at: "2026-09-11T13:19:48.000Z"
+    updated_at: "2026-09-12T03:03:19.000Z"
     evidence_post_ids: []
   - handle: "valen_silva_"
     x_user_id: "2701756044"
@@ -29351,11 +30739,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 19
+      block: 20
       false_positive: 0
-      net: 19
+      net: 20
     first_seen_at: "2026-09-07T17:12:23.000Z"
-    updated_at: "2026-09-11T18:14:13.000Z"
+    updated_at: "2026-09-12T03:03:28.000Z"
     evidence_post_ids: []
   - handle: "vanettaspibrt"
     x_user_id: "2089426618485760000"
@@ -29467,6 +30855,17 @@ entries:
     first_seen_at: "2026-09-10T11:49:57.000Z"
     updated_at: "2026-09-10T16:58:01.000Z"
     evidence_post_ids: []
+  - handle: "vellagossewrgy"
+    x_user_id: "2089749043081805824"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T22:33:15.000Z"
+    updated_at: "2026-09-12T06:12:38.000Z"
+    evidence_post_ids: []
   - handle: "vemk22k20seduzi"
     x_user_id: "286859157"
     category: "copy_paste"
@@ -29505,11 +30904,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-10T09:14:39.000Z"
-    updated_at: "2026-09-11T00:54:24.000Z"
+    updated_at: "2026-09-12T02:33:18.000Z"
     evidence_post_ids: []
   - handle: "veradesta"
     x_user_id: "220656350"
@@ -29554,6 +30953,17 @@ entries:
       net: 18
     first_seen_at: "2026-09-07T13:23:18.000Z"
     updated_at: "2026-09-11T15:35:03.000Z"
+    evidence_post_ids: []
+  - handle: "versiederosvuh"
+    x_user_id: "2089019261318520833"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 4
+      false_positive: 0
+      net: 4
+    first_seen_at: "2026-09-11T20:52:30.000Z"
+    updated_at: "2026-09-12T03:03:39.000Z"
     evidence_post_ids: []
   - handle: "vetter7274"
     x_user_id: "84682605"
@@ -29637,11 +31047,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 15
+      block: 16
       false_positive: 0
-      net: 15
+      net: 16
     first_seen_at: "2026-09-10T09:30:49.000Z"
-    updated_at: "2026-09-11T13:05:39.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "vickiecowev5t"
     x_user_id: "2089276478357684224"
@@ -29659,11 +31069,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 14
+      block: 13
       false_positive: 5
-      net: 9
+      net: 8
     first_seen_at: "2026-09-08T14:32:07.000Z"
-    updated_at: "2026-09-11T16:04:32.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "vilameuamor"
     x_user_id: "1433037560784343048"
@@ -29692,11 +31102,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-10T08:48:01.000Z"
-    updated_at: "2026-09-10T11:16:06.000Z"
+    updated_at: "2026-09-12T02:33:18.000Z"
     evidence_post_ids: []
   - handle: "vimmpmhnzfdjkk"
     x_user_id: "2069798286471417857"
@@ -29731,6 +31141,17 @@ entries:
     first_seen_at: "2026-09-10T17:16:58.000Z"
     updated_at: "2026-09-11T05:17:04.000Z"
     evidence_post_ids: []
+  - handle: "vincentmilillo7"
+    x_user_id: "1341119110810365952"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 25
+      false_positive: 0
+      net: 25
+    first_seen_at: "2026-09-12T02:18:02.000Z"
+    updated_at: "2026-09-12T06:39:31.000Z"
+    evidence_post_ids: []
   - handle: "vincentpow1oxr"
     x_user_id: "2086634958592806912"
     category: "adult_gray_traffic"
@@ -29742,27 +31163,49 @@ entries:
     first_seen_at: "2026-09-06T14:19:14.000Z"
     updated_at: "2026-09-08T13:47:48.000Z"
     evidence_post_ids: []
-  - handle: "violandoaliamp"
-    x_user_id: "1542402708"
-    category: "copy_paste"
-    sources: ["community"]
-    votes:
-      block: 22
-      false_positive: 0
-      net: 22
-    first_seen_at: "2026-09-08T14:55:00.000Z"
-    updated_at: "2026-09-10T09:52:50.000Z"
-    evidence_post_ids: []
-  - handle: "vipinku17845900"
-    x_user_id: "1270258444604497926"
+  - handle: "vino_amore"
+    x_user_id: "243319475"
     category: "copy_paste"
     sources: ["community"]
     votes:
       block: 4
       false_positive: 0
       net: 4
+    first_seen_at: "2026-09-11T21:55:56.000Z"
+    updated_at: "2026-09-12T05:00:47.000Z"
+    evidence_post_ids: []
+  - handle: "vintanhai"
+    x_user_id: "1629776186"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-11T13:53:08.000Z"
+    updated_at: "2026-09-12T06:28:40.000Z"
+    evidence_post_ids: []
+  - handle: "violandoaliamp"
+    x_user_id: "1542402708"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 24
+      false_positive: 0
+      net: 24
+    first_seen_at: "2026-09-08T14:55:00.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
+    evidence_post_ids: []
+  - handle: "vipinku17845900"
+    x_user_id: "1270258444604497926"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 5
+      false_positive: 0
+      net: 5
     first_seen_at: "2026-09-09T10:49:31.000Z"
-    updated_at: "2026-09-11T12:49:12.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "viratbhardwajo1"
     x_user_id: "1303816386863456257"
@@ -29774,6 +31217,17 @@ entries:
       net: 6
     first_seen_at: "2026-09-09T12:34:57.000Z"
     updated_at: "2026-09-10T14:10:30.000Z"
+    evidence_post_ids: []
+  - handle: "virgilottep0g"
+    x_user_id: "2089429746052665344"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 3
+      false_positive: 0
+      net: 3
+    first_seen_at: "2026-09-09T20:53:02.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "virginiapahwfh"
     x_user_id: "2086710766132953088"
@@ -30138,6 +31592,17 @@ entries:
     first_seen_at: "2026-09-06T15:08:45.000Z"
     updated_at: "2026-09-09T10:25:48.000Z"
     evidence_post_ids: []
+  - handle: "waaun_"
+    x_user_id: "817650540855361542"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 8
+      false_positive: 0
+      net: 8
+    first_seen_at: "2026-09-11T09:12:08.000Z"
+    updated_at: "2026-09-12T06:31:10.000Z"
+    evidence_post_ids: []
   - handle: "wagnersilva88"
     x_user_id: "479479826"
     category: "copy_paste"
@@ -30170,6 +31635,17 @@ entries:
       net: 4
     first_seen_at: "2026-09-09T16:00:18.000Z"
     updated_at: "2026-09-10T08:56:32.000Z"
+    evidence_post_ids: []
+  - handle: "wallyb93"
+    x_user_id: "52884318"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 20
+      false_positive: 0
+      net: 20
+    first_seen_at: "2026-09-12T02:17:56.000Z"
+    updated_at: "2026-09-12T06:33:14.000Z"
     evidence_post_ids: []
   - handle: "wallysgotsoul"
     x_user_id: "122780215"
@@ -30253,11 +31729,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-11T07:52:23.000Z"
-    updated_at: "2026-09-11T15:19:58.000Z"
+    updated_at: "2026-09-12T02:47:05.000Z"
     evidence_post_ids: []
   - handle: "warqbpkeqbi2el"
     x_user_id: "2070597864820989952"
@@ -30803,11 +32279,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 13
+      block: 14
       false_positive: 0
-      net: 13
+      net: 14
     first_seen_at: "2026-09-10T13:09:31.000Z"
-    updated_at: "2026-09-10T22:27:09.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "wtyler57"
     x_user_id: "1535316873482579970"
@@ -30847,11 +32323,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 17
+      block: 18
       false_positive: 0
-      net: 17
+      net: 18
     first_seen_at: "2026-09-08T07:12:39.000Z"
-    updated_at: "2026-09-11T06:51:54.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "wvpxahkhlsvngt"
     x_user_id: "2070630724613398528"
@@ -30896,17 +32372,6 @@ entries:
       net: 3
     first_seen_at: "2026-09-10T12:49:52.000Z"
     updated_at: "2026-09-11T13:05:39.000Z"
-    evidence_post_ids: []
-  - handle: "wyl2035"
-    x_user_id: "827100694465257476"
-    category: "other"
-    sources: ["community"]
-    votes:
-      block: 3
-      false_positive: 0
-      net: 3
-    first_seen_at: "2026-09-10T13:01:35.000Z"
-    updated_at: "2026-09-11T18:15:03.000Z"
     evidence_post_ids: []
   - handle: "wyyhenerlluphn"
     x_user_id: "2070344022103560192"
@@ -31243,11 +32708,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-10T10:15:46.000Z"
-    updated_at: "2026-09-10T19:31:55.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "xxapzfiebxznqh"
     x_user_id: "2070767085966299136"
@@ -31408,11 +32873,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 4
+      block: 5
       false_positive: 0
-      net: 4
+      net: 5
     first_seen_at: "2026-09-11T15:30:30.000Z"
-    updated_at: "2026-09-11T17:22:40.000Z"
+    updated_at: "2026-09-12T04:07:55.000Z"
     evidence_post_ids: []
   - handle: "ychichan18"
     x_user_id: "2889162361"
@@ -31474,11 +32939,22 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 12
+      block: 13
       false_positive: 0
-      net: 12
+      net: 13
     first_seen_at: "2026-09-10T06:35:21.000Z"
-    updated_at: "2026-09-10T18:49:48.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
+    evidence_post_ids: []
+  - handle: "ydsqip3ssiyecls"
+    x_user_id: "971953827686436864"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 19
+      false_positive: 0
+      net: 19
+    first_seen_at: "2026-09-12T02:17:59.000Z"
+    updated_at: "2026-09-12T06:33:24.000Z"
     evidence_post_ids: []
   - handle: "yeesestosohxd7"
     x_user_id: "2088399973876711424"
@@ -31541,10 +33017,10 @@ entries:
     sources: ["community"]
     votes:
       block: 8
-      false_positive: 0
-      net: 8
+      false_positive: 1
+      net: 7
     first_seen_at: "2026-09-11T05:47:09.000Z"
-    updated_at: "2026-09-11T13:16:08.000Z"
+    updated_at: "2026-09-12T03:19:06.000Z"
     evidence_post_ids: []
   - handle: "yhiamqp528"
     x_user_id: "2069808705260912640"
@@ -31716,11 +33192,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 15
+      block: 16
       false_positive: 1
-      net: 14
+      net: 15
     first_seen_at: "2026-09-08T02:29:41.000Z"
-    updated_at: "2026-09-11T09:59:19.000Z"
+    updated_at: "2026-09-12T05:14:48.000Z"
     evidence_post_ids: []
   - handle: "ynonbrmsyrvlbr"
     x_user_id: "2069756093082021888"
@@ -31797,7 +33273,7 @@ entries:
       false_positive: 0
       net: 4
     first_seen_at: "2026-09-10T04:01:04.000Z"
-    updated_at: "2026-09-10T16:34:31.000Z"
+    updated_at: "2026-09-12T01:06:00.000Z"
     evidence_post_ids: []
   - handle: "yosoykhalifa"
     x_user_id: "1179900782"
@@ -31940,7 +33416,7 @@ entries:
       false_positive: 0
       net: 7
     first_seen_at: "2026-09-06T13:20:37.000Z"
-    updated_at: "2026-09-10T13:57:13.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "yulandaladerer"
     x_user_id: "2088399741948502016"
@@ -32112,11 +33588,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 19
+      block: 22
       false_positive: 0
-      net: 19
+      net: 22
     first_seen_at: "2026-09-08T12:35:33.000Z"
-    updated_at: "2026-09-11T15:36:54.000Z"
+    updated_at: "2026-09-12T04:39:31.000Z"
     evidence_post_ids: []
   - handle: "yvikly529"
     x_user_id: "2070523211595579392"
@@ -32415,6 +33891,17 @@ entries:
     first_seen_at: "2026-09-10T02:20:45.000Z"
     updated_at: "2026-09-10T10:04:18.000Z"
     evidence_post_ids: []
+  - handle: "zhanlinyan74392"
+    x_user_id: "1784047650301767680"
+    category: "copy_paste"
+    sources: ["community"]
+    votes:
+      block: 34
+      false_positive: 29
+      net: 5
+    first_seen_at: "2026-09-07T08:27:14.000Z"
+    updated_at: "2026-09-12T06:11:35.000Z"
+    evidence_post_ids: []
   - handle: "zhlbhbfhffnkrm"
     x_user_id: "2069755100772335616"
     category: "other"
@@ -32475,11 +33962,11 @@ entries:
     category: "other"
     sources: ["community"]
     votes:
-      block: 7
+      block: 8
       false_positive: 0
-      net: 7
+      net: 8
     first_seen_at: "2026-09-10T01:04:03.000Z"
-    updated_at: "2026-09-10T16:54:05.000Z"
+    updated_at: "2026-09-12T00:18:14.000Z"
     evidence_post_ids: []
   - handle: "zjxideqdqjii0b"
     x_user_id: "2070240489211621376"
@@ -32578,18 +34065,18 @@ entries:
       false_positive: 1
       net: 24
     first_seen_at: "2026-09-07T06:33:22.000Z"
-    updated_at: "2026-09-11T13:22:36.000Z"
+    updated_at: "2026-09-12T06:34:53.000Z"
     evidence_post_ids: []
   - handle: "zofiamanniffm"
     x_user_id: "2088400695581978624"
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 3
+      block: 4
       false_positive: 0
-      net: 3
+      net: 4
     first_seen_at: "2026-09-11T12:47:18.000Z"
-    updated_at: "2026-09-11T15:13:16.000Z"
+    updated_at: "2026-09-12T02:13:22.000Z"
     evidence_post_ids: []
   - handle: "zqtshsoqfjpa1n"
     x_user_id: "2070205839848210433"
@@ -32662,11 +34149,11 @@ entries:
     category: "copy_paste"
     sources: ["community"]
     votes:
-      block: 14
+      block: 15
       false_positive: 0
-      net: 14
+      net: 15
     first_seen_at: "2026-09-10T06:47:30.000Z"
-    updated_at: "2026-09-11T15:00:22.000Z"
+    updated_at: "2026-09-12T00:42:19.000Z"
     evidence_post_ids: []
   - handle: "zvmwdwrbjacf17"
     x_user_id: "2069816501192847360"
