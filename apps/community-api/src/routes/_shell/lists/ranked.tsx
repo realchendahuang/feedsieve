@@ -24,14 +24,12 @@ function RankedRoute() {
       <ListPageHeader
         title="排位赛"
         meta="网页纯观看 · 认领与改名在扩展弹窗「打野」"
+        tabs={<ListsTabs />}
         aside={
-          <div className="flex items-center gap-3">
-            <ListsTabs />
-            <HelpIcon ariaLabel="排位赛说明">
-              按共识击杀计分：确认击杀 +1、首杀 +1、误伤 −2，误拉黑不计分反而扣分。
-              周赛季 ISO 周一开榜，上榜默认匿名（猎手#短码）；Top 3 且命中率 ≥80% 获永久称号「猎黄人」。
-            </HelpIcon>
-          </div>
+          <HelpIcon ariaLabel="排位赛说明">
+            按共识击杀计分：确认击杀 +1、首杀 +1、误伤 −2，误拉黑不计分反而扣分。
+            周赛季 ISO 周一开榜，上榜默认匿名（猎手#短码）；Top 3 且命中率 ≥80% 获永久称号「猎黄人」。
+          </HelpIcon>
         }
       />
       {board ? (

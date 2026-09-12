@@ -25,23 +25,21 @@ function BlacklistRoute() {
     <main className="mx-auto max-w-5xl px-[clamp(18px,2.2vw,34px)] pb-16 pt-8">
       <ListPageHeader
         title="黑名单"
+        tabs={<ListsTabs />}
         aside={
-          <div className="flex items-center gap-3">
-            <ListsTabs />
-            <HelpIcon ariaLabel="黑名单说明">
-              黑名单是举报与抢救投票的聚合（拉黑票 − 误标票 ≥ 3），反映社区意见，
-              不构成对任何账号的事实认定；拉黑始终由扩展用户本人执行。
-              <br />
-              <a
-                href="https://github.com/realchendahuang/feedsieve/blob/main/DISCLAIMER.md"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-1 inline-block text-gold"
-              >
-                完整免责声明 →
-              </a>
-            </HelpIcon>
-          </div>
+          <HelpIcon ariaLabel="黑名单说明">
+            黑名单是举报与抢救投票的聚合（拉黑票 − 误标票 ≥ 3），反映社区意见，
+            不构成对任何账号的事实认定；拉黑始终由扩展用户本人执行。
+            <br />
+            <a
+              href="https://github.com/realchendahuang/feedsieve/blob/main/DISCLAIMER.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 inline-block text-gold"
+            >
+              完整免责声明 →
+            </a>
+          </HelpIcon>
         }
       />
       {!roster ? (

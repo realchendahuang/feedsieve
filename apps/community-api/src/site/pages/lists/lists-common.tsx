@@ -34,24 +34,39 @@ export function ListsTabs() {
   );
 }
 
-/** 公示页家族共用页头（标题行 + 计数徽章位） */
+/**
+ * 公示页家族共用页头标题行。
+ * Tab 行单独渲染（tabs 独立参数）：左对齐锚定不动——各页右侧说明/按钮内容不同
+ * （如白名单页的「申请入册」），若和 tabs 同处右侧会互相挤压造成切页时 Tab 跳动。
+ */
 export function ListPageHeader({
   title,
   meta,
+  tabs,
   aside,
 }: {
   title: string;
   meta?: string;
+  /** 公示分区子导航（左对齐独立行，五页恒定不动） */
+  tabs?: ReactNode;
+  /** 页面专属工具（右侧，宽度可变）：HelpIcon、申请入册外链等 */
   aside?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-        {meta && <p className="mt-1 text-sm text-mist">{meta}</p>}
+    <>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+          {meta && <p className="mt-1 text-sm text-mist">{meta}</p>}
+        </div>
       </div>
-      {aside}
-    </div>
+      {tabs != null && (
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          {tabs}
+          {aside != null && <div className="ml-auto flex flex-wrap items-center gap-3">{aside}</div>}
+        </div>
+      )}
+    </>
   );
 }
 

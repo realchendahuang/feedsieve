@@ -25,13 +25,11 @@ function RescueRoute() {
       <ListPageHeader
         title="抢救"
         meta={roster ? `快照 ${roster.snapshot_version}` : undefined}
+        tabs={<ListsTabs />}
         aside={
-          <div className="flex items-center gap-3">
-            <ListsTabs />
-            <HelpIcon ariaLabel="抢救名单说明">
-              社区抢救记录被验证为「误标正常」的账号：误标票翻案后入册，扩展不会再把该账号标出或拉黑。
-            </HelpIcon>
-          </div>
+          <HelpIcon ariaLabel="抢救名单说明">
+            社区抢救记录被验证为「误标正常」的账号：误标票翻案后入册，扩展不会再把该账号标出或拉黑。
+          </HelpIcon>
         }
       />
       {!roster ? (

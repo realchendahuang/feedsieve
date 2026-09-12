@@ -25,9 +25,9 @@ function WhitelistRoute() {
       <ListPageHeader
         title="白名单"
         meta={roster ? `快照 ${roster.snapshot_version}` : undefined}
+        tabs={<ListsTabs />}
         aside={
-          <div className="flex items-center gap-3">
-            <ListsTabs />
+          <>
             <a
               href={WHITELIST_ISSUE_URL}
               target="_blank"
@@ -39,7 +39,7 @@ function WhitelistRoute() {
             <HelpIcon ariaLabel="白名单说明">
               推荐白名单为维护者入册账号：扩展在任何识别强度下都不会把该账号标出或拉黑。想加入？点「申请入册」提交 Issue。
             </HelpIcon>
-          </div>
+          </>
         }
       />
       {!roster ? (

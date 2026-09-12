@@ -24,14 +24,12 @@ function KeywordsRoute() {
       <ListPageHeader
         title="词库"
         meta={data ? undefined : '词库加载失败'}
+        tabs={<ListsTabs />}
         aside={
-          <div className="flex items-center gap-3">
-            <ListsTabs />
-            <HelpIcon ariaLabel="词库说明">
-              官方词库包与扩展执行的规则同源同版本（签名发布）；访客可匿名提交新短语，
-              先挂待审、运营审阅通过后才进入词库。
-            </HelpIcon>
-          </div>
+          <HelpIcon ariaLabel="词库说明">
+            官方词库包与扩展执行的规则同源同版本（签名发布）；访客可匿名提交新短语，
+            先挂待审、运营审阅通过后才进入词库。
+          </HelpIcon>
         }
       />
       {data ? (
