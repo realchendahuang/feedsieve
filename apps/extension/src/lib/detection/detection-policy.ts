@@ -39,13 +39,17 @@ export function classifyDetection(input: DetectionPolicyInput): DetectionPresent
   if (detection.source === 'heuristic' && detection.ruleId?.startsWith('keyword:')) {
     return 'review';
   }
-  // weak-signal-combo（乱码批量号锚点 + ≥1 内容佐证）是唯一升到页面的内置
-  // 启发式：账号形状 + 内容构成直接证据，且 review 是确认制，误标的成本是
-  // 「看一眼不拉黑」而不是误动作；全强度档生效（不同于指纹/域名的间接证据，
-  // 不挂大扫除档门槛）。范围必须钉死——其余内置启发式是单信号规则，各有已知
-  // 误标面（default-name-digits 有误标记录、word-salad 隐语表「约」字过泛、
-  // porn-bait-zh 已由词包通道覆盖更合适），升档属产品扩权，逐条单独评审。
-  if (detection.source === 'heuristic' && detection.ruleId === 'weak-signal-combo') {
+  // weak-signal-combo（乱码批量号锚点 + ≥1 内容佐证）与 contact-number-bait
+  // （正文 ≥11 位数字载荷 + 简介钩子，双信号自包含）是仅有的两个升到页面的内置
+  // 启发式：都是账号形状 + 内容直证或双信号互证，且 review 是确认制，误标的
+  // 成本是「看一眼不拉黑」而不是误动作；全强度档生效（不同于指纹/域名的间接
+  // 证据，不挂大扫除档门槛）。范围必须钉死——其余内置启发式是单信号规则，
+  // 各有已知误标面（default-name-digits 有误标记录、word-salad 隐语表「约」字
+  // 过泛、porn-bait-zh 已由词包通道覆盖更合适），升档属产品扩权，逐条单独评审。
+  if (
+    detection.source === 'heuristic' &&
+    (detection.ruleId === 'weak-signal-combo' || detection.ruleId === 'contact-number-bait')
+  ) {
     return 'review';
   }
   return 'ignore';

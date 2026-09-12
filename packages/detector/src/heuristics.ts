@@ -417,6 +417,36 @@ const weakSignalCombo: HeuristicRule = {
   },
 };
 
+/**
+ * 联系方式载荷规则（2026-09-12 娇妻/单男变体实锤）。
+ *
+ * 正文的裸长数字段（11 位起，手机号/带尾码号/杂号）单独出现不成立——
+ * 时间戳、金额、编号都可能这么长；必须叠加「引流钩子」（看简介/看我主页/
+ * 私信/加我/常见通讯工具名）才算号码引流。钩子在 text/bio/displayName 任一
+ * 字段即算（displayName 可能被懒加载吞掉：缺就漏判，无误伤面）。
+ * 先剥 URL，避免把网址里的长参数段当号码。
+ * 与 weak-signal-combo 同层的确认制 review：误标成本是「看一眼不拉黑」。
+ */
+const PAYLOAD_DIGITS_RE = /(?<![\d.])\d{11,}(?![\d.])/;
+const CONTACT_HINT_RE =
+  /看我简介|看简介|我主页|私信|加我|威信|微信|薇信|vx|vx号|wx|tg|telegram|联系|看头像/i;
+const PAYLOAD_URL_STRIP_RE = /https?:\/\/\S+|\b[\w-]+(?:\.[\w-]+)+\/\S*/gi;
+
+const contactNumberBait: HeuristicRule = {
+  id: 'contact-number-bait',
+  check(input) {
+    const text = (input.text ?? '').replace(PAYLOAD_URL_STRIP_RE, ' ');
+    if (!PAYLOAD_DIGITS_RE.test(text)) {
+      return null;
+    }
+    const hints = [input.text, input.bio, input.displayName].filter(Boolean).join('\n');
+    if (!CONTACT_HINT_RE.test(hints)) {
+      return null;
+    }
+    return '正文数字载荷（≥11 位）+ 简介钩子话术';
+  },
+};
+
 /** 默认启发式集合，按优先级排列（前面的先命中先解释）。 */
 export const DEFAULT_HEURISTICS: readonly HeuristicRule[] = [
   defaultNameDigits,
@@ -425,10 +455,11 @@ export const DEFAULT_HEURISTICS: readonly HeuristicRule[] = [
   templatedText,
   wordSalad,
   weakSignalCombo,
+  contactNumberBait,
 ];
 
 /**
  * 弱信号组合层单独导出：扩展运行时只装配本规则（其余内置单信号规则
  * 留在 detector 评测层，分层决策见 extension detection-policy）。
  */
-export { weakSignalCombo };
+export { weakSignalCombo, contactNumberBait };

@@ -5,350 +5,607 @@
     {
       "id": "zh-carry",
       "note": "中文带单/内部群引流",
-      "input": { "handle": "carry_001", "displayName": "带单老师", "text": "加我微信进内部群，稳赚不赔，带单老师一对一" },
+      "input": {
+        "handle": "carry_001",
+        "displayName": "带单老师",
+        "text": "加我微信进内部群，稳赚不赔，带单老师一对一"
+      },
       "expected": "templated-text"
     },
     {
       "id": "dm-invest",
       "note": "英文 DM 引流 + 变现关键词",
-      "input": { "handle": "dm_agent", "text": "dm me for the best crypto signals" },
+      "input": {
+        "handle": "dm_agent",
+        "text": "dm me for the best crypto signals"
+      },
       "expected": "templated-text"
     },
     {
       "id": "giveaway-usdt",
       "note": "USDT 假抽奖模板",
-      "input": { "handle": "gv_001", "text": "500 USDT giveaway 🎉 follow and claim now" },
+      "input": {
+        "handle": "gv_001",
+        "text": "500 USDT giveaway 🎉 follow and claim now"
+      },
       "expected": "templated-text"
     },
     {
       "id": "giveaway-variant",
       "note": "拼写变体（giweaway）",
-      "input": { "handle": "gv_002", "text": "giweaway 888 USDT claim" },
+      "input": {
+        "handle": "gv_002",
+        "text": "giweaway 888 USDT claim"
+      },
       "expected": "templated-text"
     },
     {
       "id": "follow-repost-win",
       "note": "关注-转发抽奖引流",
-      "input": { "handle": "gv_003", "text": "follow @x and repost to win 1 BTC" },
+      "input": {
+        "handle": "gv_003",
+        "text": "follow @x and repost to win 1 BTC"
+      },
       "expected": "templated-text"
     },
     {
       "id": "porn-bait-fu",
       "note": "「福」隐语",
-      "input": { "handle": "fu_01", "text": "我福不黑，不信你看" },
+      "input": {
+        "handle": "fu_01",
+        "text": "我福不黑，不信你看"
+      },
       "expected": "porn-bait-zh"
     },
     {
       "id": "porn-bait-emoji-combo",
       "note": "擦边 marker 组合（≥2 条）",
-      "input": { "handle": "ad_01", "text": "玩得开 好涩 🍑" },
+      "input": {
+        "handle": "ad_01",
+        "text": "玩得开 好涩 🍑"
+      },
       "expected": "porn-bait-zh"
     },
     {
       "id": "spam-link-hint",
       "note": "垃圾推广域名特征词",
-      "input": { "handle": "lk_01", "links": [{ "href": "https://myfreecrypto.trade", "hostname": "myfreecrypto.trade" }] },
+      "input": {
+        "handle": "lk_01",
+        "links": [
+          {
+            "href": "https://myfreecrypto.trade",
+            "hostname": "myfreecrypto.trade"
+          }
+        ]
+      },
       "expected": "spam-link-hint"
     },
     {
       "id": "default-name-digits",
       "note": "默认数字昵称 + 短前缀长数字 handle",
-      "input": { "handle": "ab12345678", "displayName": "用户12345678" },
+      "input": {
+        "handle": "ab12345678",
+        "displayName": "用户12345678"
+      },
       "expected": "default-name-digits"
     },
     {
       "id": "bio-buried-spam",
       "note": "话术埋在简介且正文干净",
-      "input": { "handle": "bio_01", "bio": "免费领取 888 USDT 🎁 giveaway" },
+      "input": {
+        "handle": "bio_01",
+        "bio": "免费领取 888 USDT 🎁 giveaway"
+      },
       "expected": "templated-text"
     },
     {
       "id": "adversarial-fullwidth-space",
       "note": "全角空格插在关键词之间仍命中（\\s 覆盖 U+3000）",
-      "input": { "handle": "fd_01", "text": "dm　me　for　crypto　signals" },
+      "input": {
+        "handle": "fd_01",
+        "text": "dm　me　for　crypto　signals"
+      },
       "expected": "templated-text"
     },
     {
       "id": "username-only-hit",
       "note": "仅用户名+昵称即可判定（无正文）",
-      "input": { "handle": "ab12345678", "displayName": "用户12345678" },
+      "input": {
+        "handle": "ab12345678",
+        "displayName": "用户12345678"
+      },
       "expected": "default-name-digits"
     },
     {
       "id": "domain-only-hit",
       "note": "正文干净，仅外链域名命中",
-      "input": { "handle": "do_01", "text": "check this out", "links": [{ "href": "https://myfreecrypto.example", "hostname": "myfreecrypto.example" }] },
+      "input": {
+        "handle": "do_01",
+        "text": "check this out",
+        "links": [
+          {
+            "href": "https://myfreecrypto.example",
+            "hostname": "myfreecrypto.example"
+          }
+        ]
+      },
       "expected": "spam-link-hint"
     },
     {
       "id": "adversarial-zero-width",
       "note": "零宽字符拆碎关键词：当前正则漏报（已知局限，规则层待修复）",
-      "input": { "handle": "zw_01", "text": "d\u200bm\u200b me for crypto si\u200bg\u200bnals" },
+      "input": {
+        "handle": "zw_01",
+        "text": "d​m​ me for crypto si​g​nals"
+      },
       "expected": null,
       "known_limitation": true
     },
     {
       "id": "legit-crypto-discussion",
       "note": "正常加密货币讨论",
-      "input": { "handle": "n1", "text": "比特币今天又涨了，ETH 质押收益还不错" },
+      "input": {
+        "handle": "n1",
+        "text": "比特币今天又涨了，ETH 质押收益还不错"
+      },
       "expected": null
     },
     {
       "id": "legit-crypto-news",
       "note": "正常英文加密新闻",
-      "input": { "handle": "n2", "text": "Bitcoin ETF inflows hit a record high" },
+      "input": {
+        "handle": "n2",
+        "text": "Bitcoin ETF inflows hit a record high"
+      },
       "expected": null
     },
     {
       "id": "legit-giveaway-mention",
       "note": "日常提到 giveaway，无币种数量，不应命中",
-      "input": { "handle": "n3", "text": "我朋友前几天参加了个 giveaway，领到几块钱" },
+      "input": {
+        "handle": "n3",
+        "text": "我朋友前几天参加了个 giveaway，领到几块钱"
+      },
       "expected": null
     },
     {
       "id": "legit-dm",
       "note": "日常「dm me」，无变现关键词",
-      "input": { "handle": "n4", "text": "dm me anytime about the project" },
+      "input": {
+        "handle": "n4",
+        "text": "dm me anytime about the project"
+      },
       "expected": null
     },
     {
       "id": "adult-cha-single",
       "note": "单擦边词（「涩」）正常语境",
-      "input": { "handle": "n5", "text": "这茶有点涩，回甘不错" },
+      "input": {
+        "handle": "n5",
+        "text": "这茶有点涩，回甘不错"
+      },
       "expected": null
     },
     {
       "id": "adult-discussion-normal",
       "note": "正常成人话题提及地名（涩谷）",
-      "input": { "handle": "n6", "text": "涩谷的猫很可爱" },
+      "input": {
+        "handle": "n6",
+        "text": "涩谷的猫很可爱"
+      },
       "expected": null
     },
     {
       "id": "quoted-spam-outer",
       "note": "引用垃圾帖的外部正常推文（脏内容在引用里，正文不读入）",
-      "input": { "handle": "n7", "text": "这个人又在骗人" },
+      "input": {
+        "handle": "n7",
+        "text": "这个人又在骗人"
+      },
       "expected": null
     },
     {
       "id": "normal-post",
       "note": "普通用户日常内容",
-      "input": { "handle": "bob2012", "displayName": "Bob 2022", "text": "今天天气真好啊，晒晒午饭" },
+      "input": {
+        "handle": "bob2012",
+        "displayName": "Bob 2022",
+        "text": "今天天气真好啊，晒晒午饭"
+      },
       "expected": null
     },
     {
       "id": "legit-link",
       "note": "正常域名（github）",
-      "input": { "handle": "n8", "links": [{ "href": "https://github.com", "hostname": "github.com" }] },
+      "input": {
+        "handle": "n8",
+        "links": [
+          {
+            "href": "https://github.com",
+            "hostname": "github.com"
+          }
+        ]
+      },
       "expected": null
     },
     {
       "id": "mixed-language-normal",
       "note": "中英混排正常内容",
-      "input": { "handle": "n9", "text": "今天也要加油 work hard play hard" },
+      "input": {
+        "handle": "n9",
+        "text": "今天也要加油 work hard play hard"
+      },
       "expected": null
     },
     {
       "id": "legit-bio",
       "note": "正常简介",
-      "input": { "handle": "n10", "bio": "产品经理｜咖啡爱好者" },
+      "input": {
+        "handle": "n10",
+        "bio": "产品经理｜咖啡爱好者"
+      },
       "expected": null
     },
     {
       "id": "username-benign",
       "note": "普通昵称 + 正常用户名，无正文",
-      "input": { "handle": "music_lover2024", "displayName": "Music Lover" },
+      "input": {
+        "handle": "music_lover2024",
+        "displayName": "Music Lover"
+      },
       "expected": null
     },
     {
       "id": "adversarial-fullwidth-bait",
       "note": "全角字母/数字黄推引流：启发式 \\b 词边界不识别全角，漏报（已知局限；指纹 v1 NFKC 折叠后 exact 覆盖，见 detect.test v1 用例）",
-      "input": { "handle": "fw_01", "text": "ｄｍ　ｍｅ　ｆｏｒ　ｃｒｙｐｔｏ　ｓｉｇｎａｌｓ　福　利　在　主　页" },
+      "input": {
+        "handle": "fw_01",
+        "text": "ｄｍ　ｍｅ　ｆｏｒ　ｃｒｙｐｔｏ　ｓｉｇｎａｌｓ　福　利　在　主　页"
+      },
       "expected": null,
       "known_limitation": true
     },
     {
       "id": "zh-paraphrase-variant",
       "note": "中文换词变体（福利主页 看 vs 福 利在简介 自取）：启发式与指纹 simhash 均不覆盖，仅指纹 exact 可命中（已知局限）",
-      "input": { "handle": "pv_01", "text": "福利主页看 不收钱" },
+      "input": {
+        "handle": "pv_01",
+        "text": "福利主页看 不收钱"
+      },
       "expected": null,
       "known_limitation": true
     },
     {
       "id": "matchmaking-bait-a",
       "note": "婚介引流话术（2026-09-07 真机采集，handle 匿名化）：点主页 + 专业牵线 + 全国1-5线覆盖。启发式/词包均漏报（已知局限；指纹 exact 覆盖，见 detect.test 真实样本用例）",
-      "input": { "handle": "tpl_01", "text": "点主页🌙专业牵线🌹全国1-5线覆盖" },
+      "input": {
+        "handle": "tpl_01",
+        "text": "点主页🌙专业牵线🌹全国1-5线覆盖"
+      },
       "expected": null,
       "known_limitation": true
     },
     {
       "id": "matchmaking-bait-b",
       "note": "同上模板换 emoji 的变体（🌙🌹 → 🍓😸）：归一化后与 a 逐字相同，指纹 exact 命中（corpus 只测启发式层，故记为局限）",
-      "input": { "handle": "tpl_02", "text": "点主页🍓专业牵线😸全国1-5线覆盖" },
+      "input": {
+        "handle": "tpl_02",
+        "text": "点主页🍓专业牵线😸全国1-5线覆盖"
+      },
       "expected": null,
       "known_limitation": true
     },
     {
       "id": "word-salad-rtobadj473-real",
       "note": "2026-09-07 真机采集：批量注册号 rtobadj473 发布「hard/fire/💙/lift/road」每行一词+emoji，昵称=点主页/专业牵线/全国1-5线覆盖引流话术",
-      "input": { "handle": "rtobadj473", "displayName": "点主页🥳专业牵线💖全国1-5线覆盖", "text": "hard\nfire\n💙\nlift\nroad" },
+      "input": {
+        "handle": "rtobadj473",
+        "displayName": "点主页🥳专业牵线💖全国1-5线覆盖",
+        "text": "hard\nfire\n💙\nlift\nroad"
+      },
       "expected": "word-salad"
     },
     {
       "id": "word-salad-make-forgive",
       "note": "同模板第二例（2026-09-07 采集，昵称按同模板建模）",
-      "input": { "handle": "tpl_5521", "displayName": "点主页🥳专业牵线💖全国1-5线覆盖", "text": "make\nforgive\n✅\nwho\nhappy" },
+      "input": {
+        "handle": "tpl_5521",
+        "displayName": "点主页🥳专业牵线💖全国1-5线覆盖",
+        "text": "make\nforgive\n✅\nwho\nhappy"
+      },
       "expected": "word-salad"
     },
     {
       "id": "word-salad-might-walk",
       "note": "同模板第三例（2026-09-07 采集，昵称按同模板建模）",
-      "input": { "handle": "tpl_8837", "displayName": "点主页🥳专业牵线💖全国1-5线覆盖", "text": "might\nwalk\n⭐\nnotice\nhear" },
+      "input": {
+        "handle": "tpl_8837",
+        "displayName": "点主页🥳专业牵线💖全国1-5线覆盖",
+        "text": "might\nwalk\n⭐\nnotice\nhear"
+      },
       "expected": "word-salad"
     },
     {
       "id": "word-salad-bus-green",
       "note": "同模板第四例（2026-09-07 采集，昵称按同模板建模）",
-      "input": { "handle": "tpl_2216", "displayName": "点主页🥳专业牵线💖全国1-5线覆盖", "text": "bus\ngreen\n😘\nacross\nwinter" },
+      "input": {
+        "handle": "tpl_2216",
+        "displayName": "点主页🥳专业牵线💖全国1-5线覆盖",
+        "text": "bus\ngreen\n😘\nacross\nwinter"
+      },
       "expected": "word-salad"
     },
     {
       "id": "word-salad-mood-post-guard",
       "note": "误伤守卫：真实心情贴句式（5 token/4 词+emoji，形状同模板）但昵称干净 → 必须漏判",
-      "input": { "handle": "jane_doe", "displayName": "Jane", "text": "some days feel hollow 🖤" },
+      "input": {
+        "handle": "jane_doe",
+        "displayName": "Jane",
+        "text": "some days feel hollow 🖤"
+      },
       "expected": null
     },
     {
       "id": "word-salad-caps-guard",
       "note": "误伤守卫：心情贴带大写 → 不是该模板",
-      "input": { "handle": "grace_w", "displayName": "Grace", "text": "Some Days Feel 🖤 Hollow" },
+      "input": {
+        "handle": "grace_w",
+        "displayName": "Grace",
+        "text": "Some Days Feel 🖤 Hollow"
+      },
       "expected": null
     },
     {
       "id": "word-salad-punct-guard",
       "note": "误伤守卫：引流昵称 + 单词沙拉但带标点（road!）→ 非模板",
-      "input": { "handle": "xwz9912", "displayName": "点主页🥳专业牵线💖全国1-5线覆盖", "text": "hard fire 💙 lift road!" },
+      "input": {
+        "handle": "xwz9912",
+        "displayName": "点主页🥳专业牵线💖全国1-5线覆盖",
+        "text": "hard fire 💙 lift road!"
+      },
       "expected": null
     },
     {
       "id": "word-salad-clean-nickname-guard",
       "note": "已知局限：批量形态 handle + 干净昵称的单词沙拉漏判（宁可漏判；此类由社区指纹/SimHash 变体层兜底）",
-      "input": { "handle": "rtobadj473", "displayName": "CleanName", "text": "hard\nfire\n💙\nlift\nroad" },
+      "input": {
+        "handle": "rtobadj473",
+        "displayName": "CleanName",
+        "text": "hard\nfire\n💙\nlift\nroad"
+      },
       "expected": null,
       "known_limitation": true
     },
     {
       "id": "word-salad-garbled-handle-real",
       "note": "2026-09-08 真机采集：乱码 handle 批次——昵称 mhmsez ruwzw 本身即随机字母、空简介、对用户帖的回复（@mention 链接被 reader 剔除）。走佐证通道 2：乱码 handle（稀有字母 4 + 最长辅音串 6）",
-      "input": { "handle": "mhmsezruwzxjwl", "displayName": "mhmsez ruwzw", "text": "sea\nhave\n🌞\nhad\nplan" },
+      "input": {
+        "handle": "mhmsezruwzxjwl",
+        "displayName": "mhmsez ruwzw",
+        "text": "sea\nhave\n🌞\nhad\nplan"
+      },
       "expected": "word-salad"
     },
     {
       "id": "word-salad-name-handle-guard",
       "note": "误伤守卫：真人姓名 handle（javierzuniga 稀有字母 3 个）+ 心情贴形状 → 缺长辅音串，乱码佐证不命中",
-      "input": { "handle": "javierzuniga", "displayName": "Javier Zuniga", "text": "some days feel hollow 🖤" },
+      "input": {
+        "handle": "javierzuniga",
+        "displayName": "Javier Zuniga",
+        "text": "some days feel hollow 🖤"
+      },
       "expected": null
     },
     {
       "id": "word-salad-keyboard-walk-guard",
       "note": "误伤守卫：纯字母长块 handle（qwertyuiopas）但稀有字母仅 1 → 乱码佐证不命中",
-      "input": { "handle": "qwertyuiopas", "displayName": "Sam", "text": "some days feel hollow 🖤" },
+      "input": {
+        "handle": "qwertyuiopas",
+        "displayName": "Sam",
+        "text": "some days feel hollow 🖤"
+      },
       "expected": null
     },
     {
       "id": "combo-garbled-erogenous",
       "note": "弱信号组合：乱码批量号 + 单个擦边 marker（不足 2 条，porn-bait-zh 不发）→ 组合命中",
-      "input": { "handle": "mhmsezruwzxjwl", "displayName": "mhmsez ruwzw", "text": "今晚的茶有点涩" },
+      "input": {
+        "handle": "mhmsezruwzxjwl",
+        "displayName": "mhmsez ruwzw",
+        "text": "今晚的茶有点涩"
+      },
       "expected": "weak-signal-combo"
     },
     {
       "id": "combo-garbled-pure-emoji",
       "note": "弱信号组合：乱码批量号 + emoji 灌水正文（擦边 emoji 同时命中 marker）",
-      "input": { "handle": "mhmsezruwzxjwl", "displayName": "mhmsez ruwzw", "text": "🍑🍑🍑🍑🍑" },
+      "input": {
+        "handle": "mhmsezruwzxjwl",
+        "displayName": "mhmsez ruwzw",
+        "text": "🍑🍑🍑🍑🍑"
+      },
       "expected": "weak-signal-combo"
     },
     {
       "id": "combo-garbled-repeated",
       "note": "弱信号组合：乱码批量号 + 重复灌水字符（非标点 4 连以上）",
-      "input": { "handle": "mhmsezruwzxjwl", "text": "哈哈哈哈哈哈哈哈" },
+      "input": {
+        "handle": "mhmsezruwzxjwl",
+        "text": "哈哈哈哈哈哈哈哈"
+      },
       "expected": "weak-signal-combo"
     },
     {
       "id": "combo-clean-handle-weak-content",
       "note": "误伤守卫：内容弱信号再多（纯 emoji 正文 + 装饰昵称）也无账号形状锚点，不得单独成立",
-      "input": { "handle": "rosie_bakes", "displayName": "Rose🌸🌸", "text": "❤️❤️❤️❤️" },
+      "input": {
+        "handle": "rosie_bakes",
+        "displayName": "Rose🌸🌸",
+        "text": "❤️❤️❤️❤️"
+      },
       "expected": null
     },
     {
       "id": "combo-garbled-plain",
       "note": "误伤守卫：乱码锚点 + 普通日常内容 → 无内容佐证，不命中",
-      "input": { "handle": "mhmsezruwzxjwl", "displayName": "mhmsez ruwzw", "text": "今天天气不错，出来走走" },
+      "input": {
+        "handle": "mhmsezruwzxjwl",
+        "displayName": "mhmsez ruwzw",
+        "text": "今天天气不错，出来走走"
+      },
       "expected": null
     },
     {
       "id": "combo-digit-anchor-pure-emoji",
       "note": "数字形态锚点（jenny83922 型：长数字段+高数字比求和过线）+ emoji 灌水佐证",
-      "input": { "handle": "jenny83922", "text": "🍑🍑🍑🍑🍑" },
+      "input": {
+        "handle": "jenny83922",
+        "text": "🍑🍑🍑🍑🍑"
+      },
       "expected": "weak-signal-combo"
     },
     {
       "id": "combo-digit-anchor-salad",
       "note": "数字形态锚点 + 单词沙拉佐证（word-salad 规则因缺隐语/乱码佐证不发，组合层收口）",
-      "input": { "handle": "ab12345678", "text": "hard fire 💙 lift road" },
+      "input": {
+        "handle": "ab12345678",
+        "text": "hard fire 💙 lift road"
+      },
       "expected": "weak-signal-combo"
     },
     {
       "id": "combo-alternation-anchor-repeated",
       "note": "字母数字交替锚点（a1b2c3d4 型）+ 重复灌水佐证",
-      "input": { "handle": "a1b2c3d4e5", "text": "哈哈哈哈哈哈哈哈" },
+      "input": {
+        "handle": "a1b2c3d4e5",
+        "text": "哈哈哈哈哈哈哈哈"
+      },
       "expected": "weak-signal-combo"
     },
     {
       "id": "combo-real-digits-handle-guard",
       "note": "误伤守卫：短数字尾缀真实 handle（john2024 型，无长数字段/低占比）到不了锚点门槛",
-      "input": { "handle": "john2024", "displayName": "John", "text": "🍑🍑🍑🍑🍑" },
+      "input": {
+        "handle": "john2024",
+        "displayName": "John",
+        "text": "🍑🍑🍑🍑🍑"
+      },
       "expected": null
     },
     {
       "id": "word-salad-editor-nickname-guard",
       "note": "误伤守卫（2026-09-09 隐语表收窄）：「约稿」昵称不再是引流隐语，心情贴形状无佐证不标",
-      "input": { "handle": "editor_wang", "displayName": "自由约稿接单", "text": "some days feel hollow 🖤" },
+      "input": {
+        "handle": "editor_wang",
+        "displayName": "自由约稿接单",
+        "text": "some days feel hollow 🖤"
+      },
       "expected": null
     },
     {
       "id": "word-salad-private-nickname-guard",
       "note": "误伤守卫（同上）：「私房菜」昵称不再是引流隐语",
-      "input": { "handle": "chef_liu", "displayName": "私房菜主理人", "text": "some days feel 🖤 hollow" },
+      "input": {
+        "handle": "chef_liu",
+        "displayName": "私房菜主理人",
+        "text": "some days feel 🖤 hollow"
+      },
       "expected": null
     },
     {
       "id": "word-salad-suffix-digit-handle",
       "note": "2026-09-11 真机批次（evidence_post_id 2098330313420161117）：纯字母乱码段 + 尾缀数字（ohbfwzyzopkkt2 型），上批纯字母规则发布后的最小变异绕开，随尾缀容忍修复收口",
-      "input": { "handle": "ohbfwzyzopkkt1", "text": "likely mango banana 🍋 butter open wide" },
+      "input": {
+        "handle": "ohbfwzyzopkkt1",
+        "text": "likely mango banana 🍋 butter open wide"
+      },
       "expected": "word-salad"
     },
     {
       "id": "combo-suffix-digit-weak-shape",
       "note": "同批极简变体：两英文词 + 两 emoji 行的弱形状，只作为乱码锚点的组合佐证",
-      "input": { "handle": "ohbfwzyzopkkt2", "text": "shielding 🍋 🤤 compensation" },
+      "input": {
+        "handle": "ohbfwzyzopkkt2",
+        "text": "shielding 🍋 🤤 compensation"
+      },
       "expected": "weak-signal-combo"
     },
     {
       "id": "word-salad-keyword-corroborated",
       "note": "评测层用例：调用方显式注入 keywordCorroborated 表达「官方词库先命中」。生产管线 keyword 命中即返回、且不装配 word-salad；循环内传播从未生效，已于 2026-09 删除，勿依赖",
-      "input": { "handle": "mimo_garden", "displayName": "茉见月花园", "text": "likely mango banana 🍋 butter open wide", "keywordCorroborated": true },
+      "input": {
+        "handle": "mimo_garden",
+        "displayName": "茉见月花园",
+        "text": "likely mango banana 🍋 butter open wide",
+        "keywordCorroborated": true
+      },
       "expected": "word-salad"
     },
     {
       "id": "word-salad-realname-suffix-digit-guard",
       "note": "误伤守卫：真实姓名 handle + 尾缀数字（elizabethkader2 型）乱码双征不成立，弱形状文本不入锚点",
-      "input": { "handle": "elizabethkader2", "displayName": "Elizabeth", "text": "quiet 🌙 ☕ monday" },
+      "input": {
+        "handle": "elizabethkader2",
+        "displayName": "Elizabeth",
+        "text": "quiet 🌙 ☕ monday"
+      },
       "expected": null
     },
     {
       "id": "word-salad-weak-shape-clean-handle-guard",
       "note": "误伤守卫：两词 + 两 emoji 正常心情贴（弱形状）配干净 handle，无锚点无佐证不标",
-      "input": { "handle": "monday_coffee", "text": "quiet 🌙 ☕ monday" },
+      "input": {
+        "handle": "monday_coffee",
+        "text": "quiet 🌙 ☕ monday"
+      },
+      "expected": null
+    },
+    {
+      "id": "contact-number-payload",
+      "note": "2026-09-12 娇妻/单男变体：正文裸长数字段 + 简介钩子（display 名可作钩子通道，可能被懒加载吞掉=漏判无误伤）",
+      "input": {
+        "handle": "BarberaFaru3j",
+        "displayName": "娇妻媚儿（想找单男看我简介",
+        "text": "那一夜你没有拒绝我 1789140669901"
+      },
+      "expected": "contact-number-bait"
+    },
+    {
+      "id": "contact-number-bio-hint",
+      "note": "数字载荷在正文、钩子在 bio 的分离写法",
+      "input": {
+        "handle": "gift_card_guy",
+        "bio": "详细资料看我主页",
+        "text": "费用问题请直接拨 18861538826 咨询"
+      },
+      "expected": "contact-number-bait"
+    },
+    {
+      "id": "contact-number-timestamp-guard",
+      "note": "误伤守卫：13 位 unix 毫秒时间戳/流水号，无钩子不标",
+      "input": {
+        "handle": "devlog",
+        "text": "批处理任务 id 1789140669009 完成，耗时 34 秒"
+      },
+      "expected": null
+    },
+    {
+      "id": "contact-number-phone-without-hook-guard",
+      "note": "误伤守卫：晒旧号/注销通知这类真实数字，无钩子不标",
+      "input": {
+        "handle": "old_fried",
+        "text": "当年的号码 13812345678 早就注销了"
+      },
+      "expected": null
+    },
+    {
+      "id": "front-door-strong-hook-without-hint",
+      "note": "误伤守卫：URL 里长参数段 + 拨打类但只含普通链接，载荷规则只看剥 URL 后正文",
+      "input": {
+        "handle": "shop_notice",
+        "text": "详情 https://shop.example.com/item?id=17891406690090 有售"
+      },
       "expected": null
     }
-]
+  ]
 }

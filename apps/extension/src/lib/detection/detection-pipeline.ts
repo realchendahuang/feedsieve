@@ -12,6 +12,7 @@
 
 import {
   detect,
+  contactNumberBait,
   type DetectInput,
   type Detection,
   type HeuristicRule,
@@ -144,10 +145,11 @@ export function runDetectionPipeline(input: DetectionPipelineInput): DetectionPi
   if (!detection) {
     detection = detect(source, {
       ...evidenceOptions,
-      // 用户明确配置的字面短语 / 官方词库，加上弱信号组合层——唯一升到页面的
-      // 内置启发式（乱码批量号锚点 + 内容佐证，分层见 detection-policy；
-      // 其余内置单信号规则仍只留在 detector 评测层）。排在词库规则之后收尾。
-      heuristics: [...keywordHeuristics, weakSignalCombo],
+      // 用户明确配置的字面短语 / 官方词库，加上两个直线双信号内置启发式——
+      // weak-signal-combo（乱码/数字批量号锚点 + 内容佐证）与
+      // contact-number-bait（正文长数字载荷 + 简介钩子），分层见 detection-policy；
+      // 其余内置单信号规则仍只留在 detector 评测层。排在词库规则之后收尾。
+      heuristics: [...keywordHeuristics, weakSignalCombo, contactNumberBait],
     });
   }
 
