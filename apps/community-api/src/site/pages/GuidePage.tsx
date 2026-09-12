@@ -45,7 +45,9 @@ export default function GuidePage() {
           </GuideRow>
         </tbody>
       </table>
-      <p className="mt-3 text-sm text-mist">Edge / Brave 等 Chromium 浏览器可用后两种方式。装好即用，无需注册任何账号。</p>
+      <p className="mt-3 text-sm text-mist">
+        Edge / Brave 等 Chromium 浏览器可直接装商店版：Edge 首次访问商店页面时允许「来自其他商店的扩展」即可，自动同步更新。装好即用，无需注册任何账号。
+      </p>
 
       <h2 id="start" className="mt-10 scroll-mt-20 text-xl font-bold">上手四步</h2>
       <p className="mt-3 text-sm leading-relaxed">
