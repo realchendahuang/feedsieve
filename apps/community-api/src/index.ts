@@ -12,6 +12,7 @@ import {
   saveAdminAccountDraft,
 } from './admin-accounts';
 import { verifyAccess } from './lib/access';
+import { isAdminHost } from './lib/hosts';
 import { hashInstallationId } from './lib/hash';
 import {
   decideApplication,
@@ -55,8 +56,8 @@ import {
   writeAgentKeywordDetectorConfig,
 } from './agent-admin';
 import { hunterPageHtml } from './hunter-page';
-import { guidePageHtml, homePageHtml, listsPageHtml } from './site-pages';
-import { LEADERBOARD, getLeaderboard, markLeaderboardDirty, settleDueSeasons } from './leaderboard';
+import { LEADERBOARD, getLeaderboard, markLeaderboardDirty } from './leaderboard';
+import { scheduledAutoPublish, settleSeasonsScheduled } from './scheduled';
 import { bindEmail, getProfile, updateProfile, verifyEmail } from './player';
 import { MAINTAINER_CATEGORIES } from './maintainer-blocklist';
 import { processRetractionBatch } from './labels';
@@ -69,42 +70,14 @@ import {
 } from './keyword-contributions';
 import {
   buildKillSwitch,
-  clearSnapshotDirty,
-  generateSnapshot,
   getLatestSnapshot,
   getLatestSnapshotFile,
   getLatestSnapshotVersion,
   getSnapshotFile,
-  killSwitchNeedsPublish,
   markSnapshotDirty,
   PUBLIC_BLOCKLIST_PACK,
-  readSnapshotDirty,
   SNAPSHOT_PACK,
 } from './snapshot';
-
-/**
- * 注意：默认值返回 false —— 未配置对应主机名时，对应域名一律不生效。
- * 值支持 CSV 多域名：域名迁移期把保底旧域与统一后的新域并列，旧客户端不断链。
- */
-function isConfiguredHost(
-  request: Request,
-  env: Cloudflare.Env,
-  variable: 'ADMIN_HOST' | 'SITE_HOST',
-): boolean {
-  const configured = env[variable]?.trim().toLowerCase();
-  if (!configured) return false;
-  const hostname = new URL(request.url).hostname.toLowerCase();
-  return configured.split(',').some((host) => host.trim() && host.trim() === hostname);
-}
-
-function isAdminHost(request: Request, env: Cloudflare.Env): boolean {
-  return isConfiguredHost(request, env, 'ADMIN_HOST');
-}
-
-/** 官网公开页域名（首页 / 名单公示）。 */
-function isSiteHost(request: Request, env: Cloudflare.Env): boolean {
-  return isConfiguredHost(request, env, 'SITE_HOST');
-}
 
 function staticAssetRequest(request: Request): Request {
   // assets.not_found_handling = single-page-application resolves TanStack routes
@@ -951,41 +924,9 @@ export function createApp() {
     });
   });
 
-  // 官网公开页：与社区 API 同一 Worker、同一域名（不再有独立静态站）。
-  // 首页/公示页是代码内嵌 HTML，样式与图片走 ASSETS（打包在 admin/dist）。
-  // 公示页数据请求从原来的跨域改为此域同源，/leaderboard 路由在上方对所有
-  // host 生效，因此 feedsieve.win/leaderboard 与 API 域名行为一致。
+  // 官网公开页已迁到 TanStack Start SSR（src/server.ts），这里只保留：
+  // 管理 host 的 ASSETS SPA 兜底；其余（含官网 host 未知路径）404。
   app.get('*', async (c) => {
-    const path = c.req.path;
-    // 早期链接手册里出现过 /lists.html 形式，归一到无扩展名路径。
-    if (path === '/lists.html') {
-      c.header('Cache-Control', 'no-store');
-      return c.redirect('/lists', 301);
-    }
-    if (isSiteHost(c.req.raw, c.env)) {
-      // 页面本身是静态壳，数据全部客户端拉取；显式 no-store 防止边缘把
-      // 过渡窗口的错误响应缓存成"正式版" publics。
-      if (path === '/') {
-        c.header('Cache-Control', 'no-store');
-        return c.html(homePageHtml());
-      }
-      if (path === '/lists') {
-        c.header('Cache-Control', 'no-store');
-        return c.html(listsPageHtml());
-      }
-      if (path === '/guide') {
-        c.header('Cache-Control', 'no-store');
-        return c.html(guidePageHtml());
-      }
-      if (!c.env.ASSETS) {
-        return c.json({ error: 'not_found' }, 404);
-      }
-      if (path === '/styles.css' || path.startsWith('/assets/')) {
-        return c.env.ASSETS.fetch(staticAssetRequest(c.req.raw));
-      }
-      // 官网域名上不暴露管理端 SPA 兜底，未知路径一律 404。
-      return c.json({ error: 'not_found' }, 404);
-    }
     // 只有独立后台域名会落到前端资产；公开 API 域名不再暴露管理界面。
     if (!isAdminHost(c.req.raw, c.env) || !c.env.ASSETS) {
       return c.json({ error: 'not_found' }, 404);
@@ -1006,49 +947,19 @@ export function createApp() {
   return app;
 }
 
-// 定时发布是异步化的消费端：有脏标记才生成；内容未变时复用版本并清除标记。
-// 生成失败不清标记 → 下一周期自然重试；生成期间到达的新变更（值已变）也保留。
-async function scheduledAutoPublish(env: Cloudflare.Env): Promise<void> {
-  try {
-    const dirty = await readSnapshotDirty(env);
-    if (dirty != null) {
-      const published = await generateSnapshot(env);
-      // 当日已有一版而内容又有变化时 generateSnapshot 返回 deferred：
-      // 脏标记保留到下一自然日再由 cron 合并发布（day-once 日更语义）。
-      if (!published.deferred) {
-        await clearSnapshotDirty(env, dirty);
-      }
-      console.info(
-        `[community-api] cron publish: version=${published.version}${published.deferred ? ' (deferred to next day)' : ''}`,
-      );
-      return;
-    }
-    // 无票面变更但官方暂停开关被部署配置翻转（开/关/理由变更）：仍需公开，
-    // day-once 守卫在 generateSnapshot 内部把关（当日已发布则顺延）。
-    if (await killSwitchNeedsPublish(env)) {
-      const published = await generateSnapshot(env);
-      console.info(`[community-api] cron publish (kill switch): version=${published.version}`);
-    }
-  } catch (error) {
-    console.error('[community-api] cron publish failed:', error);
-  }
-}
-
+// 定时任务编排已抽到 src/scheduled.ts（供 server.ts 复用，见该文件头注释）。
 // 路由表与中间件链只构建一次；每请求重建纯属浪费 CPU（env 每次调用传入）。
 const app = createApp();
 
+// fetch 的 request 参数显式 any：ExportedHandler 的窄化泛型与 vitest 插件
+// （miniflare）的全局 Request 泛型互不相容，测试直接 import 本入口调 fetch 会
+// 在边界报结构性不匹配；a11y 上运行时行为不变（cloudflare-test 的 Request 兼容）。
 export default {
-  fetch(request, env) {
-    return app.fetch(request, env);
+  fetch(request: unknown, env) {
+    return app.fetch(request as Request, env);
   },
   async scheduled(_controller, env) {
     await scheduledAutoPublish(env);
-    // 打野排位赛：跨周结算（称号发放）。失败只记日志，下小时重试。
-    try {
-      const settled = await settleDueSeasons(env);
-      if (settled > 0) console.info(`[community-api] cron settled seasons: ${settled}`);
-    } catch (error) {
-      console.error('[community-api] cron season settle failed:', error);
-    }
+    await settleSeasonsScheduled(env);
   },
 } satisfies ExportedHandler<Cloudflare.Env>;

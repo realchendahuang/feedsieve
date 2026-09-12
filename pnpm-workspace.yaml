@@ -7,3 +7,9 @@ packages:
 allowBuilds:
   esbuild: true
   workerd: true
+
+# 依赖版本钉子：@cloudflare/vite-plugin 的 miniflare 依赖解析到了
+# 5.20260910.0-alpha，其 Request 类型与 @cloudflare/workers-types 冲突
+# （全部 test/*.test.ts 报 Request 泛型不匹配）——钉回 vitest-plugin 同代的旧 alpha。
+overrides:
+  '@cloudflare/vite-plugin>miniflare': 5.20260825.0-alpha

@@ -7,7 +7,8 @@ export default defineConfig(async () => {
   return defineProject({
     plugins: [
       cloudflareTest({
-        wrangler: { configPath: './wrangler.jsonc' },
+        // 测试入口是纯 Hono 的 api-entry（wrangler.test.jsonc 交换了 main）
+        wrangler: { configPath: './wrangler.test.jsonc' },
         miniflare: {
           // 测试专用绑定：迁移内容注入为绑定，setup 文件里 applyD1Migrations 消费；
           // Access 中间件用占位配置驱动（JWKS 由测试的 fetchMock 拦截提供假密钥）。

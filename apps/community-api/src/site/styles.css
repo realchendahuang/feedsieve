@@ -1,0 +1,236 @@
+/* ============================================================
+   FeedSieve 公示站设计系统（对齐 KOSX-Impact 同款 Token 架构）
+   底：paper · 信号金：gold #d4a017 · 字：ink/mist/fog
+   圆角 14px · 内容最大宽度 5xl
+   双主题：浅色为默认（:root），深色平移进 .dark；html 上的 class
+   由内联启动脚本 + 头部切换按钮控制（三态 system/light/dark）。
+   品牌色即「黄框金」：公示台徽章、榜单大娃系、入场按钮全部共用。
+   ============================================================ */
+
+/* dark: 变体从「跟随系统」改为 class 策略，配合三态主题机 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --radius: 0.875rem;
+  color-scheme: light;
+
+  /* ===== 浅色（默认）：灰纸页底 + 纯白卡浮起，零线框；金色只给信号 ===== */
+  --paper: #f5f6f7;
+  --soft-surface: #f8f8f9;
+  --surface: #ffffff;
+  --line: #e4e4e7;
+  --ink: #18181b;
+  --mist: #52525b;
+  --fog: #a1a1aa;
+  --gold: #b8860b;
+  --gold-deep: #92660b;
+  --gold-warm: #d4a017;
+  --gold-surface: #fff8e1;
+  --white: #ffffff;
+  --black: #0a0a0a;
+
+  /* 主按钮：浅色下实心深钮（深色下为白钮） */
+  --primary: #18181b;
+  --primary-foreground: #ffffff;
+
+  /* 质感槽 */
+  --wash: rgba(0, 0, 0, 0.045);
+  --wash-strong: rgba(0, 0, 0, 0.075);
+  --edge: rgba(0, 0, 0, 0.1);
+  --glass: rgba(255, 255, 255, 0.55);
+  --scrim: rgba(0, 0, 0, 0.35);
+  --card-inset: inset 0 1px 0 0 rgba(255, 255, 255, 0.6);
+  --card-inset-strong: inset 0 1px 0 0 rgba(255, 255, 255, 0.8)   ;
+  --panel-elev: 0 1px 2px rgba(0, 0, 0, 0.04), 0 10px 28px -14px rgba(0, 0, 0, 0.1);
+
+  /* 铜银金（榜单前三名） */
+  --rank-1: #b8860b;
+  --rank-2: #9aa0a6;
+  --rank-3: #b87333;
+
+  /* ===== shadcn 语义映射 ===== */
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --card-foreground: var(--ink);
+  --popover: var(--surface);
+  --popover-foreground: var(--ink);
+  --secondary: var(--soft-surface);
+  --secondary-foreground: var(--ink);
+  --muted: var(--soft-surface);
+  --muted-foreground: var(--mist);
+  --accent: var(--soft-surface);
+  --accent-foreground: var(--ink);
+  --destructive: #e02020;
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--gold);
+  --success: var(--gold);
+}
+
+/* ===== 深色：原公示站深色观感（X 风格纸底）===== */
+.dark {
+  color-scheme: dark;
+
+  --paper: #14171a;
+  --soft-surface: #1a1d20;
+  --surface: #22262a;
+  --line: #2f3336;
+  --ink: #f7f7f5;
+  --mist: #d0d0d0;
+  --fog: #8a8a8f;
+  --gold: #d4a017;
+  --gold-deep: #fbbf24;
+  --gold-warm: #fbbf24;
+  --gold-surface: #24211a;
+  --white: #ffffff;
+  --black: #0a0a0a;
+
+  --primary: #ffffff;
+  --primary-foreground: #0a0a0a;
+
+  --wash: rgba(255, 255, 255, 0.05);
+  --wash-strong: rgba(255, 255, 255, 0.1);
+  --edge: rgba(255, 255, 255, 0.12);
+  --glass: rgba(0, 0, 0, 0.3);
+  --scrim: rgba(0, 0, 0, 0.7);
+  --card-inset: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+  --card-inset-strong: inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+  --panel-elev:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.05), inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+
+  --rank-1: #fbbf24;
+  --rank-2: #9aa0a6;
+  --rank-3: #b87333;
+}
+
+@theme inline {
+  --font-sans: -apple-system, "Helvetica Neue", "PingFang SC", "Noto Sans CJK SC", Arial, sans-serif;
+  --font-display: -apple-system, "Helvetica Neue", "PingFang SC", "Noto Sans CJK SC", Arial, sans-serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 6px);
+  --radius-2xl: calc(var(--radius) + 14px);
+
+  --color-paper: var(--paper);
+  --color-soft-surface: var(--soft-surface);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-mist: var(--mist);
+  --color-muted: var(--muted);
+  --color-fog: var(--fog);
+  --color-gold: var(--gold);
+  --color-gold-deep: var(--gold-deep);
+  --color-gold-warm: var(--gold-warm);
+  --color-gold-surface: var(--gold-surface);
+  --color-rank-1: var(--rank-1);
+  --color-rank-2: var(--rank-2);
+  --color-rank-3: var(--rank-3);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--line);
+    border-radius: 9999px;
+    transition: background-color 0.2s ease;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--muted);
+  }
+  html {
+    @apply bg-paper;
+    /* 恒定保留滚动条槽位：弹窗锁滚动时页面宽度不变 */
+    scrollbar-gutter: stable;
+  }
+  body {
+    @apply bg-paper text-foreground font-sans antialiased;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display;
+  }
+}
+
+/* 主题切换按钮三态图标：由 html[data-theme-mode] 纯 CSS 驱动，
+   水合前后不换 DOM，首帧图标即正确、零闪烁 */
+.theme-icon {
+  display: none;
+}
+html:not([data-theme-mode]) .theme-icon-system,
+html[data-theme-mode="system"] .theme-icon-system {
+  display: block;
+}
+html[data-theme-mode="light"] .theme-icon-light {
+  display: block;
+}
+html[data-theme-mode="dark"] .theme-icon-dark {
+  display: block;
+}
+
+/* 卡片面板唯一外壳（KOSX panel-card 同款：圆角 + 面板底 + panel-elev） */
+@utility panel-card {
+  border-radius: 1rem;
+  background: var(--surface);
+  box-shadow: var(--panel-elev);
+}
+
+/* 瞬时提示入场 */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-10px) scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
+
+/* 路由 pending 加载条 */
+@keyframes loadbar {
+  0% { transform: scaleX(0); opacity: 0.9; }
+  70% { transform: scaleX(0.85); opacity: 1; }
+  100% { transform: scaleX(1); opacity: 0.2; }
+}
+
+/* Tab 内容切换入场（轻上浮淡入，SSR 安全：纯 CSS 动画） */
+@keyframes tab-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@utility tab-in {
+  animation: tab-in 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* 黄框语义：名单公示的核心视觉（高置信垃圾账号的「黄框标注」→ 卡面描边） */
+@utility goFrame {
+  @apply border-2 border-gold rounded-[var(--radius)];
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--gold) 35%, transparent);
+}

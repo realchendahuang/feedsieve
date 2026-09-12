@@ -44,7 +44,7 @@ Edge / Brave 等 Chromium 浏览器可用后两种方式加载。装好即用，
 ## 设置项逐条
 
 - **同步关注列表** — 把你的关注存为本地私有保护名单，自动排除在一切清理之外，永不上传社区。这是误伤治理的第一道保险。
-- **关键词规则** — 官方行业词库包（当前 8 组 778 条，以[官网词库 Tab](https://feedsieve.win/lists#keywords)实时计数为准），默认只开启「黄推 / 成人引流」，其余按需订阅，可整包或逐条关闭，也支持添加自己的词。收录边界与来源见 [`research/KEYWORD_PRESETS.md`](research/KEYWORD_PRESETS.md)；官方词库全量公示在[官网词库 Tab](https://feedsieve.win/lists#keywords)，与扩展执行的规则同源同版本。
+- **关键词规则** — 官方行业词库包（当前 8 组 778 条，以[官网词库 Tab](https://feedsieve.win/lists/keywords)实时计数为准），默认只开启「黄推 / 成人引流」，其余按需订阅，可整包或逐条关闭，也支持添加自己的词。收录边界与来源见 [`research/KEYWORD_PRESETS.md`](research/KEYWORD_PRESETS.md)；官方词库全量公示在[官网词库 Tab](https://feedsieve.win/lists/keywords)，与扩展执行的规则同源同版本。
 - **识别强度** — 清爽 / 标准 / 大扫除 三档。档位只调"用多少证据"，不调"下手多重"：黄框标注在任何档位都永不自动批量拉黑，弱证据只在「大扫除」档提示人工复核。悬停设置项可看各档证据范围。
 - **备份与迁移** — 导出 JSON，在新设备预览后合并或替换。导出不含任何 X 登录态，凭据只在你浏览器里。
 - **个人白名单** — 页面点「误标？」加入的账号优先级最高，一票否决一切检测来源。
@@ -72,7 +72,7 @@ FeedSieve 走的是你已登录会话的内部 Block 接口，与手动点屏蔽
 不会。推文原文永不出设备，这是硬红线。内容分析走本地指纹哈希；社区上报只含 handle / 分类 / 话术指纹哈希 / 外链域名，无浏览历史。完整口径见 [PRIVACY.md](https://github.com/realchendahuang/feedsieve/blob/main/PRIVACY.md)。
 
 **被误标了怎么办？**
-被错误拉黑的账号找 FeedSieve 用户点「放回来」即可；名声受损风险极低。自己账号进入社区候选的，走[官网申请弹窗](https://feedsieve.win/lists#apply)提交申诉，邮箱验证后进维护者复核队列。
+被错误拉黑的账号找 FeedSieve 用户点「放回来」即可；名声受损风险极低。自己账号进入社区候选的，走[官网申请弹窗](https://feedsieve.win/lists/apply)提交申诉，邮箱验证后进维护者复核队列。
 
 **换号了还能被识别吗？**
 能，这是 v0.4 主要解决的问题：话术指纹（换号不换模板）、外链域名（≥2 独立安装一致即下发）、换号别名追踪。历史机制见 [`TECHNICAL_SPEC.md`](TECHNICAL_SPEC.md)。

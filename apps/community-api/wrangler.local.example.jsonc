@@ -3,12 +3,13 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "feedsieve-community-api",
-  "main": "src/index.ts",
+  "main": "src/server.ts",
   "compatibility_date": "2026-08-01",
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
   "assets": {
-    "directory": "../admin/dist",
+    // 官网 TanStack SSR + admin SPA 同一个绑定（部署前 merge-client-assets 合并）
+    "directory": "./dist/client",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
     "run_worker_first": true
@@ -16,11 +17,14 @@
   "account_id": "YOUR_CLOUDFLARE_ACCOUNT_ID",
   "routes": [
     { "pattern": "your-api.example.com", "custom_domain": true },
-    { "pattern": "admin.your-api.example.com", "custom_domain": true }
+    { "pattern": "admin.your-api.example.com", "custom_domain": true },
+    { "pattern": "www.example.com", "custom_domain": true }
   ],
   "vars": {
     // 多域名逗号分隔（SITE_HOST 同理）：域名迁移期把旧域与新域并列，旧客户端不断链
-    "ADMIN_HOST": "admin.your-api.example.com,admin.your-old-domain.example.com"
+    "ADMIN_HOST": "admin.your-api.example.com,admin.your-old-domain.example.com",
+    // 官网 SSR 公开页仅服务这个 hostname
+    "SITE_HOST": "www.example.com"
   },
   "d1_databases": [
     {

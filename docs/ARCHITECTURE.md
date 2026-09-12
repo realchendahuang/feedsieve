@@ -250,13 +250,17 @@ GET|POST|DELETE /api/admin/* (仅管理域 + Cloudflare Access)
 
 只上传用户主动贡献的数据，不上传完整浏览历史。
 
-官网公开页（feedsieve.win：首页、名单公示页 `/lists`、打野周榜
-`/leaderboard`）由同一个 Worker 渲染（HTML 内嵌在代码里），公示页消费
-`GET /v1/roster/latest` 渲染公示面并提供申请表单，与 API 同域名同源；公示
-内容与扩展执行的名单同源（同一份签名快照），免责声明见仓库根
-[`DISCLAIMER.md`](../DISCLAIMER.md)。
-没有独立静态站；styles 与图片随 admin 前端资产一起从 `apps/admin/public/`
-进 assets 绑定。
+官网公开页（feedsieve.win：首页、名单公示家族 `/lists/blacklist`
+`/lists/whitelist` `/lists/keywords` `/lists/ranked`、申请页 `/lists/apply`、
+教程页 `/guide`、打野观看页 `/leaderboard`）由同一个 Worker 以 TanStack
+Start SSR 渲染（`src/server.ts` 桥接：API 家族走 Hono，其余路径交给
+TanStack 路由树）。公示页数据在 SSR loader 内直读同一份签名快照
+（`getPublicRoster`）与词库 / 榜单模块，与扩展执行的名单同源；免责声明见
+仓库根 [`DISCLAIMER.md`](../DISCLAIMER.md)。
+SEO：每路由独立 canonical/OG（resvg 动态分享卡 `/og/*.png`）+
+`/robots.txt` `/sitemap.xml`。无独立静态站；共享资产（admin SPA、站点图片、
+OG 子集字体）经 `scripts/merge-client-assets.mjs` 合并进 vite 构建产物
+`dist/client` 进同一个 ASSETS 绑定。
 
 ## 11. X Action Adapter
 

@@ -4,7 +4,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "feedsieve-community-api",
-  "main": "src/index.ts",
+  "main": "src/server.ts",
   "compatibility_date": "2026-08-01",
   // nodejs_compat：nodemailer 走 Workers 出站 socket 直连 SMTP 发验证码
   // （未配置 SMTP_* 时不加载，不影响既有路径）
@@ -19,13 +19,22 @@
   // /api/* 与 /v1/kill-switch 已显式 no-store，不会被共享缓存误命中。
   "cache": { "enabled": true },
   "assets": {
-    "directory": "../admin/dist",
+    // 官网 TanStack SSR 与 admin SPA 都靠这一个绑定：vite 构建产物在 dist/client，
+    // admin 资产由 scripts/merge-client-assets.mjs 在部署前合并进来。
+    "directory": "./dist/client",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
+    // API / OG 图 / SEO 文件与页面（SSR）必须先经 Worker：assets 目录里没有
+    // 公示页对应的静态文件，全部路由都从 Worker 出（含 /v1 /api）。
     "run_worker_first": true
   },
   "triggers": {
     "crons": ["0 * * * *"],
+  },
+  // 公开 vars 是 host 门控字符串（非密钥）：本地 dev gates SSR 页面路由，
+  // 生产部署的真实值在 wrangler.local.jsonc 覆盖（支持 CSV 多域名）。
+  "vars": {
+    "SITE_HOST": "feedsieve.win,localhost",
   },
   "d1_databases": [
     {

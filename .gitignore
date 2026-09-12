@@ -16,3 +16,6 @@ coverage/
 
 # 本地会话计划产物（不入库）
 /.zcode/
+
+# TanStack Start 路由表生成物（vite 插件每次构建重生成）
+apps/community-api/src/routeTree.gen.ts

@@ -25,7 +25,7 @@ FeedSieve 社区名单与公开关键词后端：Cloudflare Worker + Hono + D1 +
 ```sh
 pnpm install
 cp .dev.vars.example .dev.vars
-pnpm dev        # wrangler dev，本地 workerd + 本地 D1
+pnpm dev        # vite dev（TanStack Start SSR + Hono API），本地 workerd + 本地 D1
 pnpm test       # vitest + @cloudflare/vitest-plugin，真 workerd + 真迁移
 pnpm typecheck
 ```

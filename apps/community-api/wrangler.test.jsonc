@@ -1,0 +1,31 @@
+// 测试专用配置（vitest cloudflare 插件）：main 指向纯 Hono 入口——
+// TanStack Start 的 server-entry 是虚拟模块，Miniflare 无法解析；
+// 其余绑定与 wrangler.jsonc 保持一致（DB/R2 用本地模拟，迁移走 TEST_MIGRATIONS）。
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "feedsieve-community-api-test",
+  "main": "src/api-entry.ts",
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": false },
+  "assets": {
+    "directory": "./dist/client",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "feedsieve-community",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "KEYWORD_PACKS",
+      "bucket_name": "feedsieve-keyword-packs"
+    }
+  ]
+}

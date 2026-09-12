@@ -7,6 +7,10 @@
 
 ## [未发布]
 
+### 官网重构（TanStack Start SSR）
+
+- 官网技术栈对齐（TanStack Start SSR，与 KOSX-Impact 同款）：公示站首页/教程/名单公示改为服务端渲染的真路由（`/lists/blacklist` `/lists/whitelist` `/lists/keywords` `/lists/ranked` `/lists/apply`），每路由独立 canonical / OG 元数据与 resvg 动态分享卡；新增 `/robots.txt` `/sitemap.xml`。API `/v1/*` 行为与字段不变，公示数据在 SSR 内直读同一份签名快照。
+
 ### 新增
 
 - 关键词贡献（v0.8 系 / 服务端 0022）：扩展「关键词」页每条自定义关键词旁可一键匿名贡献给官方词库；官网词库 Tab 新增匿名提交入口（IP 盐哈希每日限流 5 条、单次 10 条）。提交进维护者审阅队列，审阅通过才随词库发布生效，不影响黑名单计票。数据口径见 `PRIVACY.md`「关键词贡献」。
