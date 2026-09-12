@@ -29,7 +29,7 @@ function KeywordsRoute() {
             <ListsTabs />
             <HelpIcon ariaLabel="词库说明">
               官方词库包与扩展执行的规则同源同版本（签名发布）；访客可匿名提交新短语，
-              先挂待审、运营审阅通过后才进入词库（每 IP 每日 5 条）。
+              先挂待审、运营审阅通过后才进入词库。
             </HelpIcon>
           </div>
         }

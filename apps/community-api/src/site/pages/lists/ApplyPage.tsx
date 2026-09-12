@@ -155,9 +155,6 @@ export default function ApplyPage() {
         </form>
       )}
 
-      <p className="mt-4 text-xs text-mist">
-        每 IP 每日 20 条额度，验证码邮箱 1 小时 3 封。
-      </p>
     </main>
   );
 }
