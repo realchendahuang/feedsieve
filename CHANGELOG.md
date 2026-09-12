@@ -5,6 +5,14 @@
 - 每个版本的详细工程记录见 [`docs/RELEASES.md`](docs/RELEASES.md)。
 - 二进制产物见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)；正式用户请从 [Chrome 应用商店](https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph)接收更新。
 
+## [未发布]
+
+### 性能
+
+- 检测热点降载：关键词归一化结果有界缓存（同字段文本不再被数百规则反复重算）、规则短语派生量按规则缓存、SimHash 已知模板位向量按指纹集缓存、已验签快照解析结果进程内缓存（批量拉黑队列不再每秒重解析 2MB JSON）。
+- 弹窗社区名单先挂前 100 条并逐段「加载剩余」，全量渲染数千条不再发生；黑/白名单派生集合按依赖 memo。
+- 官网 SSR 页面边缘缓存 60s→300s（stale-while-revalidate 4h），写入不再阻塞响应；`/v1/policy` 改边缘缓存 300s；公共 roster / 词库 R2 读+解析按版本进程内 memo。
+
 ## [0.8.3] — 2026-09-12
 
 ### 官网重构（TanStack Start SSR）
