@@ -5,7 +5,7 @@
 - 每个版本的详细工程记录见 [`docs/RELEASES.md`](docs/RELEASES.md)。
 - 二进制产物见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)；正式用户请从 [Chrome 应用商店](https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph)接收更新。
 
-## [未发布]
+## [0.8.3] — 2026-09-12
 
 ### 官网重构（TanStack Start SSR）
 
@@ -19,6 +19,7 @@
 ### 变更
 
 - 扩展 API 域名切换为 `api.feedsieve.win`（旧域 `feedsieve-api.chendahuang.com` 保留为 CSV 兜底）；`PRIVACY.md`、商店提交材料同步更新。
+- 独立打野榜观看页（`/leaderboard`）彻底下线；插件内「看全榜 / 名单公示 / 词库」引流统一改指官网公示路由：打野榜 → `/lists/ranked`、推荐白名单 → `/lists/whitelist`、黑名单 → `/lists/blacklist`、抢救 → `/lists/rescue`、词库 → `/lists/keywords`。`/v1/leaderboard` 数据接口不变。
 
 - 官网名单公示页（`feedsieve.win/lists`）改版：impact 风格设计体系（胶囊导航、表面层级卡片、白色主按钮、悬停下浮微动效），四 Tab（黑名单 / 白名单 / 词库 / 排位赛）；打野周榜入公示页；黑名单行可展开证据明细（证据帖 / 外链域名 / 换号别名 / 维护者说明，与公开 blocklist.yaml 口径一致）；新增词库 Tab 全量公示黄框规则（搜词即过滤，带版本与签名徽章）；申请（白名单自荐 / 误伤申诉）改为弹窗，`#apply` 可直达。数据与扩展执行的名单同源（`GET /v1/roster/latest`，最新签名快照）；指纹（不可读哈希）与其他公开面一样不进公示响应。免责声明见 `DISCLAIMER.md`，立场：公示反映社区意见的聚合，不构成事实认定，拉黑始终由扩展用户本人执行。
 - 公示申请接口 `POST /v1/applications` + `/verify`：邮箱验证码验证后进维护者复核队列（admin 新增「公示申请」页），防灌水限流。
@@ -27,7 +28,7 @@
 
 ### 变更
 
-- 官网并入社区 API Worker：`feedsieve.win`（首页、`/lists`、`/leaderboard`）由 `feedsieve-community-api` 一个部署提供，独立静态站 Worker 下线；公示页数据请求改同源。`/lists.html` 301 归一到 `/lists`。
+- 官网并入社区 API Worker：`feedsieve.win`（首页、`/lists`）由 `feedsieve-community-api` 一个部署提供，独立静态站 Worker 下线；公示页数据请求改同源。`/lists.html` 301 归一到 `/lists`。
 - 社区名单条目分类改为证据推理：外链域名（≥2 独立安装一致）→ 诈骗，达标话术指纹 → 重复刷屏，具体类票面判断压过历史回声票（社区名单来源的旧票不再计入分类）；维护者分类仍最高优先。入榜公式不变，只影响分类展示。
 - 黄框理由不再出现「N 人标记为其他」：票数与证据 / 分类分开表述，无证据、无具体票时只显示票数；统计桶「其他」改叫「垃圾账号」。
 - 存量本地拉黑票的「其他」分类按社区达标证据自动升级（只升不降），升级后随下次同步改写服务端票面分类。
@@ -213,7 +214,8 @@
 - 首个可用版本：黄框标注（内置名单 + 启发式，带理由）、顺手拉黑、待拉黑列表、一键批量拉黑（持久队列）、一键撤销、本地统计。
 - WXT + React 19 + MV3 最小权限架构；X DOM fixtures 锁定 reader→detector 契约；95 个单元测试；pre-push 本地质量门禁。
 
-[Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.8.3...HEAD
+[0.8.3]: https://github.com/realchendahuang/feedsieve/compare/v0.8.2...v0.8.3
 [0.8.0]: https://github.com/realchendahuang/feedsieve/compare/v0.7.5...v0.8.0
 [0.7.5]: https://github.com/realchendahuang/feedsieve/compare/v0.7.4...v0.7.5
 [0.7.4]: https://github.com/realchendahuang/feedsieve/compare/v0.7.3...v0.7.4

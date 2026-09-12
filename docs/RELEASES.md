@@ -1,5 +1,16 @@
 # Release Notes
 
+## v0.8.3 — 打野榜独立页下线，引流统一走官网公示路由（2026-09-12）
+
+- **/leaderboard 独立网页彻底下线**：`api.feedsieve.win/leaderboard` 观看页删除（两 host 均 404），`/v1/leaderboard` 数据接口与排位赛本身不变。官网公示路由（`feedsieve.win/lists/*`）才是唯一观看面。
+- **插件引流全部改指官网**：新增 `src/lib/platform/site-links.ts` 统一出口（生产指向 `https://feedsieve.win`，本地 wrangler dev 自动共 host）；打野弹窗「看全榜」→ `/lists/ranked`，黑名单/推荐白名单列表页头与词库页头新增官网入口图标，x.com 抢救动作组在同意匿名贡献时附「公示」链接 → `/lists/rescue`。
+- **验证**：全仓 vitest 552/552 + community-api 190/190（含 `/leaderboard` 404 断言）；lint/typecheck/构建通过；worker 已部署，线上生效已验证。
+
+发布产物：
+
+- `feedsieve-0.8.3-chrome.zip`（477.74 kB）
+- SHA-256：`a5672e97184301ad1562c4d945ce96a0e9d2e4fee3e315918a819d80a5bea07c`
+
 ## v0.8.2 — 每日拉黑额度改友情提醒（2026-09-08）
 
 - **额度不再硬性卡死**：24h 滚动额度用尽时队列照旧暂停并展示提醒，但点「仍要继续」即放行本轮队列（quotaOverride 随队列持久化，新队列自动恢复门控），用户执意继续不再需要等到明天；提醒文案如实说明被 X 临时限制的风险。429 风暴降级与认证失效清零的硬性兜底语义不变。
