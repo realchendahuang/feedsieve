@@ -17,7 +17,7 @@
 | **GitHub Releases** | 从 [Releases](https://github.com/realchendahuang/feedsieve/releases) 下载 `feedsieve-*-chrome.zip` 解压 → `chrome://extensions` 开「开发者模式」→「加载已解压的扩展程序」 |
 | **从源码构建** | `pnpm install && pnpm build:extension`，加载 `apps/extension/.output/chrome-mv3`（Node ≥ 22，pnpm） |
 
-Edge / Brave 等 Chromium 浏览器可用后两种方式加载。装好即用，无需注册任何账号。
+Edge / Brave 等 Chromium 浏览器同样推荐直接用上方商店版：Edge 首次访问商店页面时允许「来自其他商店的扩展」即可安装，自动同步更新（无需单独上架 Edge Add-ons）。装好即用，无需注册任何账号。
 
 ## 上手四步
 
@@ -80,5 +80,5 @@ FeedSieve 走的是你已登录会话的内部 Block 接口，与手动点屏蔽
 **白名单有几种？**
 两种：社区「验证正常」白名单（净抢救票 ≥3，与黑名单镜像，随签名快照下发、一票豁免）与维护者维护的[推荐白名单](https://github.com/realchendahuang/feedsieve/blob/main/community/lists/whitelist.yaml)（人工筛选的知名正常账号与博主）。两者都永不标注。
 
-**支持 Firefox / Safari / 其他平台吗？**
-不支持的。产品边界已拍板：只做 X + Chrome 系浏览器，理由见 [`VISION.md`](VISION.md)。
+**支持 Firefox / Safari / 移动端吗？**
+Edge / Brave 等 Chromium 浏览器直接从 Chrome 应用店安装即可（见上文安装）。Firefox 与移动端浏览器在渲染核心上是 Chromium 系基本都有兼容路径，属于未来会增加的方向（暂无排期），当前精力集中在 Chrome 版的功能与稳定；Safari 不在规划内。理由见 [`VISION.md`](VISION.md)。

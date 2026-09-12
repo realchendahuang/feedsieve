@@ -65,7 +65,7 @@
 | **GitHub Releases** | 从 [Releases](https://github.com/realchendahuang/feedsieve/releases) 下载 `feedsieve-*-chrome.zip` 并解压 → 打开 `chrome://extensions` 开启「开发者模式」→「加载已解压的扩展程序」 |
 | **从源码构建** | `git clone https://github.com/realchendahuang/feedsieve.git && pnpm install && pnpm build:extension`，然后加载 `apps/extension/.output/chrome-mv3`（需要 Node ≥ 22 与 pnpm） |
 
-其他 Chromium 浏览器（Edge / Brave 等）可用后两种方式加载。
+**Edge / Brave 等 Chromium 浏览器可直接装商店版**：Edge 打开商店页面时会提示「允许来自其他商店的扩展」，允许后点「添加至 Chrome」即可，无需单独上架 Edge Add-ons（也不用后两种方式）。
 
 ## 使用教程
 
