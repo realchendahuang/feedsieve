@@ -47,7 +47,11 @@ function htmlCacheKey(request: Request): Request | URL | string {
   return `https://site-cache.feedsieve.internal${url.pathname}${url.search}`;
 }
 
-async function cachedHtml(request: Request, build: () => Promise<Response>): Promise<Response> {
+async function cachedHtml(
+  request: Request,
+  ctx: { waitUntil: (p: Promise<unknown>) => void },
+  build: () => Promise<Response>,
+): Promise<Response> {
   if (request.method !== 'GET') return build();
   const key = htmlCacheKey(request);
   const hit = await htmlCache.match(key);
@@ -59,10 +63,17 @@ async function cachedHtml(request: Request, build: () => Promise<Response>): Pro
     // 否则页面会串到 API 域名的同路径 URL 上。边缘缓存由我们手动做：
     // 存入缓存的副本才带 fresh TTL，键用 .internal 合成前缀，与真实 URL 键空间隔离。
     // body 只能读一次（bodyBuf），served 与 cached 各持独立副本。
+    // TTL 300s、stale-while-revalidate 4h：公示数据随快照日更，60s 重渲染纯浪费。
     const bodyBuf = await res.arrayBuffer();
     const cached = new Response(bodyBuf.slice(0), res);
-    cached.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300, max-age=0');
-    await htmlCache.put(key, cached);
+    cached.headers.set(
+      'Cache-Control',
+      'public, s-maxage=300, stale-while-revalidate=14400, max-age=0',
+    );
+    // 写缓存走 waitUntil，不阻塞响应回边缘
+    ctx.waitUntil(
+      htmlCache.put(key, new Response(bodyBuf.slice(0), cached)),
+    );
     const served = new Response(bodyBuf.slice(0), res);
     served.headers.set('Cache-Control', 'private, max-age=0, must-revalidate');
     return served;
@@ -97,7 +108,7 @@ export default {
       if ((pathname.startsWith('/assets/') || pathname.startsWith('/fonts/')) && env.ASSETS) {
         return withSecurityHeaders(await env.ASSETS.fetch(request));
       }
-      return cachedHtml(request, async () =>
+      return cachedHtml(request, ctx, async () =>
         withSecurityHeaders(await ssrFetch(request, env, ctx)),
       );
     }

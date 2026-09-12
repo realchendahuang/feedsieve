@@ -68,11 +68,9 @@ export async function getBundledSnapshot(): Promise<StoredSnapshot | null> {
 export async function getBundledEntries(): Promise<unknown> {
   const snap = await getBundledSnapshot();
   if (!snap) return [];
-  try {
-    return (JSON.parse(snap.body) as { entries: unknown }).entries;
-  } catch {
-    return [];
-  }
+  // 与 getStoredCommunitySnapshot 共享解析缓存，不再重复 JSON.parse / 验签
+  const parsed = parseSnapshotCached(snap.body);
+  return parsed.ok ? (parsed.value.entries ?? []) : [];
 }
 
 export interface CommunitySettings {
@@ -95,12 +93,27 @@ export const DEFAULT_COMMUNITY_SETTINGS: CommunitySettings = {
   autoContribute: true,
 };
 
+/**
+ * 快照 body 解析结果按 body 字符串缓存：body 几 MB 且内容不可变，
+ * 但拉黑队列每个任务 / 每次 pause 门控回退都会重走 parseSnapshotBody
+ * （批量队列曾每秒重解析 2MB JSON）。单槽足够——新快照即新 body。
+ */
+type ParsedSnapshot = ReturnType<typeof parseSnapshotBody>;
+let parsedSnapshotSlot: { body: string; parsed: ParsedSnapshot } | null = null;
+
+function parseSnapshotCached(body: string): ParsedSnapshot {
+  if (parsedSnapshotSlot?.body !== body) {
+    parsedSnapshotSlot = { body, parsed: parseSnapshotBody(body) };
+  }
+  return parsedSnapshotSlot.parsed;
+}
+
 async function getStoredCommunitySnapshot(): Promise<StoredSnapshot | null> {
   cleanupLegacySnapshot();
   const result = await browser.storage.local.get(SNAPSHOT_KEY);
   const value = result[SNAPSHOT_KEY] as StoredSnapshot | undefined;
   if (value && typeof value.snapshot_version === 'string' && typeof value.body === 'string') {
-    const parsed = parseSnapshotBody(value.body);
+    const parsed = parseSnapshotCached(value.body);
     if (parsed.ok && parsed.value.snapshot_version === value.snapshot_version) {
       return value;
     }
@@ -125,7 +138,7 @@ export async function getCommunityKillSwitch(): Promise<
 > {
   const stored = await getStoredCommunitySnapshot();
   if (!stored) return undefined;
-  const parsed = parseSnapshotBody(stored.body);
+  const parsed = parseSnapshotCached(stored.body);
   return parsed.ok ? parsed.value.kill_switch : undefined;
 }
 

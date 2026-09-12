@@ -55,15 +55,9 @@ function flattenOfficialRules(catalog: KeywordPackCatalog): OfficialKeywordRule[
     pack.rules.map((rule) => ({ ...rule, category: pack.id })),
   );
 }
-export const OFFICIAL_KEYWORD_CATEGORIES: readonly KeywordCategoryDefinition[] =
-  BUNDLED_KEYWORD_PACK_CATALOG.packs.map(({ id, name, description }) => ({
-    id,
-    name,
-    description,
-  }));
-export const OFFICIAL_KEYWORD_RULES: readonly OfficialKeywordRule[] = flattenOfficialRules(
-  BUNDLED_KEYWORD_PACK_CATALOG,
-);
+// 官方分类定义 / 规则清单统一经 activeKeywordRules(catalog) / 目录对象读取；
+// 曾有的 OFFICIAL_KEYWORD_CATEGORIES/OFFICIAL_KEYWORD_RULES 顶层导出没有真实
+// 消费方，且随包目录改为异步加载后这里拿到的还是空目录，已删除。
 
 /**
  * 自定义词的稳定比较键：导入/合并也必须和实际匹配使用同一套归一化，
@@ -79,7 +73,7 @@ interface VariantTableShape {
   radicals: Record<string, string>;
   confusables: Record<string, string>;
 }
-export let VARIANT_TABLES: VariantTableShape | null = null;
+let VARIANT_TABLES: VariantTableShape | null = null;
 let variantLoad: Promise<void> | null = null;
 function buildVariantIndex(): void {
   VARIANT_BY_CODEPOINT.clear();
@@ -137,8 +131,18 @@ function applyVariantMaps(value: string): string {
   return previous;
 }
 
+/**
+ * 归一化是全部匹配的最热点（三轮变体映射 + 两遍正则），同一字段文本会被
+ * 数百条规则反复重算。页面内输入宇宙有限（昵称/账号/正文/简介），字符串键
+ * 有界缓存；超限整体清空——短命的 LRU 细节不重要，不熬内存即可。
+ */
+const NORMALIZE_CACHE = new Map<string, string>();
+const NORMALIZE_CACHE_MAX = 2048;
+
 export function normalizeKeywordPhrase(value: string): string {
-  return (
+  const cached = NORMALIZE_CACHE.get(value);
+  if (cached !== undefined) return cached;
+  const computed = (
     applyVariantMaps(
       applyVariantMaps(value.trim())
         .normalize('NFKC') // 全角、上标、数学字母、兼容汉字在此归并
@@ -151,22 +155,13 @@ export function normalizeKeywordPhrase(value: string): string {
       .replace(/[\p{Mn}\u{3164}\u{115F}\u{1160}]/gu, '')
       .toLocaleLowerCase()
   );
+  if (NORMALIZE_CACHE.size >= NORMALIZE_CACHE_MAX) NORMALIZE_CACHE.clear();
+  NORMALIZE_CACHE.set(value, computed);
+  return computed;
 }
 function textForMatch(value: string): string {
   // 去掉空白、标点、emoji/符号，处理“同·城 上-门”“福 利”等规避写法。
   return normalizeKeywordPhrase(value).replace(/[\p{P}\p{S}\s]+/gu, '');
-}
-function orderedTermsMatch(value: string, terms: readonly string[], maxGap: number): boolean {
-  const haystack = textForMatch(value);
-  let cursor = 0;
-  for (const term of terms) {
-    const needle = textForMatch(term);
-    const index = haystack.indexOf(needle, cursor);
-    if (index < 0) return false;
-    if (cursor > 0 && index - cursor > maxGap) return false;
-    cursor = index + needle.length;
-  }
-  return true;
 }
 /**
  * 纯 ASCII 短语（英文单词/缩写，可含单引号、&、连字符与空格）必须整词命中：
@@ -184,21 +179,46 @@ function asciiWordRegExp(phrase: string): RegExp | null {
     .join('\\W+');
   return new RegExp(`(?<![a-z0-9])${body}(?![a-z0-9])`, 'i');
 }
-/** 规则的纯 ASCII 整词正则按规则缓存：630+ 规则 × 每推每字段重建 RegExp 是纯浪费。 */
-const ASCII_WORD_REGEX_CACHE = new WeakMap<ActiveKeywordRule, RegExp | null>();
+/**
+ * 规则侧的全部派生量按规则缓存：630+ 规则的短语归一化 / 分词 needle /
+ * ASCII 整词正则（每推每字段重建是纯浪费）。规则对象随设置重建，WeakMap
+ * 自然失效，无须手动清。
+ */
+interface RuleMatchers {
+  phraseText: string;
+  needleTexts: string[] | null;
+  ascii: RegExp | null;
+}
+const RULE_MATCHERS_CACHE = new WeakMap<ActiveKeywordRule, RuleMatchers>();
 
-function asciiWordRegExpForRule(rule: ActiveKeywordRule): RegExp | null {
-  const cached = ASCII_WORD_REGEX_CACHE.get(rule);
-  if (cached !== undefined) return cached;
-  const built = asciiWordRegExp(rule.phrase);
-  ASCII_WORD_REGEX_CACHE.set(rule, built);
+function ruleMatchersForRule(rule: ActiveKeywordRule): RuleMatchers {
+  const cached = RULE_MATCHERS_CACHE.get(rule);
+  if (cached) return cached;
+  const needles = rule.terms?.length ? rule.terms.map(textForMatch) : null;
+  const built: RuleMatchers = {
+    phraseText: textForMatch(rule.phrase),
+    needleTexts: needles,
+    ascii: needles ? null : asciiWordRegExp(rule.phrase),
+  };
+  RULE_MATCHERS_CACHE.set(rule, built);
   return built;
 }
+
 function ruleMatchesText(value: string, rule: ActiveKeywordRule): boolean {
-  if (rule.terms?.length) return orderedTermsMatch(value, rule.terms, rule.maxGap ?? 12);
-  const ascii = asciiWordRegExpForRule(rule);
-  if (ascii) return ascii.test(normalizeKeywordPhrase(value));
-  return textForMatch(value).includes(textForMatch(rule.phrase));
+  const matchers = ruleMatchersForRule(rule);
+  if (matchers.needleTexts) {
+    const haystack = textForMatch(value);
+    let cursor = 0;
+    for (const needle of matchers.needleTexts) {
+      const index = haystack.indexOf(needle, cursor);
+      if (index < 0) return false;
+      if (cursor > 0 && index - cursor > (rule.maxGap ?? 12)) return false;
+      cursor = index + needle.length;
+    }
+    return true;
+  }
+  if (matchers.ascii) return matchers.ascii.test(normalizeKeywordPhrase(value));
+  return textForMatch(value).includes(matchers.phraseText);
 }
 export function isValidPhrase(value: string): boolean {
   const phrase = value.trim();

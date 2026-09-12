@@ -195,11 +195,28 @@ export function detect(
  * 生产 v0 值实测全部 'f' 开头（旧哈希高位坍缩），与 v1 的 '3' 前缀零重叠；
  * 假想的 '3' 开头 v0 旧值与 v1 距离属不同哈希族的伪随机值，阈值 2 必然拒绝。
  */
+/**
+ * 已知模板 hex→位向量的解析结果按集合缓存：指纹集有数千条，deep_clean
+ * 下每条 miss 推文都会整集遍历，每次重新 parse hex 是纯浪费。
+ * WeakMap 挂在集合对象上——快照更新产生新 Set 时自然失效。
+ */
+const SIMHASH_BITS_CACHE = new WeakMap<ReadonlySet<string>, Map<string, ReturnType<typeof simhashFromHex>>>();
+
+function knownSimhashBits(simhashes: ReadonlySet<string>): Map<string, ReturnType<typeof simhashFromHex>> {
+  let parsed = SIMHASH_BITS_CACHE.get(simhashes);
+  if (!parsed) {
+    parsed = new Map();
+    SIMHASH_BITS_CACHE.set(simhashes, parsed);
+  }
+  return parsed;
+}
+
 function findNearSimhash(text: string, simhashes: ReadonlySet<string>): string | null {
   const localV0 = fingerprintText(text);
   const localV1 = fingerprintTextV1(text);
   const localBitsV0 = localV0 ? simhashFromHex(localV0) : null;
   const localBitsV1 = localV1 ? simhashFromHex(localV1) : null;
+  const parsedBits = knownSimhashBits(simhashes);
 
   let nearest: string | null = null;
   let nearestDist = SIMHASH_HAMMING_THRESHOLD + 1;
@@ -207,7 +224,12 @@ function findNearSimhash(text: string, simhashes: ReadonlySet<string>): string |
     if (!localBitsV0 && !localBitsV1) {
       break;
     }
-    const knownBits = simhashFromHex(known);
+    let knownBits = parsedBits.get(known);
+    if (knownBits === undefined) {
+      knownBits = simhashFromHex(known);
+      parsedBits.set(known, knownBits);
+      if (parsedBits.size > 100_000) parsedBits.clear(); // 环形保鲜，不熬内存
+    }
     if (knownBits === null) {
       continue;
     }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   parseSnapshotBody,
   type CommunityEntry,
@@ -304,14 +304,23 @@ export default function App() {
   const pauseDestructive =
     killSwitchActive || (capabilities ? shouldPauseDestructive(capabilities) : false);
   const pageCount = pageMarked?.length ?? null;
-  const protectedHandles = new Set([
-    ...allowlist.map((item) => item.handle),
-    ...following.map((item) => item.handle),
-    ...blocked.map((item) => item.handle),
-  ]);
-  const communityTodo = communityEntries.filter(
-    (entry) => !protectedHandles.has(entry.handle.toLowerCase()),
-  ).length;
+  // 名单数千条时的 Set 构建/过滤别跟 toast、计时器等无关渲染一起跑
+  const protectedHandles = useMemo(
+    () =>
+      new Set([
+        ...allowlist.map((item) => item.handle),
+        ...following.map((item) => item.handle),
+        ...blocked.map((item) => item.handle),
+      ]),
+    [allowlist, following, blocked],
+  );
+  const communityTodoCount = useMemo(
+    () =>
+      communityEntries.filter(
+        (entry) => !protectedHandles.has(entry.handle.toLowerCase()),
+      ).length,
+    [communityEntries, protectedHandles],
+  );
 
   return (
     <main className="popup">
@@ -398,8 +407,8 @@ export default function App() {
         >
           <span className="nav-icon-wrap">
             <AppIcon name="lists" />
-            {communityTodo ? (
-              <span className="nav-badge">{Math.min(communityTodo, 99)}</span>
+            {communityTodoCount ? (
+              <span className="nav-badge">{Math.min(communityTodoCount, 99)}</span>
             ) : null}
           </span>
           <span>{t.lists}</span>

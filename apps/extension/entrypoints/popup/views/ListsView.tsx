@@ -227,13 +227,13 @@ export default function ListsView({
   }
 
   async function startCommunityQueue(): Promise<void> {
-    if (cloudEligible.length === 0) return;
+    if (communityEligible.length === 0) return;
     setRunning(true);
     notify(null);
     try {
       await sendToXPage({
         type: 'feedsieve:community-block-start',
-        items: cloudEligible.map((entry) => ({
+        items: communityEligible.map((entry) => ({
           handle: entry.handle,
           ...(entry.x_user_id ? { xUserId: entry.x_user_id } : {}),
           category: entry.category,
@@ -271,19 +271,20 @@ export default function ListsView({
     return () => window.clearInterval(id);
   }, [followingSyncActive, followingSync.updatedAt]);
 
-  const protectedHandles = new Set([
-    ...(allowlist ?? []).map((item) => item.handle),
-    ...(following ?? []).map((item) => item.handle),
-    ...(blocked ?? []).map((item) => item.handle),
-  ]);
-  const cloudEligibleSet = new Set(
-    communityEntries
-      .filter((entry) => !protectedHandles.has(entry.handle.toLowerCase()))
-      .map((entry) => entry.handle.toLowerCase()),
-  );
-  const cloudEligible = communityEntries.filter((entry) =>
-    cloudEligibleSet.has(entry.handle.toLowerCase()),
-  );
+  const { communityEligible, communityEligibleSet } = useMemo(() => {
+    const protectedSet = new Set([
+      ...(allowlist ?? []).map((item) => item.handle),
+      ...(following ?? []).map((item) => item.handle),
+      ...(blocked ?? []).map((item) => item.handle),
+    ]);
+    const eligible = communityEntries.filter(
+      (entry) => !protectedSet.has(entry.handle.toLowerCase()),
+    );
+    return {
+      communityEligible: eligible,
+      communityEligibleSet: new Set(eligible.map((entry) => entry.handle.toLowerCase())),
+    };
+  }, [communityEntries, allowlist, following, blocked]);
   const sortedEntries = useMemo(() => {
     if (sortMode === 'alpha') {
       return [...communityEntries].sort((a, b) => a.handle.localeCompare(b.handle));
@@ -292,6 +293,20 @@ export default function ListsView({
       (a, b) => b.net_votes - a.net_votes || a.handle.localeCompare(b.handle),
     );
   }, [communityEntries, sortMode]);
+  // 名单可达数千条；一次性 mount 全部节点在弹窗/侧栏里既卡渲染又占内存。
+  // 先挂前 100 条，「加载剩余」逐段放出（与官网公示页分页同口径）。
+  // 排序或名单变更后在 render 期直接重置回第一页（派生状态模式，不借 effect）。
+  const [entryLimit, setEntryLimit] = useState(100);
+  const visibleEntries = useMemo(
+    () => sortedEntries.slice(0, entryLimit),
+    [sortedEntries, entryLimit],
+  );
+  const [pageKey, setPageKey] = useState('');
+  const pageKeyNow = `${sortMode}|${sortedEntries.length}`;
+  if (pageKey !== pageKeyNow) {
+    setPageKey(pageKeyNow);
+    setEntryLimit(100);
+  }
   const queueSummary = blockQueueProgress(queue);
   const queueDone = queueSummary.success + queueSummary.failed;
   const queueActive =
@@ -331,7 +346,7 @@ export default function ListsView({
           onClick={() => setListView('community')}
         >
           <span>{t.communityClean}</span>
-          <strong>{cloudEligible.length}</strong>
+          <strong>{communityEligible.length}</strong>
         </button>
         <button
           id="blocked-list-tab"
@@ -387,10 +402,10 @@ export default function ListsView({
             <div className="list-head-actions">
               <button
                 className="secondary-action community-clean-action"
-                disabled={running || queueActive || cloudEligible.length === 0 || pauseDestructive}
+                disabled={running || queueActive || communityEligible.length === 0 || pauseDestructive}
                 onClick={() => void startCommunityQueue()}
               >
-                {t.startCommunityClean(cloudEligible.length)}
+                {t.startCommunityClean(communityEligible.length)}
               </button>
               <div className="sort-toggle" role="group" aria-label={`${t.sortVotes}/${t.sortAlpha}`}>
                 <button
@@ -448,9 +463,10 @@ export default function ListsView({
             ) : null}
 
             {communityEntries.length > 0 ? (
-              <ul className="manage-list community-list" aria-label={t.communityClean}>
-                {sortedEntries.map((entry) => {
-                  const excluded = !cloudEligibleSet.has(entry.handle.toLowerCase());
+              <>
+                <ul className="manage-list community-list" aria-label={t.communityClean}>
+                  {visibleEntries.map((entry) => {
+                  const excluded = !communityEligibleSet.has(entry.handle.toLowerCase());
                   return (
                     <li key={entry.handle} className={`manage-item community-item${excluded ? ' is-excluded' : ''}`}>
                       <span className={`account-avatar${excluded ? ' is-muted' : ''}`} aria-hidden="true">
@@ -473,7 +489,17 @@ export default function ListsView({
                   );
                 })}
               </ul>
-            ) : communityEntriesLoading ? (
+              {sortedEntries.length > visibleEntries.length ? (
+                <button
+                  type="button"
+                  className="show-more-entries"
+                  onClick={() => setEntryLimit((limit) => limit + 100)}
+                >
+                  {t.showMoreEntries(sortedEntries.length - visibleEntries.length)}
+                </button>
+              ) : null}
+            </>
+          ) : communityEntriesLoading ? (
               <ul className="manage-list community-list" aria-hidden="true">
                 <li className="manage-item community-item">
                   <span className="account-avatar is-muted" aria-hidden="true">…</span>

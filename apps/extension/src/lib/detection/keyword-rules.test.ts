@@ -6,10 +6,19 @@ import {
   createKeywordHeuristics,
   getKeywordRuleSettings,
   isOfficialKeywordCategorySubscribed,
-  OFFICIAL_KEYWORD_RULES,
   setOfficialKeywordCategorySubscribed,
   setOfficialKeywordRuleEnabled,
 } from './keyword-rules';
+import { BUNDLED_KEYWORD_PACK_CATALOG } from './keyword-packs';
+
+/** 全量官方规则数（从随包目录直接算，测试里 Node 态已同步装入） */
+const OFFICIAL_RULE_COUNT = BUNDLED_KEYWORD_PACK_CATALOG.packs.reduce(
+  (count, pack) => count + pack.rules.length,
+  0,
+) as number;
+const ADULT_OFFICIAL_RULE_COUNT = (BUNDLED_KEYWORD_PACK_CATALOG.packs
+  .find((pack) => pack.id === 'adult_gray_traffic')
+  ?.rules.length ?? 0) as number;
 
 let storage: Record<string, unknown>;
 
@@ -35,7 +44,7 @@ describe('本地关键词规则', () => {
     expect(
       rule?.check({ handle: 'bait', text: '应该没人比我玩的开了吧 🤚 😊 我福不黑不信你看' }),
     ).toContain('我福不黑');
-    expect(activeKeywordRules(settings)).toHaveLength(OFFICIAL_KEYWORD_RULES.length);
+    expect(activeKeywordRules(settings)).toHaveLength(OFFICIAL_RULE_COUNT);
   });
 
   it('首次安装默认订阅黄推 + crypto 假抽奖两个默认包，旧分类是宽容空操作', async () => {
@@ -43,7 +52,7 @@ describe('本地关键词规则', () => {
     expect(isOfficialKeywordCategorySubscribed(settings, 'adult_gray_traffic')).toBe(true);
     expect(isOfficialKeywordCategorySubscribed(settings, 'crypto_giveaway_scams')).toBe(true);
     expect(isOfficialKeywordCategorySubscribed(settings, 'crypto_scam')).toBe(false);
-    expect(activeKeywordRules(settings)).toHaveLength(OFFICIAL_KEYWORD_RULES.length);
+    expect(activeKeywordRules(settings)).toHaveLength(OFFICIAL_RULE_COUNT);
 
     // 2026-09-11 起词库只保留黄推包；老版本备份把 crypto_scam 标成订阅时，
     // 该分类没有任何官方规则，不产出条目也不报错（迁移兼容面）
@@ -122,7 +131,7 @@ describe('本地关键词规则', () => {
     expect(
       activeKeywordRules(settings).filter((rule) => rule.category === 'adult_gray_traffic'),
     ).toHaveLength(
-      OFFICIAL_KEYWORD_RULES.filter((rule) => rule.category === 'adult_gray_traffic').length,
+      ADULT_OFFICIAL_RULE_COUNT,
     );
   });
 

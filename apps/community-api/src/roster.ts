@@ -58,20 +58,45 @@ function asStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 }
 
+/**
+ * 公示 roster 按 snapshot_version 模块级 memo：6 个 SSR 路由 / OG 卡 /
+ * /v1/roster/latest 在同一个 isolate 生命周期里共享一次 R2 读 + 全量 parse。
+ * 快照版本化且发布后不可变，换版本即自然失效；容量上限 2 份防 grow。
+ */
+let rosterMemo: { version: string; value: RosterPayload } | null = null;
+
 export async function getPublicRoster(env: Cloudflare.Env): Promise<RosterPayload | null> {
   const latest = await getLatestSnapshot(env);
-  const bodyRaw = await getLatestSnapshotFile(env, SNAPSHOT_PACK);
-  if (!latest || !bodyRaw) return null;
+  if (!latest) return null;
+  // manifest 很小，只取版本号做 memo 键；大 body 在 miss 时才拉
+  let manifestVersion: string;
+  try {
+    const m = JSON.parse(latest.manifest) as { snapshot_version?: unknown };
+    if (typeof m.snapshot_version !== 'string') return null;
+    manifestVersion = m.snapshot_version;
+  } catch {
+    return null;
+  }
+  if (rosterMemo && rosterMemo.version === manifestVersion) return rosterMemo.value;
 
-  let manifest: { snapshot_version?: unknown; generated_at?: unknown; signature?: unknown };
+  const bodyRaw = await getLatestSnapshotFile(env, SNAPSHOT_PACK);
+  if (!bodyRaw) return null;
+
+  let generatedAt: unknown;
+  let signature: unknown;
   let body: { entries?: unknown; whitelist?: unknown; verified?: unknown };
   try {
-    manifest = JSON.parse(latest.manifest) as typeof manifest;
+    const manifest = JSON.parse(latest.manifest) as {
+      generated_at?: unknown;
+      signature?: unknown;
+    };
+    generatedAt = manifest.generated_at;
+    signature = manifest.signature;
     body = JSON.parse(bodyRaw) as typeof body;
   } catch {
     return null;
   }
-  if (typeof manifest.snapshot_version !== 'string' || typeof manifest.generated_at !== 'string') {
+  if (typeof generatedAt !== 'string') {
     return null;
   }
 
@@ -136,12 +161,14 @@ export async function getPublicRoster(env: Cloudflare.Env): Promise<RosterPayloa
     }
   }
 
-  return {
-    snapshot_version: manifest.snapshot_version,
-    generated_at: manifest.generated_at,
-    signed: manifest.signature != null,
+  const payload = {
+    snapshot_version: manifestVersion,
+    generated_at: generatedAt,
+    signed: signature != null,
     policy: publicPolicy(),
     blacklist: { count: blacklist.length, entries: blacklist },
     whitelist: { maintained, verified },
   };
+  rosterMemo = { version: payload.snapshot_version, value: payload };
+  return payload;
 }

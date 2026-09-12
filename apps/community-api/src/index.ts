@@ -751,9 +751,10 @@ export function createApp() {
     });
   });
 
-  // 公开政策：阈值不藏在后端黑箱里
+  // 公开政策：阈值不藏在后端黑箱里。数据只在部署/政策变更时更新，
+  // 无须每次轮询都打 Worker/D1。
   app.get('/v1/policy', (c) => {
-    c.header('Cache-Control', 'no-store');
+    c.header('Cache-Control', 'public, max-age=0, s-maxage=300');
     return c.json(publicPolicy());
   });
 
