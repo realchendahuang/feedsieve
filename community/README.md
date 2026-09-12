@@ -90,7 +90,7 @@ whitelist  推荐白名单：维护者在 GitHub 维护 whitelist.yaml，公开�
 
 白名单的唯一写入通道是公开仓库：
 
-- **提交**：PR 修改 [`lists/whitelist.yaml`](lists/whitelist.yaml) 的 `entries`，每条必须带 4-240 字入册说明（note，公开问责）。
+- **提交**：PR 修改 [`lists/whitelist.yaml`](lists/whitelist.yaml) 的 `entries`，每条必须带 4-240 字入册说明（note，公开问责）。社区自助通道：填 [Issue 模板「推荐白名单申请」](../.github/ISSUE_TEMPLATE/whitelist-request.yml)，仓库所有者手动跑 `scripts/ingest-whitelist-issues.mjs` 把合规申请写进该文件（无定时、不自动收录）。
 - **审核**：维护者人工审核合并。入册标准：误标申诉经核实、知名正常账号等；不接受匿名批量提交。
 - **生效**：合并后运行 [`scripts/publish-community-whitelist.sh`](../scripts/publish-community-whitelist.sh)（`--check` 只校验预览；不带参数才写库）。脚本以「文件为唯一事实」整体同步：文件里删除的账号从白名单撤销。快照对白名单变化按「当日一版」节流发布，运营可在社区后台显式发布立即生效。
 - **审计**：`whitelist.yaml` 的 git 历史就是白名单的完整变更记录；数据库另有 `maintainer_whitelist_audit` 审计表兜底。

@@ -14,3 +14,7 @@ export const CHROME_STORE_URL =
 export function xProfileUrl(handle: string): string {
   return `https://x.com/${encodeURIComponent(handle)}`;
 }
+
+/** 推荐白名单入册申请（GitHub Issue 表单，维护者手动拉取后入册） */
+export const WHITELIST_ISSUE_URL =
+  `${GITHUB_URL}/issues/new?template=whitelist-request.yml`;

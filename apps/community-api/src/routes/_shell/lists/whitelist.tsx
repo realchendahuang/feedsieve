@@ -3,6 +3,7 @@ import { getRosterData } from '@/site/data.functions';
 import { pageHead } from '@/site/seo';
 import { ListsTabs, ListPageHeader, HelpIcon } from '@/site/pages/lists/lists-common';
 import { WhitelistPanel } from '@/site/pages/lists/WhitelistPanel';
+import { WHITELIST_ISSUE_URL } from '@/site/site';
 
 export const Route = createFileRoute('/_shell/lists/whitelist')({
   head: () =>
@@ -27,8 +28,16 @@ function WhitelistRoute() {
         aside={
           <div className="flex items-center gap-3">
             <ListsTabs />
+            <a
+              href={WHITELIST_ISSUE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-full border border-line px-3.5 py-1.5 text-sm font-semibold text-mist transition-colors hover:text-ink"
+            >
+              申请入册
+            </a>
             <HelpIcon ariaLabel="白名单说明">
-              推荐白名单为维护者入册账号：扩展在任何识别强度下都不会把该账号标出或拉黑。
+              推荐白名单为维护者入册账号：扩展在任何识别强度下都不会把该账号标出或拉黑。想加入？点「申请入册」提交 Issue。
             </HelpIcon>
           </div>
         }

@@ -121,7 +121,7 @@ x.com
 - 维护者通过受 Cloudflare Access 保护的 [React 管理后台](apps/admin)维护草稿、显式发布或回退条目。
 - **YAML for humans, JSON for machines**：[`community/lists/blocklist.yaml`](community/lists/blocklist.yaml) 供审计 / Diff / Fork；[`community/lists/official.json`](community/lists/official.json) + [`community/lists/manifest.json`](community/lists/manifest.json) 供扩展下载与校验。
 - 扩展刷 X 时**零实时请求**：快照在本地建索引，滚动时间线不逐号查询服务器。
-- **误伤有解药**：社区「验证正常」白名单（净抢救票 ≥3，与黑名单镜像）随签名快照一并下发，命中即一票豁免；另有维护者人工筛选的[推荐白名单](community/lists/whitelist.yaml)（含博主简介），两处白名单账号永不标注。
+- **误伤有解药**：社区「验证正常」白名单（净抢救票 ≥3，与黑名单镜像）随签名快照一并下发，命中即一票豁免；另有维护者人工筛选的[推荐白名单](community/lists/whitelist.yaml)（含博主简介），两处白名单账号永不标注。想进推荐白名单？填 [Issue 模板「推荐白名单申请」](.github/ISSUE_TEMPLATE/whitelist-request.yml)，仓库所有者手动拉取复核后入册。
 - **打野排位**：拉黑按共识击杀计分，周赛季排名公开可看；玩法见 [`docs/HUNTING.md`](docs/HUNTING.md)。
 
 完整机制与字段见 [`community/README.md`](community/README.md) 与 [`docs/OPEN_SOURCE_GOVERNANCE.md`](docs/OPEN_SOURCE_GOVERNANCE.md)。
