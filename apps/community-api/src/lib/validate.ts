@@ -10,7 +10,7 @@ export interface ValidReport {
   xUserId: string | null;
   reason: ReportReason;
   evidencePostId: string | null;
-  /** 内容指纹（v0.4）：客户端归一化话术文本后的 64bit 哈希，原文不出设备 */
+  /** 内容指纹（v0.4）：客户端归一化话术文本后的 64bit 哈希 */
   contentFingerprint: string | null;
   /** 外链 hostname（v0.4）：去重后小写数组；无效项在客户端即被过滤，这里兜底再滤一次 */
   linkDomains: string[];
@@ -18,6 +18,11 @@ export interface ValidReport {
   detectionSource: string | null;
   /** 击杀时刻探活结果（#2 定稿）：扩展在用户浏览器对该 handle 做的一次 guest 存活探测；旧客户端缺省为 null */
   liveness: 'alive' | 'dead' | null;
+  /** 判定材料（2026-09-12 拍板随票上报，推文本就是公开内容）：推文原文 / 作者昵称 / 简介原文。
+   * 旧客户端缺省 null；纯分析用，不进快照公开面。 */
+  tweetText: string | null;
+  displayName: string | null;
+  bio: string | null;
 }
 
 const HANDLE_RE = HANDLE_INPUT_RE; // 共享正则（与 admin 表单、extension 手动输入同源）
@@ -117,6 +122,21 @@ export function validateReport(raw: unknown): ReportValidation {
     liveness = r.liveness;
   }
 
+  // 判定材料（公开推文原文/昵称/简介）：可选，长度上限防 D1 膨胀；坏类型整条拒收
+  const violation = validateEvidenceText(r.tweet_text, MAX_TWEET_TEXT_LENGTH, 'tweet_text');
+  if (violation) return { ok: false, error: violation };
+  const tweetText = asTrimmedOrNull(r.tweet_text);
+  const displayNameViolation = validateEvidenceText(
+    r.display_name,
+    MAX_DISPLAY_NAME_LENGTH,
+    'display_name',
+  );
+  if (displayNameViolation) return { ok: false, error: displayNameViolation };
+  const displayName = asTrimmedOrNull(r.display_name);
+  const bioViolation = validateEvidenceText(r.bio, MAX_BIO_TEXT_LENGTH, 'bio');
+  if (bioViolation) return { ok: false, error: bioViolation };
+  const bio = asTrimmedOrNull(r.bio);
+
   return {
     ok: true,
     report: {
@@ -128,8 +148,33 @@ export function validateReport(raw: unknown): ReportValidation {
       linkDomains: domains.domains,
       detectionSource,
       liveness,
+      tweetText,
+      displayName,
+      bio,
     },
   };
+}
+
+const MAX_TWEET_TEXT_LENGTH = 500;
+const MAX_DISPLAY_NAME_LENGTH = 100;
+const MAX_BIO_TEXT_LENGTH = 500;
+
+function validateEvidenceText(value: unknown, max: number, field: string): string | null {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  if (typeof value !== 'string') {
+    return `invalid_${field}`;
+  }
+  if (value.trim().length === 0 || value.length > max) {
+    return `invalid_${field}`;
+  }
+  return null;
+}
+
+function asTrimmedOrNull(value: unknown): string | null {
+  const trimmed = typeof value === 'string' ? value.trim() : '';
+  return trimmed ? trimmed : null;
 }
 
 export type RescueValidation =

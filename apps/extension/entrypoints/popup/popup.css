@@ -829,13 +829,13 @@ input:focus-visible + span {
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
 }
 
-.review-item.is-excluded {
+.review-item.is-deselected {
   background: #fbfbfb;
   border-color: #e4e4e7;
   opacity: 0.58;
 }
 
-.review-item.is-excluded:hover {
+.review-item.is-deselected:hover {
   opacity: 0.88;
 }
 
@@ -922,19 +922,6 @@ input:focus-visible + span {
   color: var(--fs-ink);
 }
 
-.excluded-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: #f4f4f5;
-  border: 1px solid #e4e4e7;
-  color: #71717a;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1.3;
-}
-
 .review-snippet {
   display: flex;
   align-items: flex-start;
@@ -945,7 +932,7 @@ input:focus-visible + span {
   margin-top: 1px;
 }
 
-.review-item.is-excluded .review-snippet {
+.review-item.is-deselected .review-snippet {
   border-left-color: #cbd5e1;
   background: #f1f5f9;
 }
@@ -963,9 +950,8 @@ input:focus-visible + span {
   overflow: hidden;
 }
 
-.review-item.is-excluded .snippet-text {
+.review-item.is-deselected .snippet-text {
   color: #94a3b8;
-  text-decoration: line-through;
 }
 
 .clean-bottom-bar {
@@ -993,6 +979,24 @@ input:focus-visible + span {
 .review-item:last-child,
 .manage-item:last-child {
   border-bottom: 0;
+}
+
+/* 拉黑记录展开的推文原文：整行独占，可滚（固定像素弹窗内防溢出） */
+.manage-item .blocked-tweet-text {
+  flex: 0 0 100%;
+  margin: 0;
+  max-height: 140px;
+  overflow-y: auto;
+  padding: 8px 10px;
+  box-sizing: border-box;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: rgba(227, 209, 173, 0.75);
+  font-size: 12px;
+  line-height: 1.5;
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.15);
+  border-radius: 6px;
 }
 
 .account-avatar {
@@ -1195,18 +1199,6 @@ input:focus-visible + span {
   background: #fef2f2;
   color: #dc2626;
   border-color: #fca5a5;
-}
-
-.item-btn-restore {
-  background: #fffbeb;
-  color: #b45309;
-  border: 1px solid rgba(245, 158, 11, 0.4);
-  font-weight: 750;
-}
-
-.item-btn-restore:hover:not(:disabled) {
-  background: #fef3c7;
-  border-color: var(--fs-accent);
 }
 
 .item-btn-block {

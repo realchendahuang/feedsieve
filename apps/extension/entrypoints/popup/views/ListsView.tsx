@@ -86,6 +86,8 @@ export default function ListsView({
   const t = UI_COPY[language];
   const [listView, setListView] = useState<ListView>(initialListView);
   const [blocked, setBlocked] = useState<BlockedAccount[] | null>(null);
+  /** 当前展开推文原文的拉黑记录（单选互斥，handle 为键） */
+  const [expandedTweet, setExpandedTweet] = useState<string | null>(null);
   const [allowlist, setAllowlist] = useState<AllowlistItem[] | null>(null);
   const [following, setFollowing] = useState<FollowingAllowlistItem[] | null>(null);
   const [followingSync, setFollowingSync] = useState<FollowingSyncState>({
@@ -534,6 +536,18 @@ export default function ListsView({
                         {formatDate(account.blockedAt, language)}
                       </span>
                     </div>
+                    {account.tweetSnippet ? (
+                      <button
+                        type="button"
+                        className="secondary-inline"
+                        aria-expanded={expandedTweet === account.handle}
+                        onClick={() => {
+                          setExpandedTweet(expandedTweet === account.handle ? null : account.handle);
+                        }}
+                      >
+                        {t.blockedTweet}
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       className="secondary-inline"
@@ -542,6 +556,9 @@ export default function ListsView({
                     >
                       {t.undo}
                     </button>
+                    {expandedTweet === account.handle && account.tweetSnippet ? (
+                      <blockquote className="blocked-tweet-text">{account.tweetSnippet}</blockquote>
+                    ) : null}
                   </li>
                 ))}
               </ul>

@@ -2,7 +2,10 @@
  * 社区贡献上报（Phase F；v0.4 载荷扩容）。
  *
  * 没有逐条弹窗。用户明确维护的本地黑名单与白名单在总开关开启时同步；
- * 黑名单作为正样本，白名单作为负样本。绝不上传浏览历史或推文原文。
+ * 黑名单作为正样本，白名单作为负样本。绝不上传浏览历史。
+ *
+ * 判定材料（推文原文/昵称/简介）随票上报：2026-09-12 用户拍板（推文本就是公开内容），
+ * 用于后台针对性误报分析与规则升级；只在用户拉黑成功后的显式判断里携带。
  *
  * 网络失败进本地积压队列，由 background 在启动时补交（尽力而为）。
  */
@@ -25,6 +28,10 @@ export interface ContributionItem {
   detectionSource?: string;
   /** 击杀时刻探活结果（#2）：现场 UserByScreenName 解析得来的存活观测；缓存命中时缺省 */
   liveness?: 'alive' | 'dead';
+  /** 判定材料（2026-09-12 用户拍板随票上报）：推文原文 / 拉黑时刻作者昵称 / 简介原文。 */
+  tweetText?: string;
+  displayName?: string;
+  bio?: string;
 }
 
 const INSTALLATION_KEY = 'installationId';
@@ -43,6 +50,9 @@ type LocalLabel =
       linkDomains?: string[];
       detectionSource?: string;
       liveness?: 'alive' | 'dead';
+      tweetText?: string;
+      displayName?: string;
+      bio?: string;
     }
   | {
       label: 'allowed';
@@ -348,6 +358,9 @@ async function runLocalLabelSync(): Promise<LabelSyncSummary> {
             linkDomains: label.linkDomains,
             detectionSource: label.detectionSource,
             liveness: label.liveness,
+            tweetText: label.tweetText,
+            displayName: label.displayName,
+            bio: label.bio,
           }),
         ),
       },
@@ -441,6 +454,9 @@ async function collectLocalLabels(): Promise<Map<string, LocalLabel>> {
       ...(item.linkDomains?.length ? { linkDomains: item.linkDomains } : {}),
       ...(item.detectionSource ? { detectionSource: item.detectionSource } : {}),
       ...(item.liveness ? { liveness: item.liveness } : {}),
+      ...(item.tweetSnippet ? { tweetText: item.tweetSnippet } : {}),
+      ...(item.displayName ? { displayName: item.displayName } : {}),
+      ...(item.bio ? { bio: item.bio } : {}),
     });
   }
   for (const item of allowed) {
@@ -472,6 +488,10 @@ function labelSignature(label: LocalLabel): string {
           [...(label.linkDomains ?? [])].sort(),
           label.detectionSource ?? '',
           label.liveness ?? '',
+          // 判定材料变了要重同步：服务端随票更新原文/昵称/简介
+          label.tweetText ?? '',
+          label.displayName ?? '',
+          label.bio ?? '',
         ]
       : [
           label.label,
@@ -522,6 +542,10 @@ function reportPayload(item: ContributionItem): Record<string, unknown> {
     ...(item.linkDomains?.length ? { link_domains: item.linkDomains } : {}),
     ...(item.detectionSource ? { detection_source: item.detectionSource } : {}),
     ...(item.liveness ? { liveness: item.liveness } : {}),
+    // 判定材料（2026-09-12 拍板）：随票上报，后台据此做针对性误报/聚类分析
+    ...(item.tweetText ? { tweet_text: item.tweetText } : {}),
+    ...(item.displayName ? { display_name: item.displayName } : {}),
+    ...(item.bio ? { bio: item.bio } : {}),
   };
 }
 

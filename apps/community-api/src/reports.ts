@@ -349,8 +349,8 @@ export async function processReportBatch(
       env.DB.prepare(
         `INSERT INTO reports
            (handle, x_user_id, reason, evidence_post_id, installation_id, client_version, created_at,
-            content_fingerprint, link_domains, detection_source)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+            content_fingerprint, link_domains, detection_source, tweet_text, display_name, bio)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
          ON CONFLICT(installation_id, handle) DO UPDATE SET
            x_user_id = COALESCE(excluded.x_user_id, reports.x_user_id),
            reason = excluded.reason,
@@ -359,7 +359,10 @@ export async function processReportBatch(
            created_at = excluded.created_at,
            content_fingerprint = COALESCE(excluded.content_fingerprint, reports.content_fingerprint),
            link_domains = COALESCE(excluded.link_domains, reports.link_domains),
-           detection_source = COALESCE(excluded.detection_source, reports.detection_source)`,
+           detection_source = COALESCE(excluded.detection_source, reports.detection_source),
+           tweet_text = COALESCE(excluded.tweet_text, reports.tweet_text),
+           display_name = COALESCE(excluded.display_name, reports.display_name),
+           bio = COALESCE(excluded.bio, reports.bio)`
       )
         .bind(
           canonical,
@@ -372,6 +375,9 @@ export async function processReportBatch(
           r.contentFingerprint,
           r.linkDomains.length > 0 ? JSON.stringify(r.linkDomains) : null,
           r.detectionSource,
+          r.tweetText,
+          r.displayName,
+          r.bio,
         ),
     );
 

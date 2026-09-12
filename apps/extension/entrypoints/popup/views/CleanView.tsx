@@ -58,7 +58,13 @@ export default function CleanView({
   const [operatingHandles, setOperatingHandles] = useState<Set<string>>(new Set());
   const [refreshing, setRefreshing] = useState(false);
   const [queue, setQueue] = useState<PersistentBlockQueueState | null>(null);
-  const [excludedHandles, setExcludedHandles] = useState<Set<string>>(() => new Set());
+  /**
+   * 行勾选 = 只控制是否参与本次批量拉黑（行本身保留在列表里）；
+   * 「剔除」按钮 = 本会话内把整行从清单移除（dismissedHandles 跨刷新保留，
+   * 直到刷新后重新扫描出新的命中）。
+   */
+  const [deselectedHandles, setDeselectedHandles] = useState<Set<string>>(() => new Set());
+  const [dismissedHandles, setDismissedHandles] = useState<Set<string>>(() => new Set());
   /** 追踪上一个队列状态：page-batch 收尾时据此判断是否该刷新页面黄框。 */
   const pageBatchQueueRef = useRef<PersistentBlockQueueState | null>(null);
   // 安全额度条：滚动 24h 已用数（账本事件驱动更新，渲染期不调 Date.now）
@@ -115,16 +121,20 @@ export default function CleanView({
 
   const pageCount = pageMarked?.length ?? null;
 
-  const pendingItems = useMemo(() => {
+  const displayedItems = useMemo(() => {
     if (!pageMarked) return [];
-    return pageMarked.filter((item) => !excludedHandles.has(item.handle));
-  }, [pageMarked, excludedHandles]);
+    return pageMarked.filter((item) => !dismissedHandles.has(item.handle));
+  }, [pageMarked, dismissedHandles]);
+
+  const pendingItems = useMemo(() => {
+    return displayedItems.filter((item) => !deselectedHandles.has(item.handle));
+  }, [displayedItems, deselectedHandles]);
 
   const pendingCount = pendingItems.length;
-  const excludedCount = (pageMarked?.length ?? 0) - pendingCount;
+  const deselectedCount = displayedItems.length - pendingCount;
 
-  function toggleExclude(handle: string): void {
-    setExcludedHandles((prev) => {
+  function toggleSelect(handle: string): void {
+    setDeselectedHandles((prev) => {
       const next = new Set(prev);
       if (next.has(handle)) {
         next.delete(handle);
@@ -135,12 +145,22 @@ export default function CleanView({
     });
   }
 
+  /** 「剔除」：整行移出清单；同时清掉勾选态，防止重建后残留。 */
+  function dismissItem(handle: string): void {
+    setDismissedHandles((prev) => new Set(prev).add(handle));
+    setDeselectedHandles((prev) => {
+      const next = new Set(prev);
+      next.delete(handle);
+      return next;
+    });
+  }
+
   function toggleSelectAll(): void {
-    if (!pageMarked || pageMarked.length === 0) return;
-    if (excludedHandles.size > 0) {
-      setExcludedHandles(new Set());
+    if (displayedItems.length === 0) return;
+    if (deselectedHandles.size > 0) {
+      setDeselectedHandles(new Set());
     } else {
-      setExcludedHandles(new Set(pageMarked.map((item) => item.handle)));
+      setDeselectedHandles(new Set(displayedItems.map((item) => item.handle)));
     }
   }
 
@@ -202,6 +222,13 @@ export default function CleanView({
         detectionReason: item.reason,
       }, item.displayName);
       notify(t.allowlistAdded(item.handle));
+      // 本地立即移除，不等 content script 储库回调链路广播回来的刷新
+      setDismissedHandles((prev) => new Set(prev).add(item.handle));
+      setDeselectedHandles((prev) => {
+        const next = new Set(prev);
+        next.delete(item.handle);
+        return next;
+      });
       await refreshPageMarked();
     } catch {
       notify(t.openXNotice);
@@ -296,44 +323,49 @@ export default function CleanView({
             <p>{running ? t.processing : t.pageClean}</p>
             {!running ? <HelpIcon text={t.pageCleanHint} /> : null}
           </div>
+        ) : displayedItems.length === 0 ? (
+          <div className="clean-state">
+            <p>{t.allDismissed}</p>
+            <HelpIcon text={t.pageCleanHint} />
+          </div>
         ) : (
           <>
             <div className="selection-toolbar">
               <span className="selection-summary">
-                {t.selectedCount(pendingCount, pageCount)}
+                {t.selectedCount(pendingCount, displayedItems.length)}
               </span>
               <button
                 type="button"
                 className="toolbar-text-btn"
                 onClick={toggleSelectAll}
               >
-                {excludedHandles.size > 0 ? t.selectAll : t.deselectAll}
+                {deselectedHandles.size > 0 ? t.selectAll : t.deselectAll}
               </button>
             </div>
 
             <ul className="review-list" aria-label={t.pageMarked}>
-              {pageMarked!.map((item) => {
+              {displayedItems.map((item) => {
                 const isOperating = operatingHandles.has(item.handle);
-                const isExcluded = excludedHandles.has(item.handle);
+                const isDeselected = deselectedHandles.has(item.handle);
                 return (
                   <li
                     key={item.handle}
-                    className={`review-item${isExcluded ? ' is-excluded' : ''}`}
+                    className={`review-item${isDeselected ? ' is-deselected' : ''}`}
                   >
                     <div className="review-item-header">
                       <div className="review-meta-group">
                         <label
                           className="checkbox-control"
-                          title={isExcluded ? t.restoreItem : t.excludeItemHint}
+                          title={t.excludeItemHint}
                         >
                           <input
                             type="checkbox"
-                            checked={!isExcluded}
-                            onChange={() => toggleExclude(item.handle)}
+                            checked={!isDeselected}
+                            onChange={() => toggleSelect(item.handle)}
                             aria-label={`${t.excludeItem}: @${item.handle}`}
                           />
                           <span className="checkbox-box" aria-hidden="true">
-                            {!isExcluded ? <AppIcon name="check" size={13} /> : null}
+                            {!isDeselected ? <AppIcon name="check" size={13} /> : null}
                           </span>
                         </label>
 
@@ -356,20 +388,16 @@ export default function CleanView({
                             {item.displayName}
                           </span>
                         ) : null}
-
-                        {isExcluded ? (
-                          <span className="excluded-pill">{t.excludedBadge}</span>
-                        ) : null}
                       </div>
 
                       <div className="review-item-actions">
                         <button
                           type="button"
-                          className={`item-btn ${isExcluded ? 'item-btn-restore' : 'item-btn-exclude'}`}
-                          title={isExcluded ? t.restoreItem : t.excludeItemHint}
-                          onClick={() => toggleExclude(item.handle)}
+                          className="item-btn item-btn-exclude"
+                          title={t.excludeItemHint}
+                          onClick={() => dismissItem(item.handle)}
                         >
-                          {isExcluded ? t.restoreItem : t.excludeItem}
+                          {t.excludeItem}
                         </button>
                         <button
                           type="button"
@@ -461,9 +489,9 @@ export default function CleanView({
                 ? t.processing
                 : !pageCount || pendingCount === 0
                   ? t.blockPage
-                  : excludedCount > 0
+                  : deselectedCount > 0
                     ? t.batchBlockSelected(pendingCount)
-                    : `${t.blockPage} · ${pageCount}`}
+                    : `${t.blockPage} · ${displayedItems.length}`}
             </button>
             {/* 右下角刷新：列表在手时重新拉取当前页面黄框清单 */}
             <button

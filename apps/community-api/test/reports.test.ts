@@ -126,6 +126,43 @@ describe('POST /v1/reports', () => {
     expect(absent).toBeNull();
   });
 
+  it('stores evidence facts (tweet text / display name / bio) and enforces shape caps', async () => {
+    const res = await post({
+      installation_id: 'ffffffff-5555-4555-8555-ffffffffffff',
+      reports: [
+        report('facts_ok', {
+          tweet_text: '领福利加微 xxx',
+          display_name: '福利姐',
+          bio: ' punt '
+        }),
+        ...Array.from({ length: 10 }, (_, i) =>
+          report(`facts_long_${i}`, { tweet_text: '长'.repeat(501) }),
+        ),
+      ],
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { results: { status: string; error?: string }[] };
+    expect(body.results[0]!.status).toBe('recorded');
+    for (let i = 1; i <= 10; i += 1) {
+      expect(body.results[i]!.status).toBe('rejected');
+      expect(body.results[i]!.error).toBe('invalid_tweet_text');
+    }
+
+    const stored = await env.DB.prepare(
+      'SELECT tweet_text, display_name, bio FROM reports WHERE handle = ?1',
+    )
+      .bind('facts_ok')
+      .first<{ tweet_text: string; display_name: string; bio: string }>();
+    expect(stored?.tweet_text).toBe('领福利加微 xxx');
+    expect(stored?.display_name).toBe('福利姐');
+    expect(stored?.bio).toBe('punt');
+
+    const empty = await env.DB.prepare('SELECT tweet_text FROM reports WHERE handle = ?1')
+      .bind('src_manual')
+      .first<{ tweet_text: string | null }>();
+    expect(empty?.tweet_text).toBeNull();
+  });
+
   it('envelopes: bad body / empty array / oversized batch', async () => {
     expect((await post({ reports: [] })).status).toBe(400);
     expect((await post({ installation_id: 'short', reports: [report('x')] })).status).toBe(400);

@@ -289,6 +289,11 @@ export default defineContentScript({
             evidence: item.evidence,
             // 防自我放大的计票口径与单条拉黑路径完全一致（communityVoteForDetection）
             communityVote: communityVoteForDetection(item.evidence.detectionSource, item.ruleId),
+            // 推文原文快照随任务走：队列延迟执行时不页面已滚走，靠这里记账
+            tweetSnippet: item.snippet,
+            displayName: item.displayName,
+            // bio 是 XHR 桥带来的简介原文（bio 启发式的判定材料）；入队时固化
+            bio: bioCache.get(item.handle),
           })),
           msg?.targetTabId,
         );
@@ -510,6 +515,9 @@ export default defineContentScript({
     function refreshAllowCache(): void {
       const apply = (items: Array<{ handle: string }>): void => {
         const changed = replaceHandleCache(allowCache, items);
+        // 逐账号 DOM 清理之外，再整表对账一遍：即使该账号推文已不在 DOM
+        //（resetPageDecorationsForHandles 找不到 cell 空转），账本也必须清干净。
+        pruneProtectedPageMarked();
         if (changed.size > 0) resetPageDecorationsForHandles(changed);
       };
       void getAllowlist()
@@ -524,6 +532,7 @@ export default defineContentScript({
     function refreshFollowingCache(): void {
       const apply = (items: Array<{ handle: string }>): void => {
         const changed = replaceHandleCache(followingCache, items);
+        pruneProtectedPageMarked();
         if (changed.size > 0) resetPageDecorationsForHandles(changed);
       };
       void getFollowingAllowlist()
@@ -565,6 +574,23 @@ export default defineContentScript({
       controller.fullRescan();
     }
 
+    /**
+     * 对账清扫：凡是已进白名单（个人/关注保护）的账号，pageMarked 里不允许再留条目。
+     * 兜底两类旧坑———
+     * 1. 单账号 DOM 清理因「找不到该账号推文」（虚拟列表回收）空转后，条目再没人删；
+     * 2. SPA 路由切换后 pageMarked 是会话级 Map，保护状态已变但旧条目无处被清。
+     */
+    function pruneProtectedPageMarked(): void {
+      let pruned = false;
+      for (const handle of [...pageMarked.keys()]) {
+        if (allowCache.has(handle) || followingCache.has(handle)) {
+          pageMarked.delete(handle);
+          pruned = true;
+        }
+      }
+      if (pruned) notifyPageMarkedChanged();
+    }
+
     /** 只刷新状态变化账号，避免一次拉黑让整页黄框先塌再长回来。 */
     function resetPageDecorationsForHandles(handles: ReadonlySet<string>): void {
       const context = contextFromPath(location.pathname);
@@ -583,12 +609,15 @@ export default defineContentScript({
         }
       }
       for (const match of matches) {
+        // 账本清理与屏幕反馈解耦：即使该账号正处于拉黑成功的 650ms 反馈窗
+        //（cell 上有 disabled 按钮，DOM 清理延后避免局部高度变更），
+        // pageMarked 也必须立即删除，否则弹窗清单里永远残留旧条目。
+        pageMarked.delete(match.handle);
+        notifyPageMarkedChanged();
         // 拉黑成功后的 650ms 成功反馈必须留在屏幕上；同账号其它 cell 也一并延后，
         // 否则仍会在点击瞬间造成局部高度变更。
         if (handlesWithPendingFeedback.has(match.handle)) continue;
         controller.dropSnapshot(match.article);
-        pageMarked.delete(match.handle);
-        notifyPageMarkedChanged();
         articles.push(match.article);
         cells.add(match.cell);
       }
@@ -674,6 +703,14 @@ export default defineContentScript({
         uiLanguage,
       });
       const isProtected = allowCache.has(handle) || followingCache.has(handle);
+      if (isProtected) {
+        // SPA 路由切换不会清 pageMarked：保护名单里的账号重现在扫描里时，
+        // 把残留的旧条目就地清掉（DOM 装饰保持原状，无需在这里动它）。
+        if (pageMarked.has(handle)) {
+          pageMarked.delete(handle);
+          notifyPageMarkedChanged();
+        }
+      }
       if (isProtected || !detectionEnabled || result.presentation === 'ignore') {
         attachManualAction(article as HTMLElement, handle, result.evidence);
         return;
@@ -1009,6 +1046,10 @@ export default defineContentScript({
         communityVote?: boolean;
         batchId?: string;
         deferContribution?: boolean;
+        /** 判定材料（推文原文/昵称/简介）；不传时回查页面黄框内存态与 bio 缓存。 */
+        tweetSnippet?: string;
+        displayName?: string;
+        bio?: string;
       } = {},
     ): Promise<
       { ok: true } | { ok: false; code: string; httpStatus?: number; retryAfterMs?: number }
@@ -1076,16 +1117,31 @@ export default defineContentScript({
         };
       }
       // 记账（撤销入口的数据源）+ 本地统计
-      await markBlocked(handle, xUserId, {
-        category: item.category,
-        ...item.evidence,
-        ...(liveness ? { liveness } : {}),
-        ...(options.origin ? { origin: options.origin } : {}),
-        ...(typeof options.communityVote === 'boolean'
-          ? { communityVote: options.communityVote }
-          : {}),
-        ...(options.batchId ? { batchId: options.batchId } : {}),
-      });
+      // 判定材料（推文原文/昵称/简介）按用户 2026-09-12 拍板随票上报 + 本机留档
+      const markedEvidence = pageMarked.get(handle);
+      const tweetFacts =
+        (options.tweetSnippet ?? markedEvidence?.snippet)?.trim() || undefined;
+      await markBlocked(
+        handle,
+        xUserId,
+        {
+          category: item.category,
+          ...item.evidence,
+          ...(liveness ? { liveness } : {}),
+          ...(options.origin ? { origin: options.origin } : {}),
+          ...(typeof options.communityVote === 'boolean'
+            ? { communityVote: options.communityVote }
+            : {}),
+          ...(options.batchId ? { batchId: options.batchId } : {}),
+        },
+        {
+          ...(tweetFacts ? { tweetSnippet: tweetFacts } : {}),
+          ...(options.displayName ??
+          markedEvidence?.displayName ? { displayName: options.displayName ?? markedEvidence?.displayName } : {}),
+          // bio 是 XHR 桥带来的判定材料；队列延迟执行时页面可能已重载，缓存 miss 缺省
+          ...(options.bio ?? bioCache.get(handle) ? { bio: options.bio ?? bioCache.get(handle)! } : {}),
+        },
+      );
       await bumpStat('blocked');
       // v0.6 战报：今日拉黑 + 分类计数
       await bumpDaily('blocked', item.category);
@@ -1237,11 +1293,14 @@ export default defineContentScript({
               reason: task.reason ?? '',
               evidence: task.evidence ?? {},
             },
-            {
-              origin: current?.source ?? 'page-batch',
-              communityVote: task.communityVote ?? !(current?.source === 'community-batch'),
-              batchId: current?.id,
-            },
+        {
+          origin: current?.source ?? 'page-batch',
+          communityVote: task.communityVote ?? !(current?.source === 'community-batch'),
+          batchId: current?.id,
+          tweetSnippet: task.tweetSnippet,
+          displayName: task.displayName,
+          bio: task.bio,
+        },
           );
           // 429 风暴：连续 RATE_LIMIT_STORM_THRESHOLD 次 429 不再退避硬磨——
           // 收缩当日预算（砍半）并升级为整队暂停（docs/BLOCK_SAFETY.md Layer B/C）

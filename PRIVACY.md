@@ -1,6 +1,6 @@
 # FeedSieve 隐私政策 / Privacy Policy
 
-生效日期：2026-09-01 · Contact: [GitHub Issues](https://github.com/realchendahuang/feedsieve/issues)
+生效日期：2026-09-01（2026-09-12 增补判定材料随票上报） · Contact: [GitHub Issues](https://github.com/realchendahuang/feedsieve/issues)
 
 FeedSieve（福滤娃）是 X（Twitter）扩展：黄框标注垃圾账号，用户点击后执行拉黑。
 本政策说明它处理什么数据、什么数据出设备、什么数据绝不出设备。
@@ -26,7 +26,7 @@ FeedSieve（福滤娃）是 X（Twitter）扩展：黄框标注垃圾账号，�
 **2. 黑白名单上传（默认开启，可一键关闭）**
 开启「名单上传」时，扩展同步你明确维护的本地黑名单和白名单，包括升级前已保存在本机的历史记录。它不上传仅仅浏览过、仅仅被标注但未处理的账号；也不上传关注保护名单、你的自定义关键词或官方词库的订阅/启停状态。公开词库下载不携带安装 ID、X 账号、浏览历史或自定义词；由本地关键词触发的拉黑会明确标记为仅本地，不会回灌成社区举报票；直接执行「社区清理」产生的批量拉黑同样只记录在本机。
 
-- 黑名单：`handle`（对方账号名）、可选 `x_user_id`、分类、话术指纹单向哈希、外链 hostname（最多 5 个）
+- 黑名单：`handle`（对方账号名）、可选 `x_user_id`、分类、话术指纹单向哈希、外链 hostname（最多 5 个），以及拉黑时刻的判定材料——命中那条推文的原文（截 500 字）、作者昵称与简介原文。这些内容本来就是你拉黑动作发生时公开发布的 X 内容，随票上传用于官方反滥用分析与误报治理，只在「名单上传」开启时发送，且不含你尚未处理的浏览内容。
 - 白名单：`handle`、可选 `x_user_id`、当时的检测来源、规则 ID 与检测理由（旧记录可能只有 handle）
 - 两者共同携带：本机随机安装 ID 与扩展版本号；服务端只保存安装 ID 的加盐哈希
 
@@ -43,7 +43,7 @@ FeedSieve（福滤娃）是 X（Twitter）扩展：黄框标注垃圾账号，�
 
 ### 服务器保存什么
 
-官方 API（部署于 Cloudflare Workers + D1）保存：handle、x_user_id、分类、指纹、外链域名、误标来源/规则/理由、当前黑白标签、加盐哈希后的安装 ID、你主动贡献的关键词短语、时间。不保存原始 IP（网页关键词提交的 IP 级限流只保存盐哈希）、原始安装 ID、Cookie、任何 X 凭证。
+官方 API（部署于 Cloudflare Workers + D1）保存：handle、x_user_id、分类、指纹、外链域名、拉黑时携带的公开判定材料（推文原文/昵称/简介，只做反滥用分析，不对外公开检索）、误标来源/规则/理由、当前黑白标签、加盐哈希后的安装 ID、你主动贡献的关键词短语、时间。不保存原始 IP（网页关键词提交的 IP 级限流只保存盐哈希）、原始安装 ID、Cookie、任何 X 凭证。
 
 ### 删除与退出
 
@@ -76,7 +76,7 @@ The extension downloads the community snapshot (JSON, SHA-256 verified) from the
 **2. Blocklist and allowlist uploads (default on, one toggle to disable)**
 When “List uploads” is enabled, the extension syncs the local blocklist and allowlist entries you explicitly maintain, including records already stored locally before an upgrade. Merely viewed or merely marked accounts are never uploaded. Neither is the following-protection list. Blocks performed by Community Clean are kept as local action records and do not create new community report votes.
 
-- Blocklist: `handle`, optional `x_user_id`, category, one-way content fingerprint, and up to five external link hostnames
+- Blocklist: `handle`, optional `x_user_id`, category, one-way content fingerprint, and up to five external link hostnames — plus the evidence behind the decision at block time: the text of the tweet that triggered the block (truncated to 500 characters), the account's display name, and its bio. Those are contents the account had published publicly on X when you blocked it; they are uploaded with the vote for spam analysis and false-positive review, only while “List uploads” is enabled, and never include content you merely viewed without acting on.
 - Allowlist: `handle`, optional `x_user_id`, detection source, rule ID, and the detector's reason when available; legacy records may contain only the handle
 - Both include a random local installation ID and extension version; the server stores only a salted hash of that ID
 
@@ -93,7 +93,7 @@ When you click “Contribute to official wordpacks” in the keywords page (or s
 
 ### What the server stores
 
-The official API (Cloudflare Workers + D1) stores: handle, x_user_id, category, fingerprint, link domains, false-positive source/rule/reason, current block/allow label, salted-hashed installation ID, keyword phrases you actively contributed, and timestamps. It does not store raw IPs (IP-level rate limiting for web keyword submissions keeps only a salted hash), raw installation IDs, cookies, or any X credentials.
+The official API (Cloudflare Workers + D1) stores: handle, x_user_id, category, fingerprint, link domains, the public block-time evidence carried with votes (tweet text, display name, bio — used for abuse analysis, never publicly searchable), false-positive source/rule/reason, current block/allow label, salted-hashed installation ID, keyword phrases you actively contributed, and timestamps. It does not store raw IPs (IP-level rate limiting for web keyword submissions keeps only a salted hash), raw installation IDs, cookies, or any X credentials.
 
 ### Deletion and opt-out
 

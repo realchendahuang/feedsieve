@@ -66,4 +66,34 @@ describe('blockedAccounts 记账', () => {
     await markBlocked('   ');
     expect(await getBlockedAccounts()).toEqual([]);
   });
+
+  it('判定材料快照落拉黑记录：留存、只补不覆盖、超上限截断', async () => {
+    const longText = 'spam'.repeat(200);
+    await markBlocked(
+      'alice',
+      '101',
+      { category: 'bot_spam' },
+      { tweetSnippet: longText, displayName: 'F', bio: 'hello'.repeat(300) },
+    );
+    const first = (await getBlockedAccounts())[0];
+    if (!first) throw new Error('expected entry');
+    expect(first.tweetSnippet).toMatch(/…$/);
+    expect(first.tweetSnippet?.length).toBe(501);
+    expect(first.displayName).toBe('F');
+    expect(first.bio).toMatch(/…$/);
+
+    await markBlocked(
+      'alice',
+      '101',
+      { category: 'other' },
+      { tweetSnippet: 'later tweet', displayName: 'Updated' },
+    );
+    const after = (await getBlockedAccounts())[0];
+    if (!after) throw new Error('expected entry');
+    expect(after.tweetSnippet).toBe(first.tweetSnippet);
+    expect(after.displayName).toBe('F');
+
+    await markBlocked('bob', '102', undefined, { tweetSnippet: '   ' });
+    expect((await getBlockedAccounts())[1]).not.toHaveProperty('tweetSnippet');
+  });
 });

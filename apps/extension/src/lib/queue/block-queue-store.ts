@@ -22,6 +22,12 @@ export interface PersistentBlockTask {
   };
   /** Whether a successful local block should be contributed to the community. */
   communityVote?: boolean;
+  /** 推文原文快照（仅 page-batch 有；落拉黑记录 + 随票上报，判定材料口径见 blocked-accounts.ts）。 */
+  tweetSnippet?: string;
+  /** 拉黑时刻作者昵称（page-batch 固化入队；延迟执行时 DOM/bioCache 可能已失效）。 */
+  displayName?: string;
+  /** 拉黑时刻作者简介（判定材料，同上）。 */
+  bio?: string;
   status: PersistentBlockTaskStatus;
   /** popup 展示用失败码（failed 任务）；retryable failed 会由 runner 保持 pending + lastErrorCode */
   failureCode?: string;
@@ -103,6 +109,13 @@ function normalizeQueue(value: unknown): PersistentBlockQueueState | null {
           }
         : {}),
       ...(typeof task.communityVote === 'boolean' ? { communityVote: task.communityVote } : {}),
+      ...(typeof task.tweetSnippet === 'string' && task.tweetSnippet.trim()
+        ? { tweetSnippet: task.tweetSnippet }
+        : {}),
+      ...(typeof task.displayName === 'string' && task.displayName.trim()
+        ? { displayName: task.displayName }
+        : {}),
+      ...(typeof task.bio === 'string' && task.bio.trim() ? { bio: task.bio } : {}),
       // 存储态里的 id 同样过严格形态校验：入队/反序列化双闸（见 sanitizeQueueItem）
       ...(xUserId ? { xUserId } : {}),
       // UI 继续读 failureCode；runner 写入 lastErrorCode，failed 任务归一化补一份
@@ -189,6 +202,9 @@ export async function createPersistentBlockQueue(
     reason?: string;
     evidence?: PersistentBlockTask['evidence'];
     communityVote?: boolean;
+    tweetSnippet?: string;
+    displayName?: string;
+    bio?: string;
   }>,
   options: { targetTabId?: number } = {},
 ): Promise<PersistentBlockQueueState> {
@@ -203,6 +219,9 @@ export async function createPersistentBlockQueue(
       ...(item.reason ? { reason: item.reason } : {}),
       ...(item.evidence ? { evidence: item.evidence } : {}),
       ...(typeof item.communityVote === 'boolean' ? { communityVote: item.communityVote } : {}),
+      ...(item.tweetSnippet?.trim() ? { tweetSnippet: item.tweetSnippet } : {}),
+      ...(item.displayName?.trim() ? { displayName: item.displayName } : {}),
+      ...(item.bio?.trim() ? { bio: item.bio } : {}),
       status: 'pending',
     });
   }
