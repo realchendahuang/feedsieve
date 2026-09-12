@@ -15,7 +15,6 @@ import {
   type StoredSnapshot,
   type SyncSource,
 } from '@feedsieve/community-lists';
-import bundledSnapshotJson from '../../../../../community/lists/official.json';
 import { API_BASE } from '../platform/api-base';
 
 export const COMMUNITY_API_BASE = API_BASE;
@@ -42,12 +41,39 @@ function cleanupLegacySnapshot(): void {
     // 清理失败不影响功能
   });
 }
-const BUNDLED_SNAPSHOT_BODY = `${JSON.stringify(bundledSnapshotJson, null, 2)}\n`;
-const BUNDLED_SNAPSHOT: StoredSnapshot = {
-  snapshot_version: bundledSnapshotJson.snapshot_version,
-  body: BUNDLED_SNAPSHOT_BODY,
-  synced_at: Date.parse(bundledSnapshotJson.generated_at),
-};
+// 随包发布的最终名单不走 JS bundle：构建时由 wxt.config officialJsonPlugin 拷入
+// public/community/lists/，这里运行时 fetch（扩展自己的资源文件，无网络依赖）。
+// 此前静态 import 让 background / content / popup 三个入口各抄一份，产物膨胀到 4 MB。
+const BUNDLED_SNAPSHOT_URL = '/community/lists/official.json';
+let bundledSnapshotCache: StoredSnapshot | null | undefined;
+export async function getBundledSnapshot(): Promise<StoredSnapshot | null> {
+  if (bundledSnapshotCache !== undefined) return bundledSnapshotCache;
+  try {
+    const raw = (await fetch(browser.runtime.getURL(BUNDLED_SNAPSHOT_URL)).then((res) =>
+      res.json(),
+    )) as { snapshot_version: string; generated_at: string; entries: unknown };
+    bundledSnapshotCache = {
+      snapshot_version: raw.snapshot_version,
+      body: `${JSON.stringify(raw)}\n`,
+      synced_at: Date.parse(raw.generated_at),
+    };
+  } catch {
+    // 打包资源缺失属异常；按无兜底处理，后续仍会尝试线上同步
+    bundledSnapshotCache = null;
+  }
+  return bundledSnapshotCache;
+}
+
+/** 随包名单的 entries（content script 离线兜底用），与 getBundledSnapshot 共享一次 fetch。 */
+export async function getBundledEntries(): Promise<unknown> {
+  const snap = await getBundledSnapshot();
+  if (!snap) return [];
+  try {
+    return (JSON.parse(snap.body) as { entries: unknown }).entries;
+  } catch {
+    return [];
+  }
+}
 
 export interface CommunitySettings {
   /** 社区名单总开关（关掉后只跑启发式 + 内置名单） */
@@ -86,7 +112,7 @@ export async function getCommunitySnapshot(): Promise<StoredSnapshot | null> {
   const stored = await getStoredCommunitySnapshot();
   if (stored) return stored;
   // 首装、开发环境无 API、旧 schema 缓存失效时仍能使用随扩展发布的最终名单。
-  return BUNDLED_SNAPSHOT;
+  return getBundledSnapshot();
 }
 
 export async function setCommunitySnapshot(value: StoredSnapshot): Promise<void> {

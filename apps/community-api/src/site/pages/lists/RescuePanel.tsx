@@ -4,8 +4,16 @@ import { HandleLink, fmtDate } from './lists-common';
 
 /**
  * 社区抢救公示面板：被验证为「误标正常」的账号，50/页分页（净票降序）。
+ * 已被维护者迁入推荐白名单的条目打「已入册」标（点击跳白名单页）。
  */
-export function RescuePanel({ verified }: { verified: RosterVerifiedEntry[] }) {
+export function RescuePanel({
+  verified,
+  whitelistHandles,
+}: {
+  verified: RosterVerifiedEntry[];
+  /** 推荐白名单现有 handle（小写），与抢救名单交叉识别已入册条目 */
+  whitelistHandles?: ReadonlySet<string>;
+}) {
   const PAGE_SIZE = 50;
   const [page, setPage] = useState(0);
 
@@ -30,7 +38,18 @@ export function RescuePanel({ verified }: { verified: RosterVerifiedEntry[] }) {
           <tbody>
             {rows.map((entry) => (
               <tr key={entry.handle} className="border-b border-line/40">
-                <td className="px-4 py-2.5"><HandleLink handle={entry.handle} /></td>
+                <td className="px-4 py-2.5">
+                  <HandleLink handle={entry.handle} />
+                  {whitelistHandles?.has(entry.handle.toLowerCase()) && (
+                    <a
+                      href="/lists/whitelist"
+                      title="该账号已迁入推荐白名单：命中即一票豁免"
+                      className="ml-2 rounded-full bg-gold/10 px-2 py-0.5 align-middle text-[11px] font-semibold text-gold-deep transition-colors hover:text-gold"
+                    >
+                      已入册
+                    </a>
+                  )}
+                </td>
                 <td className="px-4 py-2.5 text-right tabular-nums">{entry.rescue_count}</td>
                 <td className="px-4 py-2.5 text-right tabular-nums">{entry.report_count}</td>
                 <td className="px-4 py-2.5 text-right font-bold tabular-nums">{entry.net_votes}</td>

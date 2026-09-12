@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { getRosterData } from '@/site/data.functions';
 import { pageHead } from '@/site/seo';
 import { ListsTabs, ListPageHeader, HelpIcon } from '@/site/pages/lists/lists-common';
+import type { RosterWhitelistEntry } from '@/roster';
 import { RescuePanel } from '@/site/pages/lists/RescuePanel';
 
 export const Route = createFileRoute('/_shell/lists/rescue')({
@@ -37,7 +38,10 @@ function RescueRoute() {
         <p className="mt-10 text-center text-mist">名单加载失败（快照暂不可用）</p>
       ) : (
         <div className="mt-6">
-          <RescuePanel verified={roster.whitelist.verified} />
+          <RescuePanel
+            verified={roster.whitelist.verified}
+            whitelistHandles={new Set(roster.whitelist.maintained.map((e: RosterWhitelistEntry) => e.handle.toLowerCase()))}
+          />
         </div>
       )}
     </main>

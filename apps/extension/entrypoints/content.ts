@@ -26,6 +26,7 @@ import { runUnblockBatch } from '../src/lib/queue/run-unblock-batch';
 import { getUserId, saveUserIds } from '../src/lib/community/user-ids';
 import {
   buildRuntimeCommunity,
+  getBundledEntries,
   requestOfficialPauseCheck,
   subscribeCommunity,
   type RuntimeCommunity,
@@ -83,14 +84,21 @@ import {
   subscribeKeywordPackCatalog,
   type KeywordPackCatalog,
 } from '../src/lib/detection/keyword-packs';
-import builtinListJson from '../../../community/lists/official.json';
-
 /**
  * 最近一次公开最终名单随扩展打包，作为离线兜底。
  * 社区名单走运行时同步（background SW -> storage.local -> 这里建索引），
  * 服务器快照永远是权威来源。
+ * 名单 JSON（2 MB+ 级）不进 JS chunk，作为打包资源运行时 fetch（替换原来
+ * 的静态 import——它会同步锁住 content script 的 JS 解析三个入口各一份）。
  */
-const BUILTIN_LIST = toHandleSet((builtinListJson as { entries: unknown }).entries as never[]);
+let builtinList: ReadonlySet<string> = toHandleSet([]);
+void getBundledEntries()
+  .then((entries) => {
+    builtinList = toHandleSet(entries as never[]);
+  })
+  .catch(() => {
+    // 打包资源缺失属异常；保持空集，社区名单同步通道仍可用
+  });
 
 const MARK_ATTRIBUTE = 'data-fs-marked';
 const STYLE_ELEMENT_ID = 'feedsieve-mark-styles';
@@ -696,7 +704,7 @@ export default defineContentScript({
       const result = runDetectionPipeline({
         input,
         community,
-        builtinList: BUILTIN_LIST,
+        builtinList,
         keywordHeuristics,
         catalog: keywordCatalog,
         strength,

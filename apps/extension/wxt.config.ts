@@ -1,4 +1,22 @@
+import { copyFileSync, mkdirSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { defineConfig } from 'wxt';
+
+// 官方名单快照（2 MB+ 级 JSON）不进 JS chunk：buildStart 时拷入 public/，
+// 随扩展以静态资源发布，运行时 browser.runtime.getURL + fetch 读取。
+// 此前静态 import 让 background / content / popup 三个入口各抄一份，
+// 产物膨胀到 4 MB，CWS 上传 zip 也跟着翻倍。
+function officialJsonPlugin() {
+  return {
+    name: 'feedsieve-copy-official-json',
+    buildStart() {
+      const root = resolve(import.meta.dirname, '../..');
+      const dst = resolve(import.meta.dirname, 'public/community/lists');
+      mkdirSync(dst, { recursive: true });
+      copyFileSync(resolve(root, 'community/lists/official.json'), resolve(dst, 'official.json'));
+    },
+  };
+}
 
 export default defineConfig({
   modules: ['@wxt-dev/module-react'],
@@ -26,6 +44,7 @@ export default defineConfig({
     },
   }),
   vite: (env) => ({
+    plugins: [officialJsonPlugin()],
     define: {
       // dev/本地测试 API 覆盖：只在 development 构建生效（FEEDSIEVE_API_BASE=http://localhost:8787 pnpm dev）。
       // 生产构建恒为空字符串回退官方线上实例——pack-store 的 manifest 审计查不到

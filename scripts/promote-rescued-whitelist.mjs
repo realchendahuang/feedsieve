@@ -13,6 +13,7 @@
  *   node scripts/promote-rescued-whitelist.mjs             # 拉取 + 追加
  */
 import { readFileSync, writeFileSync } from 'node:fs';
+/* global console, process, fetch */
 import path from 'node:path';
 import { entryBlock } from './ingest-whitelist-issues.mjs';
 

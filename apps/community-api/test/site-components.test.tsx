@@ -86,6 +86,24 @@ describe('抢救面板', () => {
     expect(html).toContain('净票');
     expect(html).not.toContain('x.com/kosx_note');
   });
+
+  it('已迁入推荐白名单的条目打「已入册」标', () => {
+    const data = rosterSample().whitelist;
+    data.verified.unshift({
+      handle: 'kosx_note',
+      net_votes: 2,
+      rescue_count: 2,
+      report_count: 0,
+      updated_at: '2026-09-11T00:00:00.000Z',
+    });
+    const html = renderToString(
+      <RescuePanel
+        verified={data.verified}
+        whitelistHandles={new Set(data.maintained.map((entry) => entry.handle))}
+      />,
+    );
+    expect(html).toContain('已入册');
+  });
 });
 
 describe('词库面板', () => {

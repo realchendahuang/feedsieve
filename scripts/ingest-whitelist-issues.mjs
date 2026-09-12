@@ -15,6 +15,7 @@
  *   node scripts/ingest-whitelist-issues.mjs             # 拉取 + 写 yaml + 已处理 issue 打标/回帖
  */
 import { execFileSync } from 'node:child_process';
+/* global console, process */
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 

@@ -19,3 +19,6 @@ coverage/
 
 # TanStack Start 路由表生成物（vite 插件每次构建重生成）
 apps/community-api/src/routeTree.gen.ts
+
+# wxt officialJsonPlugin 构建时从 community/lists/ 拷入（产物，不入库）
+public/community/
