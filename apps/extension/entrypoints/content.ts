@@ -210,6 +210,17 @@ export default defineContentScript({
     const followingSync = createFollowingSync();
 
     ensureStyles();
+    // 扩展重载后旧页面上一代 content script 已被销毁，但黄框/徽章 DOM 还挂着：
+    // 新一代脚本应清掉这些「死标记」再开始自己的扫描，否则残留装饰和
+    // 弹窗会各说各话（用户看到的黄框查不到、弹窗显示 0）。
+    // 正常首次加载的页面此刻不可能有任何 FeedSieve 装饰（扫描尚未开始），
+    // 清理只会在 reload 残留场景生效。
+    for (const cell of document.querySelectorAll(`[${MARK_ATTRIBUTE}]`)) {
+      cell.removeAttribute(MARK_ATTRIBUTE);
+    }
+    for (const element of document.querySelectorAll('.fs-badge, .fs-manual-mark')) {
+      element.remove();
+    }
     refreshAllowCache();
     refreshFollowingCache();
     refreshBlockedCache();
