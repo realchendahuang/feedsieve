@@ -1,3 +1,6 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
 /* ============================================================
    FeedSieve 公示站设计系统（对齐 KOSX-Impact 同款 Token 架构）
    底：paper · 信号金：gold #d4a017 · 字：ink/mist/fog
@@ -9,6 +12,11 @@
 
 /* dark: 变体从「跟随系统」改为 class 策略，配合三态主题机 */
 @custom-variant dark (&:where(.dark, .dark *));
+
+/* Tailwind v4 自动内容探测从本文件所在目录起扫，扫不到上层 routes 目录；
+   显式声明全部使用点（@source 相对本文件）。 */
+@source "./";
+@source "../routes/";
 
 :root {
   --radius: 0.875rem;
