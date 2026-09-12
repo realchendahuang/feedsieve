@@ -141,6 +141,26 @@ describe('本地关键词规则', () => {
     expect(rule?.check({ handle: 'normal', text: '这是普通讨论' })).toBeNull();
   });
 
+  it('英文短语按整词命中：bio 里的 Adulthood 不误标 adult，正文广告仍命中（issue #4）', async () => {
+    const settings = await getKeywordRuleSettings();
+    const rule = createKeywordHeuristics(settings).find(
+      (candidate) => candidate.id === 'keyword:official:adult-gray-traffic-7fdc3e8038e87ff5',
+    );
+    expect(rule).toBeDefined();
+    // @MarcosBL 的真实 bio：Adulthood 含 adult 子串但语义无关
+    expect(
+      rule?.check({
+        handle: 'MarcosBL',
+        displayName: 'Marcos Besteiro',
+        text: 'Lo bueno de comprar un coche Chino es que todos los repuestos son originales',
+        bio: "Adulthood is saying 'after this week things will slow down a bit' over and over",
+      }),
+    ).toBeNull();
+    expect(rule?.check({ handle: 'bait', text: 'hot amateur adult content daily' })).toContain(
+      '命中官方规则：adult',
+    );
+  });
+
   it('官方词同时匹配昵称和账号名，正文为空也能标记', async () => {
     const settings = await getKeywordRuleSettings();
     const rule = createKeywordHeuristics(settings).find(

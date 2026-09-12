@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "pack_version": "2026.09.11.5",
+  "pack_version": "2026.09.12.1",
   "generated_at": null,
   "packs": [
     {
@@ -59,10 +59,6 @@
           "adult"
         ],
         [
-          "adult-gray-traffic-8dd9ed10798ded82",
-          "amateur"
-        ],
-        [
           "adult-gray-traffic-2334ab3172ae72cb",
           "a片"
         ],
@@ -77,10 +73,6 @@
         [
           "adult-gray-traffic-0130e2d27102a651",
           "g片"
-        ],
-        [
-          "adult-gray-traffic-08775183b0ecf9d8",
-          "hardcore"
         ],
         [
           "adult-gray-traffic-cebd9d37be016798",

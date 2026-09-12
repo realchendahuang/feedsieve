@@ -87,8 +87,26 @@ function orderedTermsMatch(value: string, terms: readonly string[], maxGap: numb
   }
   return true;
 }
+/**
+ * 纯 ASCII 短语（英文单词/缩写，可含单引号、&、连字符与空格）必须整词命中：
+ * 剥标点后的子串匹配会让 bio 里的 "Adulthood" 误命中词库里的 "adult"
+ * （issue #4 实锤）。切词后按 \W+ 拼接，"adult content" 这类多词短语照样命中。
+ * 代价是放弃 "a d u l t" 式拆字规避的覆盖——英文词没有拆字_entropy 可依赖。
+ */
+function asciiWordRegExp(phrase: string): RegExp | null {
+  const normalized = normalizeKeywordPhrase(phrase);
+  if (!/^[a-z0-9][a-z0-9'&\-\s]*$/.test(normalized)) return null;
+  const body = normalized
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((token) => token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('\\W+');
+  return new RegExp(`(?<![a-z0-9])${body}(?![a-z0-9])`, 'i');
+}
 function ruleMatchesText(value: string, rule: ActiveKeywordRule): boolean {
   if (rule.terms?.length) return orderedTermsMatch(value, rule.terms, rule.maxGap ?? 12);
+  const ascii = asciiWordRegExp(rule.phrase);
+  if (ascii) return ascii.test(normalizeKeywordPhrase(value));
   return textForMatch(value).includes(textForMatch(rule.phrase));
 }
 export function isValidPhrase(value: string): boolean {

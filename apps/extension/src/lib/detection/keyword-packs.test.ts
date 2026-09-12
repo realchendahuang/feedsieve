@@ -37,10 +37,10 @@ describe('远程关键词包契约', () => {
     expect(BUNDLED_KEYWORD_PACK_CATALOG.packs).toHaveLength(1);
     const [bundledPack] = BUNDLED_KEYWORD_PACK_CATALOG.packs;
     expect(bundledPack?.id).toBe('adult_gray_traffic');
-    expect(BUNDLED_KEYWORD_PACK_CATALOG.pack_version).toBe('2026.09.11.5');
+    expect(BUNDLED_KEYWORD_PACK_CATALOG.pack_version).toBe('2026.09.12.1');
     expect(
       BUNDLED_KEYWORD_PACK_CATALOG.packs.reduce((count, pack) => count + pack.rules.length, 0),
-    ).toBe(632);
+    ).toBe(630);
     expect(
       BUNDLED_KEYWORD_PACK_CATALOG.packs
         .find((pack) => pack.id === 'adult_gray_traffic')
