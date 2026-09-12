@@ -16,9 +16,11 @@
 #   PR 之外的黑产防线：handle/note/头像在 ingest 与 publish 两层都会校验。
 #
 # 社区抢救快速通道：
-#   node scripts/promote-rescued-whitelist.mjs --dry-run   # 预览可迁移条目
-#   node scripts/promote-rescued-whitelist.mjs             # 整批写进本文件
-#   把抢救名单（误标被推翻的账号）转成入册候选；同样看 diff 后按第 3 步发布。
+#   一条命令走完（迁移 → 拉 X 资料 → 校验 → 发布前确认）：
+#     scripts/whitelist-pipeline.sh --dry-run   # 全程只读
+#     scripts/whitelist-pipeline.sh            # 回车确认后发布；--auto 跳确认、--no-publish 只备候选
+#   拆步跑也可：promote-rescued-whitelist.mjs（候选迁移）/ enrich-rescued-whitelist.mjs
+#   （拉昵称/头像/简介）/ publish-community-whitelist.sh（发布，文件为唯一事实）。
 #
 # entries 字段：
 #   handle      必填。@ 后面的用户名（@ 可带可不带，脚本自动归一为小写）

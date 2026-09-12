@@ -93,7 +93,7 @@ whitelist  推荐白名单：维护者在 GitHub 维护 whitelist.yaml，公开�
 - **提交**：PR 修改 [`lists/whitelist.yaml`](lists/whitelist.yaml) 的 `entries`，每条必须带 4-240 字入册说明（note，公开问责）。社区自助通道：填 [Issue 模板「推荐白名单申请」](../.github/ISSUE_TEMPLATE/whitelist-request.yml)，仓库所有者手动跑 `scripts/ingest-whitelist-issues.mjs` 把合规申请写进该文件（无定时、不自动收录）。
 - **审核**：维护者人工审核合并。入册标准：误标申诉经核实、知名正常账号等；不接受匿名批量提交。
 - **生效**：合并后运行 [`scripts/publish-community-whitelist.sh`](../scripts/publish-community-whitelist.sh)（`--check` 只校验预览；不带参数才写库）。脚本以「文件为唯一事实」整体同步：文件里删除的账号从白名单撤销。快照对白名单变化按「当日一版」节流发布，运营可在社区后台显式发布立即生效。
-- **抢救快速通道**：[`scripts/promote-rescued-whitelist.mjs`](../scripts/promote-rescued-whitelist.mjs) 把当前抢救名单整批转成入册候选（`--dry-run` 先预览），确认后按上一条生效。
+- **抢救快速通道**：[`scripts/whitelist-pipeline.sh`](../scripts/whitelist-pipeline.sh) 一条命令走完「迁移 → 拉 X 公开资料 → 校验 → 发布前确认」（`--dry-run` 全程只读、`--no-publish` 只备候选；拆步脚本 [`promote-rescued-whitelist.mjs`](../scripts/promote-rescued-whitelist.mjs) / [`enrich-rescued-whitelist.mjs`](../scripts/enrich-rescued-whitelist.mjs) 各自可独立跑）。
 - **审计**：`whitelist.yaml` 的 git 历史就是白名单的完整变更记录；数据库另有 `maintainer_whitelist_audit` 审计表兜底。
 
 白名单账号若同时有黑名单票数，黑名单条目自动让位（客户端对同 handle 双份条目会整份拒绝快照，服务端先保证互斥）。
