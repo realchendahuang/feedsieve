@@ -1,5 +1,5 @@
 import { env } from 'cloudflare:workers';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import worker from '../src/index';
 import { getDashboardMetrics } from '../src/dashboard';
 import {
@@ -68,6 +68,15 @@ describe('概览分层指标', () => {
 });
 
 describe('快照异步化（脏标记）', () => {
+  // cron 编排现已共用 runScheduledCron（含死账号探活）；探活会请求 X guest token，
+  // 单测环境一律假失败让 prober 走「token 缺失即离场」的快速路径，不碰网络。
+  beforeEach(() => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('unavailable', { status: 503 })),
+    );
+  });
+
   it('上报只落库置脏并返回当前版本；cron 消费后清除', async () => {
     const metaBefore = await getLatestSnapshotMeta(env);
     const before = await env.DB.prepare('SELECT COUNT(*) AS n FROM snapshots').first<{

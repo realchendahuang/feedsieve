@@ -6,11 +6,12 @@ import {
   type HunterBoardRow,
 } from '../../../src/lib/community/hunter';
 import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
-import { AppIcon } from './shared';
+import { AppIcon, HelpIcon } from './shared';
 
 /**
  * 打野 tab：只有打野榜本身——榜单速览（Top 行 + 我的战况）与官网完整榜单入口。
  * 战报（今日/子弹）与个人资料在「我的」页。
+ * 三态分离：loading（骨架）/ error（可重试）/ 数据，绝不把加载中当成失败。
  */
 export default function HuntingView({
   language,
@@ -20,9 +21,29 @@ export default function HuntingView({
 }) {
   const t = UI_COPY[language];
   const [board, setBoard] = useState<HunterBoard | null>(null);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    void fetchHunterBoard().then(setBoard).catch(() => setBoard(null));
+    let cancelled = false;
+    void fetchHunterBoard()
+      .then((next) => {
+        if (cancelled) return;
+        setBoard(next);
+        setStatus('ready');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setStatus('error');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadKey]);
+
+  const retry = useCallback(() => {
+    setStatus('loading');
+    setReloadKey((key) => key + 1);
   }, []);
 
   const openFullBoard = useCallback(() => {
@@ -40,8 +61,18 @@ export default function HuntingView({
       <section className="settings-card hunting-board-card">
         <div className="settings-card-head">
           <h2>{t.hunterTopBoard}</h2>
+          <HelpIcon text={t.hunterAccuracyHint} />
         </div>
-        {board && board.rows.length ? (
+        {status === 'loading' ? (
+          <p className="hunter-board-empty">{t.hunterLoading}</p>
+        ) : status === 'error' ? (
+          <div className="hunter-board-empty hunter-board-error">
+            <p>{t.hunterLoadFailed}</p>
+            <button type="button" className="hunter-retry" onClick={retry}>
+              {t.hunterRetry}
+            </button>
+          </div>
+        ) : board && board.rows.length ? (
           <div className="hunter-board">
             {board.rows.map((row) => (
               <BoardRow
@@ -63,10 +94,8 @@ export default function HuntingView({
               <p className="hunter-board-empty">{t.hunterUnranked}</p>
             )}
           </div>
-        ) : board ? (
-          <p className="hunter-board-empty">{t.hunterUnranked}</p>
         ) : (
-          <p className="hunter-board-empty">{t.hunterLoadFailed}</p>
+          <p className="hunter-board-empty">{t.hunterUnranked}</p>
         )}
 
         <button type="button" className="hunter-site-cta" onClick={openFullBoard}>
@@ -113,7 +142,7 @@ function BoardRow({
       </span>
       <span className="hunter-stats">
         <span className="hunter-kills">
-          {row.kills} {killsUnit}
+          {killsUnit ? `${row.kills} ${killsUnit}` : `${row.kills}`}
         </span>
         <span className="hunter-accuracy">{Math.round(row.accuracy * 100)}%</span>
       </span>

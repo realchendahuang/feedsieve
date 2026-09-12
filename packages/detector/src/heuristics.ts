@@ -231,9 +231,9 @@ const wordSalad: HeuristicRule = {
     if (wordSaladShapeStrength(text) !== 'strong') {
       return null;
     }
-    // 佐证双通道：① 官方词库已在本轮 detect 里命中任一字段
-    //（keywordCorroborated 由 detect() 按规则顺序传播，昵称/简介里「无偿约」
-    //  这类未进小词表的话术也能背书）；② 原硬编码隐语表，离线兜底。
+    // 佐证双通道：① 官方词库佐证（DetectInput.keywordCorroborated，仅评测层
+    // 手工注入——生产管线 keyword 命中即直接返回，不会走到 word-salad）；
+    // ② 原硬编码隐语表，离线兜底。
     const side = [input.displayName, input.bio].filter(Boolean).join(' ');
     if (
       !WORD_SALAD_TRAFFIC_HINT_RE.test(side) &&

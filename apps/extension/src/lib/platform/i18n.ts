@@ -56,7 +56,8 @@ export const UI_COPY = {
     cloudProtected: '已排除',
     communitySourceMaintainer: '推荐白名单',
     votesUnit: '票',
-    communityEmpty: '当前没有新增账号需要处理。同步到新名单后会显示在这里。',
+    communityEmpty: '当前没有新增账号需要处理',
+    communityEmptyDetail: '同步到新名单后会显示在这里',
     startCommunityClean: (count: number) => `一键开始清理 ${count} 个`,
     queueProgress: (done: number, total: number) => `清理进度 ${done} / ${total}`,
     manualBlockHint: '没识别到？可在帖子右下角点「拉黑」手动处理',
@@ -203,7 +204,10 @@ export const UI_COPY = {
     hunterTopBoard: '本周榜',
     hunterUnranked: '本周零杀，打野去',
     hunterOpenSite: '官网看完整榜单 · 规则与赛季',
+    hunterLoading: '榜单加载中',
     hunterLoadFailed: '榜单加载失败',
+    hunterRetry: '重试',
+    hunterAccuracyHint: '共识击杀里被社区复核确认的比例',
     hunterXHandle: 'X 账号',
     hunterXHandleInvalid: 'X 账号格式不对（不带 @，1-15 位字母数字下划线）',
     hunterEmailHint:
@@ -265,7 +269,8 @@ export const UI_COPY = {
     cloudProtected: 'Excluded',
     communitySourceMaintainer: 'Maintainer-verified',
     votesUnit: 'votes',
-    communityEmpty: 'No new accounts to process. Newly synced entries will appear here.',
+    communityEmpty: 'No new accounts to process',
+    communityEmptyDetail: 'Newly synced entries will appear here',
     startCommunityClean: (count: number) => `Start cleaning ${count}`,
     queueProgress: (done: number, total: number) => `Progress ${done} / ${total}`,
     manualBlockHint: "Not detected? Use the Block button at a post's bottom-right",
@@ -417,7 +422,10 @@ export const UI_COPY = {
     hunterTopBoard: 'This week',
     hunterUnranked: 'No kills yet, go hunting',
     hunterOpenSite: 'Full board, rules and seasons on the site',
+    hunterLoading: 'Loading board',
     hunterLoadFailed: 'Board failed to load',
+    hunterRetry: 'Retry',
+    hunterAccuracyHint: 'Share of consensus kills confirmed by community review',
     hunterXHandle: 'X handle',
     hunterXHandleInvalid: 'Invalid X handle (no @, 1-15 letters/digits/underscore)',
     hunterEmailHint:
@@ -477,7 +485,25 @@ export function localizedDetectionReason(
   const hostname = detection.reason.match(/[（(]([^()（）]+)[）)]/)?.[1];
   if (detection.ruleId?.startsWith('keyword:')) {
     // “heuristic”只是 Detector 内部接口名；用户词库要显示人话，不能泄露 rule id。
-    return detection.reason.replace(/^启发式：/, '');
+    const raw = detection.reason.replace(/^启发式：/, '');
+    if (language === 'zh') {
+      return raw;
+    }
+    // 词库短语本身是中文（官方库 630 条成人话术），前缀与命中字段翻给英文用户，
+    // 短语保留原样便于核对词包。
+    const fieldValue = raw.match(/·\s*(昵称|账号|正文|简介)$/)?.[1];
+    const fieldEn: Record<string, string> = {
+      昵称: 'name',
+      账号: 'handle',
+      正文: 'post',
+      简介: 'bio',
+    };
+    const stripped = raw.replace(/·\s*(昵称|账号|正文|简介)$/, '');
+    const prefix = stripped.startsWith('命中你的关键词：')
+      ? 'Custom keyword: '
+      : 'Official rule: ';
+    const body = stripped.replace(/^(?:命中你的关键词|命中官方规则)：/, '');
+    return `${prefix}${body}${fieldValue ? ` · ${fieldEn[fieldValue]}` : ''}`;
   }
   if (language === 'zh') {
     switch (detection.ruleId) {

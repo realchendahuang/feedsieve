@@ -15,7 +15,7 @@ import {
 } from '../../../src/lib/queue/block-safety';
 import { addAllowlist } from '../../../src/lib/community/allowlist';
 import { categoryLabel, UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
-import { AppIcon, FAILURE_LABELS, type PageMarkedItem } from './shared';
+import { AppIcon, FAILURE_LABELS, HelpIcon, type PageMarkedItem } from './shared';
 import QueuePanel from './QueuePanel';
 
 interface PageBlockResult {
@@ -233,8 +233,7 @@ export default function CleanView({
   const pageQueueFailedTasks =
     queue && queue.source === 'page-batch' && !queueActive
       ? queue.tasks.filter((task) => task.status === 'failed')
-      : [];
-  const queueStatusLabel = queue
+      : [];  const queueStatusLabel = queue
     ? {
         running: t.queueRunning,
         paused: t.queuePaused,
@@ -249,16 +248,6 @@ export default function CleanView({
       : queue?.status === 'paused' && queue.pauseReason === 'rate_limit_storm'
         ? t.queuePausedRateLimit
         : null;
-  const failedSummary = (result: { failed: Array<{ handle: string; code: string }> } | null) =>
-    result?.failed.length
-      ? result.failed
-          .map(
-            (failure) =>
-              `@${failure.handle} (${FAILURE_LABELS[language][failure.code] ?? failure.code})`,
-          )
-          .join(' · ')
-      : null;
-
   return (
     <div className="view-stack clean-view">
       <section className={`review-card${pageCount === 0 ? ' is-clean' : ''}`}>
@@ -281,6 +270,7 @@ export default function CleanView({
                 <span>{t.safetyQuota(safetyUsed, safety.budget)}</span>
               </span>
             ) : null}
+            <HelpIcon text={t.manualBlockHint} />
           </div>
         </div>
 
@@ -304,11 +294,7 @@ export default function CleanView({
               <AppIcon name="clean" size={24} />
             </button>
             <p>{running ? t.processing : t.pageClean}</p>
-            {!running ? (
-              <span className="clean-state-hint" role="img" title={t.pageCleanHint}>
-                !
-              </span>
-            ) : null}
+            {!running ? <HelpIcon text={t.pageCleanHint} /> : null}
           </div>
         ) : (
           <>
@@ -412,15 +398,25 @@ export default function CleanView({
         )}
 
         {blockResult ? (
-          <p className="result-message" role="status">
-            {t.blockedResult(blockResult.blocked.length)}
-            {failedSummary(blockResult) ? (
-              <span className="result-failure">
-                {' '}
-                · {t.failedResult(blockResult.failed.length)} · {failedSummary(blockResult)}
-              </span>
+          <>
+            <p className="result-message" role="status">
+              {t.blockedResult(blockResult.blocked.length)}
+              {blockResult.failed.length > 0
+                ? ` · ${t.failedResult(blockResult.failed.length)}`
+                : null}
+            </p>
+            {blockResult.failed.length > 0 ? (
+              // 失败明细进滚动容器，长失败串不把底部主操作顶出可视区
+              <ul className="queue-failed-list" role="status">
+                {blockResult.failed.map((failure) => (
+                  <li key={failure.handle}>
+                    @{failure.handle}（
+                    {FAILURE_LABELS[language][failure.code] ?? failure.code}）
+                  </li>
+                ))}
+              </ul>
             ) : null}
-          </p>
+          </>
         ) : null}
 
         {pageQueueFailedTasks.length > 0 ? (
@@ -481,7 +477,6 @@ export default function CleanView({
               <AppIcon name="refresh" />
             </button>
           </div>
-          <p className="manual-block-hint">{t.manualBlockHint}</p>
         </div>
       </section>
     </div>

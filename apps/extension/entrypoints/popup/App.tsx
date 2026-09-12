@@ -69,6 +69,8 @@ export default function App() {
   const [capabilities, setCapabilities] = useState<XAdapterCapabilities | null>(null);
   const [community, setCommunity] = useState<CommunitySettings | null>(null);
   const [communityEntries, setCommunityEntries] = useState<CommunityEntry[]>([]);
+  // 社区快照在拉取中：名单 tab 先给骨架，不闪「空态」误导用户（有三秒超时兜底不必）
+  const [communityEntriesLoading, setCommunityEntriesLoading] = useState(true);
   // 推荐白名单：快照 whitelist 段随名单一起下发，只读展示不做任何操作；
   // note 是维护者的公开背书理由（仓库 whitelist.yaml 强制字段），名单页直接展示
   const [recommendList, setRecommendList] = useState<WhitelistEntry[]>([]);
@@ -83,6 +85,7 @@ export default function App() {
 
   const applyCommunitySnapshotState = useCallback(
     (snapshot: Awaited<ReturnType<typeof getCommunitySnapshot>>): void => {
+      setCommunityEntriesLoading(false);
       if (!snapshot) {
         setCommunityEntries([]);
         setRecommendList([]);
@@ -342,6 +345,7 @@ export default function App() {
               refreshPageMarked={refreshPageMarked}
               pauseDestructive={pauseDestructive}
               communityEntries={communityEntries}
+              communityEntriesLoading={communityEntriesLoading}
               recommendList={recommendList}
             />
           </>

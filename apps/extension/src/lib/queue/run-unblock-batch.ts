@@ -6,22 +6,41 @@
  */
 
 import { resolveUserIdByHandle, runNativeAction } from '@feedsieve/x-adapter';
+import { classifyFailure } from '@feedsieve/block-queue';
 import { getBlockedAccounts, removeBlockedAccount } from '../community/blocked-accounts';
 import { bumpStat } from '../stats/local-stats';
 import { bumpDaily } from '../stats/daily-stats';
 import { getUserId, saveUserIds } from '../community/user-ids';
+import { currentAccountKey, recordSafetyEvent } from './block-safety';
 
 export interface UnblockBatchResult {
   unblocked: string[];
   failed: Array<{ handle: string; code: string }>;
+  /**
+   * 批次中止时的失败码（会话失效 / 429 / 端点不支持）。
+   * block 队列对这类失败整队 pause；撤销是一次性脚本级批次，走「立即停」，
+   * 继续对失效会话定速硬磨是风暴级风控暴露面（2026-09-12 修复）。
+   */
+  abortedBy?: string;
 }
 
 /**
  * 相邻两次撤销请求的间隔（毫秒）。
- * TODO(block-safety PR2, docs/BLOCK_SAFETY.md)：撤销仍 400ms 定速且不占安全账本；
- * 与批量拉黑共用同一 pace + 响应式预算的改动留到新版后按生产数据再做。
+ * 撤销成功已计入安全账本（recordSafetyEvent）；与批量拉黑共用 pace 的响应式
+ * 预算改动留到新版后按生产数据再做（docs/BLOCK_SAFETY.md 撤销 PR2）。
  */
 const PACE_MS = 400;
+
+/** 触发批次立即中止的失败类：pause（含 429 风暴码）与 unsupported。 */
+function isAbortClass(code: string): boolean {
+  const failureClass = classifyFailure({ code });
+  return (
+    failureClass === 'pause' ||
+    failureClass === 'unsupported' ||
+    // 定速撤销遇到限流时不能 KO 明日再来：继续磨等于撞 429 风暴
+    failureClass === 'transient'
+  );
+}
 
 export async function runUnblockBatch(handle?: string): Promise<UnblockBatchResult> {
   const targets = (await getBlockedAccounts()).filter(
@@ -29,6 +48,8 @@ export async function runUnblockBatch(handle?: string): Promise<UnblockBatchResu
   );
   const unblocked: string[] = [];
   const failed: Array<{ handle: string; code: string }> = [];
+  const result: UnblockBatchResult = { unblocked, failed };
+  let abortedBy: string | undefined;
 
   for (const account of targets) {
     const outcome = await unblockOne(account.handle, account.xUserId);
@@ -38,13 +59,33 @@ export async function runUnblockBatch(handle?: string): Promise<UnblockBatchResu
       await bumpStat('unblocked');
       // v0.6 战报：今日撤销（无分类）
       await bumpDaily('unblocked');
+      // 撤销与拉黑同占风控额度（BLOCK_SAFETY.md PR1 对齐）：成功即记账，
+      // 拉黑+撤销混合当天也走同一本账
+      await recordSafetyEvent(currentAccountKey());
     } else {
       failed.push({ handle: account.handle, code: outcome.code });
+      if (isAbortClass(outcome.code)) {
+        abortedBy = outcome.code;
+        break;
+      }
     }
     await sleep(PACE_MS);
   }
 
-  return { unblocked, failed };
+  if (abortedBy) {
+    // 未处理的余量条目也如实呈现为该失败码
+    for (const account of targets) {
+      if (
+        unblocked.includes(account.handle) ||
+        failed.some((f) => f.handle === account.handle)
+      ) {
+        continue;
+      }
+      failed.push({ handle: account.handle, code: abortedBy });
+    }
+    result.abortedBy = abortedBy;
+  }
+  return result;
 }
 
 async function unblockOne(

@@ -220,23 +220,27 @@ export function normalizeLedger(value: unknown): SafetyLedger | null {
   const dailyLimit = Number.isFinite(raw.dailyLimit)
     ? Math.max(1, Math.round(raw.dailyLimit as number))
     : SAFETY_PRESETS[preset].dailyLimit;
+  // PR1 存量账本没有 budget：无缝升级为以档位基线起步
+  const budget = Number.isFinite(raw.budget)
+    ? Math.max(0, Math.round(raw.budget as number))
+    : dailyLimit;
   const events = Array.isArray(raw.events)
     ? raw.events
         .filter(
           (timestamp): timestamp is number =>
             typeof timestamp === 'number' && Number.isFinite(timestamp),
         )
+        // 截断必须以 max(budget, dailyLimit) 为界：预算自适应爬升后 budget 可以
+        // 大于 dailyLimit，若只留 dailyLimit 条，usedInWindow 永远到不了 budget，
+        // shouldPauseForQuota 从预算爬升那天起就永远不触发（友情提醒静默失效）。
         .sort((a, b) => a - b)
-        .slice(-dailyLimit)
+        .slice(-Math.max(budget, dailyLimit))
     : [];
   return {
     accountKey: raw.accountKey,
     preset,
     dailyLimit,
-    // PR1 存量账本没有 budget：无缝升级为以档位基线起步
-    budget: Number.isFinite(raw.budget)
-      ? Math.max(0, Math.round(raw.budget as number))
-      : dailyLimit,
+    budget,
     cleanStreak: Number.isFinite(raw.cleanStreak)
       ? Math.max(0, Math.round(raw.cleanStreak as number))
       : 0,
@@ -386,7 +390,10 @@ export async function recordSafetyEvent(
   return enqueueLedgerWrite(async () => {
     const key = accountKey ?? FALLBACK_ACCOUNT_KEY;
     const ledger = await loadSafetyLedger(key);
-    const events = [...trimEvents(ledger.events, now), now].slice(-ledger.dailyLimit);
+    // 同 normalizeLedger：截断按 max(budget, dailyLimit)，预算爬升后额度闸不失效
+    const events = [...trimEvents(ledger.events, now), now].slice(
+      -Math.max(ledger.budget, ledger.dailyLimit),
+    );
     const next: SafetyLedger = { ...ledger, events, updatedAt: now };
     const store = (await readStore()) ?? {
       activeAccountKey: key,

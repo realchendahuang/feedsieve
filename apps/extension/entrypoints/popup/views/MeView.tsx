@@ -158,7 +158,7 @@ export default function MeView({
           <HunterStat
             label={t.statWeek}
             value={me?.rank ? `#${me.rank}` : '—'}
-            sub={me ? `${me.kills} ${t.hunterKillsUnit}` : t.hunterUnrankedShort}
+            sub={me ? (t.hunterKillsUnit ? `${me.kills} ${t.hunterKillsUnit}` : `${me.kills}`) : t.hunterUnrankedShort}
           />
           <HunterStat
             label={t.statBeaten}

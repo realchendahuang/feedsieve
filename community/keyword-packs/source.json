@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "pack_version": "2026.09.12.1",
+  "pack_version": "2026.09.12.2",
   "generated_at": null,
   "packs": [
     {
@@ -2597,6 +2597,123 @@
         [
           "adult-gray-traffic-0a291ce4b79ee76e",
           "龟头"
+        ]
+      ]
+    },
+    {
+      "id": "crypto_giveaway_scams",
+      "name": {
+        "zh": "Crypto scam giveaway",
+        "en": "Crypto scam giveaway"
+      },
+      "description": {
+        "zh": "加密货币假抽奖模板话术（USDT/BTC/Claim on Tron 型），只收模板短语，避免误伤正常加密讨论",
+        "en": "Cryptocurrency fake giveaway templates"
+      },
+      "source_refs": [
+        "local_x_miss_2026-08-21",
+        "local_x_miss_2026-08-28"
+      ],
+      "rules": [
+        [
+          "crypto-scam-usdt-giveaway",
+          "usdt giveaway"
+        ],
+        [
+          "crypto-scam-usdc-giveaway",
+          "usdc giveaway"
+        ],
+        [
+          "crypto-scam-btc-giveaway",
+          "btc giveaway"
+        ],
+        [
+          "crypto-scam-eth-giveaway",
+          "eth giveaway"
+        ],
+        [
+          "crypto-scam-sol-giveaway",
+          "sol giveaway"
+        ],
+        [
+          "crypto-scam-trx-giveaway",
+          "trx giveaway"
+        ],
+        [
+          "crypto-scam-tron-giveaway",
+          "tron giveaway"
+        ],
+        [
+          "crypto-scam-crypto-giveaway",
+          "crypto giveaway"
+        ],
+        [
+          "crypto-scam-bitcoin-giveaway",
+          "bitcoin giveaway"
+        ],
+        [
+          "crypto-scam-giweaway",
+          "giweaway"
+        ],
+        [
+          "crypto-scam-giv3away",
+          "giv3away"
+        ],
+        [
+          "crypto-scam-claim-on-tron",
+          "claim on tron"
+        ],
+        [
+          "crypto-scam-claim-on-tron-network",
+          "claim on tron network"
+        ],
+        [
+          "crypto-scam-instant-claim-on-tron",
+          "instant claim on tron"
+        ],
+        [
+          "crypto-scam-claim-your-share-now",
+          "claim your share now"
+        ],
+        [
+          "crypto-scam-time-is-ticking",
+          "times ticking"
+        ],
+        [
+          "crypto-scam-act-fast-claim",
+          "act fast"
+        ],
+        [
+          "crypto-scam-500-usdt",
+          "500 usdt"
+        ],
+        [
+          "crypto-scam-follow-to-claim",
+          "follow to claim"
+        ],
+        [
+          "crypto-scam-airdrop-claim-now",
+          "airdrop claim now"
+        ],
+        [
+          "crypto-scam-free-crypto-now",
+          "free crypto now"
+        ],
+        [
+          "crypto-scam-join-now-noky",
+          "no kyc"
+        ],
+        [
+          "crypto-scam-win-usdt",
+          "win usdt"
+        ],
+        [
+          "crypto-scam-dm-claim",
+          "dm to claim"
+        ],
+        [
+          "crypto-scam-repost-to-claim",
+          "repost to claim"
         ]
       ]
     }

@@ -21,7 +21,8 @@ export interface CustomKeywordRule {
   createdAt: number;
 }
 export interface KeywordRuleSettings {
-  subscriptionDefaultsVersion: 3;
+  /** v3=v0.7.6 只订阅成人引流；v4=v0.7.8 追加 crypto 假抽奖默认订阅 */
+  subscriptionDefaultsVersion: 3 | 4;
   subscribedCategoryIds: KeywordCategory[];
   disabledOfficialRuleIds: string[];
   customRules: CustomKeywordRule[];
@@ -41,9 +42,11 @@ const MAX_PHRASE_LENGTH = 80;
 // 与远程关键词包的 ID 格式一致，避免后续新增带连字符或下划线的官方分类/规则
 // 在本地设置和备份迁移中被错误丢弃。
 const OFFICIAL_ID_RE = /^[a-z][a-z0-9_-]{1,95}$/;
-const SUBSCRIPTION_DEFAULTS_VERSION = 3 as const;
+// v4（v0.7.8）：新增 crypto_giveaway_scams 默认订阅；v3 存量的明确选择保留并合并新包
+const SUBSCRIPTION_DEFAULTS_VERSION = 4 as const;
 /** 产品只把黄推 / 成人引流设为默认清理对象；其余行业包一律由用户显式订阅。 */
-const DEFAULT_SUBSCRIBED_CATEGORY_IDS = ['adult_gray_traffic'] as const;
+const DEFAULT_SUBSCRIBED_CATEGORY_IDS = ['adult_gray_traffic', 'crypto_giveaway_scams'] as const;
+/** v0.7.8 起新增 crypto_giveaway_scams 默认订阅（crypto 词类从 2026-09-12.2 词包回归）。 */
 
 function flattenOfficialRules(catalog: KeywordPackCatalog): OfficialKeywordRule[] {
   return catalog.packs.flatMap((pack) =>
@@ -103,9 +106,19 @@ function asciiWordRegExp(phrase: string): RegExp | null {
     .join('\\W+');
   return new RegExp(`(?<![a-z0-9])${body}(?![a-z0-9])`, 'i');
 }
+/** 规则的纯 ASCII 整词正则按规则缓存：630+ 规则 × 每推每字段重建 RegExp 是纯浪费。 */
+const ASCII_WORD_REGEX_CACHE = new WeakMap<ActiveKeywordRule, RegExp | null>();
+
+function asciiWordRegExpForRule(rule: ActiveKeywordRule): RegExp | null {
+  const cached = ASCII_WORD_REGEX_CACHE.get(rule);
+  if (cached !== undefined) return cached;
+  const built = asciiWordRegExp(rule.phrase);
+  ASCII_WORD_REGEX_CACHE.set(rule, built);
+  return built;
+}
 function ruleMatchesText(value: string, rule: ActiveKeywordRule): boolean {
   if (rule.terms?.length) return orderedTermsMatch(value, rule.terms, rule.maxGap ?? 12);
-  const ascii = asciiWordRegExp(rule.phrase);
+  const ascii = asciiWordRegExpForRule(rule);
   if (ascii) return ascii.test(normalizeKeywordPhrase(value));
   return textForMatch(value).includes(textForMatch(rule.phrase));
 }
@@ -123,18 +136,36 @@ function normalizeSettings(value: unknown): KeywordRuleSettings {
   // v0.7.4 曾把全部行业包设为默认订阅；v0.7.6 起默认只订阅黄推 / 成人引流。
   // 迁移标记写入后，才把订阅数组视为用户在新版里做出的明确选择，之后关闭全部
   // 也不会被重新打开。
-  const hasCurrentSubscriptionDefaults =
-    raw.subscriptionDefaultsVersion === SUBSCRIPTION_DEFAULTS_VERSION;
+  const storedVersion = typeof raw.subscriptionDefaultsVersion === 'number'
+    ? raw.subscriptionDefaultsVersion
+    : null;
+  const hasCurrentSubscriptionDefaults = storedVersion === SUBSCRIPTION_DEFAULTS_VERSION;
+  // v4 新增 crypto_giveaway_scams 默认订阅：v3 存量用户的明确选择要保留，
+  // 只把新默认包合并进去（不开启 hasCurrent 数组直通的路径）。
+  // 仅当存量用户至少订阅过一个分类时合并（全部关闭= 明确不要任何词库，
+  // 新默认包不再打扰）；v3 用户的空订阅因此保持为空。
+  const storedSubscribedRaw =
+    Array.isArray(raw.subscribedCategoryIds) && storedVersion !== null
+      ? [
+          ...new Set(
+            raw.subscribedCategoryIds.filter(
+              (category): category is string =>
+                typeof category === 'string' && OFFICIAL_ID_RE.test(category),
+            ),
+          ),
+        ]
+      : null;
+  const defaultPresent = DEFAULT_SUBSCRIBED_CATEGORY_IDS.filter((id) =>
+    BUNDLED_KEYWORD_PACK_CATALOG.packs.some((pack) => pack.id === id),
+  );
   const subscribedCategoryIds = hasCurrentSubscriptionDefaults
-    ? Array.isArray(raw.subscribedCategoryIds)
-      ? raw.subscribedCategoryIds.filter(
-          (category): category is string =>
-            typeof category === 'string' && OFFICIAL_ID_RE.test(category),
-        )
-      : []
-    : DEFAULT_SUBSCRIBED_CATEGORY_IDS.filter((id) =>
-        BUNDLED_KEYWORD_PACK_CATALOG.packs.some((pack) => pack.id === id),
-      );
+    ? (storedSubscribedRaw ?? [])
+    : storedSubscribedRaw
+      ? (storedSubscribedRaw.length > 0
+          ? [...storedSubscribedRaw, ...defaultPresent.filter((id) => !storedSubscribedRaw.includes(id))]
+          : /* 明确关闭全部：保留用户的空订阅 */
+            [])
+      : defaultPresent;
   const customRules = Array.isArray(raw.customRules)
     ? raw.customRules
         .flatMap((item): CustomKeywordRule[] => {
@@ -158,6 +189,14 @@ function normalizeSettings(value: unknown): KeywordRuleSettings {
 export async function getKeywordRuleSettings(): Promise<KeywordRuleSettings> {
   return normalizeSettings((await browser.storage.local.get(STORAGE_KEY))[STORAGE_KEY]);
 }
+
+/** 全新安装的默认词库配置（v4 起默认订阅成人引流 + crypto 假抽奖），供测试/预览复用。 */
+export const DEFAULT_KEYWORD_RULE_SETTINGS: KeywordRuleSettings = {
+  subscriptionDefaultsVersion: 4,
+  subscribedCategoryIds: [...DEFAULT_SUBSCRIBED_CATEGORY_IDS],
+  disabledOfficialRuleIds: [],
+  customRules: [],
+};
 async function saveKeywordRuleSettings(settings: KeywordRuleSettings): Promise<void> {
   await browser.storage.local.set({ [STORAGE_KEY]: settings });
 }
@@ -254,20 +293,32 @@ export function activeKeywordRules(
 export function createKeywordHeuristics(
   settings: KeywordRuleSettings,
   catalog: KeywordPackCatalog = BUNDLED_KEYWORD_PACK_CATALOG,
+  /** 命中字段的标签语言（简介/正文…）：徽章上透出命中位置，方便核对是否误标 */
+  fieldLabels: readonly [string, string, string, string] = ['昵称', '账号', '正文', '简介'],
 ): readonly HeuristicRule[] {
   return activeKeywordRules(settings, catalog).map((rule) => ({
     id: `keyword:${rule.id}`,
     check(input) {
       // 垃圾账号常把引流词直接放在昵称里，而正文只发图片或表情。
       // handle 也参与匹配，方便用户自定义拦截固定账号前缀。
-      const fields = [input.displayName, input.handle, input.text, input.bio].filter(
-        (value): value is string => typeof value === 'string' && value.length > 0,
+      // 每个字段独立匹配，避免昵称末尾和正文开头偶然拼成一个规则；
+      // 命中字段透出到理由里（简介/正文…），用户第一眼能核对来源。
+      const hitIndex = [
+        input.displayName,
+        input.handle,
+        input.text,
+        input.bio,
+      ].findIndex(
+        (value): value is string =>
+          typeof value === 'string' && value.length > 0 && ruleMatchesText(value, rule),
       );
-      // 每个字段独立匹配，避免昵称末尾和正文开头偶然拼成一个规则。
-      if (!fields.some((field) => ruleMatchesText(field, rule))) return null;
-      return rule.source === 'custom'
-        ? `命中你的关键词：${rule.phrase}`
-        : `命中官方规则：${rule.phrase}`;
+      if (hitIndex < 0) return null;
+      const fieldLabel = fieldLabels[hitIndex];
+      const base =
+        rule.source === 'custom'
+          ? `命中你的关键词：${rule.phrase}`
+          : `命中官方规则：${rule.phrase}`;
+      return fieldLabel ? `${base} · ${fieldLabel}` : base;
     },
   }));
 }

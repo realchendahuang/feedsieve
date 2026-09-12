@@ -57,8 +57,7 @@ body.mode-sidepanel,
 body.mode-sidepanel #root {
   width: 100% !important;
   max-width: 100% !important;
-  height: 100vh !important;
-  height: 100dvh !important;
+  height: 100% !important;
   max-height: none !important;
 }
 
@@ -357,7 +356,7 @@ input:focus-visible + span {
   position: fixed;
   z-index: 1000;
   width: max-content;
-  max-width: min(240px, calc(100vw - 24px));
+  max-width: min(240px, calc(100% - 24px));
   padding: 8px 12px;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1248,25 +1247,7 @@ input:focus-visible + span {
   transition: all 160ms ease;
 }
 
-.clean-state-hint-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.clean-state-hint {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 1px solid var(--fs-line-strong);
-  color: var(--fs-muted);
-  font-size: 9px;
-  font-weight: 700;
-  cursor: help;
-}
+/* 空状态提示改用通用 HelpIcon（可达性/键盘焦点），专属 ! 角标样式已删 */
 
 /* 空状态大图标现为刷新按钮（两态：清爽=绿盾勾；重扫中旋转） */
 .clean-state-icon {
@@ -1438,14 +1419,7 @@ input:focus-visible + span {
   }
 }
 
-/* 底部手动兜底提示：单行弱化，不占视觉重心 */
-.manual-block-hint {
-  margin: 8px 0 0;
-  color: var(--fs-muted);
-  font-size: 11px;
-  line-height: 1.4;
-  text-align: center;
-}
+/* 底部手动兜底提示已收进页头 HelpIcon（AGENTS.md），段常驻规则随 2026-09-12 收口删 */
 
 .result-message,
 .inline-notice {
@@ -3195,4 +3169,40 @@ input:focus-visible + span {
 
 .hunter-site-cta:hover {
   filter: brightness(1.05);
+}
+
+/* 榜单状态三态分离：加载/失败同一弱化样式，失败额外给重试按钮 */
+.hunter-board-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.hunter-retry {
+  padding: 5px 14px;
+  border: 1px solid var(--fs-line-strong, rgba(255, 255, 255, 0.16));
+  border-radius: var(--fs-radius-sm, 8px);
+  background: transparent;
+  color: var(--fs-accent, #f59e0b);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.hunter-retry:hover {
+  filter: brightness(1.15);
+}
+
+/* 社区空态：一句话 + ! 图标同行（第二句收进图标） */
+.community-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.community-empty-state .community-empty {
+  margin: 0;
 }

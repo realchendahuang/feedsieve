@@ -57,7 +57,7 @@ import {
 } from './agent-admin';
 import { hunterPageHtml } from './hunter-page';
 import { LEADERBOARD, getLeaderboard, markLeaderboardDirty } from './leaderboard';
-import { scheduledAutoPublish, settleSeasonsScheduled } from './scheduled';
+import { runScheduledCron } from './scheduled';
 import { bindEmail, getProfile, updateProfile, verifyEmail } from './player';
 import { MAINTAINER_CATEGORIES } from './maintainer-blocklist';
 import { processRetractionBatch } from './labels';
@@ -959,7 +959,7 @@ export default {
     return app.fetch(request as Request, env);
   },
   async scheduled(_controller, env) {
-    await scheduledAutoPublish(env);
-    await settleSeasonsScheduled(env);
+    // 与 server.ts 生产入口共用同一编排函数，探活等新增消费端不再漂移
+    await runScheduledCron(env);
   },
 } satisfies ExportedHandler<Cloudflare.Env>;

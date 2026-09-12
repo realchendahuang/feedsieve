@@ -397,9 +397,11 @@ export async function processReportBatch(
   }
 
   // 击杀时刻探活结果（#2 定稿）：随开火票写 account_health。
-  // dead 是服务端对官方名单/计分口径的输入，不改变本张票的真实意图——票照常记入。
   // 键取正主（canonical），探测物理对象是用户上报的 handle：换号别名场景下
   // 两者经 x_user_id 关联，正主一条足以表达存活口径。
+  // 单笔客户端上报不能锁死终态（2026-09-12 收口）：kill-report 的 dead 只落
+  // unknown 标记，由 cron-prober 的「kill-report 待复核」队列重验后才进 dead
+  // 终态；alive 是探活的正向结果，照常直写。
   if (valid.some(({ report }) => report.liveness !== null)) {
     const healthObservations: HealthObservation[] = [];
     for (const [, report] of touchedHandles) {
@@ -407,7 +409,7 @@ export async function processReportBatch(
       healthObservations.push({
         handle: report.handle,
         xUserId: report.xUserId,
-        state: report.liveness satisfies 'alive' | 'dead',
+        state: report.liveness === 'dead' ? 'unknown' : 'alive',
         source: 'kill-report',
       });
     }

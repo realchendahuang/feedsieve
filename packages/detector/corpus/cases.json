@@ -334,7 +334,7 @@
     },
     {
       "id": "word-salad-keyword-corroborated",
-      "note": "失守 2 收口：官方词库当轮命中（keywordCorroborated）背书无乱码 handle 的词沙拉，词库热更新短语不再依赖写死隐语表",
+      "note": "评测层用例：调用方显式注入 keywordCorroborated 表达「官方词库先命中」。生产管线 keyword 命中即返回、且不装配 word-salad；循环内传播从未生效，已于 2026-09 删除，勿依赖",
       "input": { "handle": "mimo_garden", "displayName": "茉见月花园", "text": "likely mango banana 🍋 butter open wide", "keywordCorroborated": true },
       "expected": "word-salad"
     },

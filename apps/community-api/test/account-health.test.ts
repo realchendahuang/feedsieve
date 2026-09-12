@@ -61,19 +61,20 @@ describe('击杀时刻探活入库（account_health）', () => {
     expect(second?.probe_count).toBe(2);
   });
 
-  it('dead 落库后成为终态：后续 alive 覆写不改状态、不推进 updated_at', async () => {
+  it('kill-report 的 dead 只落 unknown 待复核（单笔上报不锁终态）；之后 alive 上报合理翻转 pending', async () => {
     await reportWithLiveness('inst-dead', 'dead_user_1', 'dead');
     const first = await readHealth('dead_user_1');
-    expect(first?.state).toBe('dead');
-    expect(first?.terminal_checked_at).not.toBeNull();
+    // 2026-09-12 收口：单笔客户端 dead 上报即终态 = 一次上报永久拉黑健康记录，
+    // 改为落 unknown + kill-report 来源，由 cron-prober 的待复核队列服务端重验。
+    expect(first?.state).toBe('unknown');
+    expect(first?.source).toBe('kill-report');
+    expect(first?.terminal_checked_at).toBeNull();
 
-    // 服务端永不复探 dead（cron 查询排除），但 kill-report 仍可能随手带来一次确认：
-    // 旧的探活记录只能被确认，不能被翻案。
+    // 其它安装带来一次真正的探活（kill 时刻确诊存活）可以翻转 pending——
+    // 两笔互相独立的上报互相制衡，谁都不能单独把记录钉死。
     await reportWithLiveness('inst-live-different', 'dead_user_1', 'alive');
     const after = await readHealth('dead_user_1');
-    expect(after?.state).toBe('dead');
-    expect(after?.terminal_checked_at).toEqual(first?.terminal_checked_at);
-    // 真探过一次，计数诚实累计
+    expect(after?.state).toBe('alive');
     expect(after?.probe_count).toBe(2);
   });
 

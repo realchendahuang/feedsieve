@@ -23,6 +23,7 @@ export const PROBER_POLICY = {
   maxPerRun: 30,
   staleLimit: 20,
   missingLimit: 10,
+  killReportRecheckLimit: 10,
   interProbeDelayMs: 1200,
   requestTimeoutMs: 8000,
   consecutiveFailureTrip: 3,
@@ -194,7 +195,9 @@ export async function probeAccountHealthScheduled(env: Cloudflare.Env): Promise<
   }
 
   // 目标一：非终态且最久没信号的（滚动抽样；alive 的也允许低频重验，
-  // updated_at 会刷新回到队尾）；目标二：共识内还没有健康记录的新账号。
+  // updated_at 会刷新回到队尾）；目标二：共识内还没有健康记录的新账号；
+  // 目标三：kill-report 上报疑似 dead 的待复核单（单笔客户端上报不进终态，
+  // 必须由服务端探活背书后才落 dead，见 reports.ts 的 kill-report 映射）。
   const stale = await env.DB.prepare(
     `SELECT handle, x_user_id AS xUserId FROM account_health
      WHERE state != 'dead' ORDER BY updated_at ASC LIMIT ?1`,
@@ -208,10 +211,16 @@ export async function probeAccountHealthScheduled(env: Cloudflare.Env): Promise<
   )
     .bind(PROBER_POLICY.missingLimit)
     .all<ProbeTarget>();
+  const killReportRecheck = await env.DB.prepare(
+    `SELECT handle, x_user_id AS xUserId FROM account_health
+     WHERE state = 'unknown' AND source = 'kill-report' ORDER BY updated_at ASC LIMIT ?1`,
+  )
+    .bind(PROBER_POLICY.killReportRecheckLimit)
+    .all<ProbeTarget>();
 
   const targets: ProbeTarget[] = [];
   const seen = new Set<string>();
-  for (const target of [...stale.results, ...missing.results]) {
+  for (const target of [...stale.results, ...killReportRecheck.results, ...missing.results]) {
     if (!seen.has(target.handle)) {
       seen.add(target.handle);
       targets.push(target);

@@ -129,6 +129,7 @@ export default function HunterProfileCard({
         value={name}
         maxLength={16}
         placeholder={t.hunterDisplayName}
+        aria-label={t.hunterDisplayName}
         onChange={(event) => setName(event.target.value)}
       />
       <input
@@ -136,6 +137,7 @@ export default function HunterProfileCard({
         value={bio}
         maxLength={60}
         placeholder={t.hunterBio}
+        aria-label={t.hunterBio}
         onChange={(event) => setBio(event.target.value)}
       />
       <input
@@ -143,6 +145,7 @@ export default function HunterProfileCard({
         value={xHandle}
         maxLength={15}
         placeholder={t.hunterXHandle}
+        aria-label={t.hunterXHandle}
         onChange={(event) => setXHandle(event.target.value)}
       />
       <button type="button" className="primary-action hunter-save" onClick={() => void save()} disabled={busy}>
@@ -169,6 +172,7 @@ export default function HunterProfileCard({
             type="email"
             value={email}
             placeholder={t.hunterEmailPlaceholder}
+            aria-label={t.hunterEmailPlaceholder}
             onChange={(event) => setEmail(event.target.value)}
           />
           <div className="hunter-email-actions">
@@ -200,6 +204,7 @@ export default function HunterProfileCard({
             value={code}
             maxLength={6}
             placeholder={t.hunterCodePlaceholder}
+            aria-label={t.hunterCodePlaceholder}
             onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
           />
           <div className="hunter-email-actions">

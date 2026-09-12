@@ -166,6 +166,12 @@ export default function SettingsView({
       anchor.remove();
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
       setPersonalConfigMessage(t.personalConfigExported);
+      // 已下载是典型瞬时成功：4s 自动消失，不常驻（错误提示保留常驻供读障）
+      window.setTimeout(() => {
+        setPersonalConfigMessage((current) =>
+          current === t.personalConfigExported ? null : current,
+        );
+      }, 4_000);
     } catch {
       setPersonalConfigError(t.personalConfigExportFailed);
     }

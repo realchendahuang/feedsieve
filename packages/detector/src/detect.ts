@@ -28,9 +28,10 @@ export interface DetectInput {
   /** hostname 由 Reader 预先解析好，Detector 不做 URL 解析。 */
   links?: ReadonlyArray<{ href: string; hostname?: string; display?: string }>;
   /**
-   * 官方词库已佐证（调用方或 detect() 在前面 keyword:*official* 规则命中后
-   * 置位）。把「账号说了引流话术」从写死小词表解耦到线上词库通道：
-   * 词库当天新增的短语可直接背书词沙拉/组合层判定。
+   * 官方词库已佐证（调用方显式注入）。历史设计是「keyword:*official* 规则
+   * 命中后循环内向前传播」，但因为启发式命中即 return，后续规则永远吃不到
+   * 这个 flag，生产管线也会在 keyword 命中时直接返回——它从未真正生效。
+   * 现在只作为评测层输入：corpus 用例用手工注入表达「词库先命中」的场景。
    */
   keywordCorroborated?: boolean;
 }
@@ -159,18 +160,14 @@ export function detect(
   }
 
   const heuristics = options.heuristics ?? DEFAULT_HEURISTICS;
-  // 词库佐证沿规则顺序向前传播：keyword:*official* 命中后，后面的 word-salad /
-  // weak-signal-combo 能以线上词库当轮命中作为账号侧佐证（词库 15 分钟热更新）。
-  let keywordCorroborated = input.keywordCorroborated ?? false;
   for (const rule of heuristics) {
     let matched: string | null;
     try {
-      matched = rule.check({ ...input, handle, keywordCorroborated });
-      if (matched && rule.id.startsWith('keyword:official:')) {
-        keywordCorroborated = true;
-      }
-    } catch {
-      // 单条规则异常不拖垮整个检测
+      matched = rule.check({ ...input, handle });
+    } catch (error) {
+      // 单条规则异常不拖垮整个检测，但必须留痕：一条线上必炸的规则静默消失
+      // 等于无声漏报。detection-log 不记异常，console 是唯一痕迹。
+      console.warn(`[detector] heuristic ${rule.id} threw`, error);
       continue;
     }
     if (matched) {

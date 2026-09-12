@@ -43,3 +43,17 @@ export async function settleSeasonsScheduled(env: Cloudflare.Env): Promise<void>
     console.error('[community-api] cron season settle failed:', error);
   }
 }
+
+/**
+ * cron 全量编排：快照日更 + 赛季结算 + 死账号定向探活。
+ * 抽成单函数供两个环境入口共用（index.ts 测试入口 / server.ts 生产入口）：
+ * 新增定时消费端只改这里，别再出现 server 独有探活而 index 静默丢掉的漂移
+ * （2026-09-12 体检发现的隐患）。
+ */
+export async function runScheduledCron(env: Cloudflare.Env): Promise<void> {
+  await scheduledAutoPublish(env);
+  await settleSeasonsScheduled(env);
+  const { probeAccountHealthScheduled } = await import('./prober');
+  await probeAccountHealthScheduled(env);
+
+}

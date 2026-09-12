@@ -35,18 +35,15 @@ describe('本地关键词规则', () => {
     expect(
       rule?.check({ handle: 'bait', text: '应该没人比我玩的开了吧 🤚 😊 我福不黑不信你看' }),
     ).toContain('我福不黑');
-    expect(activeKeywordRules(settings)).toHaveLength(
-      OFFICIAL_KEYWORD_RULES.filter((rule) => rule.category === 'adult_gray_traffic').length,
-    );
+    expect(activeKeywordRules(settings)).toHaveLength(OFFICIAL_KEYWORD_RULES.length);
   });
 
-  it('首次安装默认只订阅黄推 / 成人引流，订阅不在词库的旧分类是宽容空操作', async () => {
+  it('首次安装默认订阅黄推 + crypto 假抽奖两个默认包，旧分类是宽容空操作', async () => {
     let settings = await getKeywordRuleSettings();
     expect(isOfficialKeywordCategorySubscribed(settings, 'adult_gray_traffic')).toBe(true);
+    expect(isOfficialKeywordCategorySubscribed(settings, 'crypto_giveaway_scams')).toBe(true);
     expect(isOfficialKeywordCategorySubscribed(settings, 'crypto_scam')).toBe(false);
-    expect(activeKeywordRules(settings)).toHaveLength(
-      OFFICIAL_KEYWORD_RULES.filter((rule) => rule.category === 'adult_gray_traffic').length,
-    );
+    expect(activeKeywordRules(settings)).toHaveLength(OFFICIAL_KEYWORD_RULES.length);
 
     // 2026-09-11 起词库只保留黄推包；老版本备份把 crypto_scam 标成订阅时，
     // 该分类没有任何官方规则，不产出条目也不报错（迁移兼容面）
@@ -57,14 +54,32 @@ describe('本地关键词规则', () => {
     );
   });
 
-  it('旧版订阅状态升级时迁移为仅黄推默认', async () => {
+  it('旧版订阅状态升级时迁移为默认订阅（v4 起含 crypto 假抽奖包）', async () => {
     storage.keywordRulesV1 = {
       subscribedCategoryIds: ['adult_gray_traffic', 'crypto_scam'],
       disabledOfficialRuleIds: [],
       customRules: [],
     };
     const settings = await getKeywordRuleSettings();
-    expect(settings.subscribedCategoryIds).toEqual(['adult_gray_traffic']);
+    // 无迁移标记的存量（v0.7.6 前）一律套最新默认；crypto_scam 不在词库被滤掉
+    expect(settings.subscribedCategoryIds).toEqual([
+      'adult_gray_traffic',
+      'crypto_giveaway_scams',
+    ]);
+  });
+
+  it('v3 存量升级：保留明确订阅并合并 crypto 新默认包（v0.7.6 语义不变）', async () => {
+    storage.keywordRulesV1 = {
+      subscriptionDefaultsVersion: 3,
+      subscribedCategoryIds: ['adult_gray_traffic'],
+      disabledOfficialRuleIds: [],
+      customRules: [],
+    };
+    const settings = await getKeywordRuleSettings();
+    expect(settings.subscribedCategoryIds).toEqual([
+      'adult_gray_traffic',
+      'crypto_giveaway_scams',
+    ]);
   });
 
   it('新版用户明确关闭全部词库后，空订阅不会被重新打开', async () => {

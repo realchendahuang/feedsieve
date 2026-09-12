@@ -33,14 +33,27 @@ beforeEach(() => {
 });
 
 describe('远程关键词包契约', () => {
-  it('构建时词库只保留黄推 / 成人引流包（其余行业包已于 2026-09-11 移除）、成人高召回规则和分词组合', () => {
-    expect(BUNDLED_KEYWORD_PACK_CATALOG.packs).toHaveLength(1);
-    const [bundledPack] = BUNDLED_KEYWORD_PACK_CATALOG.packs;
-    expect(bundledPack?.id).toBe('adult_gray_traffic');
-    expect(BUNDLED_KEYWORD_PACK_CATALOG.pack_version).toBe('2026.09.12.1');
+  it('构建词库：成人引流 + crypto 假抽奖两个包（2026-09-12.2 起恢复 crypto 类目）、成人高召回规则和分词组合', async () => {
+    expect(BUNDLED_KEYWORD_PACK_CATALOG.packs.map((pack) => pack.id)).toEqual([
+      'adult_gray_traffic',
+      'crypto_giveaway_scams',
+    ]);
+    // 与仓库内构建产物同源比较，不再硬编码版本/条数：词包 bump 不用手改测试
+    const { readFile } = await import('node:fs/promises');
+    const { resolve } = await import('node:path');
+    const sourcePath = resolve(
+      process.cwd(),
+      'community/keyword-packs/source.json',
+    );
+    const source = JSON.parse(await readFile(sourcePath, 'utf8')) as {
+      pack_version: string;
+      packs: Array<{ rules: unknown[] }>;
+    };
+    expect(BUNDLED_KEYWORD_PACK_CATALOG.pack_version).toBe(source.pack_version);
     expect(
       BUNDLED_KEYWORD_PACK_CATALOG.packs.reduce((count, pack) => count + pack.rules.length, 0),
-    ).toBe(630);
+    ).toBe(source.packs.reduce((count, pack) => count + pack.rules.length, 0));
+    expect(BUNDLED_KEYWORD_PACK_CATALOG.pack_version).toMatch(/^\d{4}\.\d{2}\.\d{2}\.\d{1,4}$/);
     expect(
       BUNDLED_KEYWORD_PACK_CATALOG.packs
         .find((pack) => pack.id === 'adult_gray_traffic')
@@ -51,6 +64,17 @@ describe('远程关键词包契约', () => {
       max_gap: 12,
       name: { zh: '同城 + 上门', en: '同城 + 上门' },
     });
+    // crypto 恢复类目：抽样钉住模板短语与拼写变体（变种快速校验通道）
+    expect(
+      BUNDLED_KEYWORD_PACK_CATALOG.packs.some((pack) =>
+        pack.rules.some((rule) => rule.phrase === 'claim on tron'),
+      ),
+    ).toBe(true);
+    expect(
+      BUNDLED_KEYWORD_PACK_CATALOG.packs.some((pack) =>
+        pack.rules.some((rule) => rule.phrase === 'giweaway'),
+      ),
+    ).toBe(true);
     expect(KEYWORD_PACK_SYNC_MAX_AGE_MS).toBe(15 * 60 * 1000);
   });
 
@@ -276,7 +300,7 @@ describe('detector_config 覆写契约', () => {
     const clean = parseKeywordPackCatalog(
       JSON.parse(JSON.stringify({ ...BUNDLED_KEYWORD_PACK_CATALOG })),
     );
-    expect(clean?.packs.length).toBe(1);
+    expect(clean?.packs.length).toBe(BUNDLED_KEYWORD_PACK_CATALOG.packs.length);
     const withoutConfig = parseKeywordPackCatalog(
       (() => {
         const raw: Record<string, unknown> = JSON.parse(JSON.stringify(BUNDLED_KEYWORD_PACK_CATALOG));

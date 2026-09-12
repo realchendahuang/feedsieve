@@ -36,6 +36,7 @@ import {
   AppIcon,
   FAILURE_LABELS,
   formatDate,
+  HelpIcon,
   normalizeManualInput,
 } from './shared';
 import QueuePanel from './QueuePanel';
@@ -66,6 +67,8 @@ interface ListsViewProps {
   refreshPageMarked: () => Promise<void>;
   pauseDestructive: boolean;
   communityEntries: CommunityEntry[];
+  /** 社区快照仍在拉取：还没落定前不给空态（避免闪现「没有需要处理的账号」） */
+  communityEntriesLoading?: boolean;
   /** 推荐白名单（快照 whitelist 段下调）：只读展示，含维护者背书理由 note */
   recommendList: WhitelistEntry[];
 }
@@ -77,6 +80,7 @@ export default function ListsView({
   refreshPageMarked,
   pauseDestructive,
   communityEntries,
+  communityEntriesLoading = false,
   recommendList,
 }: ListsViewProps) {
   const t = UI_COPY[language];
@@ -149,6 +153,13 @@ export default function ListsView({
     return () => unsubs.forEach((unsub) => unsub());
   }, []);
 
+  // 撤销结果与清理页同款：瞬时提示 4s 自动消失，不常驻遮挡
+  useEffect(() => {
+    if (!unblockResult) return;
+    const timer = window.setTimeout(() => setUnblockResult(null), 4_000);
+    return () => window.clearTimeout(timer);
+  }, [unblockResult]);
+
   async function runUnblock(handle?: string): Promise<void> {
     setRunning(true);
     notify(null);
@@ -167,8 +178,12 @@ export default function ListsView({
   }
 
   async function removeFromAllowlist(handle: string): Promise<void> {
-    await removeAllowed(handle);
-    await browser.runtime.sendMessage({ type: 'feedsieve:labels-sync' }).catch(() => undefined);
+    try {
+      await removeAllowed(handle);
+      await browser.runtime.sendMessage({ type: 'feedsieve:labels-sync' }).catch(() => undefined);
+    } catch {
+      notify(t.openXNotice);
+    }
   }
 
   /** 手动加入白名单（覆盖 @handle / x.com 主页链接两种输入）。 */
@@ -301,16 +316,6 @@ export default function ListsView({
       : queue?.status === 'paused' && queue.pauseReason === 'rate_limit_storm'
         ? t.queuePausedRateLimit
         : null;
-  const failedSummary = (result: { failed: Array<{ handle: string; code: string }> } | null) =>
-    result?.failed.length
-      ? result.failed
-          .map(
-            (failure) =>
-              `@${failure.handle} (${FAILURE_LABELS[language][failure.code] ?? failure.code})`,
-          )
-          .join(' · ')
-      : null;
-
   return (
     <div className="view-stack lists-view">
       <div className="list-tabs" role="tablist" aria-label={t.lists}>
@@ -464,8 +469,20 @@ export default function ListsView({
                   );
                 })}
               </ul>
+            ) : communityEntriesLoading ? (
+              <ul className="manage-list community-list" aria-hidden="true">
+                <li className="manage-item community-item">
+                  <span className="account-avatar is-muted" aria-hidden="true">…</span>
+                </li>
+                <li className="manage-item community-item">
+                  <span className="account-avatar is-muted" aria-hidden="true">…</span>
+                </li>
+              </ul>
             ) : (
-              <p className="community-empty">{t.communityEmpty}</p>
+              <div className="empty-panel community-empty-state">
+                <p className="community-empty">{t.communityEmpty}</p>
+                <HelpIcon text={t.communityEmptyDetail} />
+              </div>
             )}
           </>
         ) : listView === 'blocked' ? (
@@ -536,16 +553,25 @@ export default function ListsView({
             )}
 
             {unblockResult ? (
-              <p className="result-message" role="status">
-                {t.restoredResult(unblockResult.unblocked.length)}
-                {failedSummary(unblockResult) ? (
-                  <span className="result-failure">
-                    {' '}
-                    · {t.failedResult(unblockResult.failed.length)} ·{' '}
-                    {failedSummary(unblockResult)}
-                  </span>
+              <>
+                <p className="result-message" role="status">
+                  {t.restoredResult(unblockResult.unblocked.length)}
+                  {unblockResult.failed.length > 0
+                    ? ` · ${t.failedResult(unblockResult.failed.length)}`
+                    : null}
+                </p>
+                {unblockResult.failed.length > 0 ? (
+                  // 失败明细进滚动容器（与清理页同款），不无限换行
+                  <ul className="queue-failed-list" role="status">
+                    {unblockResult.failed.map((failure) => (
+                      <li key={failure.handle}>
+                        @{failure.handle}（
+                        {FAILURE_LABELS[language][failure.code] ?? failure.code}）
+                      </li>
+                    ))}
+                  </ul>
                 ) : null}
-              </p>
+              </>
             ) : null}
             {blockedCount ? (
               <button

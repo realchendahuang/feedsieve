@@ -1290,6 +1290,11 @@ function ensureStyles(): void {
       outline-offset: -2px;
       border-radius: 16px;
     }
+    /* 嵌套命中（引用帖/媒体也自成 cellInnerDiv）只保留最外层一圈黄框：
+       框中框既冗余又像渲染 bug（2026-09-12 真机反馈）。 */
+    [${MARK_ATTRIBUTE}] [${MARK_ATTRIBUTE}] {
+      outline: none !important;
+    }
     /* X 的 cell 仍由其 React/虚拟列表持有；只折叠显示，绝不从 DOM 物理删除。 */
     [${HIDDEN_TWEET_CELL_ATTRIBUTE}] {
       display: none !important;
@@ -1299,7 +1304,9 @@ function ensureStyles(): void {
       gap: 10px;
       align-items: center;
       padding: 3.5px 11px;
-      margin: 3px 12px 8px;
+      /* 底边距贴本体 cell 的下边：徽章必须紧挨自己的黄框，
+         不给视觉上「挂在下一格」的空间（2026-09-12 真机反馈）。 */
+      margin: 3px 12px 2px;
       width: fit-content;
       max-width: calc(100% - 24px);
       border: 1px solid rgba(245, 158, 11, 0.35);

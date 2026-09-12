@@ -269,4 +269,33 @@ describe('block-safety 安全账本', () => {
     const used = { ...ledger, events: [dayMs(2026, 9, 1) + HOUR_MS] };
     expect(remainingQuota(used, dayMs(2026, 9, 1) + HOUR_MS * 2)).toBe(199);
   });
+
+  it('预算爬升到 dailyLimit 之上后，events 不能被截成 dailyLimit 条（否则额度闸静默失效）', async () => {
+    // 存量机制回归：budget=450 > dailyLimit=400 时，events 若只留 400 条，
+    // remainingQuota 恒 > 0，shouldPauseForQuota 永远不触发。
+    storage.blockSafetyLedgerV1 = {
+      activeAccountKey: 'acc-1',
+      ledgers: {
+        'acc-1': {
+          accountKey: 'acc-1',
+          preset: 'balanced',
+          dailyLimit: 400,
+          budget: 450,
+          events: Array.from({ length: 450 }, (_, i) => NOW - (449 - i) * 60_000),
+          updatedAt: NOW,
+        },
+      },
+    };
+    const ledger = await loadSafetyLedger('acc-1');
+    expect(ledger.budget).toBe(450);
+    expect(usedInWindow(ledger, NOW)).toBe(450);
+    expect(remainingQuota(ledger, NOW)).toBe(0);
+    expect(shouldPauseForQuota(undefined, ledger, NOW)).toBe(true);
+
+    // 记一笔新事件后仍封顶 450 条（record 截断同步走 max(budget, dailyLimit)），
+    // used=450=budget，额度闸照常归零
+    const next = await recordSafetyEvent('acc-1', NOW + 60_000);
+    expect(usedInWindow(next, NOW + 60_000)).toBe(450);
+    expect(shouldPauseForQuota(undefined, next, NOW + 60_000)).toBe(true);
+  });
 });
