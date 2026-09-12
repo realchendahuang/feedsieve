@@ -1,5 +1,18 @@
 # Release Notes
 
+## v0.8.4 — 检测/弹窗热点性能轮（2026-09-12）
+
+- **检测热点降载**：关键词归一化结果有界缓存（同字段文本不再被数百规则反复重算整套变体映射+NFKC）、规则短语派生量按规则缓存、SimHash 已知模板位向量按指纹集缓存、已验签快照解析结果进程内缓存（批量队列不再每秒重解析 2MB JSON）。
+- **弹窗列表**：社区名单先挂前 100 条 +「加载剩余」逐段放出；黑/白名单派生集合按依赖 memo，不再跟 toast/计时器全量重算。
+- **随包体积继续瘦身**：词库 official.json 与变体表不再静态 import（三入口各一份），全面改 runtime 资源；全量产物 2.46→2.25MB，content.js 212→104KB。
+- **i18n 键对齐测试**：zh/en 两份文案 map 有用例钉住键集合与类型，防英文文案 undefined。
+- **验证**：全仓 557/557 + community-api 190/190；lint/typecheck/构建通过。
+
+发布产物：
+
+- `feedsieve-0.8.4-chrome.zip`（394.56 kB）
+- SHA-256：`2d602f53078e5e8c7a2561d9d5dbec85acbf5068e088adf4fb6e4f86bd1e73dd`
+
 ## v0.8.3 — 打野榜独立页下线，引流统一走官网公示路由（2026-09-12）
 
 - **/leaderboard 独立网页彻底下线**：`api.feedsieve.win/leaderboard` 观看页删除（两 host 均 404），`/v1/leaderboard` 数据接口与排位赛本身不变。官网公示路由（`feedsieve.win/lists/*`）才是唯一观看面。

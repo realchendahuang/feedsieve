@@ -5,7 +5,7 @@
 - 每个版本的详细工程记录见 [`docs/RELEASES.md`](docs/RELEASES.md)。
 - 二进制产物见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)；正式用户请从 [Chrome 应用商店](https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph)接收更新。
 
-## [未发布]
+## [0.8.4] — 2026-09-12
 
 ### 性能
 
@@ -222,7 +222,8 @@
 - 首个可用版本：黄框标注（内置名单 + 启发式，带理由）、顺手拉黑、待拉黑列表、一键批量拉黑（持久队列）、一键撤销、本地统计。
 - WXT + React 19 + MV3 最小权限架构；X DOM fixtures 锁定 reader→detector 契约；95 个单元测试；pre-push 本地质量门禁。
 
-[Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.8.3...HEAD
+[Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.8.4...HEAD
+[0.8.4]: https://github.com/realchendahuang/feedsieve/compare/v0.8.3...v0.8.4
 [0.8.3]: https://github.com/realchendahuang/feedsieve/compare/v0.8.2...v0.8.3
 [0.8.0]: https://github.com/realchendahuang/feedsieve/compare/v0.7.5...v0.8.0
 [0.7.5]: https://github.com/realchendahuang/feedsieve/compare/v0.7.4...v0.7.5
