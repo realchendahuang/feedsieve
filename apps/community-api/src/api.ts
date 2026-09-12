@@ -45,6 +45,7 @@ const SITE_PAGES = [
   { path: '/guide', title: '使用教程' },
   { path: '/lists/blacklist', title: '黑名单公示' },
   { path: '/lists/whitelist', title: '推荐白名单公示' },
+  { path: '/lists/rescue', title: '社区抢救名单公示' },
   { path: '/lists/keywords', title: '关键词词库公示' },
   { path: '/lists/ranked', title: '打野排位赛周榜' },
   { path: '/lists/apply', title: '入册申请与误伤申诉' },
@@ -137,7 +138,13 @@ async function listOgStat(
     base.big = `${roster?.whitelist.maintained.length ?? 0}`;
     base.bigLabel = '个入册账号';
     base.line = '一票豁免任何标注';
-    base.sub = roster ? '社区抢救误标条目同时展示' : '快照加载中';
+    base.sub = roster ? '与扩展执行豁免口径同源' : '快照加载中';
+  } else if (page === 'rescue') {
+    base.title = '社区抢救名单公示';
+    base.big = `${roster?.whitelist.verified.length ?? 0}`;
+    base.bigLabel = '条抢救记录';
+    base.line = '误标被推翻的账号';
+    base.sub = roster ? '与扩展执行豁免口径同源' : '快照加载中';
   } else if (page === 'ranked') {
     const board = await getLeaderboard(env, 'all');
     base.title = '打野排位赛';
@@ -160,7 +167,7 @@ async function listOgStat(
     base.title = '入册申请与误伤申诉';
     base.big = '邮箱';
     base.bigLabel = '验证后复核';
-    base.line = '每 IP / 每日 20 条额度';
+    base.line = '邮箱验证后进维护者复核队列';
     base.sub = '博主宣言入册或误伤申诉';
   } else if (page !== 'blacklist') {
     return null;

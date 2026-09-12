@@ -77,7 +77,7 @@ describe('GET /v1/roster/latest（官网名单公示）', () => {
     for (let i = 1; i <= 4; i++) await rescue(`roster-100${i}-4000-8000-bbbbbbbbbbbb`, 'rescued_user');
     // 推荐白名单（博主宣言）
     await env.DB.prepare(MAINTAINER_WHITELIST_UPSERT_SQL)
-      .bind('good_user', null, null, null, '本人宣言：不刷屏不引流', Math.floor(Date.now() / 1000))
+      .bind('good_user', null, '好用户', 'https://pbs.twimg.com/profile_images/1/ok_400x400.jpg', '本人宣言：不刷屏不引流', Math.floor(Date.now() / 1000))
       .run();
 
     await generateSnapshot(env, 0, { bypassDailyOnce: true });
@@ -104,7 +104,11 @@ describe('GET /v1/roster/latest（官网名单公示）', () => {
     expect(detail.evidence_post_ids).toEqual(['18000000000000000']);
 
     const maintained = roster.whitelist.maintained.find((entry) => entry.handle === 'good_user');
-    expect(maintained).toMatchObject({ note: '本人宣言：不刷屏不引流' });
+    expect(maintained).toMatchObject({
+      note: '本人宣言：不刷屏不引流',
+      name: '好用户',
+      avatar_url: 'https://pbs.twimg.com/profile_images/1/ok_400x400.jpg',
+    });
     expect(roster.whitelist.verified.find((entry) => entry.handle === 'rescued_user')).toMatchObject({
       net_votes: 3,
     });

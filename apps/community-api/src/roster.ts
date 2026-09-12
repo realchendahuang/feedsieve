@@ -28,6 +28,10 @@ export interface RosterBlacklistEntry {
 
 export interface RosterWhitelistEntry {
   handle: string;
+  /** 显示昵称（whitelist.yaml 维护者填写的公开昵称） */
+  name?: string;
+  /** X 公开头像 URL（pbs.twimg.com），快照里展示用 */
+  avatar_url?: string;
   note: string;
   added_at: string;
 }
@@ -106,6 +110,10 @@ export async function getPublicRoster(env: Cloudflare.Env): Promise<RosterPayloa
       if (typeof entry.handle !== 'string') continue;
       maintained.push({
         handle: entry.handle,
+        ...(typeof entry.name === 'string' && entry.name.length > 0 ? { name: entry.name } : {}),
+        ...(typeof entry.avatar_url === 'string' && entry.avatar_url.length > 0
+          ? { avatar_url: entry.avatar_url }
+          : {}),
         note: typeof entry.note === 'string' ? entry.note : '',
         added_at: typeof entry.added_at === 'string' ? entry.added_at : '',
       });

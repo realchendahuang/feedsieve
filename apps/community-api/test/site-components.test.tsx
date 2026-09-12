@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest';
 
 import { BlacklistPanel } from '../src/site/pages/lists/BlacklistPanel';
 import { WhitelistPanel } from '../src/site/pages/lists/WhitelistPanel';
+import { RescuePanel } from '../src/site/pages/lists/RescuePanel';
 import { KeywordsPanel } from '../src/site/pages/lists/KeywordsPanel';
 import { ERROR_TEXT } from '../src/site/pages/lists/ApplyPage';
 import type { RosterPayload } from '../src/roster';
@@ -68,12 +69,22 @@ describe('黑名单面板', () => {
 });
 
 describe('白名单面板', () => {
-  it('推荐白名单与社区抢救两表同行', () => {
+  it('推荐白名单表：账号/宣言/入册日期', () => {
     const data = rosterSample().whitelist;
-    const html = renderToString(<WhitelistPanel maintained={data.maintained} verified={data.verified} />);
+    const html = renderToString(<WhitelistPanel maintained={data.maintained} />);
     expect(html).toContain('x.com/kosx_note');
     expect(html).toContain('真实简介');
+    expect(html).not.toContain('x.com/rescued_ok');
+  });
+});
+
+describe('抢救面板', () => {
+  it('社区抢救表：抢救/拉黑/净票列', () => {
+    const data = rosterSample().whitelist;
+    const html = renderToString(<RescuePanel verified={data.verified} />);
     expect(html).toContain('x.com/rescued_ok');
+    expect(html).toContain('净票');
+    expect(html).not.toContain('x.com/kosx_note');
   });
 });
 

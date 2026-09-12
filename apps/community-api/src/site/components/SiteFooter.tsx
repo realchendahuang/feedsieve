@@ -17,6 +17,7 @@ export function SiteFooter() {
           <FooterLink to="/">首页</FooterLink>
           <FooterLink to="/lists/blacklist">黑名单</FooterLink>
           <FooterLink to="/lists/whitelist">推荐白名单</FooterLink>
+          <FooterLink to="/lists/rescue">抢救名单</FooterLink>
           <FooterLink to="/lists/keywords">词库</FooterLink>
           <a
             href={`${GITHUB_URL}/blob/main/DISCLAIMER.md`}

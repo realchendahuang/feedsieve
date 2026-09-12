@@ -8,6 +8,7 @@ import { xProfileUrl } from '../../site';
 const TABS = [
   { key: 'blacklist', label: '黑名单', to: '/lists/blacklist' },
   { key: 'whitelist', label: '白名单', to: '/lists/whitelist' },
+  { key: 'rescue', label: '抢救', to: '/lists/rescue' },
   { key: 'keywords', label: '词库', to: '/lists/keywords' },
   { key: 'ranked', label: '排位赛', to: '/lists/ranked' },
 ] as const;
@@ -71,4 +72,4 @@ export function fmtDate(iso: string | null | undefined): string {
   return iso ? iso.slice(0, 10) : '—';
 }
 
-export { HelpIcon };
+export { HelpIcon, xProfileUrl, cn };
