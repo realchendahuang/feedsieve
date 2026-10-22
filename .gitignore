@@ -22,3 +22,6 @@ coverage/
 
 # rollup visualizer 打包体积分析产物（本地排查用）
 stats.html
+
+# orbital 运行时队列状态，不进版本
+orbital/
