@@ -67,6 +67,15 @@ describe('packaged data across extension contexts', () => {
     expect(await loadRuntimeData(path)).toBe('new');
     expect(storage.keywordPacksSnapshotV2).toEqual({ synced_at: 123 });
   });
+  it('loads packaged data when the runtime shim lacks getManifest', async () => {
+    // Regression: an unguarded runtime.getManifest() call turned the version
+    // check into a TypeError, so the bundled list silently degraded to empty.
+    delete (api.runtime as { getManifest?: unknown }).getManifest;
+    storage[`bundledData:${path}`] = { version: '0', data: { packs: ['cached'] } };
+    const { loadRuntimeData } = await import('./runtime-data');
+    expect(await loadRuntimeData(path)).toEqual({ packs: ['cached'] });
+    expect(api.runtime.sendMessage).not.toHaveBeenCalled();
+  });
   it('failed worker fetch can retry after recovery', async () => {
     vi.mocked(fetch).mockRejectedValueOnce(new Error('temporarily unavailable'));
     const worker = await import('./runtime-data');

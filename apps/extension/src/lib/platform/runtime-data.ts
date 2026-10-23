@@ -13,6 +13,23 @@ function cacheKey(path: DataPath): string {
   return `bundledData:${path}`;
 }
 
+/**
+ * Extension version used to version the packaged-data cache.
+ * `runtime.getManifest` is absent in partial runtime shims (preview harness,
+ * page-world bridge, stubbed test runtimes); reading it unguarded turned every
+ * packaged-data load into a TypeError and silently emptied the bundled list.
+ * Fall back to a fixed tag: it still invalidates the cache across versions in
+ * contexts that do expose the manifest, and keeps the data readable in those
+ * that do not.
+ */
+function runtimeVersion(): string {
+  try {
+    return browser.runtime.getManifest?.().version ?? '0';
+  } catch {
+    return '0';
+  }
+}
+
 /** Register synchronously on every SW startup, before any asynchronous work. */
 export function registerRuntimeDataWorker(): void {
   workerReader = (path) => {
@@ -27,7 +44,7 @@ export function registerRuntimeDataWorker(): void {
       // Separate from signed remote snapshots: never modifies synced_at or throttling.
       await browser.storage.local
         .set({
-          [cacheKey(path)]: { version: browser.runtime.getManifest().version, data },
+          [cacheKey(path)]: { version: runtimeVersion(), data },
         })
         .catch((error) => {
           // Quota/storage failures must not discard already readable packaged data.
@@ -58,7 +75,7 @@ export async function loadRuntimeData(path: DataPath): Promise<unknown> {
     return {} as Record<string, unknown>;
   });
   const stored = cached[key] as { version?: string; data?: unknown } | undefined;
-  if (stored?.version === browser.runtime.getManifest().version && stored.data !== undefined) {
+  if (stored?.version === runtimeVersion() && stored.data !== undefined) {
     return stored.data;
   }
   if (workerReader) return workerReader(path);
