@@ -1,0 +1,4 @@
+ALTER TABLE "accounts" ADD CONSTRAINT "ck_accounts_aliases" CHECK (jsonb_typeof("accounts"."aliases"::jsonb) = 'array');--> statement-breakpoint
+ALTER TABLE "reports" ADD CONSTRAINT "ck_reports_link_domains" CHECK ("reports"."link_domains" is null or jsonb_typeof("reports"."link_domains"::jsonb) = 'array');--> statement-breakpoint
+ALTER TABLE "reports" ADD CONSTRAINT "ck_reports_signal_ids" CHECK ("reports"."signal_ids" is null or jsonb_typeof("reports"."signal_ids"::jsonb) = 'array');--> statement-breakpoint
+ALTER TABLE "snapshots" ADD CONSTRAINT "ck_snapshots_version" CHECK ("snapshots"."version" ~ '^[0-9]{4}[.][0-9]{2}[.][0-9]{2}[.][0-9]+$');

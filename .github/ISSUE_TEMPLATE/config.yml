@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 安全漏洞（私密报告）
+    url: https://github.com/realchendahuang/feedsieve/security/advisories/new
+    about: 不要用公开 issue 报告安全问题
+  - name: 使用教程与常见问题
+    url: https://feedsieve.win/guide
+    about: 装不上、看不到黄框、热帖为空，先看这里

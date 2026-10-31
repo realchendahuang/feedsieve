@@ -1,0 +1,22 @@
+{
+  "corpus_version": 1,
+  "generated_at": "2026-10-31T11:30:26.933Z",
+  "total": 72,
+  "tp": 34,
+  "fp": 0,
+  "fn": 0,
+  "tn": 38,
+  "known_limitation": 6,
+  "precision": 1,
+  "recall": 1,
+  "fpr": 0,
+  "runtime": {
+    "tp": 13,
+    "fp": 0,
+    "fn": 21,
+    "tn": 38,
+    "precision": 1,
+    "recall": 0.3824,
+    "fpr": 0
+  }
+}

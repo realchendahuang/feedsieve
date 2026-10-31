@@ -1,0 +1,31 @@
+node_modules/
+dist/
+.output/
+.wxt/
+.wrangler/
+.env
+.env.*
+!.env.example
+.DS_Store
+coverage/
+*.tsbuildinfo
+*.log
+
+# 发布者签名私钥（scripts/keygen.mjs 生成，永远不提交）
+/.secrets/
+
+# 本地会话计划产物（不入库）
+/.zcode/
+
+# wxt officialJsonPlugin 构建时从 community/lists/ 拷入（产物，不入库）
+**/public/community/
+
+# rollup visualizer 打包体积分析产物（本地排查用）
+stats.html
+
+# orbital 运行时队列状态，不进版本
+orbital/
+
+# 维护者内部资料（部署拓扑、成本、调研、交接）与 agent 运维技能：不入库
+/docs/internal/
+/.agents/

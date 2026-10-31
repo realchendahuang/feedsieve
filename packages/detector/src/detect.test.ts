@@ -1,0 +1,609 @@
+import { describe, expect, it } from 'vitest';
+import { detect, normalizeHandle, toHandleSet } from './detect';
+import { DEFAULT_HEURISTICS } from './heuristics';
+import { fingerprintText, fingerprintTextV1 } from './fingerprint';
+
+const SEED_LIST = toHandleSet(['@SpamKing88', 'crypto_teacher']);
+const KNOWN_TEMPLATE_FP = fingerprintText(
+  '🚀 500 USDT Giveaway! DM @spamking88 Claim on Tron 👉 https://t.co/abc123 follow & repost 🔥',
+)!;
+const TEMPLATE_TWEET =
+  '🚨 500 usdt GIVEAWAY！DM @newaccount7 Claim on Tron 👉 https://t.co/zzz789 follow & repost 🔥🔥';
+
+describe('detect: community fingerprint (v0.4)', () => {
+  it('marks tweets matching a known community fingerprint', () => {
+    const result = detect(
+      { handle: 'brand_new_rebrand', text: TEMPLATE_TWEET },
+      { fingerprints: new Set([KNOWN_TEMPLATE_FP]) },
+    );
+    expect(result?.source).toBe('fingerprint');
+    expect(result?.ruleId).toBe('community-fingerprint');
+    expect(result?.reason).toContain('社区指纹');
+  });
+
+  it('fingerprint beats heuristics when both would hit', () => {
+    // TEMPLATE_TWEET 同时命中 crypto-giveaway 正则启发式，但社区指纹优先
+    const result = detect(
+      { handle: 'brand_new_rebrand', text: TEMPLATE_TWEET },
+      { fingerprints: new Set([KNOWN_TEMPLATE_FP]) },
+    );
+    expect(result?.source).toBe('fingerprint');
+  });
+
+  it('keeps unknown-template accounts clean when only fingerprints are set', () => {
+    expect(
+      detect(
+        { handle: 'kim', text: '今天写了一天 Rust，累但开心' },
+        { fingerprints: new Set([KNOWN_TEMPLATE_FP]) },
+      ),
+    ).toBeNull();
+  });
+
+  it('empty fingerprint set disables fingerprint marking (falls through to heuristics)', () => {
+    const result = detect({ handle: 'spam', text: TEMPLATE_TWEET }, { fingerprints: new Set() });
+    expect(result?.source).toBe('heuristic');
+  });
+});
+
+describe('detect: simhash 话术变体（v0.5 Campaign）', () => {
+  it('换词变体（exact miss）命中 simhash 集合', () => {
+    const variant =
+      '🎉 500 usdt Giveaway！DM @brand_new_2 Claim on Tron 👉 https://t.co/zzz999 follow & repost 💥';
+    const result = detect(
+      { handle: 'brand_new_rebrand', text: variant },
+      { simhashes: new Set([KNOWN_TEMPLATE_FP]) },
+    );
+    expect(result?.source).toBe('fingerprint');
+    expect(result?.ruleId).toBe('community-fingerprint-sim');
+    expect(result?.reason).toContain('话术变体');
+  });
+
+  it('exact 命中优先于 simhash（两者同时给时走 community-fingerprint）', () => {
+    const result = detect(
+      { handle: 'brand_new_rebrand', text: TEMPLATE_TWEET },
+      {
+        fingerprints: new Set([KNOWN_TEMPLATE_FP]),
+        simhashes: new Set([KNOWN_TEMPLATE_FP]),
+      },
+    );
+    expect(result?.ruleId).toBe('community-fingerprint');
+  });
+
+  it('语义不同的文本距离超阈值，不误报', () => {
+    const result = detect(
+      { handle: 'brand_new_rebrand', text: '今天天气不错，整理了一下项目清单。' },
+      { simhashes: new Set([KNOWN_TEMPLATE_FP]) },
+    );
+    expect(result).toBeNull();
+  });
+
+  it('无文本（只有 bio）也走 simhash 检测（bio 是话术埋点）', () => {
+    const result = detect(
+      {
+        handle: 'brand_new_rebrand',
+        bio: '🚀 500 usdt giveaway! DM @scammer_88 claim on tron follow & repost 🔥',
+      },
+      { simhashes: new Set([KNOWN_TEMPLATE_FP]) },
+    );
+    expect(result?.source).toBe('fingerprint');
+    expect(result?.ruleId).toBe('community-fingerprint-sim');
+  });
+});
+
+describe('detect: 指纹 v1（v0.8：NFKC 全角折叠 + 版本位）', () => {
+  const V1_FP = fingerprintTextV1(
+    '🚀 500 USDT Giveaway! DM @spamking88 Claim on Tron 👉 https://t.co/abc123 follow & repost 🔥',
+  )!;
+  /** v0 盲区：全角字母/数字不折叠（NFKC 只在 v1） */
+  const FULLWIDTH_TWEET = 'ｄｍ　ｍｅ　ｆｏｒ　ｃｒｙｐｔｏ　ｓｉｇｎａｌｓ';
+  const HALFWIDTH_TEMPLATE = 'dm me for crypto signals';
+
+  it('全角规避：v1 指纹与半角模板 exact 命中', () => {
+    // 全角文本 NFKC 折叠后与半角模板指纹完全相同 -> fingerprints 集合直接命中
+    const result = detect(
+      { handle: 'fullwidth_spam', text: FULLWIDTH_TWEET },
+      { fingerprints: new Set([fingerprintTextV1(HALFWIDTH_TEMPLATE)!]) },
+    );
+    expect(result?.ruleId).toBe('community-fingerprint');
+  });
+
+  it('全角规避：v0 模板不折叠全角，变体判定不命中（v0 盲区被 v1 取代）', () => {
+    // v1 查询指纹只与 v1 模板（0x3 开头）比距离；v0 模板是旧哈希族 -> 不命中
+    const result = detect(
+      { handle: 'fullwidth_spam', text: FULLWIDTH_TWEET },
+      { simhashes: new Set([fingerprintText(HALFWIDTH_TEMPLATE)!]) },
+    );
+    expect(result).toBeNull();
+  });
+
+  it('v1 英文换词变体命中 simhash 集合', () => {
+    const variant =
+      '🎉 500 usdt Giveaway！DM @brand_new_2 Claim on Tron 👉 https://t.co/zzz999 follow & repost 💥';
+    const result = detect(
+      { handle: 'rebranded_v1', text: variant },
+      { simhashes: new Set([V1_FP]) },
+    );
+    expect(result?.ruleId).toBe('community-fingerprint-sim');
+    expect(result?.reason).toContain('话术变体');
+  });
+
+  it('v1 短话术指纹 exact 命中（v0 门槛挡住的黄推隐语）', () => {
+    const fu = fingerprintTextV1('我福不黑不信你看')!;
+    const result = detect(
+      { handle: 'fu_variant', text: '我福不黑不信你看' },
+      { fingerprints: new Set([fu]) },
+    );
+    expect(result?.ruleId).toBe('community-fingerprint');
+  });
+
+  it('v1 模板不误伤干净中文', () => {
+    const result = detect(
+      { handle: 'normal_user', text: '今天天气真好，晒晒午饭，上班摸鱼' },
+      { simhashes: new Set([V1_FP]) },
+    );
+    expect(result).toBeNull();
+  });
+
+  it('真实样本：换 emoji 的婚介引流变体 exact 命中（2026-09-07 采集，handle 匿名化）', () => {
+    // A 账号已拉黑上报指纹；B 账号换 emoji 复用同一话术 -> 归一化后逐字相同 -> exact 命中
+    const template = fingerprintTextV1('点主页🌙专业牵线🌹全国1-5线覆盖')!;
+    const result = detect(
+      { handle: 'matchmaking_b', text: '点主页🍓专业牵线😸全国1-5线覆盖' },
+      { fingerprints: new Set([template]) },
+    );
+    expect(result?.ruleId).toBe('community-fingerprint');
+    expect(fingerprintTextV1('点主页🌙专业牵线🌹全国1-5线覆盖')).toBe(
+      fingerprintTextV1('点主页🍓专业牵线😸全国1-5线覆盖'),
+    );
+  });
+});
+
+describe('detect: community domain (v0.4)', () => {
+  it('marks links pointing at a listed domain, case-insensitively', () => {
+    const result = detect(
+      {
+        handle: 'somebody',
+        links: [{ href: 'https://scam-sity.example/', hostname: 'SCAM-Sity.Example' }],
+      },
+      { domains: new Set(['scam-sity.example']) },
+    );
+    expect(result?.source).toBe('domain');
+    expect(result?.ruleId).toBe('community-domain');
+    expect(result?.reason).toContain('scam-sity.example');
+  });
+
+  it('fingerprint wins over domain when both match', () => {
+    const result = detect(
+      {
+        handle: 'rebranded_spam',
+        text: TEMPLATE_TWEET,
+        links: [{ href: 'https://scam-sity.example/', hostname: 'scam-sity.example' }],
+      },
+      {
+        fingerprints: new Set([KNOWN_TEMPLATE_FP]),
+        domains: new Set(['scam-sity.example']),
+      },
+    );
+    expect(result?.source).toBe('fingerprint');
+  });
+
+  it('list beats fingerprint and domain', () => {
+    const result = detect(
+      {
+        handle: '@SpamKing88',
+        text: TEMPLATE_TWEET,
+        links: [{ href: 'https://scam-sity.example/', hostname: 'scam-sity.example' }],
+      },
+      {
+        list: SEED_LIST,
+        fingerprints: new Set([KNOWN_TEMPLATE_FP]),
+        domains: new Set(['scam-sity.example']),
+      },
+    );
+    expect(result?.ruleId).toBe('list');
+  });
+});
+
+describe('normalizeHandle', () => {
+  it('strips @ prefix and lowercases', () => {
+    expect(normalizeHandle('@SpamKing88')).toBe('spamking88');
+  });
+
+  it('returns empty string for whitespace-only input', () => {
+    expect(normalizeHandle('   ')).toBe('');
+  });
+});
+
+describe('toHandleSet', () => {
+  it('accepts both raw handles and list entries', () => {
+    const set = toHandleSet(['@Kim', { handle: 'spam.io' }, { foo: 'no handle' } as never]);
+    expect(set.has('kim')).toBe(true);
+    expect(set.has('spam.io')).toBe(true);
+    expect(set.size).toBe(2);
+  });
+});
+
+describe('detect', () => {
+  it('marks list hits before heuristics, with explainable reason', () => {
+    // 文本同时命中启发式，但名单优先
+    const result = detect(
+      { handle: '@SpamKing88', text: 'free crypto giveaway airdrop' },
+      { list: SEED_LIST },
+    );
+    expect(result?.source).toBe('community-list');
+    expect(result?.ruleId).toBe('list');
+    expect(result?.reason).toBe('名单命中');
+  });
+
+  it('supports builtin-list source label', () => {
+    const result = detect(
+      { handle: '@SpamKing88' },
+      { list: SEED_LIST, listSource: 'builtin-list' },
+    );
+    expect(result?.source).toBe('builtin-list');
+  });
+
+  it('rejects empty handles', () => {
+    expect(detect({ handle: '' }, { list: SEED_LIST })).toBeNull();
+  });
+
+  it('returns null for clean normal accounts', () => {
+    expect(
+      detect({
+        handle: 'kim',
+        displayName: 'Kim',
+        text: '今天写了一天 Rust，累但开心',
+        links: [{ href: 'https://example.com/blog' }],
+      }),
+    ).toBeNull();
+  });
+});
+
+describe('heuristic: default-name-digits', () => {
+  it.each([
+    ['User1987654321', 'user20001'],
+    ['用户 95274', 'someone'],
+  ])('flags default display name %s', (displayName) => {
+    const result = detect({ handle: 'whatever01', displayName });
+    expect(result?.ruleId).toBe('default-name-digits');
+    expect(result?.reason).toContain('默认名');
+  });
+
+  it('flags digit-tail handle only when the display name is independently default-like', () => {
+    const result = detect({ handle: 'ab123456789', displayName: 'User 123456789' });
+    expect(result?.ruleId).toBe('default-name-digits');
+  });
+
+  it('does not treat a temporarily missing display name as spam evidence', () => {
+    // X 的懒加载 / 引用帖 DOM 会短暂缺昵称；这些是真实误标记录中的 handle 形态。
+    expect(detect({ handle: 'artist1818888', displayName: undefined })).toBeNull();
+    expect(detect({ handle: 'creator44502446', displayName: undefined })).toBeNull();
+  });
+
+  it('does not flag meaningful names or realistic handles', () => {
+    expect(detect({ handle: 'kimpark2024', displayName: '김프론트' })).toBeNull();
+    expect(detect({ handle: 'nasa', displayName: 'User1234' })).toBeNull(); // 4 位数字不够长
+  });
+});
+
+describe('heuristic: spam-link-hint', () => {
+  it.each([
+    ['crypto-giveaway.example.com', true],
+    ['example.com', false],
+    ['myfreecrypto.blog', true],
+  ])('evaluates host %s', (hostname, shouldMark) => {
+    const result = detect({
+      handle: 'somebody',
+      links: [{ href: `https://${hostname}/`, hostname }],
+    });
+    if (shouldMark) {
+      expect(result?.ruleId).toBe('spam-link-hint');
+      expect(result?.reason).toContain(hostname);
+    } else {
+      expect(result).toBeNull();
+    }
+  });
+
+  it('skips links without parsed hostname instead of throwing', () => {
+    expect(detect({ handle: 'x', links: [{ href: '::not-a-url::' }] })).toBeNull();
+  });
+});
+
+describe('heuristic: templated-text', () => {
+  it.each([
+    ['加我微信进内部群，包赚！'],
+    ['DM me for invest signals 🚀🚀'],
+    ['Claim your FREE crypto now'],
+  ])('flags template %s', (text) => {
+    const result = detect({ handle: 'spam', text });
+    expect(result?.ruleId).toBe('templated-text');
+    expect(result?.reason).toContain('模板化垃圾话术');
+  });
+
+  describe('crypto giveaway template (2026-08 real-world samples, anonymized)', () => {
+    it.each([
+      [
+        "🚀 500 USDT Giveaway! Clock's ticking—act fast! 💎 Instant claim on Tron ⚡️ No KYC, just repost 🔥 Free entry, win big Join, follow, like, repost & comment now!",
+      ],
+      [
+        "🚨 Massive 500 USDT Giveaway! Don't miss out! 🚀 Instant win chance on Tron network 🔥 No purchase—just follow, like, comment & repost Claim your share now—time's ticking!",
+      ],
+    ])('flags real spam copy', (text) => {
+      const result = detect({ handle: 'spamuser1', text });
+      expect(result?.ruleId).toBe('templated-text');
+      expect(result?.reason).toContain('Giveaway');
+    });
+
+    it('flags reversed word order and spelling variants', () => {
+      expect(detect({ handle: 's', text: 'GIWEAWAY time! Get 500 USDT now' })?.marked).toBe(true);
+    });
+
+    it('flags follow/repost + claim bait', () => {
+      const result = detect({
+        handle: 's',
+        text: 'just follow & retweet, then claim your reward',
+      });
+      expect(result?.reason).toContain('关注-转发抽奖');
+    });
+
+    it('keeps normal crypto and giveaway mentions clean', () => {
+      expect(detect({ handle: 'dev', text: 'crypto taxes are painful' })).toBeNull();
+      expect(
+        detect({ handle: 'shop', text: 'we give away swag at the conference booth' }),
+      ).toBeNull();
+      expect(detect({ handle: 'friend', text: 'I like how you claim your mornings' })).toBeNull();
+    });
+
+    it('catches spam planted in bio even with clean tweets', () => {
+      const result = detect({
+        handle: 'cleanpost',
+        text: 'good morning everyone',
+        bio: 'DM me for invest signals',
+      });
+      expect(result?.ruleId).toBe('templated-text');
+    });
+  });
+
+  describe('porn-bait-zh (2026-08 real-world samples from a live thread)', () => {
+    it.each([
+      ['比我好看的没我骚 比我骚的没我好看🍑'],
+      ['应该没人比我玩的更开了吧🍒我福不黑不信你看'],
+      ['我果然太涩了🍑👑有人想批评一下我的福嘛'],
+    ])('flags porn-bait copy: %s', (text) => {
+      const result = detect({ handle: 'bait01', text });
+      expect(result?.ruleId).toBe('porn-bait-zh');
+      expect(result?.marked).toBe(true);
+    });
+
+    it('catches 福利-in-bio variant', () => {
+      expect(detect({ handle: 'bait02', bio: '福利在简介 自取' })?.ruleId).toBe('porn-bait-zh');
+    });
+
+    it('keeps normal Chinese text clean (single erogenous marker is not enough)', () => {
+      expect(detect({ handle: 'tea', text: '今天的茶有点涩，回甘不错' })).toBeNull();
+      expect(detect({ handle: 'gamer', text: '这个英雄机制玩得真开' })).toBeNull();
+      expect(detect({ handle: 'foodie', text: '桃子🍑熟了，快来摘' })).toBeNull();
+      expect(detect({ handle: 'student', text: '老师批评了一下我的方案，改' })).toBeNull();
+    });
+  });
+});
+
+describe('heuristics are individually explainable', () => {
+  it('every default rule has id and can run against clean input', () => {
+    for (const rule of DEFAULT_HEURISTICS) {
+      expect(rule.id.length).toBeGreaterThan(0);
+      expect(rule.check({ handle: 'normalperson', text: '', links: [] })).toBeNull();
+    }
+  });
+});
+
+describe('heuristic: weak-signal-combo', () => {
+  const GARBLED = 'mhmsezruwzxjwl';
+
+  it('fires only with a garbled-batch anchor plus at least one content signal', () => {
+    const combo = (input: Parameters<typeof detect>[0]) => detect(input)?.ruleId;
+    expect(combo({ handle: GARBLED, text: '今晚的茶有点涩' })).toBe('weak-signal-combo');
+    expect(combo({ handle: GARBLED, text: '🍑🍑🍑🍑🍑' })).toBe('weak-signal-combo');
+    expect(combo({ handle: GARBLED, text: '哈哈哈哈哈哈哈哈' })).toBe('weak-signal-combo');
+    expect(combo({ handle: GARBLED, displayName: 'Rose🌸🌸', text: 'hi' })).toBeUndefined();
+  });
+
+  it('never fires on weak content signals alone', () => {
+    expect(detect({ handle: 'rosie_bakes', displayName: 'Rose🌸🌸', text: '❤️❤️❤️❤️' })).toBeNull();
+    expect(detect({ handle: 'tea', text: '今晚的茶有点涩' })).toBeNull();
+  });
+
+  it('anchor without any content signal stays clean', () => {
+    expect(detect({ handle: GARBLED, text: '今天天气不错，出来走走' })).toBeNull();
+    expect(detect({ handle: GARBLED, text: '' })).toBeNull();
+  });
+
+  it('never fires before stronger single-signal rules', () => {
+    // 玩得开 + 涩 组合已由 porn-bait-zh 先行命中并解释
+    expect(detect({ handle: GARBLED, text: '玩得开 好涩 🍑' })?.ruleId).toBe('porn-bait-zh');
+    // 单词沙拉形状优先
+    expect(
+      detect({
+        handle: GARBLED,
+        displayName: '点主页🥳专业牵线💖全国1-5线覆盖',
+        text: 'sea\nhave\n🌞\nhad\nplan',
+      })?.ruleId,
+    ).toBe('word-salad');
+  });
+
+  it('punctuation runs and URLs do not count as repeated filler', () => {
+    expect(detect({ handle: GARBLED, text: '哇!!!!!太棒了吧!!! https://x.com/aaaa' })).toBeNull();
+  });
+});
+
+describe('heuristic: weak-signal-combo 数字形态锚点与沙拉佐证', () => {
+  it('digit-shape anchors need summed sub-signals, then still require content evidence', () => {
+    const combo = (input: Parameters<typeof detect>[0]) => detect(input)?.ruleId;
+    // jenny83922：长数字段 + 高数字比 → 锚点；配 emoji 灌水 → 标
+    expect(combo({ handle: 'jenny83922', text: '🍑🍑🍑🍑🍑' })).toBe('weak-signal-combo');
+    // 短数字尾缀（john2024 型）到不了锚点门槛
+    expect(combo({ handle: 'john2024', displayName: 'John', text: '🍑🍑🍑🍑🍑' })).toBeUndefined();
+    // 字母数字交替是强子信号
+    expect(combo({ handle: 'a1b2c3d4e5', text: '哈哈哈哈哈哈哈哈' })).toBe('weak-signal-combo');
+  });
+
+  it('word-salad shape counts as content evidence for the combo layer', () => {
+    // word-salad 规则缺隐语/乱码佐证不发；组合层用数字形态锚点收口同一家族
+    expect(detect({ handle: 'ab12345678', text: 'hard fire 💙 lift road' })?.ruleId).toBe(
+      'weak-signal-combo',
+    );
+    // 无锚点时沙拉形状单独永不成立
+    expect(detect({ handle: 'mood_writer', text: 'some days feel hollow 🖤' })).toBeNull();
+  });
+
+  it('traffic-hint list no longer matches benign single characters (约稿/私房菜)', () => {
+    expect(
+      detect({
+        handle: 'editor_wang',
+        displayName: '自由约稿接单',
+        text: 'some days feel hollow 🖤',
+      }),
+    ).toBeNull();
+    expect(
+      detect({ handle: 'chef_liu', displayName: '私房菜主理人', text: 'some days feel 🖤 hollow' }),
+    ).toBeNull();
+  });
+
+  it('garbled handles still route salad text to word-salad (single-signal explains first)', () => {
+    expect(
+      detect({
+        handle: 'mhmsezruwzxjwl',
+        displayName: 'mhmsez ruwzw',
+        text: 'sea have 🌞 had plan',
+      })?.ruleId,
+    ).toBe('word-salad');
+  });
+});
+
+describe('2026-09-11 失守修复：尾缀数字锚点 + 词库佐证 + 弱形状计分', () => {
+  it('garbled letter run with trailing digits anchors (ohbfwzyzopkkt2 batch)', () => {
+    // 字母段双征成立 + ≤2 位尾缀数字 → 乱码锚点，转发词沙拉样本经 word-salad 发
+    expect(
+      detect({ handle: 'ohbfwzyzopkkt1', text: 'likely mango banana 🍋 butter open wide' })?.ruleId,
+    ).toBe('word-salad');
+    expect(detect({ handle: 'ohbfwzyzopkkt2', text: 'shielding 🍋 🤤 compensation' })?.ruleId).toBe(
+      'weak-signal-combo',
+    );
+    // 尾缀 3 位以上不再给锚点：数字变异面不能无限放宽
+    expect(detect({ handle: 'ohbfwzyzopkkt123', text: 'shielding 🍋 🤤 compensation' })).toBeNull();
+  });
+
+  it('real-name handles with digit suffixes still stay clean', () => {
+    // 真人姓名 + 尾缀数字：字母段够长但双征不成立，弱形状文本无佐证
+    expect(
+      detect({ handle: 'elizabethkader2', displayName: 'Elizabeth', text: 'quiet 🌙 ☕ monday' }),
+    ).toBeNull();
+    // john2024 型守卫在尾缀容忍加宽后仍未变（字母段 <12 够不上乱码阈值面）
+    expect(detect({ handle: 'john2024', displayName: 'John', text: '🍑🍑🍑🍑🍑' })).toBeNull();
+  });
+
+  it('official keyword hit earlier in the round corroborates salad-shaped text', () => {
+    // 词库佐证：官方词库当轮命中传给后面的 word-salad，隐语小词表不再是唯一来源
+    expect(
+      detect({
+        handle: 'mimo_garden',
+        displayName: '茉见月花园',
+        text: 'likely mango banana 🍋 butter open wide',
+        keywordCorroborated: true,
+      })?.ruleId,
+    ).toBe('word-salad');
+    // 无佐证时同样的干净 handle 不标
+    expect(
+      detect({
+        handle: 'mimo_garden',
+        displayName: '茉见月花园',
+        text: 'likely mango banana 🍋 butter open wide',
+      }),
+    ).toBeNull();
+  });
+
+  it('weak salad shapes count as combo evidence only with a batch anchor', () => {
+    const weakShape = 'quiet 🌙 ☕ monday';
+    expect(detect({ handle: 'mhmsezruwzxjwl', text: weakShape })?.ruleId).toBe('weak-signal-combo');
+    expect(detect({ handle: 'monday_coffee', text: weakShape })).toBeNull();
+  });
+
+  it('evaluates tweet and bio shapes independently', () => {
+    expect(
+      detect({
+        handle: 'mhmsezruwzxjwl',
+        text: 'quiet 🌙 ☕ monday',
+        bio: 'Independent photographer based in Shanghai.',
+      })?.ruleId,
+    ).toBe('weak-signal-combo');
+  });
+
+  it('normalizes obfuscated contact numbers and ignores generic support contacts', () => {
+    expect(
+      detect({ handle: 'bait_account', text: '看简介 １３８·００１３·８０００' })?.ruleId,
+    ).toBe('contact-number-bait');
+    expect(
+      detect({ handle: 'support_team', text: '客服电话 12345678901，有售后问题请联系我。' }),
+    ).toBeNull();
+  });
+});
+
+describe('启发式输入复用', () => {
+  it('同一轮规则收到同一个标准化输入对象', () => {
+    const seen: object[] = [];
+    const result = detect(
+      { handle: '@Bait', text: 'sample' },
+      {
+        heuristics: [
+          {
+            id: 'first',
+            check(input) {
+              seen.push(input);
+              return null;
+            },
+          },
+          {
+            id: 'second',
+            check(input) {
+              seen.push(input);
+              return '命中';
+            },
+          },
+        ],
+      },
+    );
+    expect(result?.ruleId).toBe('second');
+    expect(seen).toHaveLength(2);
+    expect(seen[0]).toBe(seen[1]);
+    expect((seen[0] as { handle: string }).handle).toBe('bait');
+  });
+});
+
+describe('启发式输入复用', () => {
+  it('同一轮规则共享标准化后的同一个输入对象，供批量匹配缓存复用', () => {
+    let firstInput: object | undefined;
+    const result = detect(
+      { handle: ' @Bait_Account ', text: 'test' },
+      {
+        heuristics: [
+          {
+            id: 'first',
+            check(input) {
+              firstInput = input;
+              return null;
+            },
+          },
+          {
+            id: 'second',
+            check(input) {
+              expect(input).toBe(firstInput);
+              expect(input.handle).toBe('bait_account');
+              return '命中';
+            },
+          },
+        ],
+      },
+    );
+    expect(result?.ruleId).toBe('second');
+  });
+});

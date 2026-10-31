@@ -1,0 +1,46 @@
+// 私有部署配置模板：cp wrangler.local.example.jsonc wrangler.local.jsonc
+// 填入你自己的账号信息后用 `pnpm deploy` 部署。此文件已被 gitignore，绝不提交。
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "feedsieve-community-api",
+  "main": "src/server.ts",
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "assets": {
+    // 官网 TanStack SSR + admin SPA 同一个绑定（部署前 merge-client-assets 合并）
+    "directory": "./dist/client",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": true
+  },
+  "account_id": "YOUR_CLOUDFLARE_ACCOUNT_ID",
+  "routes": [
+    { "pattern": "your-api.example.com", "custom_domain": true },
+    { "pattern": "admin.your-api.example.com", "custom_domain": true },
+    { "pattern": "www.example.com", "custom_domain": true }
+  ],
+  "vars": {
+    // 多域名逗号分隔（SITE_HOST 同理）：域名迁移期把旧域与新域并列，旧客户端不断链
+    "ADMIN_HOST": "admin.your-api.example.com,admin.your-old-domain.example.com",
+    // 官网 SSR 公开页仅服务这个 hostname
+    "SITE_HOST": "www.example.com"
+  },
+  // PostgreSQL 经 Hyperdrive 接入；关闭缓存，读写都要实时。
+  // 本地开发与测试连 docker-compose.yml 的库（localConnectionString）。
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "<Hyperdrive 配置 ID：wrangler hyperdrive create … --caching-disabled>",
+      "localConnectionString": "postgres://feedsieve:feedsieve_dev_password@127.0.0.1:54330/feedsieve"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "KEYWORD_PACKS",
+      "bucket_name": "feedsieve-keyword-packs"
+    }
+  ],
+  // 福滤娃周刊 Worker（feedsieve.win/weekly）：首页「本周 X 精选」读它的公开热帖
+  "services": [{ "binding": "WEEKLY", "service": "fsw-web" }]
+}

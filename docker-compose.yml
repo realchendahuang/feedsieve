@@ -1,0 +1,22 @@
+# 本地开发与测试数据库。生产环境由维护者部署，经 Hyperdrive 接入 PostgreSQL。
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: feedsieve-postgres
+    environment:
+      POSTGRES_USER: feedsieve
+      POSTGRES_PASSWORD: feedsieve_dev_password
+      POSTGRES_DB: feedsieve
+    ports:
+      # 避开本机已占用的 5432 / 54329（周刊）
+      - "127.0.0.1:54330:5432"
+    volumes:
+      - feedsieve-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U feedsieve -d feedsieve"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  feedsieve-pgdata:

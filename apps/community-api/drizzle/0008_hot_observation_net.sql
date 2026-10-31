@@ -1,0 +1,1 @@
+ALTER TABLE "hot_observations" ADD COLUMN "net" text;

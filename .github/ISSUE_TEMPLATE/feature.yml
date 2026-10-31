@@ -1,0 +1,39 @@
+name: 功能建议
+description: 想要的新能力，或者现有功能可以更好
+labels: [enhancement]
+body:
+  - type: textarea
+    id: scenario
+    attributes:
+      label: 场景
+      description: 具体到你在 X 上做什么的时候卡住了，不要只写「希望加个过滤」
+      placeholder: 我每天在搜索页找选题，结果里一半是色情引流号，要手动翻很久
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 你希望它怎么工作
+      placeholder: 搜索结果里命中的折叠起来，顶部告诉我折叠了几条，能一键展开
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: principle
+    attributes:
+      label: 产品原则自检
+      description: 见 README「产品原则」
+      options:
+        - label: 只用页面已经加载的数据，不额外请求 X
+        - label: 涉及拉黑 / 发帖 / 关注时，最后一下仍由用户自己点
+        - label: 不把用户本地数据上传到服务端（如需要，说明会上传什么）
+
+  - type: dropdown
+    id: willing
+    attributes:
+      label: 愿意自己提 PR 吗
+      options:
+        - 可以试
+        - 愿意，但需要指路
+        - 只提需求

@@ -1,0 +1,73 @@
+name: Bug 报告
+description: 功能不对、界面错位、扩展报错
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        先确认两件事：扩展是最新版本；这不是「某个账号该不该被标黄」（那个用名单申诉模板）。
+
+  - type: input
+    id: version
+    attributes:
+      label: 扩展版本
+      placeholder: 例如 0.12.1（弹窗底部可见）
+    validations:
+      required: true
+
+  - type: input
+    id: env
+    attributes:
+      label: 浏览器与系统
+      placeholder: Chrome 141 / macOS 15.2
+    validations:
+      required: true
+
+  - type: dropdown
+    id: page
+    attributes:
+      label: 出问题的页面
+      options:
+        - 首页时间线
+        - 搜索页
+        - 帖子详情页
+        - 博主主页
+        - 发帖 / 文章编辑
+        - 弹窗或侧边栏
+        - 社区 / 热帖
+        - 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 打开 x.com 首页
+        2. 看到 ...
+        3. 点击 ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望与实际
+    validations:
+      required: true
+
+  - type: textarea
+    id: console
+    attributes:
+      label: 控制台报错（可选）
+      description: 开发者工具 → Console，只贴报错行，不要贴整页
+      render: text
+
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: 隐私
+      options:
+        - label: 我确认截图里没有自己的 Cookie、私信或他人隐私信息
+          required: true

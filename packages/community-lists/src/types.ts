@@ -1,0 +1,154 @@
+/**
+ * 最终黑名单快照协议 v2（与 apps/community-api 的产出一一对应）。
+ * 该包是纯 TS 消费端：不依赖 chrome/browser，同步逻辑全部依赖注入，可完整单测。
+ */
+
+export interface SnapshotManifestFile {
+  path: string;
+  sha256: string;
+  entries: number;
+}
+
+export interface SnapshotManifest {
+  schema_version: number;
+  snapshot_version: string;
+  generated_at: string;
+  files: SnapshotManifestFile[];
+  /** 发布者签名（v1.1 起必填；旧版扩展忽略此字段继续可用） */
+  signature?: import('./signing').ManifestSignature;
+}
+
+export type CommunitySource = 'community' | 'maintainer';
+
+export interface CommunityEntry {
+  handle: string;
+  x_user_id: string | null;
+  category: string;
+  /** 为什么进入最终名单；社区共识、维护者明确加入，或两者兼有。 */
+  sources: CommunitySource[];
+  /** 维护者来源的公开说明；不存在维护者来源时省略。 */
+  maintainer_note?: string;
+  /** 可解释的社区证据分数 [0,1]；维护者单源条目为 0。 */
+  community_score: number;
+  report_count: number;
+  rescue_count: number;
+  /** report_count - rescue_count；仅用于公开解释，不由客户端再次判定入榜。 */
+  net_votes: number;
+  /** 换号别名：同 x_user_id 的历史 handle（可选） */
+  aliases?: string[];
+  /**
+   * 已知垃圾模板指纹（v0.4，可选）：≥2 个独立安装上报同一归一化话术哈希才下发。
+   * 间接证据 —— 扩展只在「大扫除」强度档用它标注（换号复用话术仍能认出）。
+   * v0.5 起指纹即 SimHash 位向量：扩展按汉明距离 <= 2 判「话术变体」。
+   */
+  fingerprints?: string[];
+  /** 垃圾外链域名（v0.4，可选）：门槛同指纹 */
+  domains?: string[];
+  /**
+   * Campaign（v0.5，可选）：该账号所属垃圾网络的「代表条目」handle。
+   * 聚类规则：同指纹簇（互相汉明距离 <= 2）内取 report_count 最高的条目为代表；
+   * 只有簇内 >= 2 个账号才产生 campaign 语义（单账号无网络）。
+   */
+  campaign_entry_id?: string;
+  /** Campaign 规模（v0.5，可选）：该簇内账号数，徽章显示「同模板 N 个账号」 */
+  campaign_size?: number;
+  first_seen_at: string;
+  updated_at: string;
+  evidence_post_ids: string[];
+}
+
+export interface SnapshotBody {
+  schema_version: number;
+  snapshot_version: string;
+  generated_at: string;
+  entries: CommunityEntry[];
+  /**
+   * 社区白名单（verified，可选）：被社区验证为「误标正常」的账号。
+   * 入榜公式与黑名单严格镜像：rescue_count - report_count >= communityNetThreshold(3)。
+   * 客户端据此一票豁免标注；与 entries 数学互斥（±3 净票无交集），verified 优先为防御兜底。
+   * 旧版客户端忽略此字段（手写校验不拒绝未知顶层字段）。
+   */
+  verified?: VerifiedEntry[];
+  /**
+   * 推荐白名单（whitelist，可选）：维护者在 GitHub 维护 whitelist.yaml，
+   * 发布脚本同步进服务端后随快照下发。一票否决，优先级最高——
+   * 任何检测来源（社区名单 / 指纹 / 域名 / 词库）都不得标注或拉黑。
+   * 与 verified 独立成段：verified 是社区抢救票合意，whitelist 是维护者公开背书（推荐白名单）。
+   * 旧版客户端忽略此字段（手写校验不拒绝未知顶层字段）。
+   */
+  whitelist?: WhitelistEntry[];
+  /**
+   * 静音规则（可选，政策 v4）：误伤率超线自动静音、或维护者手动静音的规则 ID。
+   * 扩展不再用这些规则标黄框；名单命中不受影响。旧版客户端忽略此字段。
+   */
+  muted_rules?: string[];
+  /**
+   * 官方破坏性动作暂停开关（可选）：随签名快照下发，防伪造 ——
+   * 只能关闭批量/单条拉黑等破坏性动作，绝不能远程开启任何自动拉黑。
+   * 检测 / 标注 / 读取不受影响。
+   */
+  kill_switch?: {
+    destructive_actions_disabled: true;
+    /** 运营者填写的公开理由（展示给用户，不用形容词） */
+    reason?: string;
+    /** 开关生效时间（ISO） */
+    disabled_since?: string;
+  };
+}
+
+/**
+ * 社区白名单条目（verified）：结构镜像黑名单条目的票数语义，
+ * 不带犯罪证据（指纹/域名/证据帖）——它不是指控对象，只是「被误标过且被验证」。
+ */
+export interface VerifiedEntry {
+  handle: string;
+  x_user_id: string | null;
+  /** 独立抢救票（allowed 标签计数） */
+  rescue_count: number;
+  /** 独立拉黑票（blocked 标签计数） */
+  report_count: number;
+  /** rescue_count - report_count；invariant 与黑名单条目同构（>= 3） */
+  net_votes: number;
+  first_seen_at: string;
+  updated_at: string;
+}
+
+/**
+ * 推荐白名单条目（whitelist）：维护者公开背书的「正常账号」。
+ * 不带票数语义（不是指控对象也不是合意对象），带入册说明（note）用于公开问责。
+ */
+export interface WhitelistEntry {
+  handle: string;
+  x_user_id: string | null;
+  /** 展示昵称（公开；选填） */
+  name: string | null;
+  /** X 公开头像 URL（pbs.twimg.com；选填，卡片展示用） */
+  avatar_url: string | null;
+  /** 入册说明（公开：为什么这个账号值得豁免 / 博主简介） */
+  note: string;
+  /** 入册时间（ISO） */
+  added_at: string;
+}
+
+/** 本地缓存的快照（last-known-good：只在全部校验通过后整体写入） */
+export interface StoredSnapshot {
+  snapshot_version: string;
+  /** 序列化好的快照 JSON（原样保存，构建索引时再解析） */
+  body: string;
+  synced_at: number;
+}
+
+/** 启发式提示强度；不再筛选服务器已经确定的最终黑名单。 */
+export type MarkStrength = 'refresh' | 'standard' | 'deep_clean';
+
+export const MARK_STRENGTHS: readonly MarkStrength[] = [
+  'refresh',
+  'standard',
+  'deep_clean',
+] as const;
+
+export const DEFAULT_MARK_STRENGTH: MarkStrength = 'standard';
+
+export function isMarkStrength(value: unknown): value is MarkStrength {
+  return typeof value === 'string' && (MARK_STRENGTHS as readonly string[]).includes(value);
+}

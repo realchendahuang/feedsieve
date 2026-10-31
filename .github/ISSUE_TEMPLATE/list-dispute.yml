@@ -1,0 +1,53 @@
+name: 名单申诉（误标 / 应加入）
+description: 某个账号被标错了，或者应该进社区名单
+labels: [list-dispute]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        名单是**社区投票账本**，不是官方判决。榜单口径见 [community/policy](https://github.com/realchendahuang/feedsieve/tree/main/community/policy)。
+
+        如果只是你一个人觉得标错了，先在扩展里点「认为误判」——误伤会自动静音，净票数降到阈值以下会自动出榜。这个 issue 用来处理「机制没解决」的情况。
+
+  - type: input
+    id: handle
+    attributes:
+      label: 账号 handle（不带 @）
+      placeholder: example_account
+    validations:
+      required: true
+
+  - type: input
+    id: xid
+    attributes:
+      label: x_user_id（可选）
+      description: 名单以 user id 为主键，handle 改了会找不到；能从账号页链接里查到
+      placeholder: 1234567890
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: 申诉类型
+      options:
+        - 我认为这是误标
+        - 我认为它应该进名单
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 证据
+      description: 只放帖子链接或说明理由，不要贴正文截图，也不要贴他人隐私
+      placeholder: |
+        https://x.com/xxx/status/...
+        理由：这条是正常的技术讨论，被关键词命中了
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: done
+    attributes:
+      label: 已做的操作
+      options:
+        - label: 我已经在扩展里点过「认为误判」或「上报」

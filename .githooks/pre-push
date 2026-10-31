@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+# push 前自动跑本地质量门禁。跳过：git push --no-verify。
+# 一次性启用（克隆后执行一次）：git config core.hooksPath .githooks
+
+if [ -f scripts/verify.sh ]; then
+  sh scripts/verify.sh
+fi

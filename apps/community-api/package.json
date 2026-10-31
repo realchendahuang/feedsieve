@@ -1,0 +1,52 @@
+{
+  "name": "@feedsieve/community-api",
+  "version": "0.12.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "deploy": "vite build && node scripts/merge-client-assets.mjs && wrangler deploy --config wrangler.local.jsonc",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
+  },
+  "dependencies": {
+    "@feedsieve/community-lists": "workspace:*",
+    "@feedsieve/detector": "workspace:*",
+    "@feedsieve/metrics": "workspace:*",
+    "@feedsieve/shared": "workspace:*",
+    "@resvg/resvg-wasm": "^2.6.2",
+    "@tanstack/react-router": "catalog:",
+    "@tanstack/react-start": "^1.168.60",
+    "class-variance-authority": "catalog:",
+    "clsx": "catalog:",
+    "drizzle-orm": "^0.45.4",
+    "hono": "^4.13.5",
+    "jose": "^6.1.3",
+    "lucide-react": "catalog:",
+    "nodemailer": "^10.0.6",
+    "postgres": "^3.4.9",
+    "radix-ui": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "tailwind-merge": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.54.8",
+    "@cloudflare/vitest-plugin": "^1.1.8",
+    "@cloudflare/workers-types": "^5.20260911.1",
+    "@tailwindcss/vite": "catalog:",
+    "@types/nodemailer": "^7.0.12",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "drizzle-kit": "^0.31.11",
+    "tailwindcss": "catalog:",
+    "tw-animate-css": "catalog:",
+    "vite": "catalog:",
+    "vitest": "^4.1.11",
+    "wrangler": "^4.131.1"
+  }
+}

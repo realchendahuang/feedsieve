@@ -1,0 +1,570 @@
+{
+  "data": {
+    "user": {
+      "result": {
+        "__typename": "User",
+        "timeline": {
+          "timeline": {
+            "instructions": [
+              {
+                "type": "TimelineClearCache"
+              },
+              {
+                "entry": {
+                  "content": {
+                    "__typename": "TimelineTimelineItem",
+                    "entryType": "TimelineTimelineItem",
+                    "itemContent": {
+                      "__typename": "TimelineTweet",
+                      "itemType": "TimelineTweet",
+                      "tweet_results": {
+                        "result": {
+                          "__typename": "Tweet",
+                          "rest_id": "1000000000000000001",
+                          "core": {
+                            "user_results": {
+                              "result": {
+                                "__typename": "User",
+                                "rest_id": "1000000000000000002",
+                                "core": {
+                                  "created_at": "Thu Jan 16 13:51:46 +0000 2025",
+                                  "name": "样本昵称 sample_user_1",
+                                  "screen_name": "sample_user_1"
+                                },
+                                "relationship_counts": {
+                                  "followers": 2893,
+                                  "following": 210
+                                },
+                                "tweet_counts": {
+                                  "media_tweets": 403,
+                                  "tweets": 13367
+                                },
+                                "privacy": {
+                                  "protected": false
+                                },
+                                "verification": {
+                                  "verified": false
+                                },
+                                "is_blue_verified": true,
+                                "profile_bio": {
+                                  "description": "样本简介"
+                                },
+                                "relationship_perspectives": {
+                                  "following": true,
+                                  "blocking": false
+                                }
+                              }
+                            }
+                          },
+                          "legacy": {
+                            "full_text": "样本正文 1",
+                            "lang": "zh",
+                            "created_at": "Sat Oct 24 14:02:31 +0000 2026",
+                            "favorite_count": 10,
+                            "retweet_count": 0,
+                            "reply_count": 1,
+                            "quote_count": 0,
+                            "bookmark_count": 2,
+                            "is_quote_status": false
+                          },
+                          "views": {
+                            "count": "611",
+                            "state": "EnabledWithCount"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "entryId": "tweet-1000000000000000001",
+                  "sortIndex": "2115833509988794368"
+                },
+                "type": "TimelinePinEntry"
+              },
+              {
+                "entries": [
+                  {
+                    "content": {
+                      "__typename": "TimelineTimelineItem",
+                      "entryType": "TimelineTimelineItem",
+                      "itemContent": {
+                        "__typename": "TimelineTweet",
+                        "itemType": "TimelineTweet",
+                        "tweet_results": {
+                          "result": {
+                            "__typename": "Tweet",
+                            "rest_id": "1000000000000000003",
+                            "core": {
+                              "user_results": {
+                                "result": {
+                                  "__typename": "User",
+                                  "rest_id": "1000000000000000002",
+                                  "core": {
+                                    "created_at": "Thu Jan 16 13:51:46 +0000 2025",
+                                    "name": "样本昵称 sample_user_1",
+                                    "screen_name": "sample_user_1"
+                                  },
+                                  "relationship_counts": {
+                                    "followers": 2893,
+                                    "following": 210
+                                  },
+                                  "tweet_counts": {
+                                    "media_tweets": 403,
+                                    "tweets": 13367
+                                  },
+                                  "privacy": {
+                                    "protected": false
+                                  },
+                                  "verification": {
+                                    "verified": false
+                                  },
+                                  "is_blue_verified": true,
+                                  "profile_bio": {
+                                    "description": "样本简介"
+                                  },
+                                  "relationship_perspectives": {
+                                    "following": true,
+                                    "blocking": false
+                                  }
+                                }
+                              }
+                            },
+                            "legacy": {
+                              "full_text": "样本正文 2",
+                              "lang": "zh",
+                              "created_at": "Thu Oct 29 14:08:46 +0000 2026",
+                              "favorite_count": 6,
+                              "retweet_count": 0,
+                              "reply_count": 1,
+                              "quote_count": 0,
+                              "bookmark_count": 0,
+                              "is_quote_status": false
+                            },
+                            "views": {
+                              "count": "180",
+                              "state": "EnabledWithCount"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "entryId": "tweet-1000000000000000003",
+                    "sortIndex": "2115833509988794367"
+                  },
+                  {
+                    "content": {
+                      "__typename": "TimelineTimelineItem",
+                      "entryType": "TimelineTimelineItem",
+                      "itemContent": {
+                        "__typename": "TimelineTweet",
+                        "itemType": "TimelineTweet",
+                        "tweet_results": {
+                          "result": {
+                            "__typename": "Tweet",
+                            "rest_id": "1000000000000000004",
+                            "core": {
+                              "user_results": {
+                                "result": {
+                                  "__typename": "User",
+                                  "rest_id": "1000000000000000002",
+                                  "core": {
+                                    "created_at": "Thu Jan 16 13:51:46 +0000 2025",
+                                    "name": "样本昵称 sample_user_1",
+                                    "screen_name": "sample_user_1"
+                                  },
+                                  "relationship_counts": {
+                                    "followers": 2893,
+                                    "following": 210
+                                  },
+                                  "tweet_counts": {
+                                    "media_tweets": 403,
+                                    "tweets": 13367
+                                  },
+                                  "privacy": {
+                                    "protected": false
+                                  },
+                                  "verification": {
+                                    "verified": false
+                                  },
+                                  "is_blue_verified": true,
+                                  "profile_bio": {
+                                    "description": "样本简介"
+                                  },
+                                  "relationship_perspectives": {
+                                    "following": true,
+                                    "blocking": false
+                                  }
+                                }
+                              }
+                            },
+                            "legacy": {
+                              "full_text": "样本正文 3",
+                              "lang": "zh",
+                              "created_at": "Thu Oct 29 10:29:50 +0000 2026",
+                              "favorite_count": 2,
+                              "retweet_count": 0,
+                              "reply_count": 1,
+                              "quote_count": 0,
+                              "bookmark_count": 0,
+                              "is_quote_status": false
+                            },
+                            "views": {
+                              "count": "229",
+                              "state": "EnabledWithCount"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "entryId": "tweet-1000000000000000004",
+                    "sortIndex": "2115833509988794366"
+                  },
+                  {
+                    "content": {
+                      "__typename": "TimelineTimelineItem",
+                      "entryType": "TimelineTimelineItem",
+                      "itemContent": {
+                        "__typename": "TimelineTweet",
+                        "itemType": "TimelineTweet",
+                        "tweet_results": {
+                          "result": {
+                            "__typename": "Tweet",
+                            "rest_id": "1000000000000000005",
+                            "core": {
+                              "user_results": {
+                                "result": {
+                                  "__typename": "User",
+                                  "rest_id": "1000000000000000002",
+                                  "core": {
+                                    "created_at": "Thu Jan 16 13:51:46 +0000 2025",
+                                    "name": "样本昵称 sample_user_1",
+                                    "screen_name": "sample_user_1"
+                                  },
+                                  "relationship_counts": {
+                                    "followers": 2893,
+                                    "following": 210
+                                  },
+                                  "tweet_counts": {
+                                    "media_tweets": 403,
+                                    "tweets": 13367
+                                  },
+                                  "privacy": {
+                                    "protected": false
+                                  },
+                                  "verification": {
+                                    "verified": false
+                                  },
+                                  "is_blue_verified": true,
+                                  "profile_bio": {
+                                    "description": "样本简介"
+                                  },
+                                  "relationship_perspectives": {
+                                    "following": true,
+                                    "blocking": false
+                                  }
+                                }
+                              }
+                            },
+                            "legacy": {
+                              "full_text": "样本正文 4",
+                              "lang": "zh",
+                              "created_at": "Thu Oct 29 09:02:29 +0000 2026",
+                              "favorite_count": 7,
+                              "retweet_count": 0,
+                              "reply_count": 3,
+                              "quote_count": 0,
+                              "bookmark_count": 0,
+                              "is_quote_status": false
+                            },
+                            "views": {
+                              "count": "417",
+                              "state": "EnabledWithCount"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "entryId": "tweet-1000000000000000005",
+                    "sortIndex": "2115833509988794365"
+                  },
+                  {
+                    "content": {
+                      "__typename": "TimelineTimelineItem",
+                      "entryType": "TimelineTimelineItem",
+                      "itemContent": {
+                        "__typename": "TimelineTweet",
+                        "itemType": "TimelineTweet",
+                        "tweet_results": {
+                          "result": {
+                            "__typename": "Tweet",
+                            "rest_id": "1000000000000000006",
+                            "core": {
+                              "user_results": {
+                                "result": {
+                                  "__typename": "User",
+                                  "rest_id": "1000000000000000002",
+                                  "core": {
+                                    "created_at": "Thu Jan 16 13:51:46 +0000 2025",
+                                    "name": "样本昵称 sample_user_1",
+                                    "screen_name": "sample_user_1"
+                                  },
+                                  "relationship_counts": {
+                                    "followers": 2893,
+                                    "following": 210
+                                  },
+                                  "tweet_counts": {
+                                    "media_tweets": 403,
+                                    "tweets": 13367
+                                  },
+                                  "privacy": {
+                                    "protected": false
+                                  },
+                                  "verification": {
+                                    "verified": false
+                                  },
+                                  "is_blue_verified": true,
+                                  "profile_bio": {
+                                    "description": "样本简介"
+                                  },
+                                  "relationship_perspectives": {
+                                    "following": true,
+                                    "blocking": false
+                                  }
+                                }
+                              }
+                            },
+                            "legacy": {
+                              "full_text": "样本正文 5",
+                              "lang": "zh",
+                              "created_at": "Thu Oct 29 07:07:42 +0000 2026",
+                              "favorite_count": 22,
+                              "retweet_count": 0,
+                              "reply_count": 3,
+                              "quote_count": 0,
+                              "bookmark_count": 0,
+                              "is_quote_status": true
+                            },
+                            "views": {
+                              "count": "536",
+                              "state": "EnabledWithCount"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "entryId": "tweet-1000000000000000006",
+                    "sortIndex": "2115833509988794364"
+                  },
+                  {
+                    "content": {
+                      "__typename": "TimelineTimelineModule",
+                      "entryType": "TimelineTimelineModule",
+                      "items": [
+                        {
+                          "entryId": "who-to-follow-2115833509988794373-user-1000000000000000007",
+                          "item": {
+                            "itemContent": {
+                              "__typename": "TimelineUser",
+                              "itemType": "TimelineUser",
+                              "user_results": {
+                                "result": {
+                                  "__typename": "User",
+                                  "rest_id": "1000000000000000007",
+                                  "core": {
+                                    "created_at": "Fri Jul 07 17:07:08 +0000 2017",
+                                    "name": "样本昵称 sample_user_2",
+                                    "screen_name": "sample_user_2"
+                                  },
+                                  "relationship_counts": {
+                                    "followers": 6,
+                                    "following": 297
+                                  },
+                                  "tweet_counts": {
+                                    "media_tweets": 368,
+                                    "tweets": 7307
+                                  },
+                                  "privacy": {
+                                    "protected": false
+                                  },
+                                  "verification": {
+                                    "verified": false
+                                  },
+                                  "is_blue_verified": false,
+                                  "profile_bio": {
+                                    "description": "样本简介"
+                                  },
+                                  "relationship_perspectives": {
+                                    "following": false,
+                                    "blocking": false
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "entryId": "who-to-follow-2115833509988794373-user-1000000000000000008",
+                          "item": {
+                            "itemContent": {
+                              "__typename": "TimelineUser",
+                              "itemType": "TimelineUser",
+                              "user_results": {
+                                "result": {
+                                  "__typename": "User",
+                                  "rest_id": "1000000000000000008",
+                                  "core": {
+                                    "created_at": "Sat Aug 14 08:42:34 +0000 2021",
+                                    "name": "样本昵称 sample_user_3",
+                                    "screen_name": "sample_user_3"
+                                  },
+                                  "relationship_counts": {
+                                    "followers": 3,
+                                    "following": 39
+                                  },
+                                  "tweet_counts": {
+                                    "media_tweets": 1,
+                                    "tweets": 3
+                                  },
+                                  "privacy": {
+                                    "protected": false
+                                  },
+                                  "verification": {
+                                    "verified": false
+                                  },
+                                  "is_blue_verified": false,
+                                  "profile_bio": {
+                                    "description": "样本简介"
+                                  },
+                                  "relationship_perspectives": {
+                                    "following": false,
+                                    "blocking": false
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "entryId": "who-to-follow-2115833509988794373-user-1000000000000000009",
+                          "item": {
+                            "itemContent": {
+                              "__typename": "TimelineUser",
+                              "itemType": "TimelineUser",
+                              "user_results": {
+                                "result": {
+                                  "__typename": "User",
+                                  "rest_id": "1000000000000000009",
+                                  "core": {
+                                    "created_at": "Thu Jul 12 18:16:34 +0000 2018",
+                                    "name": "样本昵称 sample_user_4",
+                                    "screen_name": "sample_user_4"
+                                  },
+                                  "relationship_counts": {
+                                    "followers": 59492,
+                                    "following": 852
+                                  },
+                                  "tweet_counts": {
+                                    "media_tweets": 1003,
+                                    "tweets": 3568
+                                  },
+                                  "privacy": {
+                                    "protected": false
+                                  },
+                                  "verification": {
+                                    "verified": false
+                                  },
+                                  "is_blue_verified": false,
+                                  "profile_bio": {
+                                    "description": "样本简介"
+                                  },
+                                  "relationship_perspectives": {
+                                    "following": false,
+                                    "blocking": false
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "entryId": "who-to-follow-2115833509988794373",
+                    "sortIndex": "2115833509988794363"
+                  },
+                  {
+                    "content": {
+                      "__typename": "TimelineTimelineItem",
+                      "entryType": "TimelineTimelineItem",
+                      "itemContent": {
+                        "__typename": "TimelineTweet",
+                        "itemType": "TimelineTweet",
+                        "tweet_results": {
+                          "result": {
+                            "__typename": "Tweet",
+                            "rest_id": "1000000000000000010",
+                            "core": {
+                              "user_results": {
+                                "result": {
+                                  "__typename": "User",
+                                  "rest_id": "1000000000000000002",
+                                  "core": {
+                                    "created_at": "Thu Jan 16 13:51:46 +0000 2025",
+                                    "name": "样本昵称 sample_user_1",
+                                    "screen_name": "sample_user_1"
+                                  },
+                                  "relationship_counts": {
+                                    "followers": 2893,
+                                    "following": 210
+                                  },
+                                  "tweet_counts": {
+                                    "media_tweets": 403,
+                                    "tweets": 13367
+                                  },
+                                  "privacy": {
+                                    "protected": false
+                                  },
+                                  "verification": {
+                                    "verified": false
+                                  },
+                                  "is_blue_verified": true,
+                                  "profile_bio": {
+                                    "description": "样本简介"
+                                  },
+                                  "relationship_perspectives": {
+                                    "following": true,
+                                    "blocking": false
+                                  }
+                                }
+                              }
+                            },
+                            "legacy": {
+                              "full_text": "样本正文 6",
+                              "lang": "zh",
+                              "created_at": "Wed Oct 28 11:47:37 +0000 2026",
+                              "favorite_count": 4,
+                              "retweet_count": 0,
+                              "reply_count": 2,
+                              "quote_count": 0,
+                              "bookmark_count": 0,
+                              "is_quote_status": false
+                            },
+                            "views": {
+                              "count": "224",
+                              "state": "EnabledWithCount"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "entryId": "tweet-1000000000000000010",
+                    "sortIndex": "2115833509988794362"
+                  }
+                ],
+                "type": "TimelineAddEntries"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

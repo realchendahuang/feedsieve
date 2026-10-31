@@ -1,0 +1,223 @@
+// @vitest-environment happy-dom
+import { describe, expect, it } from 'vitest';
+import { extractFeedItem, extractTweetIdentity } from './reader';
+
+/**
+ * 结构仿真实 X DOM（data-testid 锚点、User-Name 双行、t.co 外链包装）。
+ * 真实脱敏快照会进入 fixtures/x/，这里用最小可复现样本锁定 reader 行为。
+ */
+function renderTweet(inner: string): Element {
+  document.body.innerHTML = `<article data-testid="tweet">${inner}</article>`;
+  return document.querySelector('article')!;
+}
+
+const BASIC_TWEET = `
+  <div>
+    <div data-testid="User-Name">
+      <div><a href="/spamking88"><span>King Spam</span></a></div>
+      <div><a href="/spamking88"><span>@spamking88</span></a><span>·</span></div>
+    </div>
+    <a href="/spamking88/status/1720000000000000000"><time>2h</time></a>
+    <a href="/i/web/status/1720000000000000000"></a>
+    <div data-testid="tweetText">free crypto! claim now
+      <a href="https://t.co/abc123">https://giveaway-coin.top</a>
+    </div>
+  </div>`;
+
+describe('extractFeedItem', () => {
+  it('extracts author, postId, text and external links', () => {
+    const item = extractFeedItem(renderTweet(BASIC_TWEET), 'timeline');
+    expect(item).not.toBeNull();
+    expect(item?.author.handle).toBe('spamking88');
+    expect(item?.author.displayName).toBe('King Spam');
+    expect(item?.postId).toBe('1720000000000000000');
+    expect(item?.text).toContain('claim now');
+    expect(item?.context).toBe('timeline');
+
+    const hrefs = item!.links.map((l) => l.href);
+    // t.co 包装链接保留；x.com 站内 UI 链接被剔除
+    expect(hrefs.some((h) => h.startsWith('https://t.co/'))).toBe(true);
+    expect(hrefs.every((h) => !h.startsWith('https://x.com'))).toBe(true);
+
+    // Reader 预解析 hostname，Detector 不做 URL 解析
+    expect(item!.links.find((l) => l.hostname === 't.co')).toBeDefined();
+  });
+
+  it('returns null when the article has no recognizable author', () => {
+    const article = renderTweet('<div data-testid="tweetText">ghost post</div>');
+    expect(extractFeedItem(article)).toBeNull();
+  });
+
+  it('returns null for an empty article', () => {
+    expect(extractFeedItem(renderTweet(''))).toBeNull();
+  });
+
+  it('keeps display name undefined when only the handle is present', () => {
+    const article = renderTweet(`
+      <div data-testid="User-Name">
+        <div><a href="/lonewolf"><span>@lonewolf</span></a></div>
+      </div>
+      <a href="/lonewolf/status/999"><time>now</time></a>`);
+    const item = extractFeedItem(article);
+    expect(item).not.toBeNull();
+    expect(item?.author.handle).toBe('lonewolf');
+    expect(item?.author.displayName).toBeUndefined();
+  });
+
+  it('strips @handle from display name without eating the text', () => {
+    const article = renderTweet(`
+      <div data-testid="User-Name">
+        <div><a href="/lonewolf"><span>@lonewolf</span></a></div>
+        <div><a href="/lonewolf"><span>@lonewolf</span></a></div>
+      </div>
+      <a href="/lonewolf/status/998"><time>1m</time></a>`);
+    const item = extractFeedItem(article);
+    expect(item).not.toBeNull();
+    // 名字只有 @handle 本身时清洗后为空 -> undefined，而不是残留空串
+    expect(item?.author.displayName).toBeUndefined();
+  });
+
+  it('does not attribute quoted-post text or links to the quoting account', () => {
+    const article = renderTweet(`
+      <div data-testid="User-Name">
+        <a href="/legitcreator"><span>Legit Creator</span></a>
+        <a href="/legitcreator"><span>@legitcreator</span></a>
+      </div>
+      <a href="/legitcreator/status/111"><time>now</time></a>
+      <div role="link">
+        <a href="/spamaccount/status/222"><time>quoted</time></a>
+        <div data-testid="tweetText">DM me for crypto profit signals</div>
+        <a href="https://giveaway.example/win">claim</a>
+      </div>
+    `);
+    const item = extractFeedItem(article);
+    expect(item?.postId).toBe('111');
+    expect(item?.text).toBe('');
+    expect(item?.links.some((link) => link.hostname === 'giveaway.example')).toBe(false);
+  });
+
+  it('keeps the parent post text while excluding a nested quote', () => {
+    const article = renderTweet(`
+      <div data-testid="User-Name">
+        <a href="/commenter"><span>Commenter</span></a>
+        <a href="/commenter"><span>@commenter</span></a>
+      </div>
+      <a href="/commenter/status/333"><time>now</time></a>
+      <div data-testid="tweetText">This quoted claim looks suspicious.</div>
+      <div role="link">
+        <a href="/spamaccount/status/444"><time>quoted</time></a>
+        <div data-testid="tweetText">Free crypto giveaway, follow and claim</div>
+      </div>
+    `);
+    const item = extractFeedItem(article);
+    expect(item?.text).toBe('This quoted claim looks suspicious.');
+  });
+
+  // X 把 emoji 渲染成 <img alt="🌸">，textContent 会整段漏掉；
+  // 擦边 marker、纯 emoji 正文、装饰昵称等信号全靠这段可见文本。
+  it('includes emoji rendered as img alt in post text', () => {
+    const article = renderTweet(`
+      <div data-testid="User-Name">
+        <a href="/emojiposter"><span>Peach Poster</span></a>
+        <a href="/emojiposter"><span>@emojiposter</span></a>
+      </div>
+      <a href="/emojiposter/status/555"><time>now</time></a>
+      <div data-testid="tweetText">今晚的茶有点涩 <img src="/emoji/peach.png" alt="🍑"></div>
+    `);
+    const item = extractFeedItem(article);
+    expect(item?.text).toBe('今晚的茶有点涩 🍑');
+  });
+
+  it('joins multiple own text nodes but excludes quoted ones', () => {
+    const article = renderTweet(`
+      <div data-testid="User-Name">
+        <a href="/threader"><span>Threader</span></a>
+        <a href="/threader"><span>@threader</span></a>
+      </div>
+      <a href="/threader/status/666"><time>now</time></a>
+      <div data-testid="tweetText">first part <img src="/emoji/fire.png" alt="🔥"></div>
+      <div data-testid="tweetText">second part</div>
+      <div role="link">
+        <a href="/spamaccount/status/777"><time>quoted</time></a>
+        <div data-testid="tweetText"><img src="/emoji/peach.png" alt="🍑"></div>
+      </div>
+    `);
+    const item = extractFeedItem(article);
+    expect(item?.text).toBe('first part 🔥 second part');
+  });
+
+  it('includes emoji rendered as img alt in display name', () => {
+    const article = renderTweet(`
+      <div data-testid="User-Name">
+        <a href="/flowerry"><span>Rose <img src="/emoji/blossom.png" alt="🌸"><img src="/emoji/blossom.png" alt="🌸"></span></a>
+        <a href="/flowerry"><span>@flowerry</span></a>
+      </div>
+      <a href="/flowerry/status/888"><time>now</time></a>
+      <div data-testid="tweetText">hello</div>
+    `);
+    const item = extractFeedItem(article);
+    expect(item?.author.displayName).toBe('Rose 🌸🌸');
+  });
+
+  it('does not append timestamp text from the User-Name container', () => {
+    const article = renderTweet(`
+      <div data-testid="User-Name">
+        <a href="/cleanname"><span>Clean Name</span></a>
+        <a href="/cleanname"><span>@cleanname</span></a>
+        <span>·</span><time>1小时</time>
+      </div>
+      <a href="/cleanname/status/889"><time>1小时</time></a>
+      <div data-testid="tweetText">hello</div>
+    `);
+    expect(extractFeedItem(article)?.author.displayName).toBe('Clean Name');
+  });
+});
+
+describe('extractTweetIdentity', () => {
+  it('reads only postId and handle, matching extractFeedItem', () => {
+    const article = renderTweet(BASIC_TWEET);
+    const item = extractFeedItem(article);
+    expect(extractTweetIdentity(article)).toEqual({
+      postId: item?.postId,
+      author: { handle: item?.author.handle },
+    });
+    expect(item?.postId).toBe('1720000000000000000');
+  });
+
+  it('returns null without an author link and omits a missing postId', () => {
+    expect(extractTweetIdentity(renderTweet('<div>no author</div>'))).toBeNull();
+    expect(
+      extractTweetIdentity(renderTweet('<div data-testid="User-Name"><a href="/bob">b</a></div>')),
+    ).toEqual({ author: { handle: 'bob' } });
+  });
+});
+
+describe('extractFeedItem postId with quoted media', () => {
+  // 2026-10-30 真机：详情页主推文引用带图帖子时，被引用帖子的图片链接排在最前面
+  const QUOTING_TWEET = `
+    <div data-testid="User-Name">
+      <div><a href="/saccc_c"><span>Sac</span></a></div>
+      <div><a href="/saccc_c"><span>@saccc_c</span></a></div>
+    </div>
+    <div role="link">
+      <a href="/quoted_user/status/2115667681940770873/photo/1"><img /></a>
+      <div data-testid="User-Name"><a href="/quoted_user">Q</a></div>
+      <a href="/quoted_user/status/2115667681940770873"><time>3h</time></a>
+    </div>
+    <a href="/saccc_c/status/2115692493190594901"><time>1h</time></a>
+    <a href="/saccc_c/status/2115692493190594901/analytics">views</a>`;
+
+  it('uses the own timestamp link instead of the quoted photo link', () => {
+    const article = renderTweet(QUOTING_TWEET);
+    expect(extractFeedItem(article)?.postId).toBe('2115692493190594901');
+    expect(extractTweetIdentity(article)?.postId).toBe('2115692493190594901');
+  });
+
+  it('falls back to the first status link outside quote cards when there is no time element', () => {
+    const article = renderTweet(`
+      <div data-testid="User-Name"><a href="/a">A</a></div>
+      <div role="link"><a href="/q/status/111/photo/1"></a></div>
+      <a href="/a/status/222/analytics"></a>`);
+    expect(extractTweetIdentity(article)?.postId).toBe('222');
+  });
+});

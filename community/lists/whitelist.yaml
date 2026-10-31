@@ -1,0 +1,620 @@
+# FeedSieve 推荐白名单（金刚防护罩）
+#
+# 名单内账号永远不会被标注或拉黑：扩展对 whitelist 一票否决，优先级高于一切检测来源
+# （社区名单 / 指纹 / 域名 / 词库）。与社区黑名单互斥——命中白名单的账号不进黑名单。
+#
+# 怎么提交：
+#   1. PR 修改本文件 entries 区，每条必须附带入册说明（note，4-240 字，公开问责用）
+#   2. 维护者审核后合并（入册标准：误标申诉经核实、知名正常账号等；不接受匿名批量提交）
+#   3. 合并后运行 scripts/publish-community-whitelist.sh 发布，下一次快照即生效
+#      （快照按「当日一版」节流，白名单变化也会触发新版本）
+#
+# Issue 自助通道（仓库所有者手动拉取，无定时、无自动收录）：
+#   填 Issue 模板「推荐白名单申请」→ 所有者本地跑 scripts/ingest-whitelist-issues.mjs
+#   把合规 Issue 直接写进本文件（issue 自动打标/回帖）→ 看 diff → 按第 3 步发布。
+#   不排任何定时任务：本文件是永不标注的强豁免名单，收录必须人亲手过目。
+#   PR 之外的黑产防线：handle/note/头像在 ingest 与 publish 两层都会校验。
+#
+# 社区抢救快速通道：
+#   一条命令走完（迁移 → 拉 X 资料 → 校验 → 发布前确认）：
+#     scripts/whitelist-pipeline.sh --dry-run   # 全程只读
+#     scripts/whitelist-pipeline.sh            # 回车确认后发布；--auto 跳确认、--no-publish 只备候选
+#   拆步跑也可：promote-rescued-whitelist.mjs（候选迁移）/ enrich-rescued-whitelist.mjs
+#   （拉昵称/头像/简介）/ publish-community-whitelist.sh（发布，文件为唯一事实）。
+#
+# entries 字段：
+#   handle      必填。@ 后面的用户名（@ 可带可不带，脚本自动归一为小写）
+#   note        必填。博主简介/为什么值得豁免（会随快照公开），短简介也收
+#   name        选填。显示昵称（快照里展示用）
+#   avatar_url  选填。X 公开头像 URL（pbs.twimg.com），快照里展示用
+#   x_user_id   选填。账号数字 ID，能填则填（改名前仍可识别）
+schema_version: 1
+entries:
+  - handle: 01wu1
+    name: "子扬"
+    avatar_url: "https://pbs.twimg.com/profile_images/2091489690289582081/ikenwR2o_400x400.jpg"
+    note: "01 年小镇做题家 | Physics | 3 年 AI 产品经理🌍 做过单日流水 2000+ 的项目 | 亲自跑过从需求到收入的全过程🏂 探索普通年轻人如何抓住 AI 机会，做产品、赚到第一桶金💰 记录并还原实操，公开真实复盘💎"
+  - handle: 03aier
+    name: "逐风03"
+    avatar_url: "https://pbs.twimg.com/profile_images/2074118561086464000/6i1BpYQX_400x400.jpg"
+    note: "03男大 | 来X混口饭吃|Al-Native Builder 数学人 | all in AI|web3入局者|美股 🤖KOSX社群实习生| https://t.co/3sBo78Y9Zo 目标财富自由"
+  - handle: 2038277897zheng
+    name: "Yuze"
+    avatar_url: "https://pbs.twimg.com/profile_images/2055949149070323712/I-gP6R0h_400x400.jpg"
+    note: "06年大学生｜美股｜web3｜crypto｜X增长 人生感悟｜长期主义｜延时满足"
+  - handle: 369serena
+    name: "Serena 木瓜"
+    avatar_url: "https://pbs.twimg.com/profile_images/2014165849188495360/r8DM6qHC_400x400.jpg"
+    note: "➡️ AI 应用+工具分享 · Codex 赋能 🎓裸辞专业户 · 记录普通人如何拿回人生的主动权 🤖 CGS Agency KOL 运营 · 全球 KOL 资源"
+  - handle: 8kkjw6
+    name: "七七"
+    avatar_url: "https://pbs.twimg.com/profile_images/2093534918173409280/io_NCWuF_400x400.jpg"
+    note: "大二北京计算机系"
+  - handle: adrianpunk115
+    name: "Adrian Punk"
+    avatar_url: "https://pbs.twimg.com/profile_images/2074416007964495872/6dxqrywF_400x400.jpg"
+    note: "AI视觉/AI小白教程 3个月挣了8位数 中科大管理学硕士｜Punk系列Skills 作者 🎁First Check发起人 和 @ai_xiaomu @rwayne 一起帮助更多新人被看见助力成长"
+  - handle: agentbuff_dev
+    name: "AgentBuff"
+    avatar_url: "https://pbs.twimg.com/profile_images/2088064528986808320/mfdCF0pH_400x400.jpg"
+    note: "🚢 SaaS Going Global | Architect | Hands-on AI Practitioner | https://t.co/xHf81GJAwW 🎺 Slogan: Explore the Infinite Possibilities of AI"
+  - handle: ai_jacksaku
+    name: "阿川 | AI thinking"
+    avatar_url: "https://pbs.twimg.com/profile_images/2019055126607253504/ixViRCYk_400x400.jpg"
+    note: "马斯克研究所合作伙伴@MuskPapa_x @razzhood 前大厂多面手｜AI 专业搞钱玩家｜3天万粉第一人 关注 AI 产品&工具、AI商业化、AI企业转型 所有的项目经历和思考都发在这里"
+  - handle: ai_suxiaole
+    name: "苏乐"
+    avatar_url: "https://pbs.twimg.com/profile_images/2054407349440303104/vwh9uWQu_400x400.jpg"
+    note: "💡 AI 没那么复杂，🤖 在职大厂架构师(XWise插件作者)，长期实践 AI，💰 分享 AI 工具、赚钱案例和效率技巧，📌 每天替你测试 AI，帮你少走很多弯路"
+  - handle: ai_xiaomu
+    name: "黄小木"
+    avatar_url: "https://pbs.twimg.com/profile_images/2076716603392323584/v9BMuoo__400x400.jpg"
+    note: "👨‍💻 前大厂T11，来X记录OPC 之路。 💼 分享本地模型 & FDE 案例 & 知识库 & GEO 。 🎁 First Check发起人 & X增长工作流作者(开源)，和 @rwayne @AdrianPunk115一起帮助更多新人被看见。"
+  - handle: alexchou_x
+    name: "Alex Chou"
+    avatar_url: "https://pbs.twimg.com/profile_images/2075126356124577792/mXzvJ-D7_400x400.jpg"
+    note: "🧑🏻‍💻 产品经理｜健康顾问｜ENFJ ☄️ 分享思考｜遇见有趣的人和事 🎬 无限进步｜探索 AI 时代新的转机"
+  - handle: ally_foe
+    name: "Foe Ally"
+    avatar_url: "https://pbs.twimg.com/profile_images/2064636052435017728/K3-l_WrK_400x400.jpg"
+    note: "前4A广告创意|前互联网大厂低 P|一米七中英双语主持人|爱讲脱口秀写点小烂梗 Al+美股+Crypto 研究认知、科技与资本的交汇点 真的都是自己写的，防走丢抖音：Allyorfoe"
+  - handle: anion_ex
+    name: "anionex"
+    avatar_url: "https://pbs.twimg.com/profile_images/1726949602950328320/0QaKm7ot_400x400.jpg"
+    note: "hi, I'm anionex: https://t.co/hNwjgURrHU (18k⭐) full-stack | AI native | top 0.01% github developer sharing insights on open source & AI:) 顺便分享一些可能有用/有趣的东西～"
+  - handle: ansyn_07
+    name: "安寻Ansyn_log"
+    avatar_url: "https://pbs.twimg.com/profile_images/2049117868470751232/KCpqFeeP_400x400.jpg"
+    note: "07｜长期主义｜AI × 自媒体｜AI Workflow Builder Building in Public｜Intern @ https://t.co/Ay48fUk8L0"
+  - handle: aomyying
+    name: "Aomyying（小A本人）"
+    avatar_url: "https://pbs.twimg.com/profile_images/2047513061481934848/RICk72zG_400x400.jpg"
+    note: "💡 自媒体连续创业者｜用AI做好产品，用自媒体讲好故事｜Her Name成员｜学好英语终身受益 只分享真实体验感受｜用历史验证规律｜探索人性｜回归天道"
+  - handle: averiox007
+    name: "Lokii."
+    avatar_url: "https://pbs.twimg.com/profile_images/2061852686195253248/R9dOZhUd_400x400.jpg"
+    note: "web3丨链上丨https://t.co/7VipsoVgG6丨ENTJ 工科05 专注：财富杠杆｜人性关系｜真相探索 目标：财富自由+情感自由的数字游民"
+  - handle: benzye1988
+    name: "奔驰哥"
+    avatar_url: "https://pbs.twimg.com/profile_images/1808705527482081280/wvTDUz8b_400x400.jpg"
+    note: "股票交易员，懂点税的事 坚持跟踪市场，理解市场 投资可以犯错，但不要被打垮"
+  - handle: bketck
+    name: "Station Cat"
+    avatar_url: "https://pbs.twimg.com/profile_images/1892489460589199360/UR_E0ZJA_400x400.jpg"
+    note: "codex重度使用者 🚀 赛鹏搞笑者🧑‍💻 Creator 欢迎同频的人一起聊天 https://t.co/IQBk5drQmU"
+  - handle: calvinnotes
+    name: "Calvin"
+    avatar_url: "https://pbs.twimg.com/profile_images/2068630338021330944/HnI-yoWZ_400x400.jpg"
+    note: "AI-Native Builder / cloud architect / learning in public DCA enjoyer 🚀"
+  - handle: cgnot996
+    name: "铁柱AGI"
+    avatar_url: "https://pbs.twimg.com/profile_images/1997889886058348544/I3DNAJ91_400x400.jpg"
+    note: "开源 Grok App 作者 ｜马斯克得不到的男人 Grok Bot 野生推广大使（正在申请 SpaceX AI 官方大使中）"
+  - handle: changqinghanbot
+    name: "长卿寒"
+    avatar_url: "https://pbs.twimg.com/profile_images/2093764944026288128/K6O0nTMq_400x400.jpg"
+    note: "-05 在读大学生|长期主义 -AI × web3×内容 -分享碎碎念|社会观察|人性博弈 -vibe coding 生产玩具中"
+  - handle: chenkunhu00111
+    name: "兔子舞的奇思妙想y"
+    avatar_url: "https://pbs.twimg.com/profile_images/2097236350521282560/egHxfFnU_400x400.jpg"
+    note: "🎓 985经济学本硕，前投行业务主管； 🚀 从做题家到公众号的头部情感博主； 📊 有超400名学员及1000+小时1v1咨询经验； 💬 欢迎私信你的情感问题，免费获取一次诊断； 🔑 内部社群有门槛，情感学习请加工作微信。"
+  - handle: chenshuoai
+    name: "陈硕KAI"
+    avatar_url: "https://pbs.twimg.com/profile_images/2086788104967581696/dbHJ3lqY_400x400.jpg"
+    note: "🌏WE30七代目 🎬探寻在ai 时代下的财富自由之路🌐了解我：https://t.co/lGtm3GhpRf | 微信： Chenshuo8886669（备注来意）|耍学tg：https://t.co/MRxsJR2KFD | 目前聚焦ai | 支线：跨境| YouTube （ 数亿播放）| Crypto（8位数）"
+  - handle: chilljccu
+    name: "Chill / AI"
+    avatar_url: "https://pbs.twimg.com/profile_images/2091160004896428032/XLEzXCPL_400x400.jpg"
+    note: "08/web3/AI小手子 掌握流量的King 搭建职业道路ing wx:Qyx-0510"
+  - handle: clara_j_0529
+    name: "六水六水"
+    avatar_url: "https://pbs.twimg.com/profile_images/2069684464746389504/ACyTDSKq_400x400.jpg"
+    note: "04 | 个人IP打造沉淀中 从市场营销/心理/传播学研究自媒体 好产品是聪明人用笨功夫做出来的 jiamiaomiao029@gmail.com"
+  - handle: cxjwin
+    name: "码良"
+    avatar_url: "https://pbs.twimg.com/profile_images/2086535099420704768/VSCxzZBA_400x400.jpg"
+    note: "🔧 月薪 1800 厂弟 → 大厂 iOS Tech Lead 🌍 大厂真实观察 · AI 工具实测 📄 转码上岸真实路径，见置顶 🎯 目标 1 万粉"
+  - handle: cy_chase_ai
+    name: "承越.Chase"
+    avatar_url: "https://pbs.twimg.com/profile_images/2061461409679155200/5GsfDzXQ_400x400.jpg"
+    note: "🧑‍💻 资深工程师 / PM / 团队Owner / AI玩家 ⚡ 聊高效方法论、Vibe Coding、超级个体成长"
+  - handle: darkmirror_n
+    name: "Lucidity"
+    avatar_url: "https://pbs.twimg.com/profile_images/2086646039675805696/Z4c4bHQp_400x400.jpg"
+    note: "📈9年A股投资经验，从10W本金做到A8 🛹网球3.5+｜长距离滑板亚洲第二｜滑板马拉松全球第六 ✨分享缠论知识心得，拆解交易与人性 🩵长文分享干货，短推记录生活"
+  - handle: dashen_wang
+    name: "AI最严厉的父亲"
+    avatar_url: "https://pbs.twimg.com/profile_images/2025512788534448128/RVb6JJiL_400x400.jpg"
+    note: "马斯克研究所合作伙伴 @MuskPapa_x @razzhood 当AGI睁开眼睛的那一刻，人类的存在便失去了所有意义 构架散人。 反编译 / 站群 / 量化 / Agent,二十年自学。 现在只带 Agent 干活,不雇人。"
+  - handle: davidlin449854
+    name: "David Lin 🐑"
+    avatar_url: "https://pbs.twimg.com/profile_images/2097765463732469760/f2Wrun-8_400x400.jpg"
+    note: "🐑 一只用AI探索未来的懒羊 高尔夫行业从业者⛳️｜7年运动产业经验🏋️ 朋友圈× 运动健康 ×商业思考× 分享美食 Building In Public｜Foodie🍽️"
+  - handle: dingwenlei1
+    name: "老丁和他的AI伙伴"
+    avatar_url: "https://pbs.twimg.com/profile_images/2081619880173015040/yTqgs0-g_400x400.jpg"
+    note: "KOSX Impact 计划成员"
+  - handle: dollyw73878
+    name: "高佬"
+    avatar_url: "https://pbs.twimg.com/profile_images/2071550539964518400/brH1HBDI_400x400.jpg"
+    note: "AI｜自媒体｜英语学习｜个人成长 持续试错，慢慢升级 分享日常，喜欢交朋友，一起交流"
+  - handle: echo6718
+    name: "Echo"
+    avatar_url: "https://pbs.twimg.com/profile_images/2077602532768309249/GngQMTbk_400x400.jpg"
+    note: "🖥计算机本科在读，正在冲击研究生 🕹分享个人生活学习中的看法与想法 ❤️尝试嵌入式硬件与ai结合 努力让自己在未来有实力能在桌上"
+  - handle: edison_aware
+    name: "Edison"
+    avatar_url: "https://pbs.twimg.com/profile_images/2072151503960444928/BG9XQ4YE_400x400.jpg"
+    note: "前鹅厂程序员后因为垃圾梦想去搞科研 现在是大学青年教师，偶尔上课，经常折腾 同时是 https://t.co/76bxADA601 创新战略顾问 AI｜技术｜副业｜一些不成熟的思考 Build 点有用的，也 Build 点没用的"
+  - handle: erwinwu000
+    name: "Erwin"
+    avatar_url: "https://pbs.twimg.com/profile_images/2077329662649511936/BATq9_PG_400x400.jpg"
+    note: "🎓PolyU PhDing | 💻ex Alibaba & Shopee AI Builder丨AI x Design Researcher Building https://t.co/vIXs3fnuld"
+  - handle: eugeniasususu
+    name: "Eugenia吃了吗"
+    avatar_url: "https://pbs.twimg.com/profile_images/2081592550872555520/fi9ptFbo_400x400.jpg"
+    note: "00后AI野生学习者｜🇭🇰上市公司打工人 不知名社会观察员｜前🧪天坑人➡️AI社群运营 分享香港🇭🇰职场｜AI工具｜跨界成长 边学边做 顺便认识有趣的人👾"
+  - handle: funx1001
+    name: "yee"
+    avatar_url: "https://pbs.twimg.com/profile_images/1916772051568005120/nxtJ6oRp_400x400.jpg"
+    note: "04|广州|探索者 目标：每个月被动收入1w+！ 2026！ai+创业进行中！闲鱼一个月营业额2.2w，积累60位客户 专业AI代充，高利息稳定理财探索.KOSX.AI"
+  - handle: fxmqs
+    name: "风雪漫千山"
+    avatar_url: "https://pbs.twimg.com/profile_images/2054900209965273088/RsQ_Eywo_400x400.jpg"
+    note: "一个在持续提升品味的老登。"
+  - handle: haifeng1974
+    name: "Micky💯"
+    avatar_url: "https://pbs.twimg.com/profile_images/2097012427066109952/AR_k8Qt7_400x400.jpg"
+    note: "Haifeng | Brand Designer & Creative Director Building brands, IP & visual systems with AI. 东方美学 × Global Design × AI Creativity Shanghai / China"
+  - handle: halou168
+    name: "哈咯Halou"
+    avatar_url: "https://pbs.twimg.com/profile_images/2074513382481506304/PaJlvrU-_400x400.jpg"
+    note: "我叫哈咯，努力学习web3和美股投资当中，希望可以与大家分享我的心得，努力Build Ai and web3，个人观点不代表投资建议。投资美股上Backpack🎒（返佣30％，联系我请你喝奶茶）"
+  - handle: hh681hh
+    name: "Hh"
+    avatar_url: "https://pbs.twimg.com/profile_images/2053503484159553536/xeJ0ood3_400x400.jpg"
+    note: "16岁在校经济独立｜我在https://t.co/6t84uKXaBB很想你 一直在做一件事：如何靠一部手机赚钱 22年推特其他赛道万粉博主（帐号被盗） 跨境电商｜AI ｜交易 ｜内容 梦想数字游民 财富自由"
+  - handle: hunlan77
+    name: "魂蓝"
+    avatar_url: "https://pbs.twimg.com/profile_images/1521340222574784513/ctLLoyF9_400x400.jpg"
+    note: "SISSYSTARS品牌主理人。 致力于做一家全球服务跨性别群体的综合服务平台。"
+  - handle: isnail
+    name: "蜗牛King 👑"
+    avatar_url: "https://pbs.twimg.com/profile_images/2006754379890593792/rZQ06k6__400x400.jpg"
+    note: "AI、自媒体 公众号创作者 一个项目3个月7位数 专注自媒体和小项目实践 持续分享，每天进步一点点"
+  - handle: jack_fluxai
+    name: "Jack Flux"
+    avatar_url: "https://pbs.twimg.com/profile_images/2072156359542607872/SHqIRvOY_400x400.jpg"
+    note: "Al-Native Builder | https://t.co/sYBqHfcAIG 外企制造业工程师在AI浪潮里重新寻找人生可能 分享AI实战经验、工作流和Agent 偶尔讲讲段子，个人感悟"
+  - handle: jackywine
+    name: "Jackywine"
+    avatar_url: "https://pbs.twimg.com/profile_images/1805875520430915586/x3t_sQdd_400x400.jpg"
+    note: "Obsidian VIP | PromptEngineer | 深入学习 OpenAI Anthropic 以及国产大模型 其实不过 是工作之余分享 AI、设计、产品的普通纯小白网友罢了 ✈️ https://t.co/HRpOru3LUj 列表https://t.co/Jyj3HMNTsZ"
+  - handle: januslixxx23
+    name: "Janus Li"
+    avatar_url: "https://pbs.twimg.com/profile_images/2063295359208787968/1DjebzaV_400x400.jpg"
+    note: "1️⃣分享影视产业 摄影摄像 2️⃣AI 结合自媒体从0-1 3️⃣策划作品集 4️⃣可帮助打光&摄影摄像指导"
+  - handle: jarvis11x
+    name: "Jarvis｜AI 商业实验室"
+    avatar_url: "https://pbs.twimg.com/profile_images/2090977927965933568/S_kOnxUi_400x400.jpg"
+    note: "0 技术经验小白，用 AI 做产品、搞流量、跑商业闭环 AI Coding / SEO / GEO / 工具实测 / 真实数据 公开 AI 商业实验，让更多普通人看到 AI 的可能性"
+  - handle: jask_don
+    name: "Jask"
+    avatar_url: "https://pbs.twimg.com/profile_images/1917112031523835905/WHpfZ38u_400x400.jpg"
+    note: "A true writer is building a legend"
+  - handle: jasper_wei1
+    name: "Jasper Wei"
+    avatar_url: "https://pbs.twimg.com/profile_images/2071144538731884545/eQtKOweW_400x400.jpg"
+    note: "00后天坑专业｜AI innovation consult｜https://t.co/9JNkOobIdf 分享AI、投资、商业、人生思考"
+  - handle: jiefubtc
+    name: "解夫🔶｜Crypto"
+    avatar_url: "https://pbs.twimg.com/profile_images/2076647724846370816/ndWtbf0J_400x400.jpg"
+    note: "独立交易员｜威科夫交易 看流动性、风险偏好、关键位置和失效点 个人笔记，不构成投资建议；每一条推文，都是写给未来的信 寄语：独立思考，为认知买单，正心以中，修身以和。📈"
+  - handle: jingqing_z16832
+    name: "威廉不是王子"
+    avatar_url: "https://pbs.twimg.com/profile_images/2097742796937715712/4m7pkHyp_400x400.jpg"
+    note: "40岁退休老登，贪财好色，俗人一个 前跨境电商职业经理人：从事亚马逊、Temu、shien、Lazada等 正在重新学习这个世界：AI × Web3 × 投资 美股 / 加密 / 产业趋势 / 偶尔胡思乱想 不荐股，只记录一个普通人的长期主义"
+  - handle: jonathanfwu
+    name: "Jonathan Wu"
+    avatar_url: "https://pbs.twimg.com/profile_images/2096202283977768960/fihoT84E_400x400.jpg"
+    note: "05 | 边走，边想，边构建自己。 探索 AI、web3， 分享投资、阅读、生活，以及那些突然冒出来的想法 Stay humble."
+  - handle: jxjx2081310
+    name: "Zh1x1an Q"
+    avatar_url: "https://pbs.twimg.com/profile_images/2097585326101536768/EwPqDM2p_400x400.jpg"
+    note: "💯不上班能搞啥？ |感悟 | 情感 | 认知"
+  - handle: kekeya88
+    name: "可可鸭"
+    avatar_url: "https://pbs.twimg.com/profile_images/1943531622743097344/frvI5TWb_400x400.jpg"
+    note: "医学生在读/web3入门/AI探索者/理财小白 🤖https://t.co/MwaurZ1Z82 Community Growth Operator ｜ 搞钱研究所💰 坚定的半导体持有者！ 商务合作直接私信 个人网站：https://t.co/QRQM24587p @hhdhhd02009235"
+  - handle: king1818888
+    name: "Kimberly"
+    avatar_url: "https://pbs.twimg.com/profile_images/2084265366667374592/d2IhNMep_400x400.jpg"
+    note: "AI-Native Builder | https://t.co/axPl7LLyeW Building agents & data-driven finance 做系统 · 写工作流，把 AI 真正落地 Web3 | AI 美股港股 Bitget 返佣：https://t.co/uU3QmBTqry"
+  - handle: kkkm2238
+    name: "K"
+    avatar_url: "https://pbs.twimg.com/profile_images/2071865394797678592/3bPhaqKT_400x400.jpg"
+    note: "06年大学生 专注AI应用、Agent、商业模式 分享日常、行业观察与投资思考 记录长期主义，不构成投资建议"
+  - handle: kosxai
+    name: "KOSX"
+    avatar_url: "https://pbs.twimg.com/profile_images/2094642222067236864/cGxQQYfy_400x400.jpg"
+    note: "https://t.co/HAzqEPxVGa｜把事情做成的创造者网络 AI 实战 · 内容增长 · 真实项目 连接创作者、创业者与行业伙伴 Build Something Real."
+  - handle: li665508li
+    name: "Yuvi"
+    avatar_url: "https://pbs.twimg.com/profile_images/2036027607808905217/RqaWpvw5_400x400.jpg"
+    note: "佐助未必有我帅"
+  - handle: liangshuang2026
+    name: "梁爽withyou^^"
+    avatar_url: "https://pbs.twimg.com/profile_images/2067912768154677248/3TPFGG64_400x400.jpg"
+    note: "上海准大一｜INTJ｜野心家 能动性+养成系=无限可能！ AI Generalist（Incubating…）in https://t.co/wz5w3BBVF7 记录从 0 开始学习 AI、交易、Web3"
+  - handle: liuchan41094685
+    name: "阿牛"
+    avatar_url: "https://pbs.twimg.com/profile_images/2096614803729240064/9jvYc18h_400x400.jpg"
+    note: "武汉线下AI沙龙主理人，研究普通人从0到1AI淘金，AI产品探索中"
+  - handle: masionww
+    name: "FUFU"
+    avatar_url: "https://pbs.twimg.com/profile_images/2094354573507063808/l7pM_Whs_400x400.jpg"
+    note: "AI PM｜AI 内容创作者｜Vibe Coding 实践者｜ AI 生图 × Skill 开发 × AI 工作流 × 独立产品 商业合作TG/VX：@MasionWW AI订阅渠道：https://t.co/9vXAmWwhRF"
+  - handle: mickty
+    name: "mickty"
+    avatar_url: "https://pbs.twimg.com/profile_images/1473340902/Gros_d_gat_de_vinaigre_400x400.jpg"
+    note: "KOSX Impact 计划成员"
+  - handle: mikelammm
+    name: "Mike Lam"
+    avatar_url: "https://pbs.twimg.com/profile_images/2077419409417867264/e2pA3CdA_400x400.jpg"
+    note: "90后/ENFP/ex-香港上市公司猎头/ex- Marketing Lead 创业中💰投资实业餐饮ing，AI项目开发和落地 AI社群🏠「https://t.co/RIFO9UzY0m」｜AI Operation Lead 创业记录和经验分享，欢迎各行业对搞钱和创业感兴趣的朋友，很乐意分享我的经验和资源，希望可以一起create sth new"
+  - handle: mm_options
+    name: "𝑴𝒂𝒊𝑴𝒂𝒊 𝑺𝑷𝑿 🍟"
+    avatar_url: "https://pbs.twimg.com/profile_images/2056679994940907520/yb_3ERSX_400x400.jpg"
+    note: "🦁 𝑺𝒐𝒇𝒕𝒘𝒂𝒓𝒆 𝑬𝒏𝒈𝒊𝒏𝒆𝒆𝒓 🍟 𝑺𝑷𝑿 𝑶𝒑𝒕𝒊𝒐𝒏𝒔 𝑷𝒍𝒂𝒚𝒆𝒓"
+  - handle: mooninai
+    name: "MoonInAI"
+    avatar_url: "https://pbs.twimg.com/profile_images/2052045490984763397/urz5VBZW_400x400.jpg"
+    note: "AI Builder ｜00后潮汕人｜千问办公大使｜https://t.co/P056O6becR 开源skill全网转发量破万，努力靠认知用AI变现七位数，正在用AI为一百个传统行业赋能（寻找共创伙伴中）"
+  - handle: ned_us
+    name: "Ned"
+    avatar_url: "https://pbs.twimg.com/profile_images/2096133383307120641/AvvuiuG7_400x400.jpg"
+    note: "记录自己的美股。 只发定投和持仓，不荐股、不带单。 月投纳指，计划投十年。"
+  - handle: neverofmeyzc
+    name: "Never"
+    avatar_url: "https://pbs.twimg.com/profile_images/2015019006940577792/0DcqQ4n7_400x400.jpg"
+    note: "大厂运营，懂产品、营销 独立观察美股、宏观与流动性 也写普通人怎么用时间当杠杆 少预测，多框架。不喊单，不贩卖确定性 专业交流 DM → https://t.co/DscTeBKIrX 粉丝群：https://t.co/vvtURipTx1"
+  - handle: nian_tu41685
+    name: "动帧格"
+    avatar_url: "https://pbs.twimg.com/profile_images/2095890230368976896/vl0G6soC_400x400.jpg"
+    note: "央媒打工人转型中，拿 AI 当外挂的超级个体。 现役媒体人 / 野生 Vibe Coder / 还写点小说。 在这里分享：AI 赋能工作与生活实操、捣鼓的小程序、以及一些日常影像。"
+  - handle: noahduck283
+    name: "诺鸭船长3"
+    avatar_url: "https://pbs.twimg.com/profile_images/2035372542819696640/v_5bHa9Z_400x400.jpg"
+    note: "🚢AI实战& 数字基建& 出海指南 💗每天捞点好东西，也写一点想说的 🌌不止 AI，不止 X，目标星辰大海 🏝️带你在信息的海洋找到陆地～"
+  - handle: passenger0522
+    name: "Passenger0522"
+    avatar_url: "https://pbs.twimg.com/profile_images/1999468801776320515/jF0Iz6_j_400x400.jpg"
+    note: "01 年英语专业文科生的 AI 自救手册：跨境创业中。分享 Codex 实战、AI 工具流、跨境提效和真实踩坑。"
+  - handle: realchenchenluo
+    name: "chen chen"
+    avatar_url: "https://pbs.twimg.com/profile_images/1984481158663716868/7wdIE2ED_400x400.jpg"
+    note: "KOSX Impact 计划成员"
+  - handle: realchendahuang
+    name: "陈大黄"
+    avatar_url: "https://pbs.twimg.com/profile_images/2066350826617282560/9WSzwx4A_400x400.jpg"
+    note: "现在｜KOSX @kosxai 华东创业与独立开发负责人｜宁波 AI 科技公司合伙人 赛道｜Indie Hacker｜前 AI 产品经理｜产品洞察/段子手 在做｜FlareMo 笔记｜FeedSieve X 清理｜Cherina Pod 双语播客"
+  - handle: ringodontpanic
+    name: "Ringo"
+    avatar_url: "https://pbs.twimg.com/profile_images/2096114389237784576/jFgvOy9s_400x400.jpg"
+    note: "05 持续创业者｜投资交易｜AI｜Web3｜艺术与爱｜杂谈 🚀建模 健身 建仓🫶Don’t panic. 🪨像西西弗斯一样，让我们一起推石头"
+  - handle: rollingsirius
+    name: "Sirius"
+    avatar_url: "https://pbs.twimg.com/profile_images/1763026642346147840/xYtGrnuU_400x400.jpg"
+    note: "产品经理，前腾讯 关注 AI 产品、投资研究和个人决策系统 正在构建可复用的投研 Skill、账户面板和自动化工作流"
+  - handle: rwayne
+    name: "Roland.W"
+    avatar_url: "https://pbs.twimg.com/profile_images/1911955967505219584/mbOS-TVy_400x400.jpg"
+    note: "🇦🇺PhD ing @UQ_News | 医学与经济学 创造知识，创造价值 AIPC玩家，AI知识库 & GEO & 本地模型 🎁中文区First Check发起人 和 @ai_xiaomu @AdrianPunk115 一起帮助更多新人被看见"
+  # issue #12：@scarletkc_ 改名 @ScarletKc（同号核验：头像图片 ID/昵称/简介一致，旧名已释放），补记数字 ID
+  - handle: scarletkc
+    name: "KC"
+    avatar_url: "https://pbs.twimg.com/profile_images/2059328812463304704/BXaYGP9k_400x400.jpg"
+    note: "Indie developer building games & open-source tools Sharing AI news, model impressions, and opinions Occasional thoughts on life"
+    x_user_id: "756779273155858432"
+  - handle: shancha103
+    name: "山茶"
+    avatar_url: "https://pbs.twimg.com/profile_images/1910508617406861312/4x-NC7Ek_400x400.jpg"
+    note: "hello，我是山茶，在出海建站🀄️，在这里分享我做网站的过程，以及网站拆解学习过程 公众号：shanchaAI"
+  - handle: shuton_leon
+    name: "书童"
+    avatar_url: "https://pbs.twimg.com/profile_images/2046862881329991680/WZ6q4OEb_400x400.jpg"
+    note: "📈美股 & 虚拟货币头号韭菜 📍个人开发者 & 内容创作者 🔥分享日常，爱运动爱吃爱旅行"
+  - handle: silasandowen
+    name: "silasOwen"
+    avatar_url: "https://pbs.twimg.com/profile_images/2090350371172700160/_yAOvy93_400x400.jpg"
+    note: "币圈商城，不必出金，选购你想要的商品！欢迎垂询！ Telegram:https://t.co/tfol2H8csd https://t.co/TSGEkGdmrz"
+  - handle: sisymithus
+    name: "西西米修斯"
+    avatar_url: "https://pbs.twimg.com/profile_images/2077881453002858496/N2B6K-Cv_400x400.jpg"
+    note: "Tesla重仓｜100万美元实盘｜10年AI投资策略 前大厂十年｜硅谷到欧洲｜现居新加坡 深度调研｜图形科学｜职场｜搞钱 海外生存｜认真聊聊🇸🇬这座岛"
+  - handle: skavenps1
+    name: "平凡的蛙里奥"
+    avatar_url: "https://pbs.twimg.com/profile_images/2088290825449152512/0SYemNz3_400x400.jpg"
+    note: "一个认识到自己平凡的人 TG：https://t.co/XL1MUpCDX2"
+  - handle: song66546656
+    name: "送姜"
+    avatar_url: "https://pbs.twimg.com/profile_images/1982443595735977984/tZ4FhYA4_400x400.jpg"
+    note: "日均10小时睡王 06年在读大学生 小学四年级开始做自媒体 有疑问评论 / 付费咨询 合作请私信"
+  - handle: statiocat
+    name: "Station Cat"
+    avatar_url: "https://pbs.twimg.com/profile_images/2095353127147085824/pTq5gIc2_400x400.jpg"
+    note: "AI × Indie Hacking × Digital Life 分享 AI、软件开发、产品实验和互联网观察 Building things, sharing progress 🐱🐙 欢迎同频的人一起聊天"
+  - handle: sukiea1008
+    name: "Su"
+    avatar_url: "https://pbs.twimg.com/profile_images/2070191168848269312/gQ6X5dcH_400x400.jpg"
+    note: "https://t.co/YBpvCw9AvN ｜华东地区文旅与产业创新负责人 https://t.co/ZgvJnTKLnQ｜审美、工具 个人网页👇｜关注实用、审美与真实构建的产品人"
+  - handle: superwang
+    name: "邪恶大薯条"
+    avatar_url: "https://pbs.twimg.com/profile_images/2063546052222046208/-jKEz9LV_400x400.jpg"
+    note: "半退休设计公司负责人丨 https://t.co/gidW3Vdx8V AI｜crypto 副业SaaS相关 正在研究不出卖劳动力的财富来源 TG：https://t.co/25ftl7rWGO"
+  - handle: tsoiiiiioooyeye
+    name: "Jasper"
+    avatar_url: "https://pbs.twimg.com/profile_images/2061062255236788224/XpD-7LqA_400x400.jpg"
+    note: "No limits in the sky. Money never sleeps. The world is my playground. https://t.co/9ilP0XDTP8"
+  - handle: vegas_liu
+    name: "Vegas Liu"
+    avatar_url: "https://pbs.twimg.com/profile_images/2069048666036523009/Kqvg97AJ_400x400.jpg"
+    note: "香港上市公司 AI 转型负责人｜个人投资研究 美股长期投资｜宏观周期｜长期复利 关注 AI Infra、AI 一级项目与资产定价｜https://t.co/4j100wwhfx Premium+｜六字真言创始人 | X上面第一个BOSS直聘"
+  - handle: wangdakealien
+    name: "王大可Alien"
+    avatar_url: "https://pbs.twimg.com/profile_images/2096935228388601856/nbiLcny4_400x400.jpg"
+    note: "07｜ENTP｜前CCHOer，生化交叉｜独立思考 羽毛球省男单前八｜AI✖️自媒体｜Web3小白 kosx社群https://t.co/82NDMvFL4G｜📮wangdakealien@gmail.com I approach，I transform."
+  - handle: wangdefou
+    name: "得否"
+    avatar_url: "https://pbs.twimg.com/profile_images/1893575129038282753/rqoiJGHo_400x400.jpg"
+    note: "🦁 X文科生搞AI第一人，ENTJ-A 🫵 政企创孵中心导师，人社部人工智能训练师，企业AI转型顾问 💰 搞OPC两个月收入6位数，目标7位数 🎨 X封面图生成器作者 https://t.co/3K081pNXAP 🌍 日常分享AI、工具、生活"
+  - handle: weichen_ink
+    name: "微尘印记"
+    avatar_url: "https://pbs.twimg.com/profile_images/2086808745024385024/IIPRW1J3_400x400.jpg"
+    note: "内容创作者的「 超级工具箱 」 欢迎订阅我的 Youtube 频道 ⬇️"
+  - handle: xchatgcp
+    name: "Lennox"
+    avatar_url: "https://pbs.twimg.com/profile_images/1945337236209201152/1IWdJvvp_400x400.jpg"
+    note: "十年技术专家｜大数据 & 人工智能 现任大中华区谷歌FDE｜专注AI模型研究 解决方案 用数据驱动未来，用AI重塑世界 联系https://t.co/UiUflEPXwm"
+  - handle: xingyao47854
+    name: "小财鱼"
+    avatar_url: "https://pbs.twimg.com/profile_images/2077607114965651456/Jnsf1GdR_400x400.jpg"
+    note: "https://t.co/d75cfcrcgn|分享AI经验，使用案例，学习健身日常。 养成系二战生，见证从研零到研一的跨越。 AI小店|https://t.co/AezetsS9DJ OKX20%手续费减免|https://t.co/MdN1fy1vjD"
+  - handle: xueyu1125
+    name: "雪瑜"
+    avatar_url: "https://pbs.twimg.com/profile_images/2062953182725369856/fUW2qZNZ_400x400.jpg"
+    note: "🤖 AI Builder | 程序员 | AI 工具实践 🎮 游戏服务器开发 | Steam游戏收集控 🚀 专注美股 | 纳斯达克信仰者 🥳 热爱生活 | 偶尔写段子"
+  - handle: yanxi
+    name: "阎曦"
+    avatar_url: "https://pbs.twimg.com/profile_images/46494372/ac_400x400.jpg"
+    note: "互联网老兵"
+  - handle: yifanxu_ephai
+    name: "Yifan Xu"
+    avatar_url: "https://pbs.twimg.com/profile_images/2086091150700711936/YHkMTIg__400x400.jpg"
+    note: "🇨🇦 CS @UofT · 🇸🇬 MSAI dropout @NTUsg Living in 🇨🇳 🤖 Creator Ephemeral AI Lab | Agent Infra Foundation 📦 Author, Ephemeral Sandbox"
+  - handle: zhengyifan12345
+    name: "ZhengYiFan"
+    avatar_url: "https://pbs.twimg.com/profile_images/2025181602033041409/i_s3_8Uz_400x400.jpg"
+    note: "06 | 大三 🎓 | 深圳读大学 家乡潮汕 小红书电商五位数 热爱vibecoding AI产品与出海努力尝试中…"
+  - handle: zwzw3888
+    name: "林志伟"
+    avatar_url: "https://pbs.twimg.com/profile_images/2068844409786155008/XYy4pA7V_400x400.jpg"
+    note: "AI 产品的独立开发者 赔过钱、踩过坑，公开记录从 0 到 1 的全过程 最新作品：英语精听工具（开发中）"
+# 社区抢救迁移
+  - handle: _forab
+    name: "AB Kuai.Dong"
+    avatar_url: "https://pbs.twimg.com/profile_images/1747252669897691136/wS_-7gEt_400x400.jpg"
+    note: "热爱研究、热爱家庭、热爱分享，2016 年入行从业。"
+    x_user_id: "4848269835"
+# 社区抢救迁移
+  - handle: bertiecars67769
+    name: "咖咖酱"
+    avatar_url: "https://pbs.twimg.com/profile_images/2096907848018186240/aI7zinw1_400x400.jpg"
+    note: "社区抢救入册（资料拉取中）"
+    x_user_id: "1734683559342878720"
+# 社区抢救迁移
+  - handle: bqlsj2023
+    name: "币圈老司机🔶BNB"
+    avatar_url: "https://pbs.twimg.com/profile_images/1896595804724359171/nvH8dGaA_400x400.jpg"
+    note: "16年至今年资深币圈玩家，热衷于追寻热点 个人TG：@BQLSJ2023 OK: https://t.co/ThcsyKrreA BN：https://t.co/f4o6v3FaZN"
+    x_user_id: "1405826789927182337"
+# 社区抢救迁移
+  - handle: cfbonfox
+    name: "FOX College Football"
+    avatar_url: "https://pbs.twimg.com/profile_images/1838366085378379776/DiNEls0l_400x400.jpg"
+    note: "All your FOX favorites. All in one app. Stream CFB all season on FOX One. Sign up now in the link in bio 🔗"
+    x_user_id: "348590880"
+# 社区抢救迁移
+  - handle: crypto_daha
+    name: "哈哈哥"
+    avatar_url: "https://pbs.twimg.com/profile_images/1996826608326660102/Mnc9uuzg_400x400.jpg"
+    note: "哈哈哥 | 分享有趣人生、历史趣闻、生活meme、实用干货 | 每天一笑一悟"
+    x_user_id: "996556236404346880"
+# 社区抢救迁移
+  - handle: geekbb
+    name: "Geek"
+    avatar_url: "https://pbs.twimg.com/profile_images/1644898947272671233/7959WGOK_400x400.jpg"
+    note: "🧠在家居士 | 🥦素食者 | 🏃🏻马拉松爱好者 | 💰省钱小能手 | 搭🪜技术资深学者 | 👨‍💻科技宅 | 🆕更新狂 | 🆅 六边型战五渣"
+    x_user_id: "168139512"
+# 社区抢救迁移
+  - handle: goan999999
+    name: "govin.eth | G哥"
+    avatar_url: "https://pbs.twimg.com/profile_images/2085726397587443712/XkX2eLfE_400x400.jpg"
+    note: "🇰🇷 韩国硕士｜AI 产品经理｜28天涨万粉 分享 AI 工具、Agent、产品洞察和赚钱实践 5年 Web3｜铭文 7位数收益 一个懂 Crypto 的 AI × Web3 探索者 关注趋势，沉淀认知，寻找新机会 Build · Explore · Share"
+    x_user_id: "1466773942371520514"
+# 社区抢救迁移
+  - handle: hanpaoao
+    name: "韩跑跑"
+    avatar_url: "https://pbs.twimg.com/profile_images/1964632323288387584/Rml_k_UJ_400x400.jpg"
+    note: "不研究 K 线，只研究人性 币圈 / 股市 / 搞钱 / 普通人翻身 关注我，一起成长！"
+    x_user_id: "1740549437402013696"
+# 社区抢救迁移
+  - handle: hsn8086xe
+    name: "hsn.bot"
+    avatar_url: "https://pbs.twimg.com/profile_images/1897601834170404864/XYWOnn7f_400x400.jpg"
+    note: "都是老图 | 头像来自: @PetitPoissonXY"
+    x_user_id: "1863439189909618688"
+# 社区抢救迁移
+  - handle: huawei
+    name: "Huawei"
+    avatar_url: "https://pbs.twimg.com/profile_images/1570731236171329537/6Muib5Hc_400x400.jpg"
+    note: "Welcome to the official Huawei X account. Huawei is a leading global provider of ICT infrastructure and smart devices."
+    x_user_id: "98047213"
+# 社区抢救迁移
+  - handle: ibkr
+    name: "Interactive Brokers"
+    avatar_url: "https://pbs.twimg.com/profile_images/865584067152150528/KQPfL4Zd_400x400.jpg"
+    note: "Rated #1 Active Traders and #1 International Trading in 2025 by https://t.co/56Z2dpeP0u. Trade more worldwide from a single unified platform."
+    x_user_id: "264153788"
+# 社区抢救迁移
+  - handle: igeekbb
+    name: "iGeekbb"
+    avatar_url: "https://pbs.twimg.com/profile_images/1799328738871750657/9Shu8NrP_400x400.jpg"
+    note: "🕹️发一些碎碎念和有趣的东东，主打一个快分享。-私信开放欢迎投稿-"
+    x_user_id: "1693450364341948416"
+# 社区抢救迁移
+  - handle: jidianvpn
+    name: "极点VPN"
+    avatar_url: "https://pbs.twimg.com/profile_images/2041364653075496960/rgyZFfAs_400x400.png"
+    note: "永远可以连上的VPN Always connected, no limits. ⚡ 快速稳定 | 安全可靠 👉 @jidianvpn"
+    x_user_id: "2041364457515876352"
+# 社区抢救迁移
+  - handle: kyxbtc
+    name: "孔义兴"
+    avatar_url: "https://pbs.twimg.com/profile_images/1866770573709197312/4hKGEl-S_400x400.jpg"
+    note: "AI探索∮美股股东∮比特币投资∮WEB3推主∮微博粉30W∮数据分析∮ 除了投资之外，我想保持做一个纯粹的人。"
+    x_user_id: "1865058462608015360"
+# 社区抢救迁移
+  - handle: lingjiaxin233
+    name: "凌嘉欣"
+    avatar_url: "https://pbs.twimg.com/profile_images/1968775914713661440/O7ZDUmJl_400x400.jpg"
+    note: "name：Sonora//Apple lover//from China mainland//Gender Studies//“Stay hungry，stay thirsty”—Steve Jobs//she/her/they/them🏳️‍⚧️🍥🏳️‍🌈"
+    x_user_id: "1857802986837172224"
+# 社区抢救迁移
+  - handle: lvtgw666
+    name: "利维坦冲浪里"
+    avatar_url: "https://pbs.twimg.com/profile_images/1496193678477787137/gt41UKj__400x400.jpg"
+    note: "我是一直都是啥b啊 分析哲学倒数第6324人 重铸正统施特劳斯荣光，我辈义不容辞 备用小号@lvtgw8964 YouTube：https://t.co/wPvV77mrq4"
+    x_user_id: "1447499448649601025"
+# 社区抢救迁移
+  - handle: moyu_7777
+    name: "墨鱼(:◎)"
+    avatar_url: "https://pbs.twimg.com/profile_images/2041915657646952448/UbU2oHsP_400x400.jpg"
+    note: "⭐永不止损NFT钻石手 ⭐区块链Game多号玩家 ⭐美股自由幻想症者 ⭐AI工具使用者 ⭐预测市场事件合约参与者 迷人又可爱的反派角色😼 太好了！🙌 是Mo来了 我们有救了 😛 👀所发项目介绍皆是自己参与体验所写（仅供参考)如有亏损我也一样 所发图片视频仅供素材 Gate 大使"
+    x_user_id: "1484093964072329218"
+# 社区抢救迁移
+  - handle: mylifcc
+    name: "lifcc"
+    avatar_url: "https://pbs.twimg.com/profile_images/2034239213487681536/2gjQXlXx_400x400.jpg"
+    note: "每天用 AI 写代码的工程师 Claude Code ｜ Codex深度用户 ｜Agentic engineering 在这里分享 AI 工具实测和开发者工作流，持续构建中"
+    x_user_id: "1486017329662423044"
+# 社区抢救迁移
+  - handle: nvjishi
+    name: "女技师"
+    avatar_url: "https://pbs.twimg.com/profile_images/1665701944495833088/pAi0XCij_400x400.jpg"
+    note: "👉番号搜索工具https://t.co/cFxYQXGojZ 吃喝男模都是亏，唯有web3有来回"
+    x_user_id: "1305718816413020160"
+# 社区抢救迁移
+  - handle: ryang_luckin
+    name: "R洋"
+    avatar_url: "https://pbs.twimg.com/profile_images/2094278733549142016/qvTad6yY_400x400.jpg"
+    note: "拥抱AI的INTJ程序员 | 只工作不上班 | 薄肌修炼中"
+    x_user_id: "2094277943338176512"
+# 社区抢救迁移
+  - handle: satireorcry1
+    name: "芙宁娜娜💙Furinana (王者归来版）"
+    avatar_url: "https://pbs.twimg.com/profile_images/2005923449881972736/kaKnegOz_400x400.png"
+    note: "专注梗图制作20年。 Professional meme maker for 20 years. 欢迎商业洽谈，请用邮箱联系：furinana.x.com@gmail.com"
+    x_user_id: "1993455710274043905"
+# 社区抢救迁移
+  - handle: starlink
+    name: "Starlink"
+    avatar_url: "https://pbs.twimg.com/profile_images/1720501511271383040/FXz_jiJu_400x400.jpg"
+    note: "Fast, affordable internet available all around the world. Engineered by @SpaceX"
+    x_user_id: "1330170106501079041"
+# 社区抢救迁移
+  - handle: supermicro
+    name: "Supermicro"
+    avatar_url: "https://pbs.twimg.com/profile_images/1236093304665591809/iVFx-Tc5_400x400.jpg"
+    note: "Supermicro® (NASDAQ:SMCI), 30+ years of leadership in Enterprise, cloud, AI, and 5G Telco/Edge Infrastructure solutions."
+    x_user_id: "374598930"
+# 社区抢救迁移
+  - handle: tianyi
+    name: "Tianyi Cui"
+    avatar_url: "https://pbs.twimg.com/profile_images/378800000650737082/b849b67d6470fafe8b3deb2ae97acfda_400x400.jpeg"
+    note: "Member of Technical Staff @ DeepSeek, Harness Team I'd love to connect with members of international frontier LLM labs! DM is open. Opinions are my own."
+    x_user_id: "1473591"
+# 社区抢救迁移
+  - handle: tz_2022
+    name: "Tz"
+    avatar_url: "https://pbs.twimg.com/profile_images/1579478276287905794/7-2NGiY3_400x400.jpg"
+    note: "品味是一种异常值。→ tastes.md AI is the steam engine of the mind. AI 是心灵的蒸汽机。科幻是现实的有效坍塌。加速正在被加速。看，那千尺海啸正扑面而来，而我们还在海滩上捡垃圾。 念念不忘，必有回响。"
+    x_user_id: "100399047"
+# 社区抢救迁移
+  - handle: usopen
+    name: "US Open Tennis"
+    avatar_url: "https://pbs.twimg.com/profile_images/2072228148691746816/fZyPXm9V_400x400.jpg"
+    note: "The official account of the US Open Tennis Championships | #USOpen 2026 US Open: Sunday, August 23 – Sunday, September 13"
+    x_user_id: "14836197"
+# 社区抢救迁移
+  - handle: vincent_ainotes
+    name: "Vincent"
+    avatar_url: "https://pbs.twimg.com/profile_images/2010360210008023040/tDA3CwgH_400x400.jpg"
+    note: "社区抢救入册（资料拉取中）"
+    x_user_id: "1861449351328854016"
+# 社区抢救迁移
+  - handle: vixoprotocol
+    name: "VIXO"
+    avatar_url: "https://pbs.twimg.com/profile_images/2022196673246896128/hotW7gfx_400x400.jpg"
+    note: "520API — A multi-model AI gateway. Accelerating the arrival of the AGI era. #VIXO DAO TG： https://t.co/dhSeqzwk9r"
+    x_user_id: "1973679170904616960"
+# 社区抢救迁移
+  - handle: wangxiaolong188
+    name: "王小龙"
+    avatar_url: "https://pbs.twimg.com/profile_images/2073042528937619456/G7A7kd5m_400x400.jpg"
+    note: "26岁账户第一次七位数，什么也没买 不买房，不买车，不结婚，只买自由"
+    x_user_id: "1861422868984406019"
+# 社区抢救迁移
+  - handle: xbusiness
+    name: "Business"
+    avatar_url: "https://pbs.twimg.com/profile_images/1937148284465770496/C36iyzqg_400x400.jpg"
+    note: "Get better at X. Get better at business."
+    x_user_id: "121291606"
+# 社区抢救迁移
+  - handle: xupaopaogm
+    name: "徐跑跑"
+    avatar_url: "https://pbs.twimg.com/profile_images/2087195072202981376/a5vvH7bW_400x400.jpg"
+    note: "AI 会员代充值：https://t.co/wwJBZlN21M"
+    x_user_id: "1844296703282925568"
+# 社区抢救迁移
+  - handle: you1873118
+    name: "serein"
+    avatar_url: "https://pbs.twimg.com/profile_images/1996511612665294848/dhbbYGxp_400x400.jpg"
+    note: "I hope tomorrow will be better! Bluebird Club Just here for the memes Sharing everything fun"
+    x_user_id: "1874127374226513920"
+# 社区抢救迁移
+  - handle: zhng143308
+    name: "Yu"
+    avatar_url: "https://pbs.twimg.com/profile_images/2094835509495472129/8u7AIf9R_400x400.jpg"
+    note: "关注Ai，为未来赋能"
+    x_user_id: "1784226327186509824"

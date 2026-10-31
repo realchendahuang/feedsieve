@@ -1,0 +1,37 @@
+{
+  "data": {
+    "user": {
+      "result": {
+        "__typename": "User",
+        "rest_id": "1000000000000000001",
+        "core": {
+          "created_at": "Thu Jan 16 13:51:46 +0000 2025",
+          "name": "样本昵称 sample_user_1",
+          "screen_name": "sample_user_1"
+        },
+        "relationship_counts": {
+          "followers": 2893,
+          "following": 210
+        },
+        "tweet_counts": {
+          "media_tweets": 403,
+          "tweets": 13367
+        },
+        "privacy": {
+          "protected": false
+        },
+        "verification": {
+          "verified": false
+        },
+        "is_blue_verified": true,
+        "profile_bio": {
+          "description": "样本简介"
+        },
+        "relationship_perspectives": {
+          "following": true,
+          "blocking": false
+        }
+      }
+    }
+  }
+}

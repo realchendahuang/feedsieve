@@ -1,0 +1,67 @@
+{
+  "schema_version": 2,
+  "policy_version": 4,
+  "snapshot_version": "2026.10.31.9",
+  "generated_at": "2026-10-31T16:00:40.905Z",
+  "policy": {
+    "version": 4,
+    "blocklist": {
+      "formula": "block_votes - false_positive_votes",
+      "min_net_votes": 3,
+      "one_current_vote_per_installation": true,
+      "independence": {
+        "consensus_v2_strong": true,
+        "min_distinct_days": 2,
+        "unconditional_net_votes": 5
+      },
+      "corroborated": {
+        "min_net_votes": 2,
+        "max_false_positive_votes": 0,
+        "min_rule_hit_networks_7d": 3,
+        "same_template_campaign": true
+      },
+      "exclude_dead_accounts": true
+    },
+    "rule_feedback": {
+      "window_days": 14,
+      "auto_mute_min_hit_accounts": 30,
+      "auto_mute_min_false_positive_installs": 5,
+      "auto_mute_false_positive_rate": 0.5
+    },
+    "limits": {
+      "daily_report_base": 100,
+      "daily_rescue_base": 50,
+      "daily_min": 10,
+      "max_batch": 50,
+      "daily_ip_report_limit": 200,
+      "daily_alias_cap": 10
+    },
+    "reporter_trust": {
+      "default": 1,
+      "floor": 0.2,
+      "burst_threshold": 30,
+      "burst_decay": 0.1
+    },
+    "consensus_v2": {
+      "status": "independence_condition",
+      "formula": "trust × installation maturity weighted net votes + temporal/evidence independence"
+    }
+  },
+  "files": [
+    {
+      "path": "official.json",
+      "sha256": "08825e318779f303d5df9982d46b65bbb6db4238c185f42870ccfa8c4528ae4c",
+      "entries": 3696
+    },
+    {
+      "path": "blocklist.yaml",
+      "sha256": "4d311722ac67d35aabbc416b78d9b11d4a6da0fa24b9e721ec112dea668ce6dd",
+      "entries": 3696
+    }
+  ],
+  "signature": {
+    "key_id": "release-1",
+    "alg": "ed25519",
+    "sig": "3TsNExcu5ueFbv/r5GO1m/k5FNn0AWukK/5bjCKxZwtgNG2YNeKri5gSRpYaLGw8fNLGtEYh2Iz9oh58IQMlAA=="
+  }
+}

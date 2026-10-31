@@ -1,0 +1,1 @@
+ALTER TABLE "accounts" ADD CONSTRAINT "ck_accounts_listed" CHECK ("accounts"."listed" in (0, 1));
