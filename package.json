@@ -18,6 +18,7 @@
     "keyword-packs:publish": "sh scripts/publish-keyword-packs.sh",
     "build:extension": "pnpm --filter @feedsieve/extension build",
     "verify": "sh scripts/verify.sh",
+    "release": "sh scripts/release.sh",
     "variant-tables:build": "node scripts/build-variant-tables.mjs"
   },
   "devDependencies": {

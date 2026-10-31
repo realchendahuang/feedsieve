@@ -230,6 +230,7 @@ git config core.hooksPath .githooks     # 启用本地 pre-push 质量门禁
 pnpm verify                   # 执行全量质量门禁（Lint + Typecheck + 全量单测 + 扩展构建）
 pnpm build:extension          # 编译扩展，产物位于 apps/extension/.output/chrome-mv3
 pnpm keyword-packs:build      # 由公开 YAML 词库构建签名官方词库 JSON
+pnpm release 0.12.3         # 发版：校验 CHANGELOG → verify → tag → GitHub Release
 ```
 
 贡献准则见 [`CONTRIBUTING.md`](CONTRIBUTING.md)；设计文档在 [`docs/`](docs/README.md)。
