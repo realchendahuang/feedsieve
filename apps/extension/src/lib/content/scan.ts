@@ -20,7 +20,7 @@ import {
   type PendingBadge,
 } from '../detection/page-scan-controller';
 import { getBundledEntries } from '../community/community-store';
-import { hideCellsSoon } from '../platform/remove-tweets';
+import { HIDDEN_TWEET_CELL_ATTRIBUTE, hideCellsSoon } from '../platform/remove-tweets';
 import { MARK_ATTRIBUTE, type ContentState } from './page-state';
 import type { Badges } from './badges';
 import type { BlockedFold } from './blocked-fold';
@@ -95,7 +95,15 @@ export function createScan(deps: {
       return;
     }
     const handle = item.author.handle.toLowerCase();
-    controller.remember(element, handle);
+    const previousHandle = controller.remember(element, handle);
+    if (previousHandle) {
+      // X 复用同一个 article 显示另一条推文：上一条的隐藏/黄框徽章必须一起清掉，
+      // 否则新推文会被直接隐藏，或顶着别人的判定理由。
+      const reusedCell = article.closest(tweetSelectors.timelineCell) ?? article;
+      reusedCell.removeAttribute(MARK_ATTRIBUTE);
+      reusedCell.removeAttribute(HIDDEN_TWEET_CELL_ATTRIBUTE);
+      reusedCell.querySelectorAll('.fs-badge').forEach((badge) => badge.remove());
+    }
     // 先于 revision 早退：指标会变而 DOM 不变；文案不变时 decorate 不写 DOM
     insight?.decorate(element, item);
     const bio = state.bioCache.get(handle);

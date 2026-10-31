@@ -117,18 +117,21 @@ export class PageScanController {
     this.schedule();
   }
 
-  /** handle ↔ 节点索引维护（scanOne 提取后登记）。 */
-  remember(article: Element, handle: string): void {
+  /** handle ↔ 节点索引维护（scanOne 提取后登记）。返回被复用前的 handle。 */
+  remember(article: Element, handle: string): string | undefined {
     const previous = this.articleHandles.get(article);
     if (previous && previous !== handle) {
       const previousSet = this.articlesByHandle.get(previous);
       previousSet?.delete(article);
       if (previousSet?.size === 0) this.articlesByHandle.delete(previous);
+      // 节点被复用成另一条推文：旧 revision 必须作废，否则同作者同文本会被当成「已标注」跳过。
+      this.snapshots.delete(article);
     }
     this.articleHandles.set(article, handle);
     const set = this.articlesByHandle.get(handle) ?? new Set<Element>();
     set.add(article);
     this.articlesByHandle.set(handle, set);
+    return previous && previous !== handle ? previous : undefined;
   }
 
   /** 节点被虚拟列表回收 / 提取失败：清理快照与索引。 */

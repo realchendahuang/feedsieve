@@ -75,6 +75,8 @@ export async function runNativeAction(
     const response = await fetchImpl(ENDPOINTS[type], {
       method: 'POST',
       credentials: 'include',
+      // X 偶尔会挂住请求；没有超时会让整个拉黑队列卡在 running。
+      signal: AbortSignal.timeout(15_000),
       headers: {
         'content-type': 'application/x-www-form-urlencoded',
         Authorization: X_WEB_BEARER,

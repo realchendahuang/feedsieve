@@ -131,45 +131,50 @@ export function createBlockOne(state: ContentState) {
         ...(result.retryAfterMs !== undefined ? { retryAfterMs: result.retryAfterMs } : {}),
       };
     }
-    // 记账（撤销入口的数据源）+ 本地统计
-    // 判定材料（推文原文/昵称/简介）按用户 2026-09-12 拍板随票上报 + 本机留档
-    const markedEvidence = state.pageMarked.get(handle);
-    const tweetFacts =
-      (options.tweetSnippet ?? item.evidence.tweetText ?? markedEvidence?.snippet)?.trim() ||
-      undefined;
-    await markBlocked(
-      handle,
-      xUserId,
-      {
-        category: item.category,
-        ...item.evidence,
-        ...(liveness ? { liveness } : {}),
-        ...(options.origin ? { origin: options.origin } : {}),
-        ...(typeof options.communityVote === 'boolean'
-          ? { communityVote: options.communityVote }
-          : {}),
-        ...(options.batchId ? { batchId: options.batchId } : {}),
-      },
-      {
-        ...(tweetFacts ? { tweetSnippet: tweetFacts } : {}),
-        ...((options.displayName ?? item.evidence.displayName ?? markedEvidence?.displayName)
-          ? {
-              displayName:
-                options.displayName ?? item.evidence.displayName ?? markedEvidence?.displayName,
-            }
-          : {}),
-        // bio 是 XHR 桥带来的判定材料；队列延迟执行时页面可能已重载，缓存 miss 缺省
-        ...((options.bio ?? item.evidence.bio ?? state.bioCache.get(handle))
-          ? { bio: options.bio ?? item.evidence.bio ?? state.bioCache.get(handle)! }
-          : {}),
-      },
-      sample ?? undefined,
-    );
-    await bumpStat('blocked');
-    // v0.6 战报：今日拉黑 + 分类计数
-    await bumpDaily('blocked', item.category);
-    // 安全账本：只记确认成功的写操作；顺手拉黑与队列拉黑共用同一本账
-    await recordSafetyEvent(currentAccountKey());
+    // 网络已经成功：本地记账失败不能把结果报成拉黑失败，否则队列会重试已成功的操作。
+    try {
+      // 记账（撤销入口的数据源）+ 本地统计
+      // 判定材料（推文原文/昵称/简介）按用户 2026-09-12 拍板随票上报 + 本机留档
+      const markedEvidence = state.pageMarked.get(handle);
+      const tweetFacts =
+        (options.tweetSnippet ?? item.evidence.tweetText ?? markedEvidence?.snippet)?.trim() ||
+        undefined;
+      await markBlocked(
+        handle,
+        xUserId,
+        {
+          category: item.category,
+          ...item.evidence,
+          ...(liveness ? { liveness } : {}),
+          ...(options.origin ? { origin: options.origin } : {}),
+          ...(typeof options.communityVote === 'boolean'
+            ? { communityVote: options.communityVote }
+            : {}),
+          ...(options.batchId ? { batchId: options.batchId } : {}),
+        },
+        {
+          ...(tweetFacts ? { tweetSnippet: tweetFacts } : {}),
+          ...((options.displayName ?? item.evidence.displayName ?? markedEvidence?.displayName)
+            ? {
+                displayName:
+                  options.displayName ?? item.evidence.displayName ?? markedEvidence?.displayName,
+              }
+            : {}),
+          // bio 是 XHR 桥带来的判定材料；队列延迟执行时页面可能已重载，缓存 miss 缺省
+          ...((options.bio ?? item.evidence.bio ?? state.bioCache.get(handle))
+            ? { bio: options.bio ?? item.evidence.bio ?? state.bioCache.get(handle)! }
+            : {}),
+        },
+        sample ?? undefined,
+      );
+      await bumpStat('blocked');
+      // v0.6 战报：今日拉黑 + 分类计数
+      await bumpDaily('blocked', item.category);
+      // 安全账本：只记确认成功的写操作；顺手拉黑与队列拉黑共用同一本账
+      await recordSafetyEvent(currentAccountKey());
+    } catch (error) {
+      console.warn('[FeedSieve] 拉黑已成功，但本地记账失败（不影响拉黑结果）:', error);
+    }
     // 摩擦设计：拉黑成功即自动贡献社区（无弹窗；全局开关在 contributeBlocks 内判断）
     if (options.communityVote !== false && !options.deferContribution) {
       contributeBlocks([

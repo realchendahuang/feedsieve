@@ -66,6 +66,8 @@ export async function resolveUserIdByHandle(
     const response = await fetchImpl(url, {
       method: 'GET',
       credentials: 'include',
+      // 与拉黑请求同样的超时保护：弱网下不能把队列卡死在 resolve 阶段。
+      signal: AbortSignal.timeout(15_000),
       headers: {
         Authorization: X_WEB_BEARER,
         'X-Twitter-Auth-Type': 'OAuth2Session',

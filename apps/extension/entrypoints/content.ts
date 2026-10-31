@@ -149,12 +149,22 @@ export default defineContentScript({
     void getScheduleSettings().then((settings) => articleHelper.setEnabled(settings.articleHelper));
     subscribeScheduleSettings((settings) => articleHelper.setEnabled(settings.articleHelper));
     readTracker.visit(location.pathname);
+    // SPA 路由切换：上一条路由的黄框账本必须作废，否则「一键拉黑本页」会把
+    // 首页刷过、已经不在屏幕上的账号一起提交。清空后重扫当前 DOM 重建。
+    const resetPageLedger = (): void => {
+      if (state.pageMarked.size === 0) return;
+      state.pageMarked.clear();
+      state.notifyPageMarkedChanged();
+      controller.reset();
+    };
     // X 是单页应用：地址变化没有事件，借扫描节奏之外的轻量轮询跟踪详情页
     let lastPath = location.pathname;
     ctx.setInterval(() => {
       if (location.pathname === lastPath) return;
       lastPath = location.pathname;
       readTracker.visit(lastPath);
+      resetPageLedger();
+      controller.fullRescan();
     }, 1_000);
     // 规则命中：本页去重、攒 5 秒交给后台，后台按节奏匿名上报（见 rule-hit-uplink.ts）
     const ruleHits = createRuleHitQueue({
@@ -345,8 +355,14 @@ export default defineContentScript({
     controller.observe(document.body);
 
     // SPA 路由变化：X 不触发页面加载，靠 History API 探测以刷新 context
-    ctx.addEventListener(window, 'popstate', () => controller.fullRescan());
-    ctx.addEventListener(window, 'hashchange', () => controller.fullRescan());
+    ctx.addEventListener(window, 'popstate', () => {
+      resetPageLedger();
+      controller.fullRescan();
+    });
+    ctx.addEventListener(window, 'hashchange', () => {
+      resetPageLedger();
+      controller.fullRescan();
+    });
 
     controller.fullRescan();
   },

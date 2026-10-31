@@ -384,6 +384,9 @@ describe('popup App 渲染冒烟', () => {
     await act(async () => {
       buttonWithText(rootEl, '全部拉黑').click();
       await new Promise((resolve) => setTimeout(resolve, 0));
+      // 全部拉黑需要二次确认
+      buttonWithText(rootEl, '再点一次：拉黑 2 个').click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
     expect(tabSendMessage).toHaveBeenCalledWith(
       1,
@@ -425,6 +428,8 @@ describe('popup App 渲染冒烟', () => {
     await new Promise((resolve) => setTimeout(resolve, 150));
     await act(async () => {
       buttonWithText(rootEl, '全部拉黑').click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      buttonWithText(rootEl, '再点一次：拉黑 1 个').click();
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
     expect(tabSendMessage).not.toHaveBeenCalled();

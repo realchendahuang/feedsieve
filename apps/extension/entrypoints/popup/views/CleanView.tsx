@@ -84,6 +84,8 @@ export default function CleanView({
 }: CleanViewProps) {
   const t = UI_COPY[language];
   const [running, setRunning] = useState(false);
+  /** 「全部拉黑」是唯一一次点击影响上百个账号的操作，要求二次确认。 */
+  const [confirmCommunity, setConfirmCommunity] = useState(false);
   const [blockResult, setBlockResult] = useState<PageBlockResult | null>(null);
   const [operatingHandles, setOperatingHandles] = useState<Set<string>>(new Set());
   const [refreshing, setRefreshing] = useState(false);
@@ -478,9 +480,19 @@ export default function CleanView({
             type="button"
             className="secondary-button"
             disabled={busy || communityLoading || communityEligible.length === 0}
-            onClick={() => void startCommunityQueue()}
+            onClick={() => {
+              if (!confirmCommunity) {
+                setConfirmCommunity(true);
+                window.setTimeout(() => setConfirmCommunity(false), 3_000);
+                return;
+              }
+              setConfirmCommunity(false);
+              void startCommunityQueue();
+            }}
           >
-            {t.blockAll}
+            {confirmCommunity
+              ? t.confirmBlockAll(communityEligible.length)
+              : t.blockAll}
           </button>
         </div>
         {queuePanel('community-batch')}
