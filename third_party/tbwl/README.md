@@ -9,7 +9,7 @@
 TBWL 与 PureTwitter（闭源）互相独立地收敛到了同一个批量拉黑实现：
 `POST /1.1/blocks/create.json`（X 网页端公开 client bearer + 会话 `ct0` CSRF）。
 这是经生产验证的浏览器端拉黑标准路径，FeedSieve 的 Action Adapter 以此为基准
-（见 `docs/legacy/research/PURETWITTER_MECHANISM.md` 与 `docs/legacy/X_ACTION_ADAPTER.md`）。
+（参考公开实现与本目录代码）。
 
 MIT 允许直接复用；本目录代码可作为 Phase 2/3 的参考实现直接搬运进
 `packages/x-adapter/src/actions/` 做 TS 化改造。

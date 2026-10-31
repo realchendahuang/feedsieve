@@ -27,7 +27,7 @@ export interface UnblockBatchResult {
 /**
  * 相邻两次撤销请求的间隔（毫秒）。
  * 撤销成功已计入安全账本（recordSafetyEvent）；与批量拉黑共用 pace 的响应式
- * 预算改动留到新版后按生产数据再做（docs/legacy/BLOCK_SAFETY.md 撤销 PR2）。
+ * 预算改动留到新版后按生产数据再做。
  */
 const PACE_MS = 400;
 

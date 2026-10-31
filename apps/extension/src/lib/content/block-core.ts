@@ -168,7 +168,7 @@ export function createBlockOne(state: ContentState) {
     await bumpStat('blocked');
     // v0.6 战报：今日拉黑 + 分类计数
     await bumpDaily('blocked', item.category);
-    // 安全账本：只记确认成功的写操作；顺手拉黑与队列拉黑共用同一本账（docs/legacy/BLOCK_SAFETY.md）
+    // 安全账本：只记确认成功的写操作；顺手拉黑与队列拉黑共用同一本账
     await recordSafetyEvent(currentAccountKey());
     // 摩擦设计：拉黑成功即自动贡献社区（无弹窗；全局开关在 contributeBlocks 内判断）
     if (options.communityVote !== false && !options.deferContribution) {

@@ -9,7 +9,7 @@
  * 必须在 x.com 页面上下文执行（content script ISOLATED world 即可）：
  * 需要 document.cookie 的 ct0 与页面会话凭证。
  *
- * 参考：docs/legacy/research/PURETWITTER_MECHANISM.md、third_party/tbwl/index.user.js
+ * 参考：third_party/tbwl/index.user.js（MIT）与 X 网页端公开实现。
  */
 
 import { noteActionResult } from '../status';

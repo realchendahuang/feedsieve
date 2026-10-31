@@ -136,7 +136,7 @@ export function createBlockQueueRunner(deps: {
           },
         );
         // 429 风暴：连续 RATE_LIMIT_STORM_THRESHOLD 次 429 不再退避硬磨——
-        // 收缩当日预算（砍半）并升级为整队暂停（docs/legacy/BLOCK_SAFETY.md Layer B/C）
+        // 收缩当日预算（砍半）并升级为整队暂停
         if (!outcome.ok && outcome.code === 'rate_limited') {
           consecutiveRateLimited += 1;
           if (consecutiveRateLimited >= RATE_LIMIT_STORM_THRESHOLD) {
@@ -148,14 +148,14 @@ export function createBlockQueueRunner(deps: {
         }
         consecutiveRateLimited = 0;
         // 服务端明确拒绝写操作（登出/风控锁定）：当天预算清零，账号红线收缩
-        // TODO(block-safety PR2, docs/legacy/BLOCK_SAFETY.md)：Arkose/登录墙（challenge）检测
+        // TODO(block-safety PR2)：Arkose/登录墙（challenge）检测
         // 待真机验证 X 验证码响应特征后在此并链（persistSignal(accountKey, 'challenge')）
         if (!outcome.ok && outcome.code === 'auth_required') {
           await persistSignal(accountKey, 'auth_required');
         }
         return outcome;
       },
-      // 成功后相邻间隔按安全档位「base + 抖动」，避免固定节拍器（docs/legacy/BLOCK_SAFETY.md Layer A）
+      // 成功后相邻间隔按安全档位「base + 抖动」，避免固定节拍器
       successPaceMs: () => paceForPreset(safetyPresetCache, Math.random),
       onSuccess: (task) => {
         // 队列侧页面副作用：移除黄框并隐藏该账号推文（对齐 X 原生拉黑行为；

@@ -1,7 +1,7 @@
 /**
  * X GraphQL 响应解析器。
  *
- * 机制来源：PureTwitter 的 XHR 钩子方案（见 docs/legacy/research/PURETWITTER_MECHANISM.md），
+ * 机制来源：PureTwitter 的 XHR 钩子方案，
  * 以 TypeScript 重写并类型化。网络 JSON 比 DOM 稳定一个数量级，
  * 且能拿到 DOM 拿不到的字段：rest_id（x_user_id）、bio、following。
  *

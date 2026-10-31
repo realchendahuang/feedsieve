@@ -10,7 +10,7 @@ import {
 } from '../src/lib/compose/scheduled-parse';
 
 /**
- * 网络桥（MAIN world）—— 机制来自 PureTwitter（docs/legacy/research/PURETWITTER_MECHANISM.md）。
+ * 网络桥（MAIN world）—— 机制来自 PureTwitter。
  *
  * X 页面的时间线数据来自 GraphQL 请求（XHR + fetch 混用）；在 MAIN world 劫持两者，
  * 即可在网络层拿到权威结构化数据（handle + rest_id + bio），比 DOM 刮取稳定得多。
