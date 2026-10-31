@@ -149,7 +149,7 @@ describe('ProfileView', () => {
     expect(el.querySelector('.profile-stats')?.textContent).toBe(
       '3.2万 粉丝1600 关注关注比 0.058200 发帖',
     );
-    expect(el.querySelector('.profile-card .tier-tag')?.textContent).toBe('腰部');
+    expect(el.querySelector('.profile-card .tier-tag')?.textContent).toBe('达人');
     // 默认按倍数，回复默认不显示
     expect(texts(el)[0]).toBe('帖子 1850000000000000900');
     expect(texts(el)).not.toContain('帖子 1850000000000000901');

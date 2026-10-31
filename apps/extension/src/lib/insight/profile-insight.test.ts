@@ -73,7 +73,7 @@ describe('profile line', () => {
       'UserProfileHeader_Items',
     );
     expect([...line.children].map((node) => node.textContent)).toEqual([
-      '腰部',
+      '新锐',
       '3.2万 粉丝',
       '关注比 0.05',
       '中位浏览 1.8万',
@@ -133,7 +133,7 @@ describe('profile line', () => {
         { ...SUMMARY, baseline: null, outlierRate: null, ratio: null, postCount: 6 },
         'en',
       ),
-    ).toEqual(['Micro', '32K followers', '6 posts collected']);
+    ).toEqual(['Rising', '32K followers', '6 posts collected']);
   });
 });
 

@@ -127,7 +127,7 @@ describe('HotView', () => {
     expect(post.querySelector('.post-handle')?.textContent).toBe('@alice');
     const tier = post.querySelector('.tier-pill')!;
     expect(tier.textContent).toBe('925');
-    expect(tier.getAttribute('aria-label')).toBe('STARTER 925');
+    expect(tier.getAttribute('aria-label')).toBe('GLOW 925');
     // 流速在右上角
     expect(post.querySelector('.post-head .velocity-tag')?.textContent).toBe('52.3K/h');
     expect(post.querySelector('.velocity-tag')?.getAttribute('data-fs-level')).toBe('rocket');
@@ -223,7 +223,7 @@ describe('HotView', () => {
     const quietPage = await renderHotView(
       vi.fn(async (message: { type: string }) =>
         message.type === 'feedsieve:hot-brief'
-          ? { seen: 3, authors: 2, hot: 0, medianVelocity: 12, topBreakout: null, tiers: {} }
+          ? { seen: 3, authors: 2, hot: 0, medianVelocity: 12, topBreakout: null, tiers: [] }
           : [],
       ),
     );
@@ -602,7 +602,7 @@ describe('asHotPostList', () => {
         HOT,
         { ...HOT, postId: 'not-digits' },
         { ...HOT, handle: 'bad handle' },
-        { ...HOT, postId: '2', tier: 9, views: -5, velocity: 'fast', displayName: '  ' },
+        { ...HOT, postId: '2', tier: 11, views: -5, velocity: 'fast', displayName: '  ' },
         null,
       ]),
     ).toEqual([
@@ -651,7 +651,7 @@ describe('page brief', () => {
           hot: 7,
           medianVelocity: 312,
           topBreakout: { ratio: 196.8, handle: 'alice', postId: '1850000000000000001' },
-          tiers: { 1: 9, 2: 16, 3: 10, 4: 4, 5: 1, 6: 1 },
+          tiers: [9, 16, 10, 4, 1, 1, 0, 0, 0, 0],
         };
       }
       return [HOT];

@@ -344,8 +344,8 @@ export default function GuidePage() {
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <GuideCard title="推文上的流速与量级">
             推文右上角的数字是当前每小时浏览数：绿色是平稳，<strong>1K/h</strong> 以上变红，
-            <strong>10K/h</strong> 以上实心红。作者名旁是量级（素人 / 尾部 / 腰部 / 肩部 / 头部 /
-            顶流）和粉丝数，悬停能看关注比、注册时间和疑似互关号提示。设置里「流速与量级」可以关掉。
+            <strong>10K/h</strong> 以上实心红。作者名旁是量级（微光 / 新芽 / 新锐 / 星火 / 人气 / 达人 / 知名 /
+            影响力 / 头部 / 顶流）和粉丝数，悬停能看关注比、注册时间和疑似互关号提示。设置里「流速与量级」可以关掉。
           </GuideCard>
           <GuideCard title="我刷到的">
             点扩展图标进「热帖」，汇总你最近 2 小时在所有 X 标签页刷到、每小时 1000

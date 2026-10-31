@@ -363,7 +363,7 @@ const previewBrowser = {
           hot: 7,
           medianVelocity: 312,
           topBreakout: { ratio: 196.8, handle: 'zdetong', postId: '2115838595466772487' },
-          tiers: { 1: 9, 2: 16, 3: 10, 4: 4, 5: 1, 6: 1 },
+          tiers: [9, 16, 10, 4, 1, 1, 0, 0, 0, 0],
         };
       }
       if (message?.type === 'feedsieve:runtime-data' && typeof message.path === 'string') {

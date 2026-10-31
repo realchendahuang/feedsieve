@@ -3,7 +3,11 @@
  */
 import { DAY_MS, resolveConfig, type MetricsConfig } from './config';
 
-export type AccountTier = 1 | 2 | 3 | 4 | 5 | 6;
+export type AccountTier = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+
+/** 全部档位，供 UI 遍历和统计初始化。 */
+export const TIER_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
+export const TIER_MAX: AccountTier = 10;
 
 /** 按粉丝数分 L1–L6；粉丝数缺失时返回 null。 */
 export function accountTier(
@@ -16,23 +20,27 @@ export function accountTier(
   for (const floor of floors) {
     if (followers >= floor) tier += 1;
   }
-  return tier as AccountTier;
+  return Math.min(tier, TIER_MAX) as AccountTier;
 }
 
 /**
- * 量级名称，用中文创作者行业的通行说法（素人 / 尾部 / 腰部 / 肩部 / 头部 / 顶流），
- * 比 L1–L6 一眼能懂。英文对应常见的 KOL 分层。
+ * 量级名称：从「微光」到「顶流」十个正向称呼，覆盖 0 到 500 万粉。
+ * 不用「尾部 / 肩部」这类行业黑话，避免给作者贴贬义标签。
  */
 export const TIER_NAMES: Record<
   AccountTier,
   { zh: string; en: string; range: { zh: string; en: string } }
 > = {
-  1: { zh: '素人', en: 'Starter', range: { zh: '1 千粉以下', en: 'under 1K' } },
-  2: { zh: '尾部', en: 'Nano', range: { zh: '1 千–1 万粉', en: '1K–10K' } },
-  3: { zh: '腰部', en: 'Micro', range: { zh: '1 万–5 万粉', en: '10K–50K' } },
-  4: { zh: '肩部', en: 'Mid', range: { zh: '5 万–20 万粉', en: '50K–200K' } },
-  5: { zh: '头部', en: 'Macro', range: { zh: '20 万–100 万粉', en: '200K–1M' } },
-  6: { zh: '顶流', en: 'Mega', range: { zh: '100 万粉以上', en: '1M+' } },
+  1: { zh: '微光', en: 'Glow', range: { zh: '100 粉以下', en: 'under 100' } },
+  2: { zh: '新芽', en: 'Sprout', range: { zh: '100–1 千粉', en: '100–1K' } },
+  3: { zh: '新锐', en: 'Rising', range: { zh: '1 千–5 千粉', en: '1K–5K' } },
+  4: { zh: '星火', en: 'Spark', range: { zh: '5 千–1 万粉', en: '5K–10K' } },
+  5: { zh: '人气', en: 'Popular', range: { zh: '1 万–3 万粉', en: '10K–30K' } },
+  6: { zh: '达人', en: 'Creator', range: { zh: '3 万–10 万粉', en: '30K–100K' } },
+  7: { zh: '知名', en: 'Known', range: { zh: '10 万–30 万粉', en: '100K–300K' } },
+  8: { zh: '影响力', en: 'Influential', range: { zh: '30 万–100 万粉', en: '300K–1M' } },
+  9: { zh: '头部', en: 'Macro', range: { zh: '100 万–500 万粉', en: '1M–5M' } },
+  10: { zh: '顶流', en: 'Mega', range: { zh: '500 万粉以上', en: '5M+' } },
 };
 
 /** 关注比 = 关注数 / 粉丝数（粉丝为 0 时按 1 算）。 */

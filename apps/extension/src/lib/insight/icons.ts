@@ -72,6 +72,16 @@ export const ICONS = {
     { tag: 'path', attrs: { d: 'M11 3 8 9l4 13 4-13-3-6' } },
     { tag: 'path', attrs: { d: 'M2 9h20' } },
   ],
+  /** INFLUENTIAL — lucide: eye */
+  eye: [
+    {
+      tag: 'path',
+      attrs: {
+        d: 'M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0',
+      },
+    },
+    { tag: 'circle', attrs: { cx: '12', cy: '12', r: '3' } },
+  ],
   /** MEGA — lucide: crown */
   crown: [
     {
@@ -81,6 +91,15 @@ export const ICONS = {
       },
     },
     { tag: 'path', attrs: { d: 'M5 21h14' } },
+  ],
+  /** 顶流 — lucide: trophy */
+  trophy: [
+    { tag: 'path', attrs: { d: 'M6 9H4.5a2.5 2.5 0 0 1 0-5H6' } },
+    { tag: 'path', attrs: { d: 'M18 9h1.5a2.5 2.5 0 0 0 0-5H18' } },
+    { tag: 'path', attrs: { d: 'M4 22h16' } },
+    { tag: 'path', attrs: { d: 'M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22' } },
+    { tag: 'path', attrs: { d: 'M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22' } },
+    { tag: 'path', attrs: { d: 'M18 2H6v7a6 6 0 0 0 12 0V2Z' } },
   ],
   /** 动作栏手动拉黑 — lucide: user-x */
   userX: [
@@ -161,11 +180,15 @@ export function createIcon(name: IconName, size = 13): SVGSVGElement {
 }
 
 /** 量级 → 图标：🌱 → ✦ → ★ → 奖章 → 宝石 → 皇冠，越往上越“贵重”。 */
-export const TIER_ICONS: Record<1 | 2 | 3 | 4 | 5 | 6, IconName> = {
+export const TIER_ICONS: Record<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10, IconName> = {
   1: 'sprout',
   2: 'sparkle',
   3: 'star',
-  4: 'award',
-  5: 'gem',
-  6: 'crown',
+  4: 'flame',
+  5: 'trending',
+  6: 'award',
+  7: 'gem',
+  8: 'eye',
+  9: 'crown',
+  10: 'trophy',
 };

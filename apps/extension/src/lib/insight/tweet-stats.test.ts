@@ -171,7 +171,7 @@ describe('brief', () => {
     expect(brief.seen).toBe(3);
     expect(brief.authors).toBe(2);
     expect(brief.hot).toBe(2); // 5万浏览、3千浏览发出 1 小时：都 ≥ 1000/h
-    expect(brief.tiers).toEqual({ 1: 1, 2: 0, 3: 1, 4: 0, 5: 0, 6: 0 });
+    expect(brief.tiers).toEqual({ 1: 0, 2: 1, 3: 0, 4: 0, 5: 0, 6: 1, 7: 0, 8: 0, 9: 0, 10: 0 });
     expect(brief.topBreakout?.postId).toBe('2'); // 5万 ÷ max(500,100) = ×100
     expect(brief.medianVelocity).not.toBeNull();
   });

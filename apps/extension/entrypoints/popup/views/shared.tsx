@@ -7,7 +7,13 @@ import { normalizeStrictHandle } from '../../../src/lib/platform/xhr-bridge-guar
 import { openOfficialPage, SITE_URLS, type SiteList } from '../../../src/lib/platform/site-links';
 import { localizedDetectionReason, type UiLanguage } from '../../../src/lib/platform/i18n';
 import { formatAgo as sharedFormatAgo } from '@feedsieve/shared';
-import { accountTier, ageHours, replyOpportunity } from '@feedsieve/metrics';
+import {
+  accountTier,
+  ageHours,
+  replyOpportunity,
+  TIER_LEVELS,
+  TIER_MAX,
+} from '@feedsieve/metrics';
 
 export type AppIconName =
   | 'clean'
@@ -452,7 +458,7 @@ export function asHotPostList(value: unknown): HotPostItem[] {
       ...Object.fromEntries(Object.entries(extra).filter(([, value]) => value !== undefined)),
       velocity: nullableNumber(raw.velocity),
       breakout: nullableNumber(raw.breakout),
-      tier: tier !== null && Number.isInteger(tier) && tier >= 1 && tier <= 6 ? tier : null,
+      tier: tier !== null && Number.isInteger(tier) && tier >= 1 && tier <= TIER_MAX ? tier : null,
       viral: viral !== null && viral >= 0 && viral <= 100 ? Math.round(viral) : null,
       opportunity: asOpportunity(raw.opportunity),
       ...(typeof raw.rank === 'number' && Number.isInteger(raw.rank) && raw.rank >= 1
@@ -523,7 +529,7 @@ export interface PageBriefItem {
   threshold: number | null;
   medianVelocity: number | null;
   topBreakout: { ratio: number; handle: string; postId: string } | null;
-  tiers: [number, number, number, number, number, number];
+  tiers: number[];
 }
 
 export function asPageBrief(value: unknown): PageBriefItem | null {
@@ -534,7 +540,7 @@ export function asPageBrief(value: unknown): PageBriefItem | null {
   const hot = optionalCount(raw.hot);
   if (seen === undefined || authors === undefined || hot === undefined) return null;
   const tiersRaw = (raw.tiers ?? {}) as Record<string, unknown>;
-  const tiers = [1, 2, 3, 4, 5, 6].map(
+  const tiers = TIER_LEVELS.map(
     (tier) => optionalCount(tiersRaw[tier]) ?? 0,
   ) as PageBriefItem['tiers'];
   const top = raw.topBreakout as Record<string, unknown> | null | undefined;

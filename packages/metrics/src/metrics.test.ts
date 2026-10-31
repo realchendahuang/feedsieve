@@ -183,16 +183,24 @@ describe('ageHours', () => {
 describe('accountTier', () => {
   it.each([
     [0, 1],
-    [999, 1],
-    [1_000, 2],
-    [9_999, 2],
-    [10_000, 3],
-    [49_999, 3],
-    [50_000, 4],
-    [199_999, 4],
-    [200_000, 5],
-    [999_999, 5],
-    [1_000_000, 6],
+    [99, 1],
+    [100, 2],
+    [999, 2],
+    [1_000, 3],
+    [4_999, 3],
+    [5_000, 4],
+    [9_999, 4],
+    [10_000, 5],
+    [29_999, 5],
+    [30_000, 6],
+    [99_999, 6],
+    [100_000, 7],
+    [299_999, 7],
+    [300_000, 8],
+    [999_999, 8],
+    [1_000_000, 9],
+    [4_999_999, 9],
+    [5_000_000, 10],
   ])('%i followers → L%i', (followers, tier) => {
     expect(accountTier(followers)).toBe(tier);
   });
@@ -205,9 +213,9 @@ describe('accountTier', () => {
 
 describe('TIER_NAMES', () => {
   it('names every tier in both languages', () => {
-    expect(TIER_NAMES[3].zh).toBe('腰部');
-    expect(TIER_NAMES[6].en).toBe('Mega');
-    expect(Object.keys(TIER_NAMES)).toHaveLength(6);
+    expect(TIER_NAMES[3].zh).toBe('新锐');
+    expect(TIER_NAMES[10].en).toBe('Mega');
+    expect(Object.keys(TIER_NAMES)).toHaveLength(10);
   });
 });
 

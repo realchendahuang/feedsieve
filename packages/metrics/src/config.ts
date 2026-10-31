@@ -57,7 +57,8 @@ export interface MetricsConfig {
   coldStartMaxAgeHours: number;
   coldStartImpressions: number;
   /** 量级档位的粉丝数下限：第 2..6 档（第 1 档为其余）。 */
-  tierFollowerFloors: readonly [number, number, number, number, number];
+  /** 粉丝量级阈值；档位数 = 阈值数 + 1。 */
+  tierFollowerFloors: readonly number[];
   /** 互关号：关注数 ≥ 此值且关注/粉丝落在区间内。 */
   mutualFarmMinFollowing: number;
   mutualFarmRatioRange: readonly [number, number];
@@ -91,7 +92,9 @@ export const DEFAULT_METRICS_CONFIG: Readonly<MetricsConfig> = Object.freeze({
   coldStartFollowerCap: 50_000,
   coldStartMaxAgeHours: 2,
   coldStartImpressions: 200,
-  tierFollowerFloors: [1_000, 10_000, 50_000, 200_000, 1_000_000] as const,
+  tierFollowerFloors: [
+    100, 1_000, 5_000, 10_000, 30_000, 100_000, 300_000, 1_000_000, 5_000_000,
+  ] as const,
   mutualFarmMinFollowing: 2_000,
   mutualFarmRatioRange: [0.8, 1.25] as const,
   newAccountDays: 90,

@@ -14,8 +14,10 @@ import {
   projectedViews,
   replyOpportunity,
   resolveConfig,
+  TIER_LEVELS,
   velocityPerHour,
   viralScore,
+  type AccountTier,
   type MetricsConfig,
   type ReplyOpportunity,
   type ViewObservation,
@@ -190,7 +192,7 @@ export interface PageBrief {
   /** 破圈倍数最高的一条。 */
   topBreakout: { ratio: number; handle: string; postId: string } | null;
   /** 作者量级分布（按去重作者）。 */
-  tiers: Record<1 | 2 | 3 | 4 | 5 | 6, number>;
+  tiers: Record<AccountTier, number>;
 }
 
 function touch<K, V>(map: Map<K, V>, key: K, value: V, max: number): void {
@@ -417,7 +419,7 @@ export function createTweetStatsStore(
     const { items, threshold } = windowInsights(now);
     const velocities: number[] = [];
     const authors = new Set<string>();
-    const tiers: PageBrief['tiers'] = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+    const tiers = Object.fromEntries(TIER_LEVELS.map((tier) => [tier, 0])) as PageBrief['tiers'];
     let seen = 0;
     let hot = 0;
     let topBreakout: PageBrief['topBreakout'] = null;

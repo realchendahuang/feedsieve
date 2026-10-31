@@ -7,6 +7,14 @@
 
 ## [Unreleased]
 
+## [0.12.2] — 2026-11-01
+
+### 量级标签
+
+- 作者量级从 6 档扩到 10 档，改用正向称呼：微光 / 新芽 / 新锐 / 星火 / 人气 / 达人 / 知名 / 影响力 / 头部 / 顶流。
+- 粉丝阈值细化为 100 / 1 千 / 5 千 / 1 万 / 3 万 / 10 万 / 30 万 / 100 万 / 500 万；页面徽标、弹窗、主页概况、悬停卡片和统计同步新档位，每档配独立图标。
+- 原来的「素人 / 尾部 / 腰部 / 肩部 / 头部 / 顶流」不再使用。
+
 ### 深色模式
 
 - 面板与侧边栏跟随系统外观（`prefers-color-scheme`）：深色下纯黑背景、浅灰文字，语义色新增一套（警告、次要文字、AI 判定三档），数据色单独调过对比度。
@@ -414,6 +422,7 @@
 - WXT + React 19 + MV3 最小权限架构；X DOM fixtures 锁定 reader→detector 契约；95 个单元测试；pre-push 本地质量门禁。
 
 [Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.12.1...HEAD
+[0.12.2]: https://github.com/realchendahuang/feedsieve/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/realchendahuang/feedsieve/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/realchendahuang/feedsieve/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/realchendahuang/feedsieve/compare/v0.10.0...v0.11.0

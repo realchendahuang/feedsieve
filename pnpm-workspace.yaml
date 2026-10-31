@@ -33,3 +33,6 @@ allowBuilds:
 overrides:
   '@cloudflare/vite-plugin>miniflare': 5.20260825.0-alpha
   sharp: 0.35.5
+  # zod <4.6.6 有内存耗尽漏洞（GHSA-mrhx-c7xc-m3w5）；统一到修复版，
+  # 避免 TanStack 工具链继续带 4.6.1。
+  zod: 4.6.7

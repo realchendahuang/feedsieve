@@ -49,7 +49,7 @@ describe('createSharedInsight', () => {
     // 两个标签页的观测合成了一条帖子的两个观测点，流速按增量计算（公式本身见 @feedsieve/metrics）
     expect(list[0]!.views).toBe(90_000);
     expect(list[0]!.velocity).not.toBeNull();
-    expect(list[0]!.tier).toBe(2);
+    expect(list[0]!.tier).toBe(3);
     expect((await shared.brief()).seen).toBe(2);
 
     // 合并后的广播和持久化都是合并的一次

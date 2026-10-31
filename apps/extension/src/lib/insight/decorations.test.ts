@@ -62,8 +62,8 @@ describe('createInsightDecorations', () => {
     expect(pill.hasAttribute('title')).toBe(false);
 
     const tier = article.querySelector('.handle-row > .fs-tier') as HTMLElement;
-    expect(tier.getAttribute('data-fs-tier-level')).toBe('3');
-    expect(tier.querySelector('svg')?.getAttribute('data-fs-icon')).toBe('star');
+    expect(tier.getAttribute('data-fs-tier-level')).toBe('6');
+    expect(tier.querySelector('svg')?.getAttribute('data-fs-icon')).toBe('award');
     expect(tier.textContent).toBe('32K');
     // 不上色：用这一行 X 自己的次要文字色
     expect(tier.style.color).toBe('rgb(83, 100, 113)');
@@ -90,12 +90,12 @@ describe('createInsightDecorations', () => {
     store.recordAuthor({ handle: 'alice', followers: 500 });
     const article = tweetArticle('alice', '1');
     decorations.decorate(article, { postId: '1', author: { handle: 'alice' } });
-    expect(article.querySelector('.fs-tier svg')?.getAttribute('data-fs-icon')).toBe('sprout');
+    expect(article.querySelector('.fs-tier svg')?.getAttribute('data-fs-icon')).toBe('sparkle');
     store.recordAuthor({ handle: 'alice', followers: 2_000_000 });
     decorations.decorate(article, { postId: '1', author: { handle: 'alice' } });
     expect(article.querySelectorAll('.fs-tier svg')).toHaveLength(1);
     expect(article.querySelector('.fs-tier svg')?.getAttribute('data-fs-icon')).toBe('crown');
-    expect(article.querySelector('.fs-tier')?.getAttribute('data-fs-tier-level')).toBe('6');
+    expect(article.querySelector('.fs-tier')?.getAttribute('data-fs-tier-level')).toBe('9');
   });
 
   it('buckets tweet widths for the narrow-screen styles', async () => {
@@ -235,7 +235,7 @@ describe('hover content', () => {
     expect(en.rows[0]?.[0]).toBe('Velocity');
 
     const tier = tierHover({ followers: 3_000, followingCount: 3_100 }, 2, 'zh', NOW);
-    expect(tier.title).toBe('NANO · 尾部创作者 · 1 千–1 万粉');
+    expect(tier.title).toBe('SPROUT · 新芽创作者 · 100–1 千粉');
     expect(tier.notes).toEqual(expect.arrayContaining([expect.stringContaining('互关号')]));
   });
 });

@@ -2,7 +2,13 @@
  * 主页洞察的概况（资料卡下的那一行、推文上的倍数标签用）：只带算倍数需要的基线和几个数，
  * 不把整份帖子库传给内容脚本。
  */
-import { accountTier, analyzeProfile, followRatio, type ProfileBaseline } from '@feedsieve/metrics';
+import {
+  accountTier,
+  analyzeProfile,
+  followRatio,
+  TIER_MAX,
+  type ProfileBaseline,
+} from '@feedsieve/metrics';
 import type { CatalogEntry } from './profile-catalog';
 
 export interface ProfileSummary {
@@ -55,7 +61,7 @@ export function asProfileSummary(value: unknown): ProfileSummary | null {
     handle: raw.handle,
     ...(num(raw.followers) !== undefined ? { followers: num(raw.followers)! } : {}),
     ...(num(raw.followingCount) !== undefined ? { followingCount: num(raw.followingCount)! } : {}),
-    tier: tier !== undefined && Number.isInteger(tier) && tier >= 1 && tier <= 6 ? tier : null,
+    tier: tier !== undefined && Number.isInteger(tier) && tier >= 1 && tier <= TIER_MAX ? tier : null,
     ratio: num(raw.ratio) ?? null,
     baseline,
     outlierRate: num(raw.outlierRate) ?? null,
