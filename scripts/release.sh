@@ -50,7 +50,7 @@ echo "版本号：$CURRENT → $VERSION"
 if [ "$DRY_RUN" -eq 1 ]; then
   echo "[dry-run] 更新 apps/extension 与 apps/community-api 的 version"
   if [ "$SKIP_VERIFY" -eq 0 ]; then echo "[dry-run] 运行 pnpm verify"; fi
-  echo "[dry-run] 提交 CHANGELOG 与版本号，打 tag $TAG，推送 main 与 tag"
+  echo "[dry-run] 提交 CHANGELOG 与版本号，打 tag ${TAG}，推送 main 与 tag"
   echo "[dry-run] 构建 feedsieve-$VERSION-chrome.zip 并创建 GitHub Release"
   exit 0
 fi
