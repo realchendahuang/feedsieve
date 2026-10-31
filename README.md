@@ -33,16 +33,6 @@
   <a href="CHANGELOG.md">更新日志</a>
 </p>
 
-<p align="center">
-  <img src="assets/screens/profile.png" width="300" alt="侧边栏「主页」：博主的爆款倍数、爆款率、内容形式与发帖时段" />
-  &nbsp;
-  <img src="assets/screens/hot.png" width="300" alt="侧边栏「热帖」：最近刷到的正在火的帖子" />
-</p>
-
-<p align="center">
-  <img src="assets/demo.gif" width="760" alt="评论区黄框标注与一键拉黑演示" />
-</p>
-
 ---
 
 ## 它能做什么
