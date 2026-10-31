@@ -12,6 +12,8 @@ import {
   Filter,
   TrendingUp,
   Search,
+  CalendarDays,
+  Bot,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { CHROME_STORE_URL, GITHUB_URL } from '../site';
@@ -42,7 +44,7 @@ export default function HomePage() {
         {/* 顶部胶囊标签 */}
         <div className="inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold-surface px-4 py-1.5 text-xs font-semibold text-gold shadow-sm">
           <Sparkles className="size-3.5 animate-pulse" />
-          <span>新功能：热帖榜 · 博主主页洞察</span>
+          <span>清评论 · 看热帖 · 挖博主 · 排发帖 · 辨 AI 味</span>
         </div>
 
         {/* 标语主标题 */}
@@ -56,8 +58,8 @@ export default function HomePage() {
 
         {/* 副标题 */}
         <p className="mx-auto mt-5 max-w-2xl text-base text-mist sm:text-lg leading-relaxed">
-          开源的中文
-          X（Twitter）刷推副驾驶：黄推一眼标出、一键原生拉黑；正在火的帖子、值得研究的博主，一眼看清。
+          开源的中文 X（Twitter）副驾驶：清评论、看热帖、挖博主、排发帖、辨 AI
+          味——一个装全，本地优先，不拿账号冒险。
         </p>
 
         {/* 核心行动按钮 */}
@@ -100,7 +102,7 @@ export default function HomePage() {
               </div>
               <div className="flex items-center gap-2 rounded-full border border-line/70 bg-surface px-3 py-1 text-xs text-mist">
                 <Lock className="size-3 text-gold" />
-                <span className="font-mono">x.com / 评论区实录</span>
+                <span className="font-mono">扩展面板 / 主页洞察</span>
               </div>
               <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                 <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -108,12 +110,12 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* 实际录屏 GIF */}
-            <div className="relative bg-paper/50">
+            {/* 产品界面：博主主页洞察 */}
+            <div className="relative bg-paper/50 py-4">
               <img
-                src="/assets/demo.gif"
-                alt="福滤娃在时间线上用黄框标注垃圾账号与一键送走演示"
-                className="w-full h-auto block"
+                src="/assets/screens/profile.png"
+                alt="福滤娃面板：博主主页洞察，中位浏览、爆款率、内容形式与发帖时段"
+                className="mx-auto block max-h-[520px] w-auto max-w-full object-contain"
               />
             </div>
           </div>
@@ -128,6 +130,12 @@ export default function HomePage() {
             </span>
             <span className="pill-badge text-ink">
               <span className="text-gold font-bold">🔍</span> 博主爆款倍数 · 内容与时段规律
+            </span>
+            <span className="pill-badge text-ink">
+              <span className="text-gold font-bold">🗓</span> 发帖时间表 · 下一个空档
+            </span>
+            <span className="pill-badge text-ink">
+              <span className="text-gold font-bold">🤖</span> AI 味检测 · 多人复核
             </span>
           </div>
         </div>
@@ -184,8 +192,6 @@ export default function HomePage() {
             icon={<Flame className="size-5" />}
             kicker="热帖"
             title="刷过的火帖，一个不漏"
-            image="/assets/screens/hot.png"
-            alt="侧边栏「热帖」：最近刷到的正在火的帖子，带流速"
             points={[
               '推文右上角显示每小时浏览数，正在火的变红；作者名旁显示量级',
               '汇总你最近 2 小时在所有 X 标签页刷到的火帖，按热度、回复机会、粉丝、收藏、最近刷到排序',
@@ -202,6 +208,26 @@ export default function HomePage() {
               '每条帖子是他自己中位浏览的几倍，3 倍以上标金色；疑似投流单独标出',
               '纯文字、图片、视频、引用各自的表现，哪个时段发帖效果最好',
               '一键在 X 搜他的高赞帖、Google 站内搜索、复制 Top 20 给 AI、导出 CSV',
+            ]}
+          />
+          <ShowcaseCard
+            icon={<CalendarDays className="size-5" />}
+            kicker="发帖"
+            title="时间表、下一个空档、草稿与文章"
+            points={[
+              '设每天固定时间点或间隔，发帖框里按 Alt+N 直接填下一个空档',
+              '面板里写草稿、排序，点日历贴进 X 发帖框；最后一下仍由你点',
+              'X 文章编辑器直接粘 Markdown 自动排版，带字数、大纲和本机备份',
+            ]}
+          />
+          <ShowcaseCard
+            icon={<Bot className="size-5" />}
+            kicker="AI 味"
+            title="这条回复是不是 AI 写的"
+            points={[
+              '读账号最近 6–20 条公开回复，给 AI 味百分比、档位和一句锐评',
+              '一个人测出的结论只给本人看，多人测到重合才公开',
+              '够票才进社区 AI 号名单；评论区标记可折叠或关闭',
             ]}
           />
         </div>
@@ -591,20 +617,22 @@ function ShowcaseCard({
   icon: ReactNode;
   kicker: string;
   title: string;
-  image: string;
-  alt: string;
+  image?: string;
+  alt?: string;
   points: string[];
 }) {
   return (
     <div className="panel-card flex flex-col gap-5 p-6 sm:flex-row sm:items-start">
-      <img
-        src={image}
-        alt={alt}
-        width={200}
-        height={360}
-        loading="lazy"
-        className="mx-auto w-[200px] shrink-0 rounded-xl border border-line/70 shadow-[var(--panel-elev)] sm:mx-0"
-      />
+      {image ? (
+        <img
+          src={image}
+          alt={alt ?? ''}
+          width={200}
+          height={360}
+          loading="lazy"
+          className="mx-auto w-[200px] shrink-0 rounded-xl border border-line/70 shadow-[var(--panel-elev)] sm:mx-0"
+        />
+      ) : null}
       <div className="min-w-0">
         <div className="flex items-center gap-2 text-gold">
           {icon}
