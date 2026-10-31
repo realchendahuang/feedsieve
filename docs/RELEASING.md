@@ -33,10 +33,9 @@ scripts/release.sh 0.12.2
 1. 校验版本号格式、`CHANGELOG.md` 条目与 compare 链接
 2. 检查当前在 `main`、除 `CHANGELOG.md` 外工作区干净、tag 不存在
 3. 更新 `apps/extension/package.json` 与 `apps/community-api/package.json`
-4. 跑 `pnpm verify`
-5. 提交、打 `vX.Y.Z` tag、推送 main 与 tag
-6. 构建 `feedsieve-X.Y.Z-chrome.zip`
-7. 用 CHANGELOG 内容创建 GitHub Release 并上传 zip
+4. 跑 `scripts/pack-store.sh`（`pnpm verify` + 构建 + manifest/内容审计 + smoke）
+5. 构建通过后才提交、打 `vX.Y.Z` tag、推送 main 与 tag
+6. 用 CHANGELOG 内容创建 GitHub Release 并上传 zip 与 sha256
 
 先看计划、不实际执行：
 
@@ -44,7 +43,7 @@ scripts/release.sh 0.12.2
 scripts/release.sh 0.12.2 --dry-run
 ```
 
-已经手动跑过 `pnpm verify` 可以加 `--skip-verify`。
+`--skip-verify` 会跳过完整门禁与商店审计、只打 zip，仅用于本地调试，不要用于正式发版。
 
 ## 3. 发布到 Chrome 应用商店
 

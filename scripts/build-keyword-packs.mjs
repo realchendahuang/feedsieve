@@ -312,7 +312,7 @@ export async function main() {
       if (!valid) fail('committed manifest signature does not verify against the built-in key');
       if (committedSig.key_id !== SIGNING_KEY_ID) fail('committed manifest uses an unknown key_id');
     } else {
-      console.warn('warning: committed manifest is NOT signed; publish-keyword-packs.sh will refuse');
+      fail('committed manifest is NOT signed; run pnpm keyword-packs:build with the signing key');
     }
   } else {
     await Promise.all([writeFile(outputPath, output), writeFile(manifestPath, manifest)]);

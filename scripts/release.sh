@@ -1,12 +1,12 @@
 #!/usr/bin/env sh
-# FeedSieve 发版：版本号 → CHANGELOG 校验 → 质量门禁 → 提交打标 → GitHub Release。
+# FeedSieve 发版：版本号 → CHANGELOG 校验 → 商店级构建审计 → 提交打标 → GitHub Release。
 # Chrome Web Store 的上传与送审不在本脚本内（需要浏览器登录态），
 # 维护者按全局 skill `feedsieve-release` 完成。
 #
 # 用法：
 #   scripts/release.sh 0.12.3
 #   scripts/release.sh 0.12.3 --dry-run        # 只检查并打印计划
-#   scripts/release.sh 0.12.3 --skip-verify    # 已手动跑过 pnpm verify
+#   scripts/release.sh 0.12.3 --skip-verify    # 跳过完整门禁/商店审计，只打 zip（仅本地调试）
 #
 # 前置：CHANGELOG.md 已写好 `## [x.y.z]` 条目和底部 compare 链接；
 # 除 CHANGELOG.md 外工作区干净。脚本会提交 CHANGELOG 与两个 package.json。
@@ -44,14 +44,23 @@ grep -q "^\[$VERSION\]:" CHANGELOG.md || fail "CHANGELOG.md 底部缺少 [$VERSI
 OTHER=$(git status --porcelain | grep -v '^ M CHANGELOG.md' || true)
 [ -z "$OTHER" ] || fail "除 CHANGELOG.md 外还有未提交改动：$OTHER"
 
+# 本地 main 落后/分叉时，先把问题暴露出来，别等提交和打标之后才 push 失败。
+git fetch origin main --quiet
+[ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] ||
+  fail "本地 main 与 origin/main 不一致，先同步或合并"
+
 CURRENT=$(node -p "require('./apps/extension/package.json').version")
 echo "版本号：$CURRENT → $VERSION"
 
 if [ "$DRY_RUN" -eq 1 ]; then
   echo "[dry-run] 更新 apps/extension 与 apps/community-api 的 version"
-  if [ "$SKIP_VERIFY" -eq 0 ]; then echo "[dry-run] 运行 pnpm verify"; fi
-  echo "[dry-run] 提交 CHANGELOG 与版本号，打 tag ${TAG}，推送 main 与 tag"
-  echo "[dry-run] 构建 feedsieve-$VERSION-chrome.zip 并创建 GitHub Release"
+  if [ "$SKIP_VERIFY" -eq 0 ]; then
+    echo "[dry-run] 跑 scripts/pack-store.sh（pnpm verify + zip + manifest/内容审计 + smoke）"
+  else
+    echo "[dry-run] 跳过门禁，只构建 zip"
+  fi
+  echo "[dry-run] 构建通过后再提交 CHANGELOG 与版本号，推 main，打 tag ${TAG}"
+  echo "[dry-run] 创建 GitHub Release 并上传 zip"
   exit 0
 fi
 
@@ -70,22 +79,22 @@ for (const p of ['apps/extension/package.json', 'apps/community-api/package.json
 }
 NODE
 
+# 先构建并审计产物，再提交/打标：构建失败不会留下「tag 已推、没有 Release」的半发布。
 if [ "$SKIP_VERIFY" -eq 0 ]; then
-  pnpm verify
+  sh scripts/pack-store.sh
 else
-  echo "跳过 pnpm verify（--skip-verify）"
+  echo "跳过完整门禁与商店审计（--skip-verify）：只构建 zip"
+  pnpm --filter @feedsieve/extension zip
 fi
+
+ZIP="apps/extension/.output/feedsieve-$VERSION-chrome.zip"
+[ -f "$ZIP" ] || fail "没有生成 $ZIP"
 
 git add CHANGELOG.md apps/extension/package.json apps/community-api/package.json
 git commit -m "chore(release): $VERSION"
-git tag "$TAG"
-
 git push --no-verify origin main
+git tag "$TAG"
 git push --no-verify origin "$TAG"
-
-pnpm --filter @feedsieve/extension zip
-ZIP="apps/extension/.output/feedsieve-$VERSION-chrome.zip"
-[ -f "$ZIP" ] || fail "没有生成 $ZIP"
 
 NOTES=$(mktemp)
 trap 'rm -f "$NOTES"' EXIT
@@ -102,7 +111,11 @@ cat >> "$NOTES" <<EOF
 - 或下载下方 \`feedsieve-$VERSION-chrome.zip\`，解压后在 \`chrome://extensions\` 打开开发者模式 → 加载已解压的扩展程序。
 EOF
 
-gh release create "$TAG" "$ZIP" --title "$TAG" --notes-file "$NOTES"
+if [ -f "$ZIP.sha256" ]; then
+  gh release create "$TAG" "$ZIP" "$ZIP.sha256" --title "$TAG" --notes-file "$NOTES"
+else
+  gh release create "$TAG" "$ZIP" --title "$TAG" --notes-file "$NOTES"
+fi
 
 echo
 echo "GitHub Release 完成：$TAG"
