@@ -5,6 +5,8 @@
 FeedSieve（福滤娃）是 X（Twitter）扩展：黄框标注垃圾账号、用户点击后执行拉黑；并基于页面已经加载的公开数据，显示帖子热度、热帖列表和博主主页分析。
 本政策说明它处理什么数据、什么数据出设备、什么数据绝不出设备。
 
+Firefox 版通过 `browser_specific_settings.gecko.data_collection_permissions` 声明与本文相同的数据用途（websiteContent / websiteActivity / personallyIdentifyingInfo / authenticationInfo）；两个浏览器的口径一致。
+
 ---
 
 ## 中文

@@ -47,3 +47,5 @@ jobs:
       - run: pnpm test
       - run: pnpm --filter @feedsieve/community-api test
       - run: pnpm build:extension
+      - run: pnpm build:extension:firefox
+      - run: pnpm check:extension:firefox

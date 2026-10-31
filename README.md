@@ -166,6 +166,7 @@ X 的主页只按时间排帖子，想找一个博主最好的那几条，只能
 | **Chrome 应用商店（推荐）**               | 打开 [Chrome 商店页面](https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph) 点「添加至 Chrome」，自动接收更新                         |
 | **Edge / Brave / Arc 等 Chromium 浏览器** | 同上，允许来自其他商店的扩展即可                                                                                                                                      |
 | **GitHub Releases**                       | 从 [Releases](https://github.com/realchendahuang/feedsieve/releases) 下载 `feedsieve-*-chrome.zip` 解压 → `chrome://extensions` 打开开发者模式 → 加载已解压的扩展程序 |
+| **Firefox（开发版）**                     | 暂未上架 AMO。`pnpm build:extension:firefox` 后，在 `about:debugging#/runtime/this-firefox` 临时加载 `apps/extension/.output/firefox-mv3/manifest.json`；详见 [`docs/FIREFOX.md`](docs/FIREFOX.md) |
 | **从源码构建**                            | 见下方本地开发（Node ≥ 22、pnpm）                                                                                                                                     |
 
 ---
