@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# 本地质量门禁（仓库没有云端 CI，这里就是全部检查）。community-api 测试需要 Docker 起本地 PostgreSQL。
+# 本地质量门禁；GitHub Actions 在 push / PR 时跑同样的步骤。community-api 测试需要 Docker 起本地 PostgreSQL。
 # push 前由 .githooks/pre-push 自动执行（克隆后 pnpm install 会自动启用钩子）。
 # 手动运行：pnpm verify；跳过钩子：git push --no-verify。
 

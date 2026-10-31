@@ -1,0 +1,49 @@
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: feedsieve
+          POSTGRES_PASSWORD: feedsieve_dev_password
+          POSTGRES_DB: feedsieve
+        ports:
+          - 54330:5432
+        options: >-
+          --health-cmd "pg_isready -U feedsieve -d feedsieve"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.11.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm keyword-packs:check
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm --filter @feedsieve/community-api test
+      - run: pnpm build:extension
