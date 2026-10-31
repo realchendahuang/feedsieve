@@ -1,0 +1,109 @@
+#!/usr/bin/env sh
+# FeedSieve 发版：版本号 → CHANGELOG 校验 → 质量门禁 → 提交打标 → GitHub Release。
+# Chrome Web Store 的上传与送审不在本脚本内（需要浏览器登录态），
+# 维护者按全局 skill `feedsieve-release` 完成。
+#
+# 用法：
+#   scripts/release.sh 0.12.3
+#   scripts/release.sh 0.12.3 --dry-run        # 只检查并打印计划
+#   scripts/release.sh 0.12.3 --skip-verify    # 已手动跑过 pnpm verify
+#
+# 前置：CHANGELOG.md 已写好 `## [x.y.z]` 条目和底部 compare 链接；
+# 除 CHANGELOG.md 外工作区干净。脚本会提交 CHANGELOG 与两个 package.json。
+
+set -eu
+
+VERSION="${1:-}"
+DRY_RUN=0
+SKIP_VERIFY=0
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run) DRY_RUN=1 ;;
+    --skip-verify) SKIP_VERIFY=1 ;;
+  esac
+done
+
+fail() {
+  printf 'error: %s\n' "$*" >&2
+  exit 1
+}
+
+[ -n "$VERSION" ] || fail "用法：scripts/release.sh <x.y.z> [--dry-run] [--skip-verify]"
+echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || fail "版本号必须是 x.y.z：$VERSION"
+
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+cd "$ROOT"
+
+TAG="v$VERSION"
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+[ "$BRANCH" = "main" ] || fail "请在 main 分支发版（当前：$BRANCH）"
+
+grep -q "^## \[$VERSION\]" CHANGELOG.md || fail "CHANGELOG.md 没有 ## [$VERSION] 条目，先写本版变更"
+grep -q "^\[$VERSION\]:" CHANGELOG.md || fail "CHANGELOG.md 底部缺少 [$VERSION]: compare 链接"
+
+OTHER=$(git status --porcelain | grep -v '^ M CHANGELOG.md' || true)
+[ -z "$OTHER" ] || fail "除 CHANGELOG.md 外还有未提交改动：$OTHER"
+
+CURRENT=$(node -p "require('./apps/extension/package.json').version")
+echo "版本号：$CURRENT → $VERSION"
+
+if [ "$DRY_RUN" -eq 1 ]; then
+  echo "[dry-run] 更新 apps/extension 与 apps/community-api 的 version"
+  if [ "$SKIP_VERIFY" -eq 0 ]; then echo "[dry-run] 运行 pnpm verify"; fi
+  echo "[dry-run] 提交 CHANGELOG 与版本号，打 tag $TAG，推送 main 与 tag"
+  echo "[dry-run] 构建 feedsieve-$VERSION-chrome.zip 并创建 GitHub Release"
+  exit 0
+fi
+
+git rev-parse -q --verify "refs/tags/$TAG" >/dev/null && fail "本地已有 tag $TAG"
+! git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1 ||
+  fail "远端已有 tag $TAG"
+
+node - "$VERSION" <<'NODE'
+const fs = require('node:fs');
+const version = process.argv[2];
+for (const p of ['apps/extension/package.json', 'apps/community-api/package.json']) {
+  const raw = fs.readFileSync(p, 'utf8');
+  const next = raw.replace(/"version": "[^"]+"/, `"version": "${version}"`);
+  if (next === raw) throw new Error(`未能更新版本号：${p}`);
+  fs.writeFileSync(p, next);
+}
+NODE
+
+if [ "$SKIP_VERIFY" -eq 0 ]; then
+  pnpm verify
+else
+  echo "跳过 pnpm verify（--skip-verify）"
+fi
+
+git add CHANGELOG.md apps/extension/package.json apps/community-api/package.json
+git commit -m "chore(release): $VERSION"
+git tag "$TAG"
+
+git push --no-verify origin main
+git push --no-verify origin "$TAG"
+
+pnpm --filter @feedsieve/extension zip
+ZIP="apps/extension/.output/feedsieve-$VERSION-chrome.zip"
+[ -f "$ZIP" ] || fail "没有生成 $ZIP"
+
+NOTES=$(mktemp)
+trap 'rm -f "$NOTES"' EXIT
+awk -v ver="$VERSION" '
+  index($0, "## [" ver "]") == 1 { on=1; next }
+  on && index($0, "## [") == 1 { exit }
+  on { print }
+' CHANGELOG.md > "$NOTES"
+cat >> "$NOTES" <<EOF
+
+### 安装
+
+- Chrome 应用商店：https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph
+- 或下载下方 \`feedsieve-$VERSION-chrome.zip\`，解压后在 \`chrome://extensions\` 打开开发者模式 → 加载已解压的扩展程序。
+EOF
+
+gh release create "$TAG" "$ZIP" --title "$TAG" --notes-file "$NOTES"
+
+echo
+echo "GitHub Release 完成：$TAG"
+echo "下一步：按 feedsieve-release skill 上传 $ZIP 到 Chrome Web Store 并提交审核。"
