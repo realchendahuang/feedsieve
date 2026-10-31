@@ -10,6 +10,10 @@
 
 ## 中文
 
+### 与 X 的关系
+
+FeedSieve 是独立开源项目，与 X Corp. 没有隶属、合作或背书关系。X、Twitter 及其标志是 X Corp. 的商标；本项目只在说明兼容性时使用这些名称。
+
 ### 公示内容是什么
 
 - **黑名单**：FeedSieve 用户举报（拉黑票）与抢救（误标票）的聚合结果，加上维护者明确维护的条目。
@@ -42,6 +46,10 @@ whitelist) and the official keyword packs, with a keyword-contribution submissio
 (submissions enter a manual review queue and join the wordpacks only after review), plus an
 application entry. This statement explains the nature, boundaries, and remedies of what is
 published.
+
+### Relationship with X
+
+FeedSieve is an independent open-source project. It is not affiliated with, endorsed by, or sponsored by X Corp. X, Twitter and their logos are trademarks of X Corp.; the names are used only to describe compatibility.
 
 ### What the roster is
 

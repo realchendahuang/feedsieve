@@ -18,7 +18,7 @@ FeedSieve 社区名单与公开关键词后端：Cloudflare Worker + Hono + Post
 | 线上密钥                                 | `wrangler secret put`          | ❌ 只存在 Cloudflare                      |
 | 本地开发密钥                             | `.dev.vars`                    | ❌ gitignored（提交 `.dev.vars.example`） |
 
-隐私红线（见 `docs/legacy/OPEN_SOURCE_GOVERNANCE.md` §5）：举报者侧数据只存服务器加盐哈希，IP / 原始安装 UUID 永不落库、永不公开。
+隐私红线：举报者侧数据只存服务器加盐哈希，IP / 原始安装 UUID 永不落库、永不公开。
 
 ## 本地开发
 

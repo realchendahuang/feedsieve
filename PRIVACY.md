@@ -14,7 +14,7 @@ FeedSieve（福滤娃）是 X（Twitter）扩展：黄框标注垃圾账号、�
 - X 页面内容：推文文本、昵称、简介、链接 —— 在本地用于识别垃圾账号；用户处理后的有限证据按下述授权上传。
 - 识别结果与动作记录：标注、拉黑、撤销、白名单、本地统计，以及你自定义的关键词规则、对官方预置词包的订阅/启停状态和最近一次校验通过的公开词库版本缓存。例外：官方规则打黄框的账号会按下文第 10 条匿名上报（可单独关闭）。
 - 你的 X 关注列表：用于形成每个用户自己的「关注保护」名单，只保存在浏览器本地，绝不作为白名单或抢救票上传。
-- X 登录凭证（ct0 / bearer）：仅在你的浏览器内、你点击拉黑/撤销时，用于向 x.com 本身发起请求。不读取、不存储、不发送给 FeedSieve 或任何第三方。
+- X 登录凭证（ct0 / bearer）：仅在你点击拉黑/撤销时，从页面 Cookie 读取 `ct0`，随该次请求发给 x.com 本身；不存储、不写日志、不发送给 FeedSieve 或任何第三方。
 - 浏览历史（访问过哪些网址）、私信、密码：不收集。开启「参与全站热榜」时会上传你刷到的公开帖子指标，见下文第 7 条；你打开过的博主主页的公开帖子数字按第 8 条共享。
 - 帖子公开指标与作者公开资料：你浏览 X 时页面已经加载的帖子浏览数、互动数、发布时间、正文前 1000 字、作者名称、头像地址、粉丝数，用于在本地显示流速、量级和「热帖」列表。多个 X 标签页的数据会在扩展后台合并，只保存在浏览器的会话内存里（`storage.session`），关闭浏览器即清空；扩展不会为此额外请求 X。开启「参与全站热榜」时，其中一部分按下文第 7 条上传。
 - 博主主页的帖子：你在 X 上打开过的博主主页，扩展会保存你浏览时页面已经加载的这个博主的公开帖子和公开资料（各项计数、发帖时间、正文前 1000 字、帖子类型），用于「主页」视图显示他的爆款和规律。保存在本机（`storage.local`，不设数量上限、不淘汰），其中的公开帖子数字按下文第 8 条与其他用户共享；扩展不会为此替你滚动页面，也不会额外请求 X。可随时在「设置 → 清空主页数据」删除本机数据。
@@ -90,7 +90,7 @@ FeedSieve（福滤娃）是 X（Twitter）扩展：黄框标注垃圾账号、�
 - X page content: tweet text, display names, bios, links — detection runs locally; bounded evidence from explicit actions may be uploaded as described below.
 - Detection results and actions: marks, blocks, unblocks, allowlist, local stats.
 - Your X following list: used as a per-user protection list and stored locally only. It is never uploaded as an allow or rescue vote.
-- Your X session credentials (ct0 / bearer): used only inside your browser, only when you click block/unblock, only against x.com itself. Never read, stored, or sent to FeedSieve or any third party.
+- Your X session credentials (ct0 / bearer): read from the page cookie only at the moment you click block/unblock, and sent only to x.com itself. Never stored, logged, or sent to FeedSieve or any third party.
 - Browsing history (which URLs you visit), direct messages, passwords: not collected. With "Join the global hot list" on, metrics of public posts you scroll past are uploaded as described in item 7 below; public post numbers of creator profiles you open are shared as described in item 8.
 - Public post metrics and public author profiles: view and engagement counts, post time, the first 1000 characters, author name, avatar URL and follower count of posts X already loaded while you browse, used locally for velocity, tier and the "Hot posts" list. Data from several X tabs is merged in the extension background and kept only in browser session memory (`storage.session`), cleared when the browser closes; the extension makes no extra requests to X for it.
 - Creator profile posts: for creator profiles you open on X, the extension keeps the public posts and public profile stats X already loaded while you browse (counts, post time, first 1000 characters, post type), so the "Profile" view can show their outliers and patterns. It is stored on this device (`storage.local`, no count limit and no eviction); its public post numbers are shared with other users as described in item 8 below. The extension never scrolls the page or makes extra requests to X for it. Clear the local copy any time under Settings → Clear profile data.
