@@ -8,6 +8,45 @@ import { MARK_ATTRIBUTE } from './page-state';
 import { ACTION_SLOT_CSS } from './action-slot';
 
 const STYLE_ELEMENT_ID = 'feedsieve-mark-styles';
+const THEME_ATTRIBUTE = 'data-feedsieve-theme';
+
+/**
+ * X 有 Default / Dim / Lights out 三档主题，和系统主题是独立的两套设置，
+ * 所以注入 UI 不能跟 prefers-color-scheme，只能读页面背景的亮度。
+ */
+function detectPageTheme(): 'light' | 'dark' {
+  const bg = getComputedStyle(document.body).backgroundColor;
+  const parts = bg.match(/\d+/g);
+  if (!parts || parts.length < 3) return 'light';
+  const [r = 0, g = 0, b = 0] = parts.slice(0, 3).map(Number);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.5 ? 'dark' : 'light';
+}
+
+/** 把当前 X 主题写进 <html>，样式表用属性选择器切换两套颜色。 */
+export function syncPageTheme(): void {
+  const theme = detectPageTheme();
+  if (document.documentElement.getAttribute(THEME_ATTRIBUTE) !== theme) {
+    document.documentElement.setAttribute(THEME_ATTRIBUTE, theme);
+  }
+}
+
+function watchPageTheme(): void {
+  let pending = false;
+  const schedule = () => {
+    if (pending) return;
+    pending = true;
+    requestAnimationFrame(() => {
+      pending = false;
+      syncPageTheme();
+    });
+  };
+  const observer = new MutationObserver(schedule);
+  for (const target of [document.documentElement, document.body]) {
+    if (target) observer.observe(target, { attributes: true, attributeFilter: ['style', 'class'] });
+  }
+  // X 切主题时也可能只改 <meta name="theme-color"> 或系统主题，兜一层。
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', schedule);
+}
 
 export function ensureStyles(): void {
   if (document.getElementById(STYLE_ELEMENT_ID)) {
@@ -264,6 +303,45 @@ export function ensureStyles(): void {
       color: #71767b;
       font-size: 11px;
     }
+    /* ---- 跟随 X 主题（Default / Dim / Lights out）的暗色覆盖 ----
+       Dim（#15202b）和 Lights out（#000）都算 dark；浮层类（hovercard、toast）
+       本来就是深色，不受影响。 */
+    html[${THEME_ATTRIBUTE}='dark'] [${MARK_ATTRIBUTE}] {
+      background-color: rgba(245, 158, 11, 0.12);
+    }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-badge,
+    html[${THEME_ATTRIBUTE}='dark'] .fs-tier,
+    html[${THEME_ATTRIBUTE}='dark'] .fs-allow { color: rgb(139, 152, 165); }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-allow:hover { background: rgba(139, 152, 165, 0.16); }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-block-now {
+      color: #fbbf24;
+      border-color: rgba(245, 158, 11, 0.5);
+    }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-block-now:hover:not(:disabled) {
+      background: rgba(245, 158, 11, 0.18);
+    }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-multiple { color: rgb(139, 152, 165); }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-multiple[data-fs-level='outlier'] {
+      color: #ffd400;
+      background: rgba(255, 173, 31, 0.2);
+    }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-profile-line,
+    html[${THEME_ATTRIBUTE}='dark'] .fs-profile-line > span + span::before {
+      color: rgb(139, 152, 165);
+    }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-profile-line .fs-profile-key { color: rgb(231, 233, 234); }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-velocity { color: #22d39b; }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-velocity[data-fs-level='hot'] {
+      background: rgba(255, 107, 107, 0.16);
+      color: #ff8a8a;
+    }
+    html[${THEME_ATTRIBUTE}='dark'] [data-fs-flash] { animation-name: fs-flash-dark; }
+    @keyframes fs-flash-dark {
+      0%, 30% { box-shadow: inset 0 0 0 2px rgba(245, 158, 11, 0.9); background-color: rgba(245, 158, 11, 0.16); }
+      100% { box-shadow: inset 0 0 0 2px rgba(245, 158, 11, 0); background-color: transparent; }
+    }
   `;
   document.documentElement.appendChild(style);
+  syncPageTheme();
+  watchPageTheme();
 }

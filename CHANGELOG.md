@@ -2,10 +2,15 @@
 
 本项目所有显著变更都记录在这个文件。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
-- 每个版本的详细工程记录见 [`docs/legacy/RELEASES.md`](docs/legacy/RELEASES.md)。
+- 每个版本的详细工程记录见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)。
 - 二进制产物见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)；正式用户请从 [Chrome 应用商店](https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph)接收更新。
 
 ## [Unreleased]
+
+### 深色模式
+
+- 面板与侧边栏跟随系统外观（`prefers-color-scheme`）：深色下纯黑背景、浅灰文字，语义色新增一套（警告、次要文字、AI 判定三档），数据色单独调过对比度。
+- 注入到 X 页面的标注（黄框、理由徽章、量级、流速、按钮）改跟 X 自己的主题（Default / Dim / Lights out），不再假设浅色：content script 读页面背景亮度写入 `data-feedsieve-theme`，切换主题时实时跟随。
 
 ## [0.12.1] — 2026-11-01
 

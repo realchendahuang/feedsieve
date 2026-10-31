@@ -25,7 +25,11 @@ import {
 import { getSelfHandle } from '../../../src/lib/community/following-allowlist';
 import { AppIcon, HelpIcon } from './shared';
 
-const TONE_COLOR = { ai: '#e5484d', mixed: '#d97706', human: '#00a36c' } as const;
+const TONE_COLOR = {
+  ai: 'var(--tone-ai)',
+  mixed: 'var(--tone-mixed)',
+  human: 'var(--tone-human)',
+} as const;
 
 const COPY = {
   zh: {

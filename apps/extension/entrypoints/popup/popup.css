@@ -5,7 +5,22 @@
    300px 下不断字、不重叠：长文本截断，按钮不换行，数字用等宽数字。
    ===================================================================== */
 :root {
-  color-scheme: light;
+  color-scheme: light dark;
+  /* 语义色：浅色为默认，深色在文件末尾的 prefers-color-scheme 块里整组覆盖 */
+  --bg: #fff;
+  --surface: #fff;
+  --surface-sunken: #f7f7f5;
+  --on-accent: #fff;
+  --warn-bg: #fbf3db;
+  --warn-tint: rgba(255, 173, 31, 0.16);
+  --warn-fg: #89632a;
+  --warn-fg-strong: #b26b00;
+  --muted-strong: rgb(83, 100, 113);
+  --tone-ai: #e5484d;
+  --tone-mixed: #d97706;
+  --tone-human: #00a36c;
+  --blue-tint: rgba(29, 155, 240, 0.08);
+  --blue-strong: #1a8cd8;
   --ink: #37352f;
   --ink-soft: #55534e;
   --muted: #787774;
@@ -57,7 +72,7 @@ a {
 }
 
 body {
-  background: #fff;
+  background: var(--surface);
   color: var(--ink);
   font-size: 14px;
   line-height: 1.5;
@@ -159,8 +174,8 @@ ol {
   height: 16px;
   padding: 0 4px;
   border-radius: 999px;
-  background: #fbf3db;
-  color: #89632a;
+  background: var(--warn-bg);
+  color: var(--warn-fg);
   font-size: 10.5px;
   font-weight: 600;
   line-height: 16px;
@@ -180,7 +195,7 @@ ol {
   overflow-y: auto;
   padding: 12px 16px 16px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(55, 53, 47, 0.16) transparent;
+  scrollbar-color: var(--line-strong) transparent;
 }
 
 .view {
@@ -266,7 +281,7 @@ ol {
   padding: 0 14px;
   border: 0;
   background: #191919;
-  color: #fff;
+  color: var(--on-accent);
   font-size: 13px;
   font-weight: 600;
 }
@@ -279,7 +294,7 @@ ol {
   height: 30px;
   padding: 0 11px;
   border: 1px solid var(--line-strong);
-  background: #fff;
+  background: var(--surface);
   font-size: 13px;
 }
 
@@ -352,7 +367,7 @@ ol {
 }
 
 .segmented button.is-selected {
-  background: #fff;
+  background: var(--surface);
   color: var(--ink);
   font-weight: 600;
   box-shadow:
@@ -378,7 +393,7 @@ ol {
   width: 28px;
   height: 16px;
   border-radius: 999px;
-  background: rgba(55, 53, 47, 0.2);
+  background: var(--line-strong);
   transition: background-color 140ms ease;
 }
 
@@ -390,7 +405,7 @@ ol {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--surface);
   box-shadow: 0 1px 2px rgba(15, 15, 15, 0.2);
   transition: transform 140ms ease;
 }
@@ -436,7 +451,7 @@ ol {
   padding: 6px 9px;
   border-radius: 6px;
   background: #2f2f2f;
-  color: #fff;
+  color: var(--on-accent);
   font-size: 12px;
   line-height: 1.5;
   white-space: pre-line;
@@ -455,7 +470,7 @@ input:not([type]),
   padding: 0 10px;
   border: 1px solid var(--line-strong);
   border-radius: 6px;
-  background: #fff;
+  background: var(--surface);
   color: var(--ink);
   font-size: 13px;
 }
@@ -543,7 +558,7 @@ input:not([type]):focus,
 .loading-list span {
   height: 44px;
   border-radius: 6px;
-  background: linear-gradient(90deg, var(--fill) 25%, rgba(55, 53, 47, 0.03) 50%, var(--fill) 75%);
+  background: linear-gradient(90deg, var(--fill) 25%, var(--hover) 50%, var(--fill) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.2s ease-in-out infinite;
 }
@@ -564,7 +579,7 @@ input:not([type]):focus,
   padding: 8px 12px;
   border-radius: 8px;
   background: #2f2f2f;
-  color: #fff;
+  color: var(--on-accent);
   font-size: 13px;
   box-shadow: 0 6px 20px rgba(15, 15, 15, 0.2);
   transform: translateX(-50%);
@@ -582,7 +597,7 @@ input:not([type]):focus,
   margin: 4px 0 -16px;
   padding: 10px 0 16px;
   border-top: 1px solid var(--line);
-  background: #fff;
+  background: var(--surface);
 }
 
 .action-bar .secondary-button:only-child {
@@ -624,13 +639,13 @@ input:not([type]):focus,
 }
 
 .velocity-tag[data-fs-level='hot'] {
-  background: rgba(244, 33, 46, 0.1);
+  background: var(--danger-bg);
   color: var(--red);
 }
 
 .velocity-tag[data-fs-level='rocket'] {
   background: var(--red);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 /* ---------- 热帖 ---------- */
@@ -711,7 +726,7 @@ input:not([type]):focus,
 
 .post-rank.is-top {
   background: var(--red);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .rank-trend {
@@ -728,7 +743,7 @@ input:not([type]):focus,
 .rank-trend.is-new {
   padding: 0 5px;
   border-radius: 999px;
-  background: rgba(35, 131, 226, 0.12);
+  background: var(--blue-tint);
   color: var(--blue);
   line-height: 16px;
 }
@@ -741,7 +756,7 @@ input:not([type]):focus,
   padding: 0 9px;
   border: 1px solid var(--line-strong);
   border-radius: 999px;
-  background: #fff;
+  background: var(--surface);
   color: var(--muted);
   font-size: 12px;
   white-space: nowrap;
@@ -779,8 +794,8 @@ input:not([type]):focus,
   margin: 0 0 4px;
   border: 0;
   border-radius: 999px;
-  background: #1d9bf0;
-  color: #fff;
+  background: var(--blue);
+  color: var(--on-accent);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -789,7 +804,7 @@ input:not([type]):focus,
 }
 
 .new-posts-bar:hover {
-  background: #1a8cd8;
+  background: var(--blue-strong);
 }
 
 /* 回复机会：卡片下方一行理由 + 去回复按钮（和正文左对齐） */
@@ -817,7 +832,7 @@ input:not([type]):focus,
   border: 0;
   border-radius: 999px;
   background: #0f1419;
-  color: #fff;
+  color: var(--on-accent);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -873,7 +888,7 @@ input:not([type]):focus,
   padding: 0 0 10px;
   border: 0;
   background: none;
-  color: #1d9bf0;
+  color: var(--blue);
   font-size: 13px;
   cursor: pointer;
 }
@@ -936,7 +951,7 @@ input:not([type]):focus,
 }
 
 .post:hover {
-  background: rgba(15, 20, 25, 0.03);
+  background: var(--fill);
 }
 
 /* 新进来的帖子：头像左侧一个蓝点，鼠标离开列表后清掉 */
@@ -968,7 +983,7 @@ input:not([type]):focus,
 .post:focus-visible {
   outline: 2px solid #1d9bf0;
   outline-offset: -2px;
-  background: rgba(29, 155, 240, 0.04);
+  background: var(--blue-tint);
 }
 
 .post.is-new::before {
@@ -979,7 +994,7 @@ input:not([type]):focus,
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #1d9bf0;
+  background: var(--blue);
 }
 
 .post-avatar {
@@ -1036,7 +1051,7 @@ input:not([type]):focus,
   flex: 0 1 auto;
   min-width: 2em;
   overflow: hidden;
-  color: #0f1419;
+  color: var(--ink);
   font-weight: 700;
   text-overflow: ellipsis;
 }
@@ -1048,7 +1063,7 @@ input:not([type]):focus,
 
 .post-verified {
   flex: none;
-  color: #1d9bf0;
+  color: var(--blue);
 }
 
 .post-handle {
@@ -1084,7 +1099,7 @@ input:not([type]):focus,
   display: -webkit-box;
   margin-top: 2px;
   overflow: hidden;
-  color: #0f1419;
+  color: var(--ink);
   font-size: 15px;
   line-height: 20px;
   white-space: pre-wrap;
@@ -1098,7 +1113,7 @@ input:not([type]):focus,
   width: 100%;
   max-height: 220px;
   margin-top: 10px;
-  border: 1px solid rgb(207, 217, 222);
+  border: 1px solid var(--line-strong);
   border-radius: 14px;
   object-fit: cover;
 }
@@ -1109,7 +1124,7 @@ input:not([type]):focus,
   justify-content: space-between;
   max-width: 425px;
   margin-top: 10px;
-  color: rgb(83, 100, 113);
+  color: var(--muted-strong);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
@@ -1210,7 +1225,7 @@ input:not([type]):focus,
   height: 16px;
   border: 1.5px solid var(--line-strong);
   border-radius: 4px;
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .check input:checked + span {
@@ -1276,8 +1291,8 @@ input:not([type]):focus,
   flex: none;
   padding: 1px 5px;
   border-radius: 4px;
-  background: #fbf3db;
-  color: #89632a;
+  background: var(--warn-bg);
+  color: var(--warn-fg);
   font-size: 11px;
   font-weight: 600;
 }
@@ -1690,7 +1705,7 @@ input:not([type]):focus,
 .profile-sub {
   display: flex;
   gap: 4px;
-  color: rgb(83, 100, 113);
+  color: var(--muted-strong);
   font-size: 14px;
   white-space: nowrap;
 }
@@ -1700,7 +1715,7 @@ input:not([type]):focus,
   flex-wrap: wrap;
   gap: 2px 14px;
   margin: 10px 0 0;
-  color: rgb(83, 100, 113);
+  color: var(--muted-strong);
   font-size: 13px;
 }
 
@@ -1789,7 +1804,7 @@ input:not([type]):focus,
 
 .kpi-card .is-accent dd,
 .kpi-card .is-accent dd small {
-  color: #b26b00;
+  color: var(--warn-fg-strong);
 }
 
 /* 热帖页的概况：同一种卡片，字号小一档 */
@@ -1831,7 +1846,7 @@ input:not([type]):focus,
 .multiple-tag {
   flex: none;
   margin-left: auto;
-  color: rgb(83, 100, 113);
+  color: var(--muted-strong);
   font-size: 13px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -1841,8 +1856,8 @@ input:not([type]):focus,
   height: 18px;
   padding: 0 7px;
   border-radius: 999px;
-  background: rgba(255, 173, 31, 0.16);
-  color: #b26b00;
+  background: var(--warn-tint);
+  color: var(--warn-fg-strong);
   line-height: 18px;
 }
 
@@ -2063,7 +2078,7 @@ input:not([type]):focus,
 .ai-level {
   padding: 3px 10px;
   border-radius: 999px;
-  color: #fff;
+  color: var(--on-accent);
   font-size: 13px;
   font-weight: 700;
   white-space: nowrap;
@@ -2082,7 +2097,7 @@ input:not([type]):focus,
   height: 12px;
   margin: -6px 0 0 -6px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--surface);
   box-shadow: 0 0 0 2px var(--ink);
 }
 .ai-roast {
@@ -2283,7 +2298,7 @@ input:not([type]):focus,
 
 .write-warn {
   padding: 6px 0;
-  color: #b45309;
+  color: var(--warn-fg-strong);
 }
 
 .write-slots {
@@ -2307,7 +2322,7 @@ input:not([type]):focus,
   padding: 8px 10px;
   border: 1px solid var(--line-strong);
   border-radius: 6px;
-  background: #fff;
+  background: var(--surface);
   color: var(--ink);
   font: inherit;
   font-size: 13px;
@@ -2329,7 +2344,7 @@ input:not([type]):focus,
 }
 
 .write-over {
-  color: #b45309;
+  color: var(--warn-fg-strong);
 }
 
 .write-draft {
@@ -2356,4 +2371,44 @@ input:not([type]):focus,
 
 .write-backup .row-label > span:first-child {
   max-width: 180px;
+}
+
+/* =====================================================================
+   深色模式：跟随系统 / 浏览器外观（prefers-color-scheme）
+   X 自己的三档主题（Default / Dim / Lights out）与系统无关，注入到页面的
+   徽章由 content/styles.ts 单独跟 X 的主题走，不在这里。
+   ===================================================================== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #000;
+    --surface: #000;
+    --surface-sunken: #0a0a0a;
+    --on-accent: #fff;
+    --ink: #e7e9ea;
+    --ink-soft: #c9ccd1;
+    --muted: #8b98a5;
+    --faint: #6b7785;
+    --line: rgba(255, 255, 255, 0.1);
+    --line-strong: rgba(255, 255, 255, 0.18);
+    --hover: rgba(255, 255, 255, 0.06);
+    --pressed: rgba(255, 255, 255, 0.1);
+    --fill: rgba(255, 255, 255, 0.08);
+    --blue: #4aa8f0;
+    --blue-strong: #6bbcf7;
+    --blue-tint: rgba(29, 155, 240, 0.14);
+    --green: #22d39b;
+    --red: #ff6b6b;
+    --danger-bg: rgba(244, 33, 46, 0.18);
+    --danger-fg: #ff9aa0;
+    --success: #2ecc9b;
+    --warn-bg: rgba(255, 173, 31, 0.16);
+    --warn-tint: rgba(255, 173, 31, 0.22);
+    --warn-fg: #fbbf24;
+    --warn-fg-strong: #ffd400;
+    --muted-strong: rgb(139, 152, 165);
+    --tone-ai: #ff6b6b;
+    --tone-mixed: #fbbf24;
+    --tone-human: #22d39b;
+  }
 }
