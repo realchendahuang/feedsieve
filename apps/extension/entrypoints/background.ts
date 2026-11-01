@@ -191,6 +191,21 @@ export default defineBackground(() => {
         () => ({ opened: false }),
       );
     }
+    if (msg?.type === 'feedsieve:open-tab') {
+      // 内容脚本请求新开标签（例如 AI 味检测去回复页，不跳走当前页）。
+      // 只允许 x.com 的回复页，避免变成任意 URL 跳板。
+      const url = (msg as { url?: unknown }).url;
+      if (
+        typeof url !== 'string' ||
+        !/^https:\/\/x\.com\/[a-z0-9_]+\/with_replies(?:\?[^#]*)?$/i.test(url)
+      ) {
+        return Promise.resolve({ ok: false });
+      }
+      return browser.tabs.create({ url, active: true }).then(
+        () => ({ ok: true }),
+        () => ({ ok: false }),
+      );
+    }
     if (msg?.type === 'feedsieve:hot-posts') {
       return sharedInsight.hotList(isHotSort(msg.sort) ? msg.sort : 'heat');
     }

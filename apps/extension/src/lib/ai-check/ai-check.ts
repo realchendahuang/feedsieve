@@ -603,14 +603,19 @@ export function createAiCheck(deps: {
   }
 
   /** 点机器人图标 / 标签：有结论直接出报告，没有就去这个人的回复页测 */
+  /** 在他的回复页开测：新标签打开，不动当前页（用户可能正在看评论或详情）。 */
+  function openInNewTab(handle: string, force: boolean): void {
+    const url = `https://x.com/${handle}/with_replies?fs_ai=${handle}${force ? '&force=1' : ''}`;
+    void deps.send({ type: 'feedsieve:open-tab', url }).catch(() => undefined);
+  }
+
   async function openFor(handle: string): Promise<void> {
     const k = known.has(handle) ? known.get(handle) : await lookup(handle);
     if (judged(k) && !k.expired) {
       showKnown(handle, k);
       return;
     }
-    sessionStorage.setItem(AUTOSTART_KEY, handle);
-    location.assign(`/${handle}/with_replies`);
+    openInNewTab(handle, false);
   }
 
   // ---- 入口一：主页 Tab 栏的「AI 味」Tab ----
@@ -697,8 +702,10 @@ export function createAiCheck(deps: {
     const replies = repliesTab(handle);
     if (replies) replies.click();
     else {
-      sessionStorage.setItem(AUTOSTART_KEY, handle);
-      location.assign(`/${handle}/with_replies`);
+      pending = null;
+      pendingForce = false;
+      closePanel();
+      openInNewTab(handle, force);
     }
   }
   let pendingForce = false;
@@ -1187,8 +1194,10 @@ export function createAiCheck(deps: {
         return;
       }
     }
-    sessionStorage.setItem(AUTOSTART_KEY, force ? `${handle}!` : handle);
-    location.assign(`/${handle}/with_replies`);
+    // 不在这个人的回复页：新开标签，别把当前页面跳走（用户可能正在看评论或详情）。
+    // 新标签带 fs_ai=<handle>，回复页加载后自动开始检测。
+    openInNewTab(handle, force);
+    closePanel();
   }
 
   const onPanelMessage = (message: unknown): Promise<unknown> | undefined => {
@@ -1230,6 +1239,18 @@ export function createAiCheck(deps: {
       closePanel();
     }
     if (profile?.tab !== 'replies') return;
+    // 新标签打开时带 fs_ai=<handle>：自动开始检测，然后把参数从地址栏清掉。
+    const params = new URLSearchParams(location.search);
+    const autoFromUrl = params.get('fs_ai')?.toLowerCase();
+    if (autoFromUrl && autoFromUrl === profile.handle) {
+      const force = params.get('force') === '1';
+      params.delete('fs_ai');
+      params.delete('force');
+      const qs = params.toString();
+      history.replaceState(null, '', location.pathname + (qs ? `?${qs}` : ''));
+      void run(profile.handle, force);
+      return;
+    }
     const auto = sessionStorage.getItem(AUTOSTART_KEY);
     const autoHandle = auto?.replace(/!$/, '');
     if (autoHandle === profile.handle || pending === profile.handle) {
