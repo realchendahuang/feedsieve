@@ -1,0 +1,63 @@
+name: 推荐白名单申请
+description: 申请把自己的账号加入「永不标注」推荐白名单
+labels: [whitelist-request]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        白名单是**金刚防护罩**：名单内账号永远不会被标注或拉黑，优先级高于一切检测来源。
+
+        所以收录很克制——只收能公开问责的正常账号，不收匿名或批量提交。先自查：
+        如果你只是偶尔被误标，直接在扩展里点「认为误判」就够了，不需要开这个 issue。
+
+        提交后由维护者在本地手动拉取（`scripts/ingest-whitelist-issues.mjs`），
+        审核通过才会写入 [community/lists/whitelist.yaml](https://github.com/realchendahuang/feedsieve/blob/main/community/lists/whitelist.yaml)，
+        下一次快照生效。
+
+  - type: input
+    id: handle
+    attributes:
+      label: X 账号 handle
+      description: @ 后面的用户名，不带 @
+      placeholder: example_account
+    validations:
+      required: true
+
+  - type: input
+    id: name
+    attributes:
+      label: 显示昵称
+      description: 可留空，留空按 X 当前昵称展示
+      placeholder: 张三
+
+  - type: input
+    id: avatar_url
+    attributes:
+      label: X 公开头像链接
+      description: 必须是 pbs.twimg.com/profile_images/ 开头的公开链接，可留空
+      placeholder: https://pbs.twimg.com/profile_images/.../xxx_400x400.jpg
+
+  - type: textarea
+    id: note
+    attributes:
+      label: 入册说明 / 简介
+      description: 公开问责用，会随名单快照公开。4-240 字，不要带引号
+      placeholder: |
+        一句话说清你是谁、做什么的、为什么应该被豁免
+    validations:
+      required: true
+
+  - type: input
+    id: x_user_id
+    attributes:
+      label: X 数字 ID
+      description: 能填就填：名单以数字 ID 识别，改名后仍能找到你。可从账号页链接或第三方查询工具取得
+      placeholder: "1234567890"
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: 确认
+      options:
+        - label: 我确认这是本人账号，且上面的资料都来自公开主页
+          required: true
