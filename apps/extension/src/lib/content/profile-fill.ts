@@ -2,18 +2,15 @@
  * 主页补全：用户点「补全」后向下滚动，让 X 自己加载更多帖子。
  *
  * 只由用户显式触发（主页洞察面板工具条上的图标），不自动滚；随时可以再点一次停止。
- * 一次翻 8–12 屏，然后等 X 把这一批加载出来（最多等 1.5 秒，加载快时立刻继续），
- * 一直滚到没有新帖子为止（连续 5 批没有增长），或到 30 批的保险上限。
+ * 每一步直接滚到当前页面底部（等同按 End），等 X 加载出下一批帖子再继续；加载快时
+ * 几乎不停，最多等 1.2 秒。一直到底（连续 4 批没有新内容），或到 40 批的保险上限。
  */
 import { tweetSelectors } from '@feedsieve/x-adapter';
 
-export const PROFILE_FILL_MAX_STEPS = 30;
-/** 每步翻多少：8–12 屏（视口高度 × 8–12，随机），一次甩很远。 */
-export const PROFILE_FILL_STEP_MIN_RATIO = 8;
-export const PROFILE_FILL_STEP_MAX_RATIO = 12;
-/** 等新内容时每 150ms 看一次；最多等 1.5 秒。 */
+export const PROFILE_FILL_MAX_STEPS = 40;
+/** 等新内容时每 150ms 看一次；最多等 1.2 秒。 */
 export const PROFILE_FILL_POLL_MS = 150;
-export const PROFILE_FILL_WAIT_MS = 1_500;
+export const PROFILE_FILL_WAIT_MS = 1_200;
 
 export type ProfileFillStop = 'user' | 'limit' | 'stagnant' | 'not-profile';
 
@@ -32,12 +29,26 @@ export function countArticles(): number {
   return document.querySelectorAll(tweetSelectors.article).length;
 }
 
-/** 每一步翻多远：8–12 屏随机，一次甩一大截。 */
-function stepDistance(random: () => number): number {
-  const ratio =
-    PROFILE_FILL_STEP_MIN_RATIO +
-    random() * (PROFILE_FILL_STEP_MAX_RATIO - PROFILE_FILL_STEP_MIN_RATIO);
-  return Math.round(window.innerHeight * ratio);
+/**
+ * 当前页面上能看到的帖子 ID。
+ * X 的列表会回收 DOM（滚过去之后旧 article 会被移走），所以不能用 article 数量判断
+ * 「这一批加载没有」——只能把滚动过程中见到的 ID 累积起来看有没有新面孔。
+ */
+export function collectPostIds(): Set<string> {
+  const ids = new Set<string>();
+  for (const article of document.querySelectorAll(tweetSelectors.article)) {
+    const href = article
+      .querySelector('a[href*="/status/"]')
+      ?.getAttribute('href');
+    const match = href?.match(/\/status\/(\d+)/);
+    if (match) ids.add(match[1]!);
+  }
+  return ids;
+}
+
+/** 直接滚到页面底部（等同按 End 键），让 X 加载下一批。 */
+function scrollToBottom(): void {
+  window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
 }
 
 export function createProfileFill(
@@ -55,7 +66,8 @@ export function createProfileFill(
     }
     running = true;
     stopRequested = false;
-    const before = countArticles();
+    const seen = collectPostIds();
+    const beforeCount = seen.size;
     let stagnant = 0;
     let stopped: ProfileFillStop = 'limit';
     try {
@@ -65,19 +77,22 @@ export function createProfileFill(
           break;
         }
         const beforeHeight = document.documentElement.scrollHeight;
-        const beforeCount = countArticles();
-        // 一次翻 8–12 屏，像人快速往下甩
-        window.scrollBy({ top: stepDistance(random), behavior: 'smooth' });
+        // 直接到底，等 X 加载完这一批再继续
+        scrollToBottom();
         // 等 X 把这一批加载出来：加载快就立刻继续，最多等 1.5 秒
         let grew = false;
         const maxPolls = Math.ceil(PROFILE_FILL_WAIT_MS / PROFILE_FILL_POLL_MS);
         for (let poll = 0; poll < maxPolls; poll++) {
           await sleep(PROFILE_FILL_POLL_MS);
           if (stopRequested) break;
-          if (
-            document.documentElement.scrollHeight > beforeHeight ||
-            countArticles() > beforeCount
-          ) {
+          // 新帖子 ID 出现（或页面变长）就算这一批有收获
+          for (const id of collectPostIds()) {
+            if (!seen.has(id)) {
+              seen.add(id);
+              grew = true;
+            }
+          }
+          if (grew || document.documentElement.scrollHeight > beforeHeight) {
             grew = true;
             break;
           }
@@ -86,9 +101,9 @@ export function createProfileFill(
           stopped = 'user';
           break;
         }
-        // 连续 5 批没有增长就当作到底
+        // 连续 4 批没有增长就当作到底
         stagnant = grew ? 0 : stagnant + 1;
-        if (stagnant >= 5) {
+        if (stagnant >= 4) {
           stopped = 'stagnant';
           break;
         }
@@ -96,7 +111,7 @@ export function createProfileFill(
     } finally {
       running = false;
     }
-    return { ok: true, added: countArticles() - before, stopped };
+    return { ok: true, added: Math.max(0, seen.size - beforeCount), stopped };
   }
 
   return {

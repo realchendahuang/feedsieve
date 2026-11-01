@@ -8,10 +8,15 @@ afterEach(() => {
   history.replaceState(null, '', '/');
 });
 
+let articleSeq = 0;
+
 function addArticles(count: number): void {
   for (let i = 0; i < count; i++) {
     const article = document.createElement('article');
     article.setAttribute('data-testid', 'tweet');
+    const link = document.createElement('a');
+    link.setAttribute('href', `/alice/status/${++articleSeq}`);
+    article.appendChild(link);
     document.body.appendChild(article);
   }
 }
@@ -24,10 +29,10 @@ describe('profile-fill', () => {
     expect(isProfilePath('/bob', 'alice')).toBe(false);
   });
 
-  it('分步慢慢滚，没有新帖子就停', async () => {
+  it('直接滚到底，没有新帖子就停', async () => {
     history.replaceState(null, '', '/alice');
     addArticles(2);
-    const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => undefined);
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
     let round = 0;
     const sleep = vi.fn(async () => {
       round += 1;
@@ -37,12 +42,8 @@ describe('profile-fill', () => {
     const fill = createProfileFill({ sleep, random: () => 0.5 });
     const result = await fill.fill('alice');
     expect(result).toEqual({ ok: true, added: 3, stopped: 'stagnant' });
-    expect(scrollBy).toHaveBeenCalled();
-    // 每一步翻 8–12 屏，一次甩一大截
-    for (const call of scrollBy.mock.calls) {
-      const top = (call[0] as { top?: number }).top ?? 0;
-      expect(top).toBeGreaterThan(window.innerHeight * 7.5);
-      expect(top).toBeLessThan(window.innerHeight * 12.5);
+    expect(scrollTo).toHaveBeenCalled();
+    for (const call of scrollTo.mock.calls) {
       expect(call[0]).toMatchObject({ behavior: 'smooth' });
     }
   });
@@ -50,7 +51,7 @@ describe('profile-fill', () => {
   it('调用 stop 后下一步就退出', async () => {
     history.replaceState(null, '', '/alice');
     addArticles(1);
-    vi.spyOn(window, 'scrollBy').mockImplementation(() => undefined);
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
     const sleep = vi.fn(async () => {
       fill.stop();
     });
@@ -62,10 +63,10 @@ describe('profile-fill', () => {
 
   it('不在这个博主的主页时不滚动', async () => {
     history.replaceState(null, '', '/bob');
-    const scrollBy = vi.spyOn(window, 'scrollBy').mockImplementation(() => undefined);
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
     const fill = createProfileFill({ sleep: async () => undefined, random: () => 0.5 });
     const result = await fill.fill('alice');
     expect(result).toEqual({ ok: false, added: 0, stopped: 'not-profile' });
-    expect(scrollBy).not.toHaveBeenCalled();
+    expect(scrollTo).not.toHaveBeenCalled();
   });
 });

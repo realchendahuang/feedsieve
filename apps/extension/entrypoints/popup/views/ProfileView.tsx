@@ -599,7 +599,9 @@ export default function ProfileView({ language, notify, sendToXPage }: ProfileVi
       setEntry(next);
       setNow(Date.now());
       if (result?.ok) {
-        notify(result.added && result.added > 0 ? t.profileFillDone(result.added) : t.profileFillNone);
+        if (result.added && result.added > 0) notify(t.profileFillDone(result.added));
+        else if (result.stopped === 'stagnant') notify(t.profileFillEnd);
+        else notify(t.profileFillNone);
       } else if (result?.stopped === 'not-profile') {
         notify(t.profileFillNotProfile);
       } else {
