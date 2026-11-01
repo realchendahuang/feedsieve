@@ -1,6 +1,6 @@
 # Firefox 支持
 
-Firefox 版与 Chrome 版共用同一套代码，构建目标为 MV3。当前状态：**可构建、可临时加载、界面已验证；真实 X 账号验收通过后，用官方 ID `feedsieve-official@feedsieve.win` 提交 AMO**。
+Firefox 版与 Chrome 版共用同一套代码，构建目标为 MV3。当前状态：**可构建、可临时加载、界面已验证；官方 AMO 条目 [FeedSieve 福滤娃](https://addons.mozilla.org/zh-CN/firefox/addon/feedsieve-fuluwa/) 已提交 0.13.2，等待审核**。
 
 > **AMO 上的 `feedsieve` 条目不是本项目发布的。** 2026-09-07，AMO 账号「AI小鲸鱼」在注册 19 分钟后用 `feedsieve@feedsieve.local` 上架了 0.8.2；该 ID 和条目属于对方，不能复用。`feedsieve@feedsieve.win` 也被对方占成了非公开条目（上传时报重复 ID），官方改用 `feedsieve-official@feedsieve.win` 另建条目；不举报对方，靠官方条目、README 和审核说明区分。详见下方「AMO 上架」。
 
@@ -72,6 +72,8 @@ AMO 上的 <https://addons.mozilla.org/zh-CN/firefox/addon/feedsieve/>（0.8.2�
 ### 官方版提交
 
 上架文案、字段、数据收集勾选和审核员说明见 [`AMO-LISTING.md`](AMO-LISTING.md)。
+
+2026-11-02 已提交 0.13.2：<https://addons.mozilla.org/zh-CN/firefox/addon/feedsieve-fuluwa/>，状态「等待审核」。审核通过后 AMO 自动发布，已装 0.8.2 的第三方条目用户不会自动迁移到官方条目。
 
 发版前：
 
