@@ -3,19 +3,22 @@
  * GET /v1/ai-accounts/list：所有可公开的 AI / 疑似账号，扩展同步到本机，用来在评论区标记 / 折叠。
  *
  * 不调用任何第三方、不花 token、不计入判定额度，边缘可缓存（所以不按请求人区分）。
- * 可公开 = 已被第二个独立安装印证（confirmed）或社区投票进了名单，且不在复核中。
+ * 公开规则（投票 + Jev，不再有维护者复核）：
+ * - AI 票 ≥ 3 且领先 → 公开 AI 结论（有 Jev 分就带分数）；
+ * - 真人票 ≥ 3 且领先 → 公开「真人」，从 AI 名单撤下；
+ * - 两边都 ≥ 3 且持平 → contested，只显示票数；
+ * - 票数都不够时，Jev 被第二个独立安装确认（confirmed）才公开。
  * 单人未确认的结论这里只返回 pending=true，不返回分数：提交者本人的结果存在他的扩展里。
- * 复核中 = 「是真人」票 ≥ 3 或有已验证的申诉，且维护者还没复核：暂停公开展示。
  */
-import { and, eq, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { getDb } from '../db/client';
-import { aiAccountVerdicts, aiAccountVotes, applications } from '../db/schema';
+import { aiAccountVerdicts, aiAccountVotes } from '../db/schema';
 import { parseRhythm, type VerdictRhythm } from './check';
 import type { AiVerdict } from './evidence';
 import { AI_LIST_MIN_VOTES, tallyVotes, type AiVoteTally } from './vote';
 
 const HANDLE = /^[a-z0-9_]{1,15}$/;
-/** 「是真人」票达到这个数就暂停公开展示，进维护者复核队列 */
+/** 旧后台队列的「真人票」阈值；公开结果已不再依赖维护者复核 */
 export const REVIEW_HUMAN_VOTES = 3;
 
 export interface AiLookupValue {
@@ -32,26 +35,13 @@ export interface AiLookupValue {
   public: boolean;
   /** 有人测过但还没被第二个人印证：不返回分数 */
   pending: boolean;
-  /** 「是真人」票够了或有申诉，等维护者复核：暂停公开 */
+  /** 「是真人」票和 AI 票都够且持平：只显示票数 */
+  contested: boolean;
+  /** 旧字段，保留给旧版扩展；新逻辑恒为 false */
   under_review: boolean;
-  /** 维护者已复核过当前结论 */
+  /** 维护者是否手动处理过（仅保留信息，不再影响公开状态） */
   reviewed: boolean;
   votes: Omit<AiVoteTally, 'handle'>;
-}
-
-async function hasOpenAppeal(env: Cloudflare.Env, handle: string): Promise<boolean> {
-  const rows = await getDb(env)
-    .select({ id: applications.id })
-    .from(applications)
-    .where(
-      and(
-        eq(applications.handle, handle),
-        eq(applications.kind, 'appeal'),
-        eq(applications.status, 'verified'),
-      ),
-    )
-    .limit(1);
-  return rows.length > 0;
 }
 
 export async function lookupAiAccount(
@@ -61,7 +51,7 @@ export async function lookupAiAccount(
 ): Promise<AiLookupValue | null> {
   const handle = rawHandle.trim().replace(/^@/, '').toLowerCase();
   if (!HANDLE.test(handle)) return null;
-  const [[row], tally, appeal] = await Promise.all([
+  const [[row], tally] = await Promise.all([
     getDb(env)
       .select({
         verdict: sql<AiVerdict>`${aiAccountVerdicts.verdict}`,
@@ -76,25 +66,41 @@ export async function lookupAiAccount(
       .from(aiAccountVerdicts)
       .where(eq(aiAccountVerdicts.handle, handle)),
     tallyVotes(env, handle),
-    hasOpenAppeal(env, handle),
   ]);
   const nowS = Math.floor(now / 1000);
-  const reviewed = row?.reviewedAt != null;
-  const underReview = !reviewed && (tally.human_count >= REVIEW_HUMAN_VOTES || appeal);
-  const isPublic = !!row && (row.confirmed === 1 || tally.listed || reviewed) && !underReview;
+  const aiWin = tally.ai_count >= AI_LIST_MIN_VOTES && tally.ai_count > tally.human_count;
+  const humanWin = tally.human_count >= AI_LIST_MIN_VOTES && tally.human_count > tally.ai_count;
+  const contested =
+    tally.ai_count >= AI_LIST_MIN_VOTES &&
+    tally.human_count >= AI_LIST_MIN_VOTES &&
+    tally.ai_count === tally.human_count;
+  const jevAi = row?.verdict === 'ai' || row?.verdict === 'suspect';
+  let verdict: AiVerdict | null = null;
+  let score: number | null = null;
+  if (!contested && humanWin) {
+    verdict = 'human';
+  } else if (!contested && aiWin) {
+    verdict = jevAi ? row!.verdict : 'ai';
+    score = jevAi ? row!.score : null;
+  } else if (!contested && row?.confirmed === 1 && row.verdict !== 'insufficient') {
+    verdict = row.verdict;
+    score = jevAi ? row.score : null;
+  }
+  const isPublic = verdict !== null;
   return {
     handle,
-    verdict: isPublic ? row.verdict : null,
-    score: isPublic ? row.score : null,
-    reply_count: isPublic ? row.replyCount : 0,
-    rhythm: isPublic ? parseRhythm(row.rhythm) : null,
+    verdict,
+    score: isPublic ? score : null,
+    reply_count: isPublic && verdict !== 'human' ? (row?.replyCount ?? 0) : 0,
+    rhythm: isPublic && verdict !== 'human' && row ? parseRhythm(row.rhythm) : null,
     judged_at: row?.judgedAt ?? null,
     expires_at: row?.expiresAt ?? null,
     expired: row ? row.expiresAt <= nowS : false,
     public: isPublic,
-    pending: !!row && !isPublic && !underReview,
-    under_review: underReview,
-    reviewed,
+    pending: !!row && !isPublic && !contested,
+    contested,
+    under_review: false,
+    reviewed: row?.reviewedAt != null,
     votes: { ai_count: tally.ai_count, human_count: tally.human_count, listed: tally.listed },
   };
 }
@@ -103,7 +109,7 @@ export async function lookupAiAccount(
 export type AiListEntry = [string, number | null, 0 | 1];
 
 /**
- * 可公开的 AI 一侧账号（ai / suspect，未过期）+ 社区投票进名单的账号。复核中的不下发。
+ * 可公开的 AI 一侧账号（ai / suspect，未过期）+ 社区投票进名单的账号。社区认为真人/争议的不下发。
  * 按 handle 排序（collate "C"），同一批数据输出稳定，边缘缓存与 ETag 才有意义。
  */
 export async function listAiAccounts(
@@ -132,17 +138,11 @@ export async function listAiAccounts(
     from ${aiAccountVerdicts} v
     full outer join ${tallies} on t.handle = v.handle
     where
-      (v.reviewed_at is not null or coalesce(t.human, 0) < ${REVIEW_HUMAN_VOTES})
-      and not exists (
-        select 1 from ${applications} a
-        where a.handle = coalesce(v.handle, t.handle) and a.kind = 'appeal' and a.status = 'verified'
-          and v.reviewed_at is null
-      )
+      -- 真人票 ≥ 3 且不落后：社区认为真人（或争议），不进 AI 名单
+      not (coalesce(t.human, 0) >= ${AI_LIST_MIN_VOTES} and coalesce(t.human, 0) >= coalesce(t.ai, 0))
       and (
-        (v.verdict in ('ai', 'suspect') and v.expires_at > ${nowS}
-          and (v.confirmed = 1 or v.reviewed_at is not null
-               or (coalesce(t.ai, 0) >= ${AI_LIST_MIN_VOTES} and coalesce(t.ai, 0) > coalesce(t.human, 0))))
-        or (v.handle is null and coalesce(t.ai, 0) >= ${AI_LIST_MIN_VOTES} and coalesce(t.ai, 0) > coalesce(t.human, 0))
+        (v.verdict in ('ai', 'suspect') and v.expires_at > ${nowS} and v.confirmed = 1)
+        or (coalesce(t.ai, 0) >= ${AI_LIST_MIN_VOTES} and coalesce(t.ai, 0) > coalesce(t.human, 0))
       )
     order by coalesce(v.handle, t.handle) collate "C"
   `);

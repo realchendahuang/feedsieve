@@ -72,6 +72,8 @@ export interface AiLookupValue {
   expired: boolean;
   public?: boolean;
   pending?: boolean;
+  contested?: boolean;
+  /** 旧字段，保留兼容 */
   under_review?: boolean;
   reviewed?: boolean;
   votes: { ai_count: number; human_count: number; listed: boolean };

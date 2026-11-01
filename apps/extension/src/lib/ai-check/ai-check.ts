@@ -109,7 +109,7 @@ const TEXT = {
     stopped: '已停止',
     noData: '页面上没读到这个人的回复，刷新页面再试',
     mineOnly: '只有你能看到 · 再有一人测到同样结果才公开',
-    underReview: '有人认为是真人，维护者复核中',
+    underReview: '社区争议中，投票还没分出结果',
     shareLink: '分享到 X',
     shareText: (name: string, pct: number, level: string) =>
       `测了一下 ${name} 的回复：AI 味 ${pct}%（${level}）`,
@@ -159,7 +159,7 @@ const TEXT = {
     stopped: 'Stopped',
     noData: 'No replies from this account were found. Reload and try again',
     mineOnly: 'Only you can see this until someone else gets the same result',
-    underReview: 'Someone says this is a human; under review',
+    underReview: 'Community vote is tied',
     shareLink: 'Share on X',
     shareText: (name: string, pct: number, level: string) =>
       `Checked ${name}'s replies: ${pct}% AI flavor (${level})`,
@@ -394,7 +394,7 @@ export function createAiCheck(deps: {
       return {
         ...fromRecord(mine, myVote),
         votes: remote?.votes ?? null,
-        underReview: remote?.under_review === true,
+        underReview: remote?.contested === true || remote?.under_review === true,
       };
     }
     if (remote?.votes || myVote) {
@@ -407,7 +407,7 @@ export function createAiCheck(deps: {
         votes: remote?.votes ?? null,
         myVote,
         mineOnly: false,
-        underReview: remote?.under_review === true,
+        underReview: remote?.contested === true || remote?.under_review === true,
       };
     }
     return null;

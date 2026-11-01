@@ -131,25 +131,34 @@ ${footer('与扩展执行的名单同源（签名快照）')}
 </svg>`;
 }
 
-/** AI 味结果页 OG 卡入参（公开结论，或待复核 / 复核中 / 没测过的占位） */
+/** AI 味结果页 OG 卡入参（公开结论，或待复核 / 争议中 / 真人 / 没测过的占位） */
 export interface AiOgCard {
   handle: string;
   displayName: string | null;
   /** 头像 data URI（服务端已读好）；读不到画首字母圆 */
   avatar: string | null;
-  state: 'public' | 'pending' | 'review' | 'none';
+  state: 'public' | 'human' | 'contested' | 'pending' | 'none';
   percent?: number;
   tone?: 'ai' | 'mixed' | 'human';
   level?: string;
   roast?: string;
   replyCount?: number;
+  aiVotes?: number;
+  humanVotes?: number;
 }
 
 const AI_TONE = { ai: '#ff4d6d', mixed: '#ffb020', human: '#22d39b' } as const;
 
-/** AI 味结果页 OG 卡：头像 + 名字 + @id，右侧大百分比 + 档位 + 锐评；没有公开结论时给邀请复核的文案 */
+/** AI 味结果页 OG 卡：头像 + 名字 + @id，右侧大百分比 + 档位 + 锐评；没有公开结论时给邀请确认的文案 */
 export function aiCardOgSvg(card: AiOgCard): string {
-  const tone = card.tone ? AI_TONE[card.tone] : GOLD;
+  const tone =
+    card.state === 'human'
+      ? AI_TONE.human
+      : card.state === 'contested'
+        ? AI_TONE.mixed
+        : card.tone
+          ? AI_TONE[card.tone]
+          : GOLD;
   const name = card.displayName?.trim() || `@${card.handle}`;
   const initial = esc([...name.replace(/^@/, '')][0]?.toUpperCase() ?? '?');
   const avatar = card.avatar
@@ -171,20 +180,29 @@ export function aiCardOgSvg(card: AiOgCard): string {
 <rect x="470" y="404" width="${Math.min(640, textW(card.level ?? '', 38) + 56)}" height="64" rx="32" fill="${tone}"/>
 <text x="498" y="448" font-size="38" font-weight="700" fill="#0a0a0a">${esc(card.level ?? '')}</text>
 <text x="470" y="526" font-size="30" fill="${SUBTLE}">${esc(truncate(`「${card.roast ?? ''}」`, 650, 30))}</text>`
-      : `<text x="470" y="250" font-size="54" font-weight="700" fill="${INK}">${
-          card.state === 'pending'
-            ? '已有人测过 · 待复核'
-            : card.state === 'review'
-              ? '复核中'
-              : '还没人测过'
-        }</text>
+      : card.state === 'human'
+        ? `<text x="470" y="200" font-size="30" font-weight="700" fill="${MIST}">社区结论</text>
+<text x="462" y="370" font-size="150" font-weight="700" fill="${tone}">真人</text>
+<text x="470" y="448" font-size="30" fill="${MIST}">AI ${card.aiVotes ?? 0} 票 · 真人 ${card.humanVotes ?? 0} 票</text>
+<text x="470" y="526" font-size="30" fill="${SUBTLE}">社区投票认为这是真人，不是 AI 号</text>`
+        : card.state === 'contested'
+          ? `<text x="470" y="200" font-size="30" font-weight="700" fill="${MIST}">社区投票</text>
+<text x="462" y="370" font-size="110" font-weight="700" fill="${tone}">争议中</text>
+<text x="470" y="448" font-size="30" fill="${MIST}">AI ${card.aiVotes ?? 0} 票 · 真人 ${card.humanVotes ?? 0} 票</text>
+<text x="470" y="526" font-size="30" fill="${SUBTLE}">两边票数接近，继续投票决定</text>`
+          : card.state === 'public'
+            ? `<text x="470" y="200" font-size="30" font-weight="700" fill="${MIST}">社区结论</text>
+<text x="462" y="370" font-size="150" font-weight="700" fill="${tone}">AI</text>
+<text x="470" y="448" font-size="30" fill="${MIST}">AI ${card.aiVotes ?? 0} 票 · 真人 ${card.humanVotes ?? 0} 票</text>
+<text x="470" y="526" font-size="30" fill="${SUBTLE}">还没有可公开的 Jev 分数</text>`
+            : `<text x="470" y="250" font-size="54" font-weight="700" fill="${INK}">${
+                card.state === 'pending' ? '已有人测过 · 待确认' : '还没人测过'
+              }</text>
 <text x="470" y="318" font-size="30" fill="${MIST}">${
-          card.state === 'pending'
-            ? '再有一位用户测到同样的结果就公开'
-            : card.state === 'review'
-              ? '有人认为是真人或提出申诉，维护者复核中'
-              : '装上福滤娃，测测 TA 的回复有多少 AI 味'
-        }</text>`;
+                card.state === 'pending'
+                  ? '再有一位用户测到同样的结果就公开'
+                  : '装上福滤娃，测测 TA 的回复有多少 AI 味'
+              }</text>`;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_W}" height="${OG_H}" viewBox="0 0 ${OG_W} ${OG_H}" role="img" aria-label="${esc(name)} 的 AI 味 · 福滤娃 FeedSieve">
 <g font-family="${FONT}">
 <rect width="${OG_W}" height="${OG_H}" fill="#0a0a0a"/>

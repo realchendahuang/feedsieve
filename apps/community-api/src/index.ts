@@ -698,7 +698,7 @@ export function createApp() {
     return c.json({ changed: true });
   });
 
-  // AI 号复核队列：「是真人」票 ≥ 3 或有已验证申诉（复核前暂停公开展示）
+  // AI 号复核：仅保留紧急人工入口；常规公开结果由投票 + Jev 决定
   // 规则误伤：命中账号数、误标账号数、误伤率与静音状态；可手动静音 / 恢复
   app.get('/api/admin/rule-feedback', async (c) =>
     c.json({ rules: await loadRuleFeedback(c.env), policy: RULE_HIT_POLICY }),

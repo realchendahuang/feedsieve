@@ -38,8 +38,11 @@ const COPY = {
       '读这个账号最近 6–10 条公开回复，交给模型判一次是不是 AI 代写。一个人测出的结果只有本人能看到，再有一人测到同样结果才对所有人公开；每天最多新测 20 个账号。',
     noAccount: '打开一个 X 账号的主页或帖子',
     notChecked: '还没人测过',
-    pendingOther: '有人测过，等第二个人复核',
-    underReview: '复核中',
+    pendingOther: '有人测过，等第二个人确认',
+    underReview: '社区争议中',
+    communityHuman: (ai: number, human: number) => `社区结论：真人（AI ${ai} · 真人 ${human}）`,
+    communityAi: (ai: number, human: number) => `社区认为这是 AI（AI ${ai} · 真人 ${human}）`,
+    communityContested: (ai: number, human: number) => `社区争议中：AI ${ai} · 真人 ${human}`,
     start: '开始检测',
     retest: '重新检测',
     expired: '结论已过期',
@@ -81,7 +84,12 @@ const COPY = {
     noAccount: 'Open an X profile or post',
     notChecked: 'Not checked yet',
     pendingOther: 'Checked once, waiting for a second check',
-    underReview: 'Under review',
+    underReview: 'Community vote is tied',
+    communityHuman: (ai: number, human: number) =>
+      `Community verdict: human (AI ${ai} · human ${human})`,
+    communityAi: (ai: number, human: number) => `Community verdict: AI (AI ${ai} · human ${human})`,
+    communityContested: (ai: number, human: number) =>
+      `Community vote is tied: AI ${ai} · human ${human}`,
     start: 'Check',
     retest: 'Check again',
     expired: 'Result expired',
@@ -367,6 +375,33 @@ export function AiView({
             <span />
             <span />
           </div>
+        ) : remote?.contested || (remote?.under_review && !remote?.contested) ? (
+          <CommunityResult
+            language={language}
+            votes={remote.votes}
+            myVote={myVote}
+            voting={voting}
+            onVote={(choice) => void vote(choice)}
+            kind="contested"
+          />
+        ) : remote?.public && remote.verdict === 'human' ? (
+          <CommunityResult
+            language={language}
+            votes={remote.votes}
+            myVote={myVote}
+            voting={voting}
+            onVote={(choice) => void vote(choice)}
+            kind="human"
+          />
+        ) : remote?.public && remote.score === null ? (
+          <CommunityResult
+            language={language}
+            votes={remote.votes}
+            myVote={myVote}
+            voting={voting}
+            onVote={(choice) => void vote(choice)}
+            kind="ai"
+          />
         ) : shown ? (
           <AiResult
             language={language}
@@ -378,13 +413,7 @@ export function AiView({
           />
         ) : (
           <div className="ai-empty">
-            <span className="row-meta">
-              {remote?.under_review
-                ? c.underReview
-                : remote?.pending
-                  ? c.pendingOther
-                  : c.notChecked}
-            </span>
+            <span className="row-meta">{remote?.pending ? c.pendingOther : c.notChecked}</span>
             <button type="button" className="primary-button" onClick={() => void start(handle)}>
               {c.start}
             </button>
@@ -493,6 +522,52 @@ export function AiView({
           />
         </div>
       </section>
+    </div>
+  );
+}
+
+function CommunityResult({
+  language,
+  votes,
+  myVote,
+  voting,
+  onVote,
+  kind,
+}: {
+  language: UiLanguage;
+  votes: { ai_count: number; human_count: number; listed: boolean };
+  myVote: 'ai' | 'human' | null;
+  voting: boolean;
+  onVote: (choice: 'ai' | 'human') => void;
+  kind: 'ai' | 'human' | 'contested';
+}) {
+  const c = COPY[language];
+  const color =
+    kind === 'human' ? TONE_COLOR.human : kind === 'ai' ? TONE_COLOR.ai : TONE_COLOR.mixed;
+  return (
+    <div className="ai-empty">
+      <span className="row-meta" style={{ color }}>
+        {kind === 'human'
+          ? c.communityHuman(votes.ai_count, votes.human_count)
+          : kind === 'ai'
+            ? c.communityAi(votes.ai_count, votes.human_count)
+            : c.communityContested(votes.ai_count, votes.human_count)}
+      </span>
+      <div className="button-row ai-votes">
+        {(['ai', 'human'] as const).map((choice) => (
+          <button
+            key={choice}
+            type="button"
+            className={`secondary-button${myVote === choice ? ' is-selected' : ''}`}
+            disabled={voting}
+            aria-pressed={myVote === choice}
+            onClick={() => onVote(choice)}
+          >
+            {choice === 'ai' ? c.voteAi : c.voteHuman}
+          </button>
+        ))}
+      </div>
+      <p className="row-meta ai-tally">{c.tally(votes.ai_count, votes.human_count)}</p>
     </div>
   );
 }

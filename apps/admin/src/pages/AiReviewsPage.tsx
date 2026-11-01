@@ -35,7 +35,7 @@ const OUTCOME_LABELS: Array<[string, string]> = [
 ];
 
 /**
- * AI 号复核：「是真人」票 ≥ 3 或有已验证申诉的判定进这里，复核前已暂停公开展示。
+ * AI 号复核（仅紧急入口，已从主导航移除）：公开结论由投票 + Jev 自动决定，这里只作人工覆盖。
  * 改判真人 = 推翻结论、90 天内不重判；维持 = 恢复公开展示。申诉单本身在「公示申请」里另行裁决。
  */
 export function AiReviewsPage() {
@@ -55,7 +55,7 @@ export function AiReviewsPage() {
 
   return (
     <section>
-      <PageHeader title="AI 号复核" />
+      <PageHeader title="AI 号复核（仅紧急）" />
       {response.isPending ? (
         <Loading />
       ) : response.isError ? (

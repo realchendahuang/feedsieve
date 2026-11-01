@@ -1,4 +1,4 @@
-import { eq, like, or } from 'drizzle-orm';
+import { like, or } from 'drizzle-orm';
 import { getDb } from '../src/db/client';
 import {
   adminAuditLog,
@@ -14,7 +14,7 @@ import worker from '../src/index';
 import { judgeAiAccount } from '../src/ai-accounts/judge';
 import { listAiAccounts, lookupAiAccount } from '../src/ai-accounts/lookup';
 import { voteAiAccount } from '../src/ai-accounts/vote';
-import { decideAiReview, listAiReviews, recordClientOutcome } from '../src/ai-accounts/review';
+import { listAiReviews, recordClientOutcome } from '../src/ai-accounts/review';
 import { getAiPublic } from '../src/ai-accounts/public-page';
 
 const A = 'install-aaaa-000001';
@@ -120,7 +120,7 @@ describe('AI 判定交叉验证', () => {
     expect(third.body).toMatchObject({ verdict: 'human', confirmed: true });
   });
 
-  it('「是真人」票 ≥ 3 暂停公开、进复核队列；改判真人后公开为真人', async () => {
+  it('真人票 ≥ 3 且领先：直接公开真人，从 AI 名单撤下，不再进维护者队列', async () => {
     stubJev(0.9);
     await judge(A, 'appealed');
     await judge(B, 'appealed');
@@ -132,39 +132,65 @@ describe('AI 判定交叉验证', () => {
       });
     }
     expect(await lookupAiAccount(env, 'appealed')).toMatchObject({
-      public: false,
-      under_review: true,
-    });
-    expect(await listAiAccounts(env)).toEqual([]);
-    const queue = await listAiReviews(env);
-    expect(queue.items.map((i) => i.handle)).toEqual(['appealed']);
-    expect(queue.items[0]).toMatchObject({ human_count: 3, verdict: 'ai' });
-
-    expect(
-      await decideAiReview(env, 'appealed', { decision: 'human' }, 'admin@example.com'),
-    ).toEqual({ ok: true });
-    expect(await lookupAiAccount(env, 'appealed')).toMatchObject({
       public: true,
       verdict: 'human',
-      reviewed: true,
+      score: null,
+      contested: false,
       under_review: false,
     });
-    expect((await listAiReviews(env)).items).toEqual([]);
-    const audit = await getDb(env)
-      .select()
-      .from(adminAuditLog)
-      .where(eq(adminAuditLog.targetId, 'appealed'));
-    expect(audit[0]?.action).toBe('ai_review_human');
-    // 改判后有人再测：命中复核结论，不重判
-    const calls = stubJev(0.95);
-    expect((await judge('install-cccc-000003', 'appealed', replies(10, 200))).body).toMatchObject({
-      verdict: 'human',
-      cached: true,
-    });
-    expect(calls.jev).toBe(0);
+    expect(await listAiAccounts(env)).toEqual([]);
+    expect((await getAiPublic(env, 'appealed'))?.state).toBe('human');
   });
 
-  it('已验证的申诉也暂停公开；维持原判后恢复', async () => {
+  it('Jev 判真人但社区 AI 票领先：按社区公开 AI，并进名单', async () => {
+    stubJev(0.1);
+    await judge(A, 'human_jev');
+    await judge(B, 'human_jev');
+    for (const id of ['install-a1-0000021', 'install-a2-0000022', 'install-a3-0000023']) {
+      await voteAiAccount({ ...env } as Cloudflare.Env, {
+        installation_id: id,
+        handle: 'human_jev',
+        vote: 'ai',
+      });
+    }
+    expect(await lookupAiAccount(env, 'human_jev')).toMatchObject({
+      public: true,
+      verdict: 'ai',
+      score: null,
+      contested: false,
+    });
+    expect(await listAiAccounts(env)).toEqual([['human_jev', null, 1]]);
+  });
+
+  it('AI 票和真人票都 ≥ 3 且持平：社区争议中，不公开结论', async () => {
+    stubJev(0.9);
+    await judge(A, 'tied');
+    await judge(B, 'tied');
+    for (const id of ['install-a1-0000001', 'install-a2-0000002', 'install-a3-0000003']) {
+      await voteAiAccount({ ...env } as Cloudflare.Env, {
+        installation_id: id,
+        handle: 'tied',
+        vote: 'ai',
+      });
+    }
+    for (const id of ['install-h1-0000011', 'install-h2-0000012', 'install-h3-0000013']) {
+      await voteAiAccount({ ...env } as Cloudflare.Env, {
+        installation_id: id,
+        handle: 'tied',
+        vote: 'human',
+      });
+    }
+    expect(await lookupAiAccount(env, 'tied')).toMatchObject({
+      public: false,
+      verdict: null,
+      contested: true,
+      under_review: false,
+    });
+    expect(await listAiAccounts(env)).toEqual([]);
+    expect((await getAiPublic(env, 'tied'))?.state).toBe('contested');
+  });
+
+  it('已验证的申诉不再暂停公开；仍然只看票数 + Jev', async () => {
     stubJev(0.9);
     await judge(A, 'claimed');
     await judge(B, 'claimed');
@@ -178,11 +204,10 @@ describe('AI 判定交叉验证', () => {
       createdAt: 1,
     });
     expect(await lookupAiAccount(env, 'claimed')).toMatchObject({
-      under_review: true,
-      public: false,
+      under_review: false,
+      public: true,
+      verdict: 'ai',
     });
-    await decideAiReview(env, 'claimed', { decision: 'keep' }, 'admin@example.com');
-    expect(await lookupAiAccount(env, 'claimed')).toMatchObject({ public: true, verdict: 'ai' });
     expect(await listAiAccounts(env)).toEqual([['claimed', 0.9, 0]]);
   });
 

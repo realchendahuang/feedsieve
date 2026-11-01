@@ -88,6 +88,53 @@ describe('AiView', () => {
     expect(host.querySelector('.ai-row')?.textContent).toContain('@alice');
   });
 
+  it('社区票数决出真人：显示社区结论，不再出现复核中', async () => {
+    lookup = {
+      remote: {
+        handle: 'alice',
+        verdict: 'human',
+        score: null,
+        reply_count: 0,
+        rhythm: null,
+        judged_at: 1,
+        expires_at: 2,
+        expired: false,
+        public: true,
+        pending: false,
+        contested: false,
+        votes: { ai_count: 1, human_count: 4, listed: false },
+      },
+      myVote: 'human',
+    };
+    const { host } = await render();
+    expect(host.textContent).toContain('社区结论：真人（AI 1 · 真人 4）');
+    expect(host.textContent).not.toContain('复核中');
+    expect(host.querySelector('.ai-votes .is-selected')?.textContent).toBe('是真人');
+  });
+
+  it('社区票数持平：显示社区争议中，并允许继续投票', async () => {
+    lookup = {
+      remote: {
+        handle: 'alice',
+        verdict: null,
+        score: null,
+        reply_count: 0,
+        rhythm: null,
+        judged_at: 1,
+        expires_at: 2,
+        expired: false,
+        public: false,
+        pending: false,
+        contested: true,
+        votes: { ai_count: 3, human_count: 3, listed: false },
+      },
+      myVote: null,
+    };
+    const { host } = await render();
+    expect(host.textContent).toContain('社区争议中：AI 3 · 真人 3');
+    expect(host.querySelectorAll('.ai-votes button')).toHaveLength(2);
+  });
+
   it('服务端没公开时显示自己测的结果，并标明只有本人能看到', async () => {
     lookup = {
       remote: {

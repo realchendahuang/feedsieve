@@ -2,7 +2,7 @@
  * 公开结果页（feedsieve.win/ai/:handle）与它的 OG 预览图共用的取数。
  *
  * 只展示「可以向所有人展示」的结论（见 lookup.ts）：单人未确认的只显示「待复核」，
- * 复核中的显示「复核中」，都不给分数——分享出去的链接不能变成伪造证据的扩音器。
+ * 社区票数持平的显示「争议中」，都不给分数——分享出去的链接不能变成伪造证据的扩音器。
  */
 import { eq } from 'drizzle-orm';
 import { flavorOf, type Flavor } from '@feedsieve/shared';
@@ -16,7 +16,7 @@ export interface AiPublicData {
   handle: string;
   displayName: string | null;
   avatarUrl: string | null;
-  state: 'public' | 'pending' | 'review' | 'none';
+  state: 'public' | 'human' | 'contested' | 'pending' | 'none';
   lookup: AiLookupValue;
   /** state 为 public 且有分数时 */
   flavor: Flavor | null;
@@ -43,10 +43,12 @@ export async function getAiPublic(env: Cloudflare.Env, raw: string): Promise<AiP
       .where(eq(profileAccounts.handle, handle)),
   ]);
   if (!lookup) return null;
-  const state = lookup.public
-    ? 'public'
-    : lookup.under_review
-      ? 'review'
+  const state = lookup.contested
+    ? 'contested'
+    : lookup.public
+      ? lookup.verdict === 'human'
+        ? 'human'
+        : 'public'
       : lookup.pending
         ? 'pending'
         : 'none';
@@ -58,7 +60,7 @@ export async function getAiPublic(env: Cloudflare.Env, raw: string): Promise<AiP
     handle,
     displayName: verdictRow?.displayName ?? profileRow?.displayName ?? null,
     avatarUrl: verdictRow?.avatarUrl ?? profileRow?.avatarUrl ?? null,
-    state: flavor || state !== 'public' ? state : 'none',
+    state,
     lookup,
     flavor,
   };

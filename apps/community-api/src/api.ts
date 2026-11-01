@@ -112,6 +112,8 @@ async function handleOg(
         displayName: data.displayName,
         avatar: await avatarDataUri(data.avatarUrl),
         state: data.state,
+        aiVotes: data.lookup.votes.ai_count,
+        humanVotes: data.lookup.votes.human_count,
         ...(data.flavor
           ? {
               percent: data.flavor.percent,
@@ -122,7 +124,7 @@ async function handleOg(
             }
           : {}),
       });
-      // 结论会变（确认 / 复核 / 重测）：边缘只缓存 10 分钟
+      // 结论会变（确认 / 争议 / 重测）：边缘只缓存 10 分钟
       return new Response(await renderOgPng(env, svg, origin), {
         headers: {
           'Content-Type': 'image/png',
