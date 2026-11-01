@@ -29,7 +29,7 @@
     "eslint": "^10.9.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.11.0",
-    "happy-dom": "^20.11.6",
+    "happy-dom": "^21.0.4",
     "opencc-js": "^1.4.2",
     "playwright": "1.62.1",
     "prettier": "^3.9.6",
