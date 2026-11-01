@@ -85,8 +85,8 @@ const previewProfile = (() => {
   add(46, 30_000, { createdAt: now - 3 * 3_600_000, snippet: '刚发的：今天把主页洞察做出来了。' });
   return {
     account: {
-      handle: 'zdetong',
-      displayName: '赵德彤',
+      handle: 'demo_creator',
+      displayName: '示例博主',
       avatarUrl: 'https://pbs.twimg.com/profile_images/1/a_normal.jpg',
       verified: true,
       followers: 32_400,
@@ -103,8 +103,8 @@ const previewProfile = (() => {
 const hotPosts = [
   {
     postId: '2115838595466772487',
-    handle: 'zdetong',
-    displayName: '周德通',
+    handle: 'demo_creator',
+    displayName: '示例博主',
     snippet:
       '刚把自己的 Claude 工作流整理成一份清单，十个月踩过的坑都在里面。\n\n最重要的一条：先写验收标准，再让模型动手。\n\n1. 需求先写成可以检查的条目\n2. 每一步都让它先说计划\n3. 改完立刻跑测试，不要攒着\n\n清单放在评论区，自取 https://t.co/AbCdEf123',
     createdAt: now - 2 * 60 * 60_000,
@@ -123,8 +123,8 @@ const hotPosts = [
   },
   {
     postId: '2115695701959336440',
-    handle: 'berryxia',
-    displayName: 'Berryxia.AI 一个名字特别长特别长的博主',
+    handle: 'demo_ai_blog',
+    displayName: '示例 AI 博客 一个名字特别长特别长的博主',
     snippet:
       '今天 OpenAI 发布会的 5 个重点，第 3 个对独立开发者影响最大。\n\n以前要自己搭的那一套，现在一个接口就够了。成本大概降到原来的五分之一。',
     createdAt: now - 3 * 60 * 60_000,
@@ -143,8 +143,8 @@ const hotPosts = [
   },
   {
     postId: '2115810375686119566',
-    handle: 'antiaivo',
-    displayName: '纳米AI',
+    handle: 'demo_ai_tool',
+    displayName: '示例 AI 工具',
     snippet:
       '我觉得\n达到AGI阶段的电脑\n它的agent理想模式应该是：\n\n开机\n只有一个对话窗口\n人机交互只有文字或语音',
     createdAt: now - 25 * 60_000,
@@ -309,7 +309,7 @@ const previewBrowser = {
   },
   tabs: {
     // 当前标签页在一个博主主页上：「主页」视图有数据可看
-    query: async () => [{ id: 1, index: 0, active: true, url: 'https://x.com/zdetong' }],
+    query: async () => [{ id: 1, index: 0, active: true, url: 'https://x.com/demo_creator' }],
     onActivated: { addListener: () => undefined, removeListener: () => undefined },
     onUpdated: { addListener: () => undefined, removeListener: () => undefined },
     create: async () => ({ id: 2 }),
@@ -362,7 +362,7 @@ const previewBrowser = {
           authors: 41,
           hot: 7,
           medianVelocity: 312,
-          topBreakout: { ratio: 196.8, handle: 'zdetong', postId: '2115838595466772487' },
+          topBreakout: { ratio: 196.8, handle: 'demo_creator', postId: '2115838595466772487' },
           tiers: [9, 16, 10, 4, 1, 1, 0, 0, 0, 0],
         };
       }

@@ -112,5 +112,11 @@ Build output matches the submitted zip byte-for-byte.
 
 ## 截图
 
-AMO 建议 1280×800。可复用 Chrome 商店截图，或从 `preview:popup` 出图后补。
-当前不阻塞提交。
+已生成并随 0.13.2 上传到 AMO（1280×800，2026-11-02）：
+
+- `assets/store/amo/screenshot-1.png` — 热帖：哪条正在火，一眼看到
+- `assets/store/amo/screenshot-2.png` — 主页洞察：打开任何博主，看透他的爆款
+- `assets/store/amo/screenshot-3.png` — 清理：黄推和引流号，只框不藏
+- `assets/store/amo/screenshot-4.png` — 发帖：写帖、排期，一条龙
+
+截图里的账号均已换成 `demo_creator` / `demo_ai_blog` 等示例账号，不含真实第三方账号。
