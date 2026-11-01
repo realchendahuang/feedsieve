@@ -5,6 +5,13 @@
 - 每个版本的详细工程记录见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)。
 - 二进制产物见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)；正式用户请从 [Chrome 应用商店](https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph)接收更新。
 
+## [0.13.2] — 2026-11-02
+
+### Firefox
+
+- Gecko ID 改为 `feedsieve-official@feedsieve.win`：AMO 上 `feedsieve@feedsieve.local`（第三方公开条目）和 `feedsieve@feedsieve.win`（第三方非公开条目）都已被占用，0.13.1 上传时报「发现重复的附加组件 ID」。
+- 功能与 0.13.1 相同，仅为 AMO 首次上架换一个可用的官方 ID。
+
 ## [0.13.1] — 2026-11-01
 
 ### AI 味
@@ -470,7 +477,8 @@
 - 首个可用版本：黄框标注（内置名单 + 启发式，带理由）、顺手拉黑、待拉黑列表、一键批量拉黑（持久队列）、一键撤销、本地统计。
 - WXT + React 19 + MV3 最小权限架构；X DOM fixtures 锁定 reader→detector 契约；95 个单元测试；pre-push 本地质量门禁。
 
-[Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.13.1...HEAD
+[Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.13.2...HEAD
+[0.13.2]: https://github.com/realchendahuang/feedsieve/compare/v0.13.1...v0.13.2
 [0.13.1]: https://github.com/realchendahuang/feedsieve/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/realchendahuang/feedsieve/compare/v0.12.2...v0.13.0
 [0.12.2]: https://github.com/realchendahuang/feedsieve/compare/v0.12.1...v0.12.2
