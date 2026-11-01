@@ -58,3 +58,14 @@ export function tierCode(tier: number): string {
 export function formatTier(tier: number, followers: number): string {
   return `${tierCode(tier)} ${compact(followers)}`;
 }
+
+/** 倍数：`12×`、`4.6×`。不到 0.1 时一位小数会写成 0.0×，看着像没有浏览。 */
+export function formatMultipleText(value: number): string {
+  if (value < 0.1) return '<0.1×';
+  return `${value >= 10 ? Math.round(value) : value.toFixed(1)}×`;
+}
+
+/** 正文末尾的 t.co 链接是图片 / 视频 / 引用的占位，去掉。 */
+export function cleanText(text: string | undefined): string {
+  return (text ?? '').replace(/(\s*https:\/\/t\.co\/\w+)+\s*$/u, '').trim();
+}

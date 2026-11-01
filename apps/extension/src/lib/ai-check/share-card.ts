@@ -3,6 +3,7 @@
  * 图里不放被检测账号的回复原文，只放结论、档位、锐评和统计数字。
  */
 import type { Flavor, Lang } from '@feedsieve/shared';
+import { CARD_FONT as FONT, roundRect, wrapText as wrap } from '../share/canvas-kit';
 
 export interface ShareCardInput {
   handle: string;
@@ -23,8 +24,6 @@ export interface ShareCardInput {
 
 const W = 1080;
 const H = 1350;
-const FONT =
-  '"PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif';
 
 const TONE = {
   ai: { accent: '#ff4d6d', glow: 'rgba(255, 77, 109, 0.35)' },
@@ -82,43 +81,6 @@ export function formatGap(seconds: number | null, lang: Lang): string {
 export function spreadLabel(cv: number, lang: Lang): string {
   const t = TEXT[lang];
   return cv >= 0.6 ? t.spreadHigh : cv >= 0.35 ? t.spreadMid : t.spreadLow;
-}
-
-/** 按字符折行（中英文混排都能用），最多 maxLines 行，超出加省略号。 */
-function wrap(ctx: CanvasRenderingContext2D, text: string, width: number, maxLines: number) {
-  const lines: string[] = [];
-  let line = '';
-  for (const ch of [...text]) {
-    if (ctx.measureText(line + ch).width > width && line) {
-      lines.push(line);
-      line = ch.trim() ? ch : '';
-      if (lines.length === maxLines) break;
-    } else {
-      line += ch;
-    }
-  }
-  if (lines.length < maxLines && line) lines.push(line);
-  else if (lines.length === maxLines && line) {
-    lines[maxLines - 1] = `${lines[maxLines - 1]!.slice(0, -1)}…`;
-  }
-  return lines;
-}
-
-function roundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number,
-) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
 }
 
 export function drawShareCard(input: ShareCardInput): HTMLCanvasElement {
@@ -289,26 +251,4 @@ export function drawShareCard(input: ShareCardInput): HTMLCanvasElement {
   ctx.fillText(t.note, W - pad, 1318);
   ctx.textAlign = 'left';
   return canvas;
-}
-
-/** 读头像位图：pbs.twimg.com 允许 x.com 跨域读取；换成 400×400 的大图。读不到返回 null。 */
-export async function loadAvatar(url: string | null | undefined): Promise<ImageBitmap | null> {
-  if (!url || !/^https:\/\/pbs\.twimg\.com\//.test(url)) return null;
-  const large = url.replace(/_(normal|bigger|mini|x96|200x200)(\.[a-z]+)(\?.*)?$/i, '_400x400$2');
-  try {
-    const response = await fetch(large, { credentials: 'omit' });
-    if (!response.ok) return null;
-    return await createImageBitmap(await response.blob());
-  } catch {
-    return null;
-  }
-}
-
-export function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
-  return new Promise((resolve, reject) =>
-    canvas.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error('toBlob failed'))),
-      'image/png',
-    ),
-  );
 }

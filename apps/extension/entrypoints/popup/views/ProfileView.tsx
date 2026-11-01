@@ -28,6 +28,8 @@ import {
 } from '@feedsieve/metrics';
 import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
 import { formatCount } from '../../../src/lib/insight/format';
+import { drawProfileShareCard, pickSharePosts } from '../../../src/lib/insight/share-card';
+import { canvasToBlob } from '../../../src/lib/share/canvas-kit';
 import { INSIGHT_COPY } from '../../../src/lib/insight/copy';
 import { INSIGHT_READ_MESSAGE } from '../../../src/lib/insight/read-tracker';
 import {
@@ -596,6 +598,46 @@ export default function ProfileView({ language, notify, sendToXPage }: ProfileVi
     }
   }
 
+  async function shareImage(): Promise<void> {
+    if (!handle || !entry) return;
+    const postCount = Object.keys(entry.posts).length;
+    const cardPosts = pickSharePosts(Object.values(entry.posts)).map((post) => ({
+      post,
+      multiple: analysis.scores.get(post.postId)?.multiple ?? null,
+    }));
+    const { account } = entry;
+    try {
+      const canvas = await drawProfileShareCard({
+        handle: account.handle,
+        ...(account.displayName ? { displayName: account.displayName } : {}),
+        ...(account.avatarUrl ? { avatarUrl: account.avatarUrl } : {}),
+        tier: accountTier(account.followers),
+        medianViews: analysis.baseline?.medianViews ?? null,
+        outlierRate: analysis.outlierRate,
+        postCount,
+        posts: cardPosts,
+        lang: language,
+        date: new Date(now),
+      });
+      const blob = await canvasToBlob(canvas);
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        notify(t.profileImageCopied);
+      } catch {
+        // 剪贴板写不进图片（权限或环境限制）就退回下载，别让用户白点一次
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `feedsieve-${handle}-${new Date(now).toISOString().slice(0, 10)}.png`;
+        link.click();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+        notify(t.profileImageDownloaded);
+      }
+    } catch {
+      notify(t.profileActionFailed);
+    }
+  }
+
   function exportCsv(): void {
     if (!handle) return;
     try {
@@ -657,6 +699,14 @@ export default function ProfileView({ language, notify, sendToXPage }: ProfileVi
           label={t.profileCopyAi}
           hint={t.profileCopyAiHint}
           onClick={() => void copyForAi()}
+        />
+      ) : null}
+      {hasPosts && analysis.baseline ? (
+        <IconButton
+          icon="image"
+          label={t.profileShareImage}
+          hint={t.profileShareImageHint}
+          onClick={() => void shareImage()}
         />
       ) : null}
       {hasPosts ? (

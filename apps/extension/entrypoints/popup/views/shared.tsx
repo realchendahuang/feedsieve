@@ -36,6 +36,7 @@ export type AppIconName =
   | 'globe'
   | 'sparkles'
   | 'download'
+  | 'image'
   | 'calendar'
   | 'up'
   | 'down';
@@ -97,6 +98,13 @@ export function AppIcon({
         <path d="M12 3v12" />
         <path d="m7 10 5 5 5-5" />
         <path d="M5 21h14" />
+      </>
+    ),
+    image: (
+      <>
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <circle cx="9" cy="9" r="2" />
+        <path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21" />
       </>
     ),
     // lucide: trending-up（ISC License）

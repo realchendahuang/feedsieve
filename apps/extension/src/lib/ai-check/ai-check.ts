@@ -30,7 +30,8 @@ import {
   type PageTweet,
 } from './evidence';
 import { flavorOf, type Lang } from '@feedsieve/shared';
-import { canvasToBlob, drawShareCard, formatGap, loadAvatar, spreadLabel } from './share-card';
+import { canvasToBlob, loadAvatar } from '../share/canvas-kit';
+import { drawShareCard, formatGap, spreadLabel } from './share-card';
 import {
   AI_JUDGE_MESSAGE,
   AI_LIST_KEY,

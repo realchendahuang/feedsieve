@@ -111,6 +111,11 @@ export const UI_COPY = {
       `新开一个 X 搜索页：${query}。和你自己搜一样，搜到的帖子会自动收进来；扩展不会替你翻页。`,
     profileCopyAi: '复制 Top 20 给 AI',
     profileCopied: '已复制',
+    profileShareImage: '分享洞察图',
+    profileShareImageHint:
+      '画一张 4:5 的主页洞察图（中位浏览、爆款率、最近三条帖子），复制到剪贴板，直接贴进聊天窗口或发 X。',
+    profileImageCopied: '已复制图片',
+    profileImageDownloaded: '已存为图片',
     profileExportCsv: '导出 CSV',
     profileExported: '已导出',
     profileActionFailed: '操作失败，请重试',
@@ -448,6 +453,11 @@ export const UI_COPY = {
       `Opens an X search: ${query}. Same as searching yourself; results are collected automatically, and the extension never pages through them for you.`,
     profileCopyAi: 'Copy top 20 for AI',
     profileCopied: 'Copied',
+    profileShareImage: 'Copy insight image',
+    profileShareImageHint:
+      'Draws a 4:5 profile insight card (median views, outlier rate, three recent posts) and copies it to the clipboard.',
+    profileImageCopied: 'Image copied',
+    profileImageDownloaded: 'Image saved',
     profileExportCsv: 'Export CSV',
     profileExported: 'Exported',
     profileActionFailed: 'Something went wrong, try again',

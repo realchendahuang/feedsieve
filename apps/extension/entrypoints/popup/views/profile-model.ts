@@ -14,6 +14,10 @@ import type {
   CatalogEntry,
   CatalogPost,
 } from '../../../src/lib/insight/profile-catalog';
+import { cleanText, formatMultipleText } from '../../../src/lib/insight/format';
+
+// 分享卡和导出共用同一套格式化：ProfileView 仍从这里取
+export { formatMultipleText };
 
 export type ProfileSort = 'multiple' | 'views' | 'likes' | 'bookmarks' | 'saveRate' | 'recent';
 export const PROFILE_SORTS: readonly ProfileSort[] = [
@@ -209,17 +213,6 @@ export function topOutliers(
 
 export function postUrl(handle: string, postId: string): string {
   return `https://x.com/${handle}/status/${postId}`;
-}
-
-export function formatMultipleText(value: number): string {
-  // 不到 0.1 时一位小数会写成 0.0×，看着像没有浏览
-  if (value < 0.1) return '<0.1×';
-  return `${value >= 10 ? Math.round(value) : value.toFixed(1)}×`;
-}
-
-/** 正文末尾的 t.co 链接是图片 / 视频 / 引用的占位，去掉。 */
-function cleanText(text: string | undefined): string {
-  return (text ?? '').replace(/(\s*https:\/\/t\.co\/\w+)+\s*$/u, '').trim();
 }
 
 export interface MarkdownCopy {
