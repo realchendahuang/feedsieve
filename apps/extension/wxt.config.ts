@@ -40,10 +40,11 @@ export default defineConfig({
             },
             browser_specific_settings: {
               gecko: {
-                // 官方 Firefox 版使用自己的 ID。AMO 上 2026-09-07 出现的
-                // feedsieve@feedsieve.local / slug=feedsieve 条目是第三方转载，
-                // 不是本项目发布，不能复用它的 ID；我们另行提交官方条目。
-                id: 'feedsieve@feedsieve.win',
+                // 官方 Firefox 版 ID。AMO 上 2026-09-07 出现的
+                // feedsieve@feedsieve.local / slug=feedsieve 条目是第三方转载；
+                // 连 feedsieve@feedsieve.win 也被对方占成了非公开条目（上传时报重复 ID），
+                // 所以官方使用独立的 feedsieve-official@feedsieve.win。
+                id: 'feedsieve-official@feedsieve.win',
                 strict_min_version: '140.0',
                 // Firefox 140 起的数据传输声明，和 PRIVACY.md 的条目对应。
                 data_collection_permissions: {

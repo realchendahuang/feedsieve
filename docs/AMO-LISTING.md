@@ -1,7 +1,8 @@
 # AMO 上架材料（0.13.1）
 
-官方 Firefox 条目使用 Gecko ID `feedsieve@feedsieve.win`。AMO 上已有的
-`feedsieve@feedsieve.local` / 0.8.2 条目是第三方转载，不是本项目发布；
+官方 Firefox 条目使用 Gecko ID `feedsieve-official@feedsieve.win`。AMO 上已有的
+`feedsieve@feedsieve.local` / 0.8.2 条目是第三方转载，`feedsieve@feedsieve.win`
+也被对方占成了非公开条目（上传时报重复 ID），所以官方另用 `-official` 地址；
 提交时不要选择「更新已有条目」，而是新建条目。
 
 ## 名称

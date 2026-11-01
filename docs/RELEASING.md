@@ -69,8 +69,8 @@ AMO 审核用完整源码包。GitHub Release 会多挂：
 - `feedsieve-X.Y.Z-firefox-source.zip` + `.sha256`
 
 AMO 上传与送审同样需要登录态，不在脚本内；流程见 [`FIREFOX.md`](FIREFOX.md)。
-Firefox 的 Gecko ID 是官方自有的 `feedsieve@feedsieve.win`；AMO 上已有的
-`feedsieve@feedsieve.local` 条目是第三方转载，不要更新它。
+Firefox 的 Gecko ID 是官方自有的 `feedsieve-official@feedsieve.win`；AMO 上已有的
+`feedsieve@feedsieve.local` 和 `feedsieve@feedsieve.win` 都被第三方占用，不要更新它们。
 
 ## 4. 发版后检查
 

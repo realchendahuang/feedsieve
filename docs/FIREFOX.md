@@ -1,8 +1,8 @@
 # Firefox 支持
 
-Firefox 版与 Chrome 版共用同一套代码，构建目标为 MV3。当前状态：**可构建、可临时加载、界面已验证；真实 X 账号验收通过后，用官方 ID `feedsieve@feedsieve.win` 提交 AMO**。
+Firefox 版与 Chrome 版共用同一套代码，构建目标为 MV3。当前状态：**可构建、可临时加载、界面已验证；真实 X 账号验收通过后，用官方 ID `feedsieve-official@feedsieve.win` 提交 AMO**。
 
-> **AMO 上的 `feedsieve` 条目不是本项目发布的。** 2026-09-07，AMO 账号「AI小鲸鱼」在注册 19 分钟后用 `feedsieve@feedsieve.local` 上架了 0.8.2；该 ID 和条目属于对方，不能复用。我们使用自己的 `feedsieve@feedsieve.win` 另建官方条目，并已准备向 AMO 举报该转载条目。详见下方「AMO 上架」。
+> **AMO 上的 `feedsieve` 条目不是本项目发布的。** 2026-09-07，AMO 账号「AI小鲸鱼」在注册 19 分钟后用 `feedsieve@feedsieve.local` 上架了 0.8.2；该 ID 和条目属于对方，不能复用。`feedsieve@feedsieve.win` 也被对方占成了非公开条目（上传时报重复 ID），官方改用 `feedsieve-official@feedsieve.win` 另建条目；不举报对方，靠官方条目、README 和审核说明区分。详见下方「AMO 上架」。
 
 ## 构建
 
@@ -45,7 +45,7 @@ npx web-ext run --source-dir apps/extension/.output/firefox-mv3
 | 侧边栏 | `side_panel` + `sidePanel` 权限 | `sidebar_action` + 同一个 `popup.html` |
 | 后台 | service worker | `background.scripts`（事件页，空闲会停） |
 | 权限 | storage / unlimitedStorage / sidePanel | storage / unlimitedStorage |
-| Gecko ID | — | `feedsieve@feedsieve.win`（官方 ID；`.local` 属于第三方转载条目） |
+| Gecko ID | — | `feedsieve-official@feedsieve.win`（官方 ID；`.local` / `.win` 都被第三方占用） |
 | 最低版本 | — | Firefox 140；暂不声明 Android（侧边栏 / 弹窗未验收） |
 | 数据传输声明 | 商店隐私权表单 | `browser_specific_settings.gecko.data_collection_permissions` |
 
@@ -62,12 +62,12 @@ AMO 上的 <https://addons.mozilla.org/zh-CN/firefox/addon/feedsieve/>（0.8.2�
 - 该包的 manifest 没有 author / homepage，support 链接却指向本项目的 GitHub Issues；数据收集声明为 `none`，也没有许可证和隐私政策
 - 包内只有旧 API 域名 `feedsieve-api.chendahuang.com`（已失效），没有任何新域名；代码看起来是旧版原样转载，但更新权在对方手里，不能引导用户安装
 
-处理顺序：
+处理方式（2026-11-02 确认不举报）：
 
-1. 用 listing 页的「举报此附加组件」提交：<https://addons.mozilla.org/zh-CN/firefox/addon/feedsieve/abuse/>，理由选冒充/误导（impersonation / misleading），附上本仓库、Chrome 商店条目、官网和上述时间线
-2. 同时邮件 `amo-admins@mozilla.org`，说明 MIT 允许转载，但对方使用同一名称、指向官方支持页，误导用户；请求下架或移交条目
-3. 对方条目下架前，官方新版用 `feedsieve@feedsieve.win` 另建条目；如果名称冲突，标题用「FeedSieve 福滤娃（官方）」并填 homepage / support
-4. 不要给对方的 0.8.2 上传任何更新，也不要把官方 ID 改成 `.local`
+1. 对方条目继续留在 AMO，我们不更新它，也不把官方 ID 改成 `.local`
+2. `feedsieve@feedsieve.win` 也被对方占成了非公开条目——上传 0.13.1 时报「发现重复的附加组件 ID」
+3. 官方改用 `feedsieve-official@feedsieve.win` 另建条目；标题用「FeedSieve 福滤娃」，名称冲突时再加「（官方）」
+4. README 和 listing 里说明 AMO 上已有的 0.8.2 条目不是官方发布，避免用户装错
 
 ### 官方版提交
 
@@ -82,7 +82,7 @@ AMO 上的 <https://addons.mozilla.org/zh-CN/firefox/addon/feedsieve/>（0.8.2�
 
 提交时：
 
-1. 在 [AMO 开发者中心](https://addons.mozilla.org/developers/) 新建条目（官方 ID `feedsieve@feedsieve.win`），上传 Firefox zip
+1. 在 [AMO 开发者中心](https://addons.mozilla.org/developers/) 新建条目（官方 ID `feedsieve-official@feedsieve.win`），上传 Firefox zip
 2. 附完整 monorepo 源码 zip（WXT 默认 sources.zip 只含扩展子目录，不含 `packages/*`）和构建说明
 3. 审核说明里写清：AI 味检测会把公开回复交给第三方语言模型判定一次；无远程代码；`browser.storage` 与 `x.com` 主机权限的用途；并说明官方发布与转载条目的区别
 4. listing：MIT 许可证、隐私政策 URL、主页 `https://feedsieve.win/`、截图、当前功能描述；数据收集选网站内容 / 用户活动 / 唯一标识 / 认证信息四类
