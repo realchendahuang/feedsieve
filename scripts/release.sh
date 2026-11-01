@@ -128,8 +128,8 @@ cat >> "$NOTES" <<EOF
 EOF
 if [ "$FIREFOX" -eq 1 ]; then
   cat >> "$NOTES" <<EOF
-- Firefox（AMO）：https://addons.mozilla.org/zh-CN/firefox/addon/feedsieve/
-- Firefox 离线安装包：\`feedsieve-$VERSION-firefox.zip\`；AMO 审核用源码包：\`feedsieve-$VERSION-firefox-source.zip\`。
+- Firefox：官方 AMO 条目提交审核中；离线包见下方 \`feedsieve-$VERSION-firefox.zip\`。
+- AMO 审核用源码包：\`feedsieve-$VERSION-firefox-source.zip\`。
 EOF
 fi
 
