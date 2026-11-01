@@ -11,12 +11,13 @@
  * - 其余不报。所以一个博主被很多人看，服务端也只收到真正的新数字。
  * 攒着批量发，最多 5 分钟一次；第一次在看到数据 1 分钟后。
  *
- * 只报公开数据：受保护账号、粉丝不到 1000 的博主不报；只在私信、通知、书签、列表等页面看到的帖子不报；
- * 「仅本地运行」打开时既不拉也不报。
+ * 只报公开数据：受保护账号不报；只在私信、通知、书签、列表等页面看到的帖子不报；
+ * 「仅本地运行」打开时既不拉也不报。粉丝多少都收（2026-11-02 改）：小博主以后可能成长起来，
+ * 提前攒下的数据同样有价值。
  * 自己的主页和别人的主页一样上报、拉取（帖子本来就是公开的，本人提供的数据也最完整），但自己的
  * 那批用一个单独的每日会话 ID，不和他看别人的记录落在同一个会话里。
  * 不带安装 ID，只带每日轮换的随机会话 ID（服务端加盐哈希后只用于限额，不和帖子存在一起）。
- * 拉取时服务端能看到 IP 和博主 handle（不记录对应关系），受保护和粉丝不够的博主不去拉。
+ * 拉取时服务端能看到 IP 和博主 handle（不记录对应关系），受保护的博主不去拉。
  */
 import type { InsightObservation } from './shared-insight';
 import type { CatalogEntry, CatalogPost, RemoteProfile } from './profile-catalog';
@@ -35,8 +36,6 @@ const MIN_GROWTH = 20;
 /** 拉取失败后，同一个博主隔这么久再试（失败时不能每条观测都重拉）。 */
 const PULL_RETRY_MS = 60 * 1000;
 const MIN_GROWTH_RATIO = 0.05;
-/** 粉丝少于这么多的博主不上报（和服务端 MIN_PROFILE_FOLLOWERS 一致，docs/07 §3.1）。 */
-export const PROFILE_MIN_FOLLOWERS = 1_000;
 const SESSION_KEY = 'profileSessionV1';
 /** 待上报的博主与上次上报时间：storage.session，service worker 被回收也不丢。 */
 const STATE_KEY = 'profileSyncStateV1';
@@ -210,12 +209,8 @@ export function createProfileSync(deps: ProfileSyncDeps) {
     const task = (async () => {
       if (!(await deps.isAllowed()) || !(await deps.catalog.has(handle))) return;
       const entry = await deps.catalog.get(handle);
-      // 受保护、已知粉丝不到门槛的：服务端没有，也不必让服务端看到这次请求
-      if (
-        !entry ||
-        entry.account.protected ||
-        (entry.account.followers !== undefined && entry.account.followers < PROFILE_MIN_FOLLOWERS)
-      ) {
+      // 受保护的：服务端没有，也不必让服务端看到这次请求
+      if (!entry || entry.account.protected) {
         return;
       }
       if (
@@ -277,11 +272,7 @@ export function createProfileSync(deps: ProfileSyncDeps) {
   ): Promise<void> {
     for (const handle of round) {
       const entry = await deps.catalog.get(handle);
-      if (
-        !entry ||
-        entry.account.protected ||
-        (entry.account.followers ?? 0) < PROFILE_MIN_FOLLOWERS
-      ) {
+      if (!entry || entry.account.protected) {
         pending.delete(handle);
         continue;
       }

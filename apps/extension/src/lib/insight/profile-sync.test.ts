@@ -280,16 +280,16 @@ describe('createProfileSync', () => {
     expect(t.uploads.at(-1)!.posts.map((p) => p.post_id)).toEqual(['11']);
   });
 
-  it('does not upload creators under 1000 followers', async () => {
+  it('uploads creators regardless of follower count', async () => {
     const t = setup();
     await t.observe({
       profile: 'alice',
-      authors: [{ handle: 'alice', followers: 999 }],
+      authors: [{ handle: 'alice', followers: 12 }],
       tweets: [tweet('11', 300)],
     });
     t.advance(PROFILE_FIRST_UPLOAD_DELAY_MS);
-    await t.observe({ authors: [{ handle: 'alice', followers: 999 }], tweets: [tweet('12', 300)] });
-    expect(t.post).not.toHaveBeenCalled();
+    await t.observe({});
+    expect(t.uploads.at(-1)!.posts.map((p) => p.post_id)).toEqual(['11']);
   });
 
   it('sends the creator profile with the first batch, then only when followers change', async () => {

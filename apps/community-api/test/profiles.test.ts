@@ -99,17 +99,17 @@ describe('POST /v1/profile-observations', () => {
     });
   });
 
-  it('skips small accounts and accounts on the community blocklist', async () => {
+  it('accepts small accounts and skips accounts on the community blocklist', async () => {
     const at = NOW - DAY;
     const small = await ingest(
       [post(at, 100, { handle: 'tiny' })],
       [{ handle: 'tiny', followers: 999 }],
     );
-    expect(small).toEqual({ status: 200, body: { accepted: 0, rejected: 2 } });
-    // 没带资料、服务端也不知道粉丝数：不收
+    expect(small).toEqual({ status: 200, body: { accepted: 2, rejected: 0 } });
+    // 没带资料：补一条只有 handle 的账号行，帖子照样收
     expect((await ingest([post(at, 100, { handle: 'nobody' }, 1)], [])).body).toEqual({
-      accepted: 0,
-      rejected: 1,
+      accepted: 1,
+      rejected: 0,
     });
     await getDb(env)
       .insert(accounts)

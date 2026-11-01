@@ -16,6 +16,7 @@ import type { ContentState } from './page-state';
 import { communityVoteForDetection } from './block-core';
 import type { BlockQueueRunner } from './block-queue';
 import type { ManualActions } from './manual-actions';
+import type { ProfileFill } from './profile-fill';
 import { scrollToPost } from '../insight/locate';
 
 export function registerContentMessageHandlers(deps: {
@@ -24,8 +25,16 @@ export function registerContentMessageHandlers(deps: {
   followingSync: FollowingSync;
   startPersistentQueue: BlockQueueRunner['startPersistentQueue'];
   runManualSpamBlock: ManualActions['runManualSpamBlock'];
+  profileFill: ProfileFill;
 }): void {
-  const { state, queueSupervisor, followingSync, startPersistentQueue, runManualSpamBlock } = deps;
+  const {
+    state,
+    queueSupervisor,
+    followingSync,
+    startPersistentQueue,
+    runManualSpamBlock,
+    profileFill,
+  } = deps;
 
   /**
    * popup「一键拉黑 / 一键撤销」入口：这里执行需要页面会话的原生操作，
@@ -74,6 +83,14 @@ export function registerContentMessageHandlers(deps: {
     }
     if (type === 'feedsieve:manual-spam-block' && msg?.handle) {
       return runManualSpamBlock(msg.handle);
+    }
+    if (type === 'feedsieve:profile-fill' && typeof msg?.handle === 'string') {
+      // 用户点「补全」：向下滚动让 X 自己加载更多帖子（不额外请求 X）
+      return profileFill.fill(msg.handle.toLowerCase());
+    }
+    if (type === 'feedsieve:profile-fill-stop') {
+      profileFill.stop();
+      return Promise.resolve({ ok: true });
     }
     if (type === 'feedsieve:following-sync-start') {
       return followingSync.start();

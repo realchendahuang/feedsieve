@@ -19,8 +19,7 @@
  * 防伪造：
  * - 发帖时间必须和帖子 ID 里的 snowflake 时间一致（误差 5 分钟内），伪造的 ID / 时间整条丢弃；
  * - 发出超过 72 小时、已有 1000 以上浏览的帖子，单次上报的浏览超过已有值 3 倍的不采信（老帖子浏览已经稳定）；
- * - 只收粉丝 ≥ 1000 的博主（docs/07 §3.1，2026-10-30 定）：数据太少做不出基线，也更接近普通人；
- *   本次请求或服务端已有的资料里粉丝数要达到门槛，否则帖子整条丢弃；
+ * - 小博主也收（2026-11-02 改）：粉丝不到 1000 的账号以后可能成长起来，提前攒下的数据同样有价值；
  * - 社区黑名单里的账号不收；
  * - 会话、IP 双维度每日限额，另外同一 IP 给同一个博主每天最多 2000 条。
  * 一个人报上来就对所有人可见（不要求多人一致，2026-10-31 定：一个人看过、所有人受益），
@@ -69,8 +68,6 @@ const IP_HANDLE_DAILY_LIMIT = 2_000;
 /** 拉取只返回至少这么久以前提交的变化：并发写入的提交顺序和时间戳不一致时，游标也不会跳过它们。 */
 export const PROFILE_SETTLE_MS = 60_000;
 const STABLE_MAX_JUMP = 3;
-/** 粉丝少于这么多的博主不收。 */
-export const MIN_PROFILE_FOLLOWERS = 1_000;
 
 const POST_ID = /^\d{1,20}$/;
 const HANDLE = /^[a-z0-9_]{1,15}$/;
@@ -307,7 +304,6 @@ export async function ingestProfileObservations(
   const allowed = await eligibleHandles(
     db,
     [...new Set([...parsedPosts.map((p) => p.handle), ...parsedAccounts.map((a) => a.handle)])],
-    parsedAccounts,
   );
   let posts = foldPosts(parsedPosts.filter((post) => allowed.has(post.handle)));
   const accounts = foldAccounts(parsedAccounts.filter((account) => allowed.has(account.handle)));
@@ -397,24 +393,41 @@ export async function ingestProfileObservations(
     sql` or `,
   )})`;
 
+  // 帖子里的作者如果本次没带资料，补一条只有 handle 的账号行，帖子才挂得上去
+  const reportedHandles = new Set(accounts.map((account) => account.handle));
+  const accountRows = [
+    ...accounts.map((account) => ({
+      handle: account.handle,
+      displayName: account.displayName ?? null,
+      avatarUrl: account.avatarUrl ?? null,
+      verified: account.verified === undefined ? null : account.verified ? 1 : 0,
+      followers: account.followers ?? null,
+      followingCount: account.followingCount ?? null,
+      tweets: account.tweets ?? null,
+      joinedAt: account.joinedAt ?? null,
+      updatedAt: now,
+    })),
+    ...[...new Set(posts.map((post) => post.handle))]
+      .filter((handle) => !reportedHandles.has(handle))
+      .map((handle) => ({
+        handle,
+        displayName: null,
+        avatarUrl: null,
+        verified: null,
+        followers: null,
+        followingCount: null,
+        tweets: null,
+        joinedAt: null,
+        updatedAt: now,
+      })),
+  ].sort((x, y) => compareText(x.handle, y.handle));
+
   await retryOnConflict(async () => {
     // 先写资料（拿到作者编号），再写帖子
-    if (accounts.length > 0) {
+    if (accountRows.length > 0) {
       await db
         .insert(a)
-        .values(
-          accounts.map((account) => ({
-            handle: account.handle,
-            displayName: account.displayName ?? null,
-            avatarUrl: account.avatarUrl ?? null,
-            verified: account.verified === undefined ? null : account.verified ? 1 : 0,
-            followers: account.followers ?? null,
-            followingCount: account.followingCount ?? null,
-            tweets: account.tweets ?? null,
-            joinedAt: account.joinedAt ?? null,
-            updatedAt: now,
-          })),
-        )
+        .values(accountRows)
         .onConflictDoUpdate({
           target: a.handle,
           // 资料取最新的非空值；粉丝数会涨也会掉，但一次变化超过一倍（或掉到一半以下）不采信，
@@ -482,39 +495,22 @@ export async function ingestProfileObservations(
 }
 
 /**
- * 能收的博主：粉丝数达到门槛（本次请求里的资料优先，其次服务端已有的），且不在社区黑名单里。
+ * 能收的博主：只排除社区黑名单。
  */
 async function eligibleHandles(
   db: ReturnType<typeof getDb>,
   handles: string[],
-  reported: ProfileAccountInput[],
 ): Promise<Set<string>> {
   if (handles.length === 0) return new Set();
-  const [known, blocked] = await Promise.all([
-    db
-      .select({ handle: profileAccounts.handle, followers: profileAccounts.followers })
-      .from(profileAccounts)
-      .where(inArray(profileAccounts.handle, handles)),
-    db
-      .select({ handle: communityAccounts.handle })
-      .from(communityAccounts)
-      .where(
-        // 和公开名单同一口径（快照发布写入 accounts.listed）
-        and(inArray(communityAccounts.handle, handles), eq(communityAccounts.listed, 1)),
-      ),
-  ]);
-  // 服务端已有的粉丝数优先：本次请求里自报的只用于第一次收这个博主
-  const followers = new Map<string, number>();
-  for (const account of reported) {
-    if (account.followers !== undefined) followers.set(account.handle, account.followers);
-  }
-  for (const row of known) if (row.followers !== null) followers.set(row.handle, row.followers);
+  const blocked = await db
+    .select({ handle: communityAccounts.handle })
+    .from(communityAccounts)
+    .where(
+      // 和公开名单同一口径（快照发布写入 accounts.listed）
+      and(inArray(communityAccounts.handle, handles), eq(communityAccounts.listed, 1)),
+    );
   const banned = new Set(blocked.map((row) => row.handle));
-  return new Set(
-    handles.filter(
-      (handle) => !banned.has(handle) && (followers.get(handle) ?? 0) >= MIN_PROFILE_FOLLOWERS,
-    ),
-  );
+  return new Set(handles.filter((handle) => !banned.has(handle)));
 }
 
 export interface ProfilePostOutput {

@@ -37,6 +37,12 @@ import {
   subscribeModuleSettings,
   type ModuleSettings,
 } from '../../../src/lib/settings/module-settings';
+import {
+  getUiSettings,
+  setUiSettings,
+  subscribeUiSettings,
+  type UiSettings,
+} from '../../../src/lib/settings/ui-settings';
 import { AppIcon, HelpIcon, STRENGTH_HINTS, STRENGTH_LABELS, Toggle } from './shared';
 import KeywordsView from './KeywordsView';
 import CadencePage from './settings/CadencePage';
@@ -51,6 +57,7 @@ export type SettingsPage =
   | 'highlight'
   | 'stats'
   | 'ai'
+  | 'clean'
   | 'compose'
   | 'share'
   | 'filter'
@@ -66,6 +73,7 @@ const PARENT_PAGE: Record<Exclude<SettingsPage, 'home'>, SettingsPage> = {
   highlight: 'home',
   stats: 'home',
   ai: 'home',
+  clean: 'home',
   compose: 'home',
   share: 'home',
   filter: 'home',
@@ -218,12 +226,14 @@ export default function SettingsView({
   const [budgetDraft, setBudgetDraft] = useState<string | null>(null);
   const [insightBadges, setInsightBadges] = useState<boolean | null>(null);
   const [modules, setModules] = useState<ModuleSettings | null>(null);
+  const [ui, setUi] = useState<UiSettings | null>(null);
   const [schedule, setSchedule] = useState<ScheduleSettings | null>(null);
   const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     void getInsightBadgesEnabled().then(setInsightBadges);
     void getModuleSettings().then(setModules);
+    void getUiSettings().then(setUi);
     void getScheduleSettings().then(setSchedule);
     void getSafetyBudgetOverride().then((value) =>
       setBudgetDraft(String(value ?? SAFETY_PRESETS[DEFAULT_PRESET].dailyLimit)),
@@ -233,6 +243,7 @@ export default function SettingsView({
     const unsubs = [
       subscribeInsightBadges(setInsightBadges),
       subscribeModuleSettings(setModules),
+      subscribeUiSettings(setUi),
       subscribeScheduleSettings(setSchedule),
       subscribeKeywordRules(setKeywordRules),
       subscribeKeywordPackCatalog(setCatalog),
@@ -250,6 +261,12 @@ export default function SettingsView({
   async function updateModule(key: 'aiCheck' | 'shareMenu', enabled: boolean): Promise<void> {
     setModules((prev) => (prev ? { ...prev, [key]: enabled } : prev));
     await setModuleSettings(key === 'aiCheck' ? { aiCheck: enabled } : { shareMenu: enabled });
+  }
+
+  /** 界面净化：细项在总开关打开后才生效，这里只负责存，页面上的效果由内容脚本监听。 */
+  async function updateUi(key: keyof UiSettings, enabled: boolean): Promise<void> {
+    setUi((prev) => (prev ? { ...prev, [key]: enabled } : prev));
+    await setUiSettings({ [key]: enabled });
   }
 
   /** 发帖辅助是一个总开关，两个细项一起开 / 一起关；细项仍可在「发帖」页单独调。 */
@@ -350,6 +367,7 @@ export default function SettingsView({
       highlight: t.enabled,
       stats: t.insightBadges,
       ai: t.moduleAi,
+      clean: t.moduleClean,
       compose: t.moduleCompose,
       share: t.moduleShare,
       filter: t.groupFilter,
@@ -429,6 +447,79 @@ export default function SettingsView({
               />
             </Row>
           </section>
+        ) : null}
+
+        {page === 'clean' ? (
+          <>
+            <section className="group">
+              <Row label={t.cleanUi} hint={t.cleanUiHint}>
+                <Toggle
+                  checked={ui?.cleanUi ?? false}
+                  disabled={ui === null}
+                  label={t.cleanUi}
+                  onChange={(enabled) => void updateUi('cleanUi', enabled)}
+                />
+              </Row>
+            </section>
+            <section className="group">
+              <Row label={t.cleanForYou} hint={t.cleanForYouHint}>
+                <Toggle
+                  checked={ui?.hideForYou ?? true}
+                  disabled={!ui?.cleanUi}
+                  label={t.cleanForYou}
+                  onChange={(enabled) => void updateUi('hideForYou', enabled)}
+                />
+              </Row>
+              <Row label={t.cleanTrends} hint={t.cleanTrendsHint}>
+                <Toggle
+                  checked={ui?.hideTrends ?? true}
+                  disabled={!ui?.cleanUi}
+                  label={t.cleanTrends}
+                  onChange={(enabled) => void updateUi('hideTrends', enabled)}
+                />
+              </Row>
+              <Row label={t.cleanWhoToFollow} hint={t.cleanWhoToFollowHint}>
+                <Toggle
+                  checked={ui?.hideWhoToFollow ?? true}
+                  disabled={!ui?.cleanUi}
+                  label={t.cleanWhoToFollow}
+                  onChange={(enabled) => void updateUi('hideWhoToFollow', enabled)}
+                />
+              </Row>
+              <Row label={t.cleanPromoted} hint={t.cleanPromotedHint}>
+                <Toggle
+                  checked={ui?.hidePromoted ?? true}
+                  disabled={!ui?.cleanUi}
+                  label={t.cleanPromoted}
+                  onChange={(enabled) => void updateUi('hidePromoted', enabled)}
+                />
+              </Row>
+              <Row label={t.cleanGrok} hint={t.cleanGrokHint}>
+                <Toggle
+                  checked={ui?.hideGrok ?? true}
+                  disabled={!ui?.cleanUi}
+                  label={t.cleanGrok}
+                  onChange={(enabled) => void updateUi('hideGrok', enabled)}
+                />
+              </Row>
+              <Row label={t.cleanPremiumReplies} hint={t.cleanPremiumRepliesHint}>
+                <Toggle
+                  checked={ui?.dimPremiumReplies ?? true}
+                  disabled={!ui?.cleanUi}
+                  label={t.cleanPremiumReplies}
+                  onChange={(enabled) => void updateUi('dimPremiumReplies', enabled)}
+                />
+              </Row>
+              <Row label={t.cleanFont} hint={t.cleanFontHint}>
+                <Toggle
+                  checked={ui?.systemFont ?? true}
+                  disabled={!ui?.cleanUi}
+                  label={t.cleanFont}
+                  onChange={(enabled) => void updateUi('systemFont', enabled)}
+                />
+              </Row>
+            </section>
+          </>
         ) : null}
 
         {page === 'compose' ? (
@@ -661,6 +752,11 @@ export default function SettingsView({
           label={t.moduleAi}
           meta={moduleMeta(modules ? modules.aiCheck : null)}
           onOpen={() => onNavigate('ai')}
+        />
+        <NavRow
+          label={t.moduleClean}
+          meta={moduleMeta(ui ? ui.cleanUi : null)}
+          onOpen={() => onNavigate('clean')}
         />
         <NavRow
           label={t.moduleCompose}

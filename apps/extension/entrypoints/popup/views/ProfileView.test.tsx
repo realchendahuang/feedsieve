@@ -97,7 +97,11 @@ beforeEach(() => {
     },
     runtime: {
       sendMessage: vi.fn(async (message: { type: string; handle?: string }) =>
-        message.type === 'feedsieve:profile-get' && message.handle === 'alice' ? entry : null,
+        message.type === 'feedsieve:profile-get' && message.handle === 'alice'
+          ? entry
+          : message.type === 'feedsieve:profile-fill'
+            ? { ok: true, added: 3, stopped: 'limit' }
+            : null,
       ),
       onMessage: { addListener: vi.fn(), removeListener: vi.fn() },
     },
@@ -119,25 +123,41 @@ async function render() {
   const root = ReactDOM.createRoot(el);
   mounted.push(root);
   const notify = vi.fn();
+  const sendToXPage = vi.fn(async () => ({ ok: true, added: 3, stopped: 'limit' }));
   await act(async () => {
     root.render(
       React.createElement(ProfileView, {
         language: 'zh' as const,
         notify,
-        sendToXPage: async () => ({ found: false }),
+        sendToXPage,
       }),
     );
   });
   await act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
-  return { el, notify };
+  return { el, notify, sendToXPage };
 }
 
 const texts = (el: HTMLElement) =>
   [...el.querySelectorAll('.profile-post .post-text')].map((node) => node.textContent);
 
 describe('ProfileView', () => {
+  it('starts scrolling fill from the tool row when asked', async () => {
+    const { el, notify, sendToXPage } = await render();
+    const button = el.querySelector<HTMLButtonElement>('button[aria-label="补全这个博主"]');
+    expect(button).toBeTruthy();
+    await act(async () => {
+      button!.click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(sendToXPage).toHaveBeenCalledWith({
+      type: 'feedsieve:profile-fill',
+      handle: 'alice',
+    });
+    expect(notify).toHaveBeenCalledWith('补全了 3 条');
+  });
+
   it('shows the account, the baseline and outliers first', async () => {
     const { el } = await render();
     expect(el.querySelector('.profile-card .post-name')?.textContent).toBe('Alice');
@@ -254,14 +274,15 @@ describe('ProfileView', () => {
     expect(el.querySelector('.google-search')).toBeNull();
   });
 
-  it('keeps only the search icons when nothing is collected yet', async () => {
+  it('keeps the tool row to icons when nothing is collected yet', async () => {
     entry = catalog([]);
     const { el } = await render();
     expect(el.textContent).toContain('往下滚动主页');
     const labels = [...el.querySelectorAll('.profile-tools button')].map((b) =>
       b.getAttribute('aria-label'),
     );
-    expect(labels).toEqual(['在 X 搜高赞帖', '用 Google 搜他的帖子']);
+    // 没数据时更需要「补全」：滚动加载是这里唯一的自救入口
+    expect(labels).toEqual(['补全这个博主', '在 X 搜高赞帖', '用 Google 搜他的帖子']);
     // 没有赤裸裸的大按钮
     expect(el.querySelector('.secondary-button')).toBeNull();
   });

@@ -36,6 +36,8 @@ import {
 import { createInsightDecorations } from '../src/lib/insight/decorations';
 import { createProfileInsight } from '../src/lib/insight/profile-insight';
 import { createShareMenu } from '../src/lib/insight/share-menu';
+import { createCleanUi } from '../src/lib/content/clean-ui';
+import { createProfileFill } from '../src/lib/content/profile-fill';
 import { createAiCheck } from '../src/lib/ai-check/ai-check';
 import { createComposeSchedule } from '../src/lib/compose/compose-schedule';
 import { createArticleHelper } from '../src/lib/compose/article-editor';
@@ -205,6 +207,11 @@ export default defineContentScript({
       isEnabled: () => modules.shareMenu,
     });
     shareMenu.listen();
+    // 界面净化（设置 › 界面净化）：默认关闭，只改 X 自己的外观
+    const cleanUi = createCleanUi();
+    cleanUi.start();
+    // 主页补全：用户点工具条图标后才慢慢往下滚，模拟人滑动的节奏
+    const profileFill = createProfileFill();
     insight.listenHover();
     scanWiring.processOne = scan.scanOne;
     scanWiring.flushBadges = badges.flushPendingBadges;
@@ -280,6 +287,7 @@ export default defineContentScript({
       shareMenu.dispose();
       composeSchedule.stop();
       articleHelper.stop();
+      cleanUi.stop();
       insight.dispose();
       clearPageDecorations();
     });
@@ -362,6 +370,7 @@ export default defineContentScript({
       followingSync,
       startPersistentQueue: queueRunner.startPersistentQueue,
       runManualSpamBlock: manual.runManualSpamBlock,
+      profileFill,
     });
     // 快照/设置变化（同步、换强度档）实时生效到下一次扫描；只订阅一次
     subscribeCommunity(() => {

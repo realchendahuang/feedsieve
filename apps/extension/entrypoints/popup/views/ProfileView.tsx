@@ -74,7 +74,7 @@ const OUTLIER_RATE_ACCENT = 0.1;
 interface ProfileViewProps {
   language: UiLanguage;
   notify: (message: string | null) => void;
-  sendToXPage: (message: { type: string; postId?: string }) => Promise<unknown>;
+  sendToXPage: (message: { type: string; postId?: string; handle?: string }) => Promise<unknown>;
 }
 
 /** 当前标签页的博主：切到别的页面（帖子详情、首页）时保留上一个，面板不闪。 */
@@ -437,6 +437,7 @@ export default function ProfileView({ language, notify, sendToXPage }: ProfileVi
   const [googleRange, setGoogleRange] = useState<GoogleRange>('any');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [visited, setVisited] = useState<Set<string>>(() => new Set());
+  const [filling, setFilling] = useState(false);
   const sentinelRef = useRef<HTMLLIElement | null>(null);
 
   useEffect(() => {
@@ -580,6 +581,37 @@ export default function ProfileView({ language, notify, sendToXPage }: ProfileVi
 
   const numberText = (value: number): string => formatCount(value, language);
 
+  /** 用户点「补全」：慢慢向下滚，让 X 自己加载更多帖子；再点一次停止。 */
+  async function fillProfile(): Promise<void> {
+    if (!handle) return;
+    if (filling) {
+      await sendToXPage({ type: 'feedsieve:profile-fill-stop' }).catch(() => undefined);
+      return;
+    }
+    setFilling(true);
+    notify(t.profileFillRunning);
+    try {
+      const result = (await sendToXPage({
+        type: 'feedsieve:profile-fill',
+        handle,
+      })) as { ok?: boolean; added?: number; stopped?: string } | null;
+      const next = await load(handle);
+      setEntry(next);
+      setNow(Date.now());
+      if (result?.ok) {
+        notify(result.added && result.added > 0 ? t.profileFillDone(result.added) : t.profileFillNone);
+      } else if (result?.stopped === 'not-profile') {
+        notify(t.profileFillNotProfile);
+      } else {
+        notify(t.profileFillFailed);
+      }
+    } catch {
+      notify(t.profileFillFailed);
+    } finally {
+      setFilling(false);
+    }
+  }
+
   async function copyForAi(): Promise<void> {
     if (!handle) return;
     const markdown = outliersMarkdown(
@@ -685,6 +717,12 @@ export default function ProfileView({ language, notify, sendToXPage }: ProfileVi
   // 右上角的图标按钮：没有帖子时只留两个搜索（复制、导出没东西可用）
   const tools = (
     <>
+      <IconButton
+        icon={filling ? 'x' : 'down'}
+        label={filling ? t.profileFillStop : t.profileFill}
+        hint={filling ? undefined : t.profileFillHint}
+        onClick={() => void fillProfile()}
+      />
       <IconButton
         icon="search"
         label={t.profileSearchHighLikes}
