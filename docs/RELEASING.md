@@ -55,6 +55,22 @@ scripts/release.sh 0.12.2 --dry-run
 3. 确认版本号与权限（`storage` / `unlimitedStorage` / `sidePanel` / `x.com`）
 4. 提交审核，保持「通过审核后自动发布」
 
+## 3.1 同时发布 Firefox（AMO）
+
+```sh
+scripts/release.sh 0.13.1 --firefox
+```
+
+在 Chrome 包之外，还会跑 `scripts/pack-firefox.sh`：构建 Firefox MV3、
+`check-firefox.mjs`、`web-ext lint`（要求 0 errors）、zip 审计，并生成
+AMO 审核用完整源码包。GitHub Release 会多挂：
+
+- `feedsieve-X.Y.Z-firefox.zip` + `.sha256`
+- `feedsieve-X.Y.Z-firefox-source.zip` + `.sha256`
+
+AMO 上传与送审同样需要登录态，不在脚本内；流程见 [`FIREFOX.md`](FIREFOX.md)。
+注意 Firefox 的 Gecko ID 固定为 `feedsieve@feedsieve.local`，必须更新已有条目。
+
 ## 4. 发版后检查
 
 - GitHub Release 的 `vX.Y.Z` 有 `feedsieve-X.Y.Z-chrome.zip`

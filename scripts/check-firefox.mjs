@@ -8,7 +8,8 @@ const manifest = JSON.parse(readFileSync(resolve(output, 'manifest.json'), 'utf8
 assert.equal(manifest.manifest_version, 3);
 
 const gecko = manifest.browser_specific_settings?.gecko;
-assert.equal(gecko?.id, 'feedsieve@feedsieve.win');
+// 必须和 AMO 上已存在的 feedsieve 条目（0.8.2，slug=feedsieve）一致；AMO 首次提交后不可改。
+assert.equal(gecko?.id, 'feedsieve@feedsieve.local');
 assert.equal(gecko?.strict_min_version, '140.0');
 assert.deepEqual(gecko?.data_collection_permissions?.required, [
   'websiteContent',
@@ -16,7 +17,8 @@ assert.deepEqual(gecko?.data_collection_permissions?.required, [
   'personallyIdentifyingInfo',
   'authenticationInfo',
 ]);
-assert.equal(manifest.browser_specific_settings?.gecko_android?.strict_min_version, '142.0');
+// Android 端侧边栏 / 弹窗未验收，暂不声明 gecko_android。
+assert.equal(manifest.browser_specific_settings?.gecko_android, undefined);
 
 // Firefox MV3 用 background.scripts；出现 service_worker 说明构建目标错了。
 assert.ok(manifest.background?.scripts?.length > 0, 'background.scripts 为空');

@@ -1,6 +1,8 @@
 # Firefox 支持
 
-Firefox 版与 Chrome 版共用同一套代码，构建目标为 MV3。当前状态：**可构建、可临时加载、界面已验证；真实 X 账号上的标注与拉黑尚未验收**。
+Firefox 版与 Chrome 版共用同一套代码，构建目标为 MV3。当前状态：**可构建、可临时加载、界面已验证；AMO 上已有 0.8.2 公开条目（slug `feedsieve`，GUID `feedsieve@feedsieve.local`），新版提交前还需要真实 X 账号验收**。
+
+> AMO 的 GUID 首次提交后不可改。2026-09-07 已用 `feedsieve@feedsieve.local` 上架过 0.8.2，后续版本必须沿用这个 ID，否则 AMO 会当成另一个扩展，老用户收不到更新。不要改成 `feedsieve@feedsieve.win`。
 
 ## 构建
 
@@ -10,6 +12,14 @@ pnpm check:extension:firefox
 ```
 
 产物在 `apps/extension/.output/firefox-mv3/`。校验脚本会检查 MV3、Gecko ID、权限、`sidebar_action`、`background.scripts`、MAIN world 网络桥和入口文件。
+
+发版打包（含 `web-ext lint`、zip 审计和 AMO 审核用完整源码包）：
+
+```sh
+sh scripts/pack-firefox.sh
+```
+
+产出 `feedsieve-<version>-firefox.zip`、`feedsieve-<version>-firefox-source.zip` 及各自 `.sha256`。源码包只含 `apps/extension`、`packages/*`、`community/*` 和根配置；已验证从源码包 `pnpm install --frozen-lockfile` 后构建出的产物与提交 zip 完全一致。
 
 ## 本机调试
 
@@ -35,21 +45,33 @@ npx web-ext run --source-dir apps/extension/.output/firefox-mv3
 | 侧边栏 | `side_panel` + `sidePanel` 权限 | `sidebar_action` + 同一个 `popup.html` |
 | 后台 | service worker | `background.scripts`（事件页，空闲会停） |
 | 权限 | storage / unlimitedStorage / sidePanel | storage / unlimitedStorage |
-| Gecko ID | — | `feedsieve@feedsieve.win`（AMO 首次提交后不可改） |
-| 最低版本 | — | Firefox 140；Android 142 |
+| Gecko ID | — | `feedsieve@feedsieve.local`（沿用 AMO 已有条目，首次提交后不可改） |
+| 最低版本 | — | Firefox 140；暂不声明 Android（侧边栏 / 弹窗未验收） |
 | 数据传输声明 | 商店隐私权表单 | `browser_specific_settings.gecko.data_collection_permissions` |
 
 `getChromeSidePanel()` 在 Firefox 下用 `browser.sidebarAction` 模拟 `open` / `close`，调用方无需分支。两者都要求用户手势，从 content script 转发点击时可能失败，界面按「侧边栏打开失败」提示。
 
 ## AMO 上架
 
-1. `pnpm check:extension:firefox` 通过
-2. `npx web-ext lint --source-dir apps/extension/.output/firefox-mv3`，要求 0 errors
-3. 在 [AMO 开发者中心](https://addons.mozilla.org/developers/) 提交 zip 和完整源码
-4. 首次提交前确认：
-   - Gecko ID 是否已有条目；没有就用 `feedsieve@feedsieve.win`
-   - `data_collection_permissions` 与 `PRIVACY.md` 的条目逐项对应
-   - 源码提交需要完整 monorepo（WXT 默认 sources.zip 只含扩展子目录）
+AMO 上已有公开条目：<https://addons.mozilla.org/zh-CN/firefox/addon/feedsieve/>（0.8.2，GUID `feedsieve@feedsieve.local`）。新版本是**更新这个条目**，不是首发。
+
+发版前：
+
+1. 用登录了 X 的 Firefox 完成下方「尚未验证」清单
+2. `pnpm check:extension:firefox` 通过
+3. `npx web-ext lint --source-dir apps/extension/.output/firefox-mv3`，要求 0 errors
+4. 更新 `PRIVACY.md`、本文件和 `CHANGELOG.md`；确认 `data_collection_permissions` 与隐私政策逐项对应
+
+提交时：
+
+1. 在 [AMO 开发者中心](https://addons.mozilla.org/developers/) 打开已有的 FeedSieve 条目 →「上传新版本」
+2. 上传 Firefox zip；版本号必须大于 0.8.2
+3. 附完整 monorepo 源码 zip（WXT 默认 sources.zip 只含扩展子目录，不含 `packages/*`）和构建说明
+4. 审核说明里写清：AI 味检测会把公开回复交给第三方语言模型判定一次；无远程代码；`browser.storage` 与 `x.com` 主机权限的用途
+5. 补齐 listing：MIT 许可证、隐私政策 URL、主页、截图、当前功能描述；数据收集表单从 0.8.2 的 `none` 改为网站内容 / 用户活动 / 唯一标识 / 认证信息四类
+6. 只勾桌面 Firefox；Android 等真机验收后再开
+
+审核通过后 AMO 自动发布，已装 0.8.2 的用户会收到更新。
 
 ## 已验证 / 未验证
 

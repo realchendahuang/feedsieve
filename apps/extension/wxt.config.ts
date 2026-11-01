@@ -38,8 +38,9 @@ export default defineConfig({
             },
             browser_specific_settings: {
               gecko: {
-                // AMO 首次提交后不可改；改之前先确认没有已存在的条目。
-                id: 'feedsieve@feedsieve.win',
+                // AMO 首次提交后不可改。必须沿用 2026-09-07 已上架的 feedsieve 条目
+                // （0.8.2，slug=feedsieve）的 ID，否则 AMO 会当成另一个扩展，老用户收不到更新。
+                id: 'feedsieve@feedsieve.local',
                 strict_min_version: '140.0',
                 // Firefox 140 起的数据传输声明，和 PRIVACY.md 的条目对应。
                 data_collection_permissions: {
@@ -51,7 +52,7 @@ export default defineConfig({
                   ],
                 },
               },
-              gecko_android: { strict_min_version: '142.0' },
+              // Android 端侧边栏与弹窗还没验收；先不发 Android，等真机测过再补 gecko_android。
             },
           }
         : { side_panel: { default_path: 'popup.html' } }),
