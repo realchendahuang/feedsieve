@@ -26,6 +26,8 @@ export default defineConfig({
       // 商店简短描述同这一句（≤132 字），改动时同步 docs/08-商店上架材料.md
       description:
         '评论区不骚了，好帖也不漏了。黄推标出一键原生拉黑；流速与量级、热帖榜、博主爆款分析、定时排期与文章 Markdown，中文 X 副驾驶。',
+      // 官方主页；AMO 审核与用户识别官方发布时使用
+      homepage_url: 'https://feedsieve.win/',
       // unlimitedStorage：主页洞察的本地帖子库（profile-catalog.ts）会超过 storage.local 默认的 10 MB。
       // Firefox 没有 sidePanel，用 sidebar_action 承载同一个 popup.html。
       permissions: ['storage', 'unlimitedStorage', ...(firefox ? [] : ['sidePanel'])],
@@ -38,9 +40,10 @@ export default defineConfig({
             },
             browser_specific_settings: {
               gecko: {
-                // AMO 首次提交后不可改。必须沿用 2026-09-07 已上架的 feedsieve 条目
-                // （0.8.2，slug=feedsieve）的 ID，否则 AMO 会当成另一个扩展，老用户收不到更新。
-                id: 'feedsieve@feedsieve.local',
+                // 官方 Firefox 版使用自己的 ID。AMO 上 2026-09-07 出现的
+                // feedsieve@feedsieve.local / slug=feedsieve 条目是第三方转载，
+                // 不是本项目发布，不能复用它的 ID；我们另行提交官方条目。
+                id: 'feedsieve@feedsieve.win',
                 strict_min_version: '140.0',
                 // Firefox 140 起的数据传输声明，和 PRIVACY.md 的条目对应。
                 data_collection_permissions: {

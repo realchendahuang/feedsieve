@@ -20,7 +20,7 @@
 
 ### Firefox
 
-- 确认 AMO 上已有 0.8.2 公开条目（slug `feedsieve`），Gecko ID 改为沿用 `feedsieve@feedsieve.local`；新版本作为该条目的更新提交，不再使用 `feedsieve@feedsieve.win`。
+- 发现 AMO 上的 `feedsieve` 0.8.2 条目（GUID `feedsieve@feedsieve.local`）是第三方账号在 2026-09-07 注册后立即转载的，不是本项目发布；官方版改用自有 `feedsieve@feedsieve.win`，并准备向 AMO 举报该条目。
 - 新增 `scripts/pack-firefox.sh`：Firefox 构建 + `check-firefox` + `web-ext lint` + zip 审计 + AMO 审核用完整源码包；源码包已验证可独立安装依赖并构建出相同产物。
 - 首个新版暂不声明 Android（侧边栏 / 弹窗尚未在 Android 验收）。
 

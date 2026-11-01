@@ -8,8 +8,9 @@ const manifest = JSON.parse(readFileSync(resolve(output, 'manifest.json'), 'utf8
 assert.equal(manifest.manifest_version, 3);
 
 const gecko = manifest.browser_specific_settings?.gecko;
-// 必须和 AMO 上已存在的 feedsieve 条目（0.8.2，slug=feedsieve）一致；AMO 首次提交后不可改。
-assert.equal(gecko?.id, 'feedsieve@feedsieve.local');
+// 官方 ID；AMO 上已有的 feedsieve@feedsieve.local 条目是第三方转载，不能复用。
+assert.equal(gecko?.id, 'feedsieve@feedsieve.win');
+assert.equal(manifest.homepage_url, 'https://feedsieve.win/');
 assert.equal(gecko?.strict_min_version, '140.0');
 assert.deepEqual(gecko?.data_collection_permissions?.required, [
   'websiteContent',
