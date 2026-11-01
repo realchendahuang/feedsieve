@@ -5,7 +5,7 @@
 - 每个版本的详细工程记录见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)。
 - 二进制产物见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)；正式用户请从 [Chrome 应用商店](https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph)接收更新。
 
-## [Unreleased]
+## [0.13.1] — 2026-11-01
 
 ### AI 味
 
@@ -20,7 +20,7 @@
 
 ### Firefox
 
-- 发现 AMO 上的 `feedsieve` 0.8.2 条目（GUID `feedsieve@feedsieve.local`）是第三方账号在 2026-09-07 注册后立即转载的，不是本项目发布；官方版改用自有 `feedsieve@feedsieve.win`，并准备向 AMO 举报该条目。
+- 官方 Firefox 版使用自有 Gecko ID `feedsieve@feedsieve.win` 另建 AMO 条目；AMO 上 2026-09-07 出现的 `feedsieve@feedsieve.local` / `feedsieve` 0.8.2 条目是第三方转载，不是本项目发布，不复用、不更新。
 - 新增 `scripts/pack-firefox.sh`：Firefox 构建 + `check-firefox` + `web-ext lint` + zip 审计 + AMO 审核用完整源码包；源码包已验证可独立安装依赖并构建出相同产物。
 - 首个新版暂不声明 Android（侧边栏 / 弹窗尚未在 Android 验收）。
 
@@ -470,7 +470,8 @@
 - 首个可用版本：黄框标注（内置名单 + 启发式，带理由）、顺手拉黑、待拉黑列表、一键批量拉黑（持久队列）、一键撤销、本地统计。
 - WXT + React 19 + MV3 最小权限架构；X DOM fixtures 锁定 reader→detector 契约；95 个单元测试；pre-push 本地质量门禁。
 
-[Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.13.1...HEAD
+[0.13.1]: https://github.com/realchendahuang/feedsieve/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/realchendahuang/feedsieve/compare/v0.12.2...v0.13.0
 [0.12.2]: https://github.com/realchendahuang/feedsieve/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/realchendahuang/feedsieve/compare/v0.12.0...v0.12.1
