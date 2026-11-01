@@ -257,12 +257,13 @@ function ensureStyles(): void {
     .fs-ai-mark[data-tone="mixed"] { background: #b45309; }
     .fs-ai-mark:hover { filter: brightness(1.1); }
     .fs-ai-mark:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
-    /* 未检测的入口：作者名旁一个低调的机器人小圆，hover 变紫 */
+    /* 未检测的入口：@handle 前面的灰色机器人小圆，hover 变紫 */
     .fs-ai-entry { display: inline-flex; align-items: center; justify-content: center;
-      width: 20px; height: 20px; margin-left: 4px; padding: 0; border: 0; border-radius: 50%;
-      background: transparent; color: inherit; opacity: .4; cursor: pointer; flex: none; align-self: center; }
-    .fs-ai-entry svg { width: 15px; height: 15px; }
-    .fs-ai-entry:hover { color: #7856ff; background: rgba(120,86,255,.12); opacity: 1; }
+      width: 20px; height: 20px; margin-right: 4px; padding: 0; border: 0; border-radius: 50%;
+      background: rgba(113,118,123,.14); color: rgb(83,100,113); opacity: .85; cursor: pointer;
+      flex: none; align-self: center; }
+    .fs-ai-entry svg { width: 14px; height: 14px; }
+    .fs-ai-entry:hover { color: #7856ff; background: rgba(120,86,255,.14); opacity: 1; }
     .fs-ai-entry:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
     article[data-fs-ai-tone="ai"] { box-shadow: inset 3px 0 0 #d81e2f; }
     article[data-fs-ai-tone="mixed"] { box-shadow: inset 3px 0 0 #ffb020; }
@@ -652,7 +653,8 @@ export function createAiCheck(deps: {
             event.stopPropagation();
             void openFor(handle);
           });
-          entryRow.appendChild(btn);
+          // 插到 @handle 前面：紧挨作者名，不放到行末被时间和徽标挤开
+          entryRow.insertBefore(btn, entryRow.firstChild);
         }
       } else {
         entry?.remove();
