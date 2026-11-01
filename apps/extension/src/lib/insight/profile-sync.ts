@@ -11,10 +11,12 @@
  * - 其余不报。所以一个博主被很多人看，服务端也只收到真正的新数字。
  * 攒着批量发，最多 5 分钟一次；第一次在看到数据 1 分钟后。
  *
- * 只报公开数据：受保护账号、用户自己、粉丝不到 1000 的博主不报；只在私信、通知、书签、列表等页面看到的帖子不报；
+ * 只报公开数据：受保护账号、粉丝不到 1000 的博主不报；只在私信、通知、书签、列表等页面看到的帖子不报；
  * 「仅本地运行」打开时既不拉也不报。
+ * 自己的主页和别人的主页一样上报、拉取（帖子本来就是公开的，本人提供的数据也最完整），但自己的
+ * 那批用一个单独的每日会话 ID，不和他看别人的记录落在同一个会话里。
  * 不带安装 ID，只带每日轮换的随机会话 ID（服务端加盐哈希后只用于限额，不和帖子存在一起）。
- * 拉取时服务端能看到 IP 和博主 handle（不记录对应关系），所以自己、受保护和粉丝不够的博主不去拉。
+ * 拉取时服务端能看到 IP 和博主 handle（不记录对应关系），受保护和粉丝不够的博主不去拉。
  */
 import type { InsightObservation } from './shared-insight';
 import type { CatalogEntry, CatalogPost, RemoteProfile } from './profile-catalog';
@@ -137,6 +139,14 @@ function toUploadAccount(entry: CatalogEntry): ProfileUploadAccount | null {
   return item;
 }
 
+/** 原地洗牌：服务端看不出这一批里先看了谁、后看了谁。 */
+function shuffle<T>(list: T[]): void {
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [list[i], list[j]] = [list[j]!, list[i]!];
+  }
+}
+
 export function createProfileSync(deps: ProfileSyncDeps) {
   const now = deps.now ?? (() => Date.now());
   const randomId = deps.randomId ?? (() => crypto.randomUUID());
@@ -171,15 +181,26 @@ export function createProfileSync(deps: ProfileSyncDeps) {
       .catch(() => undefined);
   }
 
-  /** 每天一个新的随机会话 ID，和全站热榜的不是同一个。 */
-  async function sessionId(): Promise<string> {
+  /**
+   * 每天一个新的随机会话 ID，和全站热榜的不是同一个。
+   * 自己的主页用 `self` 这个独立的 ID：即使同一天既看自己又看别人，服务端也串不起来。
+   */
+  async function sessionId(scope: 'default' | 'self' = 'default'): Promise<string> {
     const day = new Date(now()).toISOString().slice(0, 10);
     const stored = (await deps.storage.get(SESSION_KEY))[SESSION_KEY] as
-      { day?: string; id?: string } | undefined;
-    if (stored?.day === day && typeof stored.id === 'string') return stored.id;
-    const id = randomId();
-    await deps.storage.set({ [SESSION_KEY]: { day, id } });
-    return id;
+      { day?: string; id?: string; selfId?: string } | undefined;
+    if (stored?.day === day) {
+      if (scope === 'self' && typeof stored.selfId === 'string') return stored.selfId;
+      if (scope === 'default' && typeof stored.id === 'string') return stored.id;
+    }
+    const sameDay = stored?.day === day;
+    const next = {
+      day,
+      id: sameDay && typeof stored?.id === 'string' ? stored.id : randomId(),
+      selfId: sameDay && typeof stored?.selfId === 'string' ? stored.selfId : randomId(),
+    };
+    await deps.storage.set({ [SESSION_KEY]: next });
+    return scope === 'self' ? next.selfId : next.id;
   }
 
   /** 从服务端拉一个博主的帖子库（增量），合并进本机。同一个博主 10 分钟内最多一次。 */
@@ -189,11 +210,10 @@ export function createProfileSync(deps: ProfileSyncDeps) {
     const task = (async () => {
       if (!(await deps.isAllowed()) || !(await deps.catalog.has(handle))) return;
       const entry = await deps.catalog.get(handle);
-      // 受保护、自己、已知粉丝不到门槛的：服务端没有，也不必让服务端看到这次请求
+      // 受保护、已知粉丝不到门槛的：服务端没有，也不必让服务端看到这次请求
       if (
         !entry ||
         entry.account.protected ||
-        handle === (await deps.getSelfHandle()) ||
         (entry.account.followers !== undefined && entry.account.followers < PROFILE_MIN_FOLLOWERS)
       ) {
         return;
@@ -260,7 +280,6 @@ export function createProfileSync(deps: ProfileSyncDeps) {
       if (
         !entry ||
         entry.account.protected ||
-        handle === self ||
         (entry.account.followers ?? 0) < PROFILE_MIN_FOLLOWERS
       ) {
         pending.delete(handle);
@@ -274,12 +293,33 @@ export function createProfileSync(deps: ProfileSyncDeps) {
       pending.delete(handle);
     }
     if (posts.length === 0 && accounts.length === 0) return;
+    // 自己的主页走独立会话：数据是公开的，但不必让服务端把它和同一个人看别人的记录串起来
+    const selfPosts = posts.filter((item) => item.handle === self);
+    const selfAccounts = accounts.filter((item) => item.handle === self);
+    const otherPosts = posts.filter((item) => item.handle !== self);
+    const otherAccounts = accounts.filter((item) => item.handle !== self);
     // 打乱顺序：服务端看不出这一批里先看了谁、后看了谁
-    for (let i = posts.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [posts[i], posts[j]] = [posts[j]!, posts[i]!];
+    shuffle(otherPosts);
+    shuffle(selfPosts);
+    if (otherPosts.length > 0 || otherAccounts.length > 0) {
+      if (!(await sendBatch(otherPosts, otherAccounts, await sessionId()))) {
+        // 自己的那批还没发：放回队列，下个周期再试
+        for (const item of selfPosts) pending.add(item.handle);
+        for (const account of selfAccounts) pending.add(account.handle);
+        return;
+      }
     }
-    const id = await sessionId();
+    if (selfPosts.length > 0 || selfAccounts.length > 0) {
+      await sendBatch(selfPosts, selfAccounts, await sessionId('self'));
+    }
+  }
+
+  /** 发一批（每批最多 CHUNK 条帖子、20 个账号）。返回 false 表示限额用完或服务端出错，下个周期再试。 */
+  async function sendBatch(
+    posts: Array<{ handle: string; post: ProfileUploadPost }>,
+    accounts: ProfileUploadAccount[],
+    id: string,
+  ): Promise<boolean> {
     // 账号资料跟帖子一起走（服务端每次最多 20 个账号）
     let accountQueue = accounts;
     for (let i = 0; i < posts.length || accountQueue.length > 0; i += CHUNK) {
@@ -297,7 +337,7 @@ export function createProfileSync(deps: ProfileSyncDeps) {
         // 限额用完或服务器出错：没报成功的博主留着，下个周期再试
         for (const item of posts.slice(i)) pending.add(item.handle);
         for (const account of [...accountChunk, ...accountQueue]) pending.add(account.handle);
-        return;
+        return false;
       }
       // 服务端收下请求就算同步过，包括它按规则拒收的条目（粉丝不够、伪造等）：
       // 拒收的重报一次还是拒收，按 accepted 重试会变成无限重报
@@ -317,6 +357,7 @@ export function createProfileSync(deps: ProfileSyncDeps) {
         await deps.catalog.markSynced(handle, list, followers);
       }
     }
+    return true;
   }
 
   async function maybeUpload(): Promise<void> {

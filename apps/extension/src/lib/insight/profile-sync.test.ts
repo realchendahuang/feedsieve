@@ -59,7 +59,12 @@ function setup(options: { allowed?: boolean; responses?: unknown[] } = {}) {
   let clock = NOW;
   const { storage } = memoryStorage();
   const catalog = createProfileCatalog({ storage, now: () => clock, persistDelayMs: 1 });
-  const uploads: Array<{ posts: ProfileUploadPost[]; accounts: unknown[] }> = [];
+  const uploads: Array<{
+    session_id: string;
+    posts: ProfileUploadPost[];
+    accounts: unknown[];
+  }> = [];
+  let idSeq = 0;
   const responses = [...(options.responses ?? [])];
   const fetchProfile = vi.fn<(handle: string, cursor: string | undefined) => Promise<Response>>(
     async () => {
@@ -74,7 +79,11 @@ function setup(options: { allowed?: boolean; responses?: unknown[] } = {}) {
       return new Response(JSON.stringify(body), { status: 200 });
     },
   );
-  const post = vi.fn(async (body: { posts: ProfileUploadPost[]; accounts: unknown[] }) => {
+  const post = vi.fn(async (body: {
+    session_id: string;
+    posts: ProfileUploadPost[];
+    accounts: unknown[];
+  }) => {
     uploads.push(body);
     return new Response('{}', { status: 200 });
   });
@@ -86,7 +95,7 @@ function setup(options: { allowed?: boolean; responses?: unknown[] } = {}) {
     fetchProfile,
     storage,
     now: () => clock,
-    randomId: () => '0000000000000000-0001',
+    randomId: () => `0000000000000000-${String(++idSeq).padStart(4, '0')}`,
   });
   /** 内容脚本的一批观测：先进本机帖子库，再交给同步（和 background.ts 的顺序一致）。 */
   async function observe(observation: Record<string, unknown>) {
@@ -158,6 +167,37 @@ describe('createProfileSync', () => {
     expect(entry.posts['10']).toMatchObject({ views: 9_000, syncedViews: 9_000, synced: true });
     expect(entry.account.followers).toBe(5_000);
     expect(entry.remoteCursor).toBe('1_10');
+  });
+
+  it("pulls and uploads the user's own profile like any other", async () => {
+    const t = setup();
+    await t.observe({
+      profile: 'me',
+      authors: [{ handle: 'me', followers: 5_000 }],
+      tweets: [tweet('20', 300, { handle: 'me' })],
+    });
+    await vi.runAllTimersAsync();
+    expect(t.fetchProfile).toHaveBeenCalledWith('me', undefined);
+    t.advance(PROFILE_FIRST_UPLOAD_DELAY_MS);
+    await t.observe({});
+    expect(t.uploads.at(-1)!.posts.map((p) => p.post_id)).toEqual(['20']);
+  });
+
+  it("uses a separate session for the user's own profile", async () => {
+    const t = setup();
+    await t.observe({
+      profile: 'me',
+      authors: [{ handle: 'me', followers: 5_000 }],
+      tweets: [tweet('20', 300, { handle: 'me' })],
+    });
+    await t.observe({ profile: 'alice', tweets: [tweet('11', 300)] });
+    await vi.runAllTimersAsync();
+    t.advance(PROFILE_FIRST_UPLOAD_DELAY_MS);
+    await t.observe({});
+    const sessions = new Map(t.uploads.map((u) => [u.posts[0]?.handle, u.session_id]));
+    expect(sessions.get('alice')).toBeTruthy();
+    expect(sessions.get('me')).toBeTruthy();
+    expect(sessions.get('me')).not.toBe(sessions.get('alice'));
   });
 
   it('pulls again only after the interval, with the cursor (incremental)', async () => {
