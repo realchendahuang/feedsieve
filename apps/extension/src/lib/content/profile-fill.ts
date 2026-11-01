@@ -2,18 +2,18 @@
  * 主页补全：用户点「补全」后向下滚动，让 X 自己加载更多帖子。
  *
  * 只由用户显式触发（主页洞察面板工具条上的图标），不自动滚；随时可以再点一次停止。
- * 节奏按人的翻页习惯来：一次翻将近一屏，停 1–2.2 秒再翻下一屏，间隔带随机；
- * 连续几次没有新帖子就停，避免滚过空白区继续空跑。
+ * 一次翻 8–12 屏，然后等 X 把这一批加载出来（最多等 1.5 秒，加载快时立刻继续），
+ * 一直滚到没有新帖子为止（连续 5 批没有增长），或到 30 批的保险上限。
  */
 import { tweetSelectors } from '@feedsieve/x-adapter';
 
-export const PROFILE_FILL_MAX_STEPS = 40;
-/** 每步翻多少：将近一屏（视口高度 × 0.9–1.15，随机）。 */
-export const PROFILE_FILL_STEP_MIN_RATIO = 0.9;
-export const PROFILE_FILL_STEP_MAX_RATIO = 1.15;
-export const PROFILE_FILL_STEP_MIN_MS = 1_000;
-export const PROFILE_FILL_STEP_MAX_MS = 2_200;
-export const PROFILE_FILL_TARGET_POSTS = 300;
+export const PROFILE_FILL_MAX_STEPS = 30;
+/** 每步翻多少：8–12 屏（视口高度 × 8–12，随机），一次甩很远。 */
+export const PROFILE_FILL_STEP_MIN_RATIO = 8;
+export const PROFILE_FILL_STEP_MAX_RATIO = 12;
+/** 等新内容时每 150ms 看一次；最多等 1.5 秒。 */
+export const PROFILE_FILL_POLL_MS = 150;
+export const PROFILE_FILL_WAIT_MS = 1_500;
 
 export type ProfileFillStop = 'user' | 'limit' | 'stagnant' | 'not-profile';
 
@@ -32,14 +32,7 @@ export function countArticles(): number {
   return document.querySelectorAll(tweetSelectors.article).length;
 }
 
-/** 每一步停多久：1–2.2 秒之间随机，间隔不固定，更像真人翻页。 */
-function stepDelay(random: () => number): number {
-  return Math.round(
-    PROFILE_FILL_STEP_MIN_MS + random() * (PROFILE_FILL_STEP_MAX_MS - PROFILE_FILL_STEP_MIN_MS),
-  );
-}
-
-/** 每一步翻多远：一屏上下随机浮动，不会每次都是同一个距离。 */
+/** 每一步翻多远：8–12 屏随机，一次甩一大截。 */
 function stepDistance(random: () => number): number {
   const ratio =
     PROFILE_FILL_STEP_MIN_RATIO +
@@ -64,7 +57,6 @@ export function createProfileFill(
     stopRequested = false;
     const before = countArticles();
     let stagnant = 0;
-    let last = before;
     let stopped: ProfileFillStop = 'limit';
     try {
       for (let step = 0; step < PROFILE_FILL_MAX_STEPS; step++) {
@@ -72,13 +64,30 @@ export function createProfileFill(
           stopped = 'user';
           break;
         }
-        // 一屏一屏地翻，像人在快速往下滚
+        const beforeHeight = document.documentElement.scrollHeight;
+        const beforeCount = countArticles();
+        // 一次翻 8–12 屏，像人快速往下甩
         window.scrollBy({ top: stepDistance(random), behavior: 'smooth' });
-        await sleep(stepDelay(random));
-        const now = countArticles();
-        if (now >= before + PROFILE_FILL_TARGET_POSTS) break;
-        stagnant = now === last ? stagnant + 1 : 0;
-        last = now;
+        // 等 X 把这一批加载出来：加载快就立刻继续，最多等 1.5 秒
+        let grew = false;
+        const maxPolls = Math.ceil(PROFILE_FILL_WAIT_MS / PROFILE_FILL_POLL_MS);
+        for (let poll = 0; poll < maxPolls; poll++) {
+          await sleep(PROFILE_FILL_POLL_MS);
+          if (stopRequested) break;
+          if (
+            document.documentElement.scrollHeight > beforeHeight ||
+            countArticles() > beforeCount
+          ) {
+            grew = true;
+            break;
+          }
+        }
+        if (stopRequested) {
+          stopped = 'user';
+          break;
+        }
+        // 连续 5 批没有增长就当作到底
+        stagnant = grew ? 0 : stagnant + 1;
         if (stagnant >= 5) {
           stopped = 'stagnant';
           break;

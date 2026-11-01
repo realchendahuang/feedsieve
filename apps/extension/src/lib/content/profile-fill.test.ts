@@ -1,10 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-  createProfileFill,
-  isProfilePath,
-  PROFILE_FILL_TARGET_POSTS,
-} from './profile-fill';
+import { createProfileFill, isProfilePath } from './profile-fill';
 
 afterEach(() => {
   document.body.innerHTML = '';
@@ -41,14 +37,12 @@ describe('profile-fill', () => {
     const fill = createProfileFill({ sleep, random: () => 0.5 });
     const result = await fill.fill('alice');
     expect(result).toEqual({ ok: true, added: 3, stopped: 'stagnant' });
-    // 2 条 + 3 条 = 5，远没到目标；验证停止理由是「不再增长」
-    expect(PROFILE_FILL_TARGET_POSTS).toBeGreaterThan(5);
     expect(scrollBy).toHaveBeenCalled();
-    // 每一步翻将近一屏，不是一次翻到底
+    // 每一步翻 8–12 屏，一次甩一大截
     for (const call of scrollBy.mock.calls) {
       const top = (call[0] as { top?: number }).top ?? 0;
-      expect(top).toBeGreaterThan(window.innerHeight * 0.8);
-      expect(top).toBeLessThan(window.innerHeight * 1.3);
+      expect(top).toBeGreaterThan(window.innerHeight * 7.5);
+      expect(top).toBeLessThan(window.innerHeight * 12.5);
       expect(call[0]).toMatchObject({ behavior: 'smooth' });
     }
   });

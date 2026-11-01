@@ -54,7 +54,7 @@ export const UI_COPY = {
       '扩展不会替你滚动页面，也不会额外请求 X：你看到的帖子才会收进来。点「在 X 搜高赞帖」可以一次收进他点赞最高的一批。',
     profileFill: '补全这个博主',
     profileFillHint:
-      '慢慢向下滚动，让 X 自己加载更多帖子；像人滑手机一样分步滚，最多约一分钟，随时再点停止。',
+      '一次翻好几屏，一直滚到没有更多帖子为止；加载快时几乎不停，随时再点停止。',
     profileFillStop: '停止补全',
     profileFillRunning: '正在慢慢向下滚动补全…',
     profileFillDone: (n: number) => `补全了 ${n} 条`,
@@ -443,7 +443,7 @@ export const UI_COPY = {
       'The extension never scrolls for you or makes extra requests to X: only posts you see are collected. “Search top posts on X” collects their most-liked posts in one go.',
     profileFill: 'Complete this profile',
     profileFillHint:
-      'Slowly scrolls down so X loads more posts, in small steps with human-like pauses. About a minute at most; click again to stop.',
+      'Scrolls several screens at a time, all the way to the end of the profile. Continues as soon as X loads more; click again to stop.',
     profileFillStop: 'Stop completing',
     profileFillRunning: 'Scrolling down slowly…',
     profileFillDone: (n: number) => `Completed with ${n} more posts`,
