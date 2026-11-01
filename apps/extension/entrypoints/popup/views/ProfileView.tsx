@@ -718,7 +718,7 @@ export default function ProfileView({ language, notify, sendToXPage }: ProfileVi
   const tools = (
     <>
       <IconButton
-        icon={filling ? 'x' : 'down'}
+        icon={filling ? 'x' : 'chevrons-down'}
         label={filling ? t.profileFillStop : t.profileFill}
         hint={filling ? undefined : t.profileFillHint}
         onClick={() => void fillProfile()}

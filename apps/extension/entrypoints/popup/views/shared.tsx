@@ -39,7 +39,8 @@ export type AppIconName =
   | 'image'
   | 'calendar'
   | 'up'
-  | 'down';
+  | 'down'
+  | 'chevrons-down';
 
 export function AppIcon({
   name,
@@ -73,6 +74,13 @@ export function AppIcon({
     ),
     up: <path d="m18 15-6-6-6 6" />,
     down: <path d="m6 9 6 6 6-6" />,
+    // lucide: chevrons-down（ISC License）— 两个箭头表示「加载更多」，不是下载
+    'chevrons-down': (
+      <>
+        <path d="m7 6 5 5 5-5" />
+        <path d="m7 13 5 5 5-5" />
+      </>
+    ),
     // lucide: search / globe / sparkles / download（ISC License）
     search: (
       <>
