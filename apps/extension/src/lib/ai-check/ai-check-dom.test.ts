@@ -228,3 +228,31 @@ it('已关注的号：照样有检测图标，但不自动标记', async () => {
   expect(reply.querySelector('.fs-ai-mark')).toBeNull();
   ai.stop();
 });
+
+describe('通知页的 AI 图标', () => {
+  function replyCard(handle: string, postId: string, to: string): string {
+    return `<article data-testid="tweet">
+      <div data-testid="User-Name"><div><a href="/${handle}">Name</a></div>
+        <div><a href="/${handle}">@${handle}</a><a href="/${handle}/status/${postId}">1h</a></div></div>
+      <div>回复 <a href="/${to}">@${to}</a></div>
+      <div data-testid="tweetText">reply ${postId}</div>
+      <div role="group"><button data-testid="like">like</button></div>
+    </article>`;
+  }
+
+  it('只给别人的回复加，聚合通知、普通帖子和自己的回复不加', () => {
+    const { ai, tick } = setup('/notifications', [
+      `<article data-testid="notification"><div>新帖子通知</div></article>`,
+      replyCard('replier', '300', 'me'),
+      tweet('poster', '301'),
+      replyCard('me', '302', 'someone'),
+    ].join(''));
+    tick();
+    const articles = [...document.querySelectorAll('article')];
+    expect(articles[0]!.querySelector('[data-fs-action="ai"]')).toBeNull();
+    expect(articles[1]!.querySelector('[data-fs-action="ai"]')).not.toBeNull();
+    expect(articles[2]!.querySelector('[data-fs-action="ai"]')).toBeNull();
+    expect(articles[3]!.querySelector('[data-fs-action="ai"]')).toBeNull();
+    ai.stop();
+  });
+});

@@ -472,9 +472,22 @@ export function createAiCheck(deps: {
     return settings.scope === 'blue' ? isBlue(article) : !isBlue(article);
   }
 
+  /** 通知页的回复卡片在 User-Name 后面有一行「回复 @你 / Replying to @you」 */
+  function hasReplyContext(article: Element): boolean {
+    const name = article.querySelector(tweetSelectors.authorNameArea);
+    if (!name) return false;
+    const text = (article.textContent ?? '').replace(/\s+/g, ' ');
+    const nameText = (name.textContent ?? '').replace(/\s+/g, ' ');
+    const at = text.indexOf(nameText);
+    const head = at >= 0 ? text.slice(at + nameText.length, at + nameText.length + 120) : '';
+    return /(?:回复|Replying to)\s*@/i.test(head);
+  }
+
   // ---- 入口二、三：回复上的机器人图标，已有结论的号加标签 / 折叠 ----
   function decorateArticles(): void {
     const focal = location.pathname.match(/\/status\/(\d+)/)?.[1] ?? null;
+    // 通知页：别人对你的回复也加检测入口（聚合通知卡不算）。
+    const notifications = /^\/notifications(?:[/?#]|$)/.test(location.pathname);
     const self = deps.getSelfHandle()?.toLowerCase();
     const root = focal ? rootAuthor(focal) : null;
     let focalSeen = false;
@@ -492,14 +505,23 @@ export function createAiCheck(deps: {
       const exempt = handle === self || EXEMPT.has(handle);
       const protectedAccount = exempt || deps.isProtected?.(handle) === true;
 
-      // 机器人图标：只在详情页、只加在「回复」上
-      if (focal) {
-        const reply = isReplyById(item.postId);
-        const opAuthor =
-          root ?? (reply === false && isFocal ? handle : null) ?? (!focalSeen ? null : focalAuthor);
-        // 接口数据说了算；没有接口数据时退回「被打开那条下面的评论」
-        const looksLikeReply = reply ?? (focalSeen && !isFocal);
-        const eligible = looksLikeReply && !exempt && handle !== opAuthor;
+      // 机器人图标：详情页加在「回复」上；通知页加在别人对你的回复上
+      if (focal || notifications) {
+        let eligible = false;
+        if (focal) {
+          const reply = isReplyById(item.postId);
+          const opAuthor =
+            root ??
+            (reply === false && isFocal ? handle : null) ??
+            (!focalSeen ? null : focalAuthor);
+          // 接口数据说了算；没有接口数据时退回「被打开那条下面的评论」
+          const looksLikeReply = reply ?? (focalSeen && !isFocal);
+          eligible = looksLikeReply && !exempt && handle !== opAuthor;
+        } else {
+          // 通知页：接口数据优先，没有就认 DOM 里的「回复 @xxx」上下文
+          const looksLikeReply = isReplyById(item.postId) ?? hasReplyContext(article);
+          eligible = looksLikeReply && !exempt && handle !== self;
+        }
         const key = eligible ? item.postId : '-';
         if (article.getAttribute(BUTTON_ATTR) !== key) {
           article.setAttribute(BUTTON_ATTR, key);
