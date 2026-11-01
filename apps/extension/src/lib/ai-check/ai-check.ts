@@ -507,7 +507,7 @@ export function createAiCheck(deps: {
 
       // 机器人图标：详情页加在「回复」上；通知页加在别人对你的回复上
       if (focal || notifications) {
-        let eligible = false;
+        let eligible: boolean;
         if (focal) {
           const reply = isReplyById(item.postId);
           const opAuthor =
@@ -522,27 +522,28 @@ export function createAiCheck(deps: {
           const looksLikeReply = isReplyById(item.postId) ?? hasReplyContext(article);
           eligible = looksLikeReply && !exempt && handle !== self;
         }
+        const group = eligible
+          ? (article.querySelector(tweetSelectors.actionAnchor)?.closest('[role="group"]') ?? null)
+          : null;
         const key = eligible ? item.postId : '-';
         if (article.getAttribute(BUTTON_ATTR) !== key) {
           article.setAttribute(BUTTON_ATTR, key);
           article.querySelectorAll('[data-fs-action="ai"]').forEach((b) => b.remove());
-          const group = eligible
-            ? article.querySelector(tweetSelectors.actionAnchor)?.closest('[role="group"]')
-            : null;
-          if (group) {
-            const slot = createActionSlot(group, 'ai', t().buttonTip);
-            slot.setContent(actionIcon('robot'));
-            slot.button.addEventListener('click', (event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              void openFor(handle);
-            });
-            const block = group.querySelector('[data-fs-action="block"]');
-            if (block) group.insertBefore(slot.root, block);
-            else group.appendChild(slot.root);
-            alignActionSlot(slot.root);
-            if (block instanceof HTMLElement) alignActionSlot(block);
-          }
+        }
+        // X 或别的模块可能重建动作栏；每次 tick 发现按钮没了就补回来。
+        if (eligible && group && !group.querySelector('[data-fs-action="ai"]')) {
+          const slot = createActionSlot(group, 'ai', t().buttonTip);
+          slot.setContent(actionIcon('robot'));
+          slot.button.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            void openFor(handle);
+          });
+          const block = group.querySelector('[data-fs-action="block"]');
+          if (block) group.insertBefore(slot.root, block);
+          else group.appendChild(slot.root);
+          alignActionSlot(slot.root);
+          if (block instanceof HTMLElement) alignActionSlot(block);
         }
       }
 
