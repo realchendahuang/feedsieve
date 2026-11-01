@@ -71,6 +71,8 @@ AMO 上的 <https://addons.mozilla.org/zh-CN/firefox/addon/feedsieve/>（0.8.2�
 
 ### 官方版提交
 
+上架文案、字段、数据收集勾选和审核员说明见 [`AMO-LISTING.md`](AMO-LISTING.md)。
+
 发版前：
 
 1. 用登录了 X 的 Firefox 完成下方「尚未验证」清单
