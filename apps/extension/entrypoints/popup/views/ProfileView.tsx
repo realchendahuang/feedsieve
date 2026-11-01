@@ -79,7 +79,11 @@ interface ProfileViewProps {
 
 /** 当前标签页的博主：切到别的页面（帖子详情、首页）时保留上一个，面板不闪。 */
 function useActiveHandle(): string | null {
-  const [handle, setHandle] = useState<string | null>(null);
+  const [handle, setHandle] = useState<string | null>(() => {
+    // 从主页资料行打开的独立窗口没有 X 标签页可跟随，URL 里带着博主
+    const fromQuery = new URLSearchParams(globalThis.location?.search ?? '').get('handle');
+    return fromQuery && /^[a-z0-9_]{1,15}$/i.test(fromQuery) ? fromQuery.toLowerCase() : null;
+  });
   useEffect(() => {
     let active = true;
     const apply = (url: string | undefined): void => {

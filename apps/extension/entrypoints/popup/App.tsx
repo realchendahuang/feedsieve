@@ -144,6 +144,10 @@ export default function App() {
   useEffect(() => {
     if (viewReady) return;
     let active = true;
+    // 兜底：个别环境里 tabs.query 迟迟不 settle 时，热帖区不能一直空着
+    const timer = setTimeout(() => {
+      if (active) setViewReady(true);
+    }, 400);
     void Promise.resolve()
       .then(() => browser.tabs.query({ active: true, currentWindow: true }))
       .then((tabs) => {
@@ -153,10 +157,12 @@ export default function App() {
       })
       .catch(() => undefined)
       .finally(() => {
+        clearTimeout(timer);
         if (active) setViewReady(true);
       });
     return () => {
       active = false;
+      clearTimeout(timer);
     };
     // 只在打开的那一刻判断一次
     // eslint-disable-next-line react-hooks/exhaustive-deps

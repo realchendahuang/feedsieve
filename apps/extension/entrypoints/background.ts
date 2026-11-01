@@ -11,6 +11,7 @@ import {
 import { flushContributions } from '../src/lib/community/contribute';
 import { syncKeywordPackCatalog } from '../src/lib/detection/keyword-packs';
 import { getChromeSidePanel } from '../src/lib/platform/sidepanel';
+import { openProfilePanel, profileHandleFromUrl } from '../src/lib/platform/profile-panel';
 import {
   createSharedInsight,
   INSIGHT_OBSERVE_MESSAGE,
@@ -178,18 +179,22 @@ export default defineBackground(() => {
     }
     if (msg?.type === 'feedsieve:open-profile-panel') {
       // 主页资料卡下的那一行被点击：打开侧边栏并落到「主页」视图。
-      // sidePanel.open 要求用户手势；内容脚本里点击转发过来时浏览器不一定认，失败就算了
-      const windowId = sender.tab?.windowId;
-      const open = getChromeSidePanel()?.open;
-      if (windowId === undefined || !open) return Promise.resolve({ opened: false });
       // 先发起写入、不等它：await 之后再 open 会丢掉用户手势。侧边栏启动时读它，已开着的侧边栏监听变化
       void browser.storage.session
         .set({ [PANEL_VIEW_REQUEST_KEY]: { view: 'profile', at: Date.now() } })
         .catch(() => undefined);
-      return open({ windowId }).then(
-        () => ({ opened: true }),
-        () => ({ opened: false }),
-      );
+      // sidePanel.open 要求用户手势；内容脚本转发过来时部分浏览器不认。
+      // 打不开就退回独立小窗口，不能静默失败（见 profile-panel.ts）
+      const handle = profileHandleFromUrl(sender.tab?.url);
+      return openProfilePanel({
+        sidePanel: getChromeSidePanel(),
+        windowId: sender.tab?.windowId,
+        popupUrl: browser.runtime.getURL(
+          `/popup.html?view=profile&panel=1${handle ? `&handle=${encodeURIComponent(handle)}` : ''}`,
+        ),
+        openWindow: (url) =>
+          browser.windows.create({ url, type: 'popup', width: 420, height: 680 }),
+      });
     }
     if (msg?.type === 'feedsieve:open-tab') {
       // 内容脚本请求新开标签（例如 AI 味检测去回复页，不跳走当前页）。
