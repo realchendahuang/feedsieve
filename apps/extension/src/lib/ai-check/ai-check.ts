@@ -51,7 +51,7 @@ import {
   type AiRhythm,
   type AiVoteOutcome,
 } from './client';
-import { actionIcon, alignActionSlot, createActionSlot } from '../content/action-slot';
+import { actionIcon } from '../content/action-slot';
 
 const SITE_BASE = 'https://feedsieve.win';
 const MARK_ATTR = 'data-fs-ai-mark';
@@ -257,6 +257,13 @@ function ensureStyles(): void {
     .fs-ai-mark[data-tone="mixed"] { background: #b45309; }
     .fs-ai-mark:hover { filter: brightness(1.1); }
     .fs-ai-mark:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+    /* 未检测的入口：作者名旁一个低调的机器人小圆，hover 变紫 */
+    .fs-ai-entry { display: inline-flex; align-items: center; justify-content: center;
+      width: 20px; height: 20px; margin-left: 4px; padding: 0; border: 0; border-radius: 50%;
+      background: transparent; color: inherit; opacity: .4; cursor: pointer; flex: none; align-self: center; }
+    .fs-ai-entry svg { width: 15px; height: 15px; }
+    .fs-ai-entry:hover { color: #7856ff; background: rgba(120,86,255,.12); opacity: 1; }
+    .fs-ai-entry:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
     article[data-fs-ai-tone="ai"] { box-shadow: inset 3px 0 0 #d81e2f; }
     article[data-fs-ai-tone="mixed"] { box-shadow: inset 3px 0 0 #ffb020; }
     /* 折叠：整条回复收成一行，点「显示」展开 */
@@ -550,8 +557,8 @@ export function createAiCheck(deps: {
       const protectedAccount = exempt || protectedFromAutoMark(handle);
 
       // 机器人图标：详情页加在「回复」上；通知页加在别人对你的回复上
+      let eligible = false;
       if (focal || notifications) {
-        let eligible: boolean;
         if (focal) {
           const reply = isReplyById(item.postId);
           const opAuthor =
@@ -566,28 +573,10 @@ export function createAiCheck(deps: {
           const looksLikeReply = isReplyById(item.postId) ?? hasReplyContext(article);
           eligible = looksLikeReply && !exempt && handle !== self;
         }
-        const group = eligible
-          ? (article.querySelector(tweetSelectors.actionAnchor)?.closest('[role="group"]') ?? null)
-          : null;
         const key = eligible ? item.postId : '-';
         if (article.getAttribute(BUTTON_ATTR) !== key) {
           article.setAttribute(BUTTON_ATTR, key);
           article.querySelectorAll('[data-fs-action="ai"]').forEach((b) => b.remove());
-        }
-        // X 或别的模块可能重建动作栏；每次 tick 发现按钮没了就补回来。
-        if (eligible && group && !group.querySelector('[data-fs-action="ai"]')) {
-          const slot = createActionSlot(group, 'ai', t().buttonTip);
-          slot.setContent(actionIcon('robot'));
-          slot.button.addEventListener('click', (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            void openFor(handle);
-          });
-          const block = group.querySelector('[data-fs-action="block"]');
-          if (block) group.insertBefore(slot.root, block);
-          else group.appendChild(slot.root);
-          alignActionSlot(slot.root);
-          if (block instanceof HTMLElement) alignActionSlot(block);
         }
       }
 
@@ -643,6 +632,30 @@ export function createAiCheck(deps: {
             cell.setAttribute(FOLD_ATTR, '1');
           }
         }
+      }
+
+      // 入口：没有结论时在作者名后面挂一个灰色机器人；有结论就让位给 AI 味标签。
+      // 和标签同一个位置，用户不用记两个地方；拉黑留在动作栏最右。
+      const entryRow = mark ? null : nameRowOf(article);
+      const entry = article.querySelector<HTMLElement>('[data-fs-action="ai"]');
+      if (eligible && entryRow && !mark) {
+        if (!entry || entry.parentElement !== entryRow) {
+          entry?.remove();
+          const btn = el('button', 'fs-ai-entry');
+          btn.type = 'button';
+          btn.setAttribute('data-fs-action', 'ai');
+          btn.title = t().buttonTip;
+          btn.setAttribute('aria-label', t().buttonTip);
+          btn.append(actionIcon('robot'));
+          btn.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            void openFor(handle);
+          });
+          entryRow.appendChild(btn);
+        }
+      } else {
+        entry?.remove();
       }
     }
   }

@@ -59,7 +59,11 @@ describe('评论区的 AI 图标', () => {
     const articles = [...document.querySelectorAll('article')];
     const has = articles.map((a) => !!a.querySelector('[data-fs-action="ai"]'));
     expect(has).toEqual([false, false, false, false, false, true]);
-    expect(articles[5]!.querySelector('[data-fs-action="ai"] svg')).not.toBeNull();
+    const entry = articles[5]!.querySelector('[data-fs-action="ai"]')!;
+    // 入口在作者名行，不在动作栏：和拉黑分开
+    expect(entry.closest('[data-testid="User-Name"]')).not.toBeNull();
+    expect(entry.closest('[role="group"]')).toBeNull();
+    expect(entry.querySelector('svg')).not.toBeNull();
     ai.stop();
   });
 });
@@ -225,7 +229,7 @@ describe('回复详情页与评论区标记', () => {
     tick();
     const button = document
       .querySelectorAll('article')[1]!
-      .querySelector('[data-fs-action="ai"] button') as HTMLButtonElement;
+      .querySelector('[data-fs-action="ai"]') as HTMLButtonElement;
     button.click();
     await vi.waitFor(() =>
       expect(document.querySelector('#fs-ai-panel .fs-ai-level')).not.toBeNull(),
@@ -312,7 +316,11 @@ it('打开「标记已关注账号」后，已关注账号也打标；个人白�
 
 it('模块总开关关掉后撤掉标签和检测入口，重新打开就恢复', async () => {
   history.replaceState(null, '', '/op/status/900');
-  document.body.innerHTML = [tweet('op', '900'), tweet('farm', '901')].join('');
+  document.body.innerHTML = [
+    tweet('op', '900'),
+    tweet('farm', '901'),
+    tweet('other', '902'),
+  ].join('');
   let enabled = false;
   (globalThis as unknown as { browser: unknown }).browser = {
     runtime: { onMessage: { addListener: vi.fn(), removeListener: vi.fn() } },
@@ -334,18 +342,23 @@ it('模块总开关关掉后撤掉标签和检测入口，重新打开就恢复'
   await new Promise((r) => setTimeout(r, 0));
   ai.start();
   const reply = document.querySelectorAll('article')[1]!;
+  const plain = document.querySelectorAll('article')[2]!;
   expect(reply.querySelector('.fs-ai-mark')).toBeNull();
   expect(reply.querySelector('[data-fs-action="ai"]')).toBeNull();
+  expect(plain.querySelector('[data-fs-action="ai"]')).toBeNull();
 
   enabled = true;
   ai.start();
   expect(reply.querySelector('.fs-ai-mark')).not.toBeNull();
-  expect(reply.querySelector('[data-fs-action="ai"]')).not.toBeNull();
+  // 有结论的号：入口让位给标签，不再重复出现
+  expect(reply.querySelector('[data-fs-action="ai"]')).toBeNull();
+  // 没结论的号：名字行有检测入口
+  expect(plain.querySelector('[data-fs-action="ai"]')).not.toBeNull();
 
   enabled = false;
   ai.start();
   expect(reply.querySelector('.fs-ai-mark')).toBeNull();
-  expect(reply.querySelector('[data-fs-action="ai"]')).toBeNull();
+  expect(plain.querySelector('[data-fs-action="ai"]')).toBeNull();
   ai.stop();
 });
 
