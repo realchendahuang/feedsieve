@@ -73,7 +73,11 @@ function collectReplies(main: Element): MarkdownTweet[] {
   return replies;
 }
 
-export function createShareMenu(deps: { getLanguage: () => UiLanguage }) {
+export function createShareMenu(deps: {
+  getLanguage: () => UiLanguage;
+  /** 模块总开关：关掉后不再接管分享按钮 */
+  isEnabled?: () => boolean;
+}) {
   let pendingArticle: Element | null = null;
   let observer: MutationObserver | null = null;
   let waitTimer: number | undefined;
@@ -172,6 +176,11 @@ export function createShareMenu(deps: { getLanguage: () => UiLanguage }) {
     stopWaiting();
     pendingArticle = article;
     const tryInject = (): boolean => {
+      // 菜单出现前模块被关掉：别把「复制为 Markdown」留在半路上
+      if (deps.isEnabled?.() === false) {
+        stopWaiting();
+        return true;
+      }
       const dropdown = document.querySelector(menuSelectors.dropdown);
       if (!dropdown || !pendingArticle) return false;
       inject(dropdown, pendingArticle);
@@ -185,6 +194,7 @@ export function createShareMenu(deps: { getLanguage: () => UiLanguage }) {
   }
 
   function onClick(event: MouseEvent): void {
+    if (deps.isEnabled?.() === false) return;
     const target = event.target instanceof Element ? event.target : null;
     const button = target?.closest('button, [role="button"]');
     if (!button || !isShareButton(button)) return;
@@ -192,10 +202,21 @@ export function createShareMenu(deps: { getLanguage: () => UiLanguage }) {
     if (article) waitForMenu(article);
   }
 
+  let listening = false;
+
   function listen(): void {
+    if (listening) return;
+    listening = true;
     // 捕获阶段：X 的 React 处理器可能阻止冒泡
     document.addEventListener('click', onClick, true);
   }
 
-  return { listen, inject, dispose: stopWaiting };
+  function dispose(): void {
+    stopWaiting();
+    if (!listening) return;
+    listening = false;
+    document.removeEventListener('click', onClick, true);
+  }
+
+  return { listen, inject, dispose };
 }

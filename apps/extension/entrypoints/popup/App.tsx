@@ -212,6 +212,8 @@ export default function App() {
       items?: Array<{ handle: string; xUserId?: string; category: string }>;
       sort?: string;
       postId?: string;
+      text?: string;
+      at?: number;
     }): Promise<unknown> => {
       // 只发给当前激活的 x.com 标签页：发给后台标签页可能拉黑错账号。
       // 必须是弹窗 / 侧边栏所在窗口的（currentWindow），多窗口时 lastFocusedWindow 会指到别的窗口
@@ -428,7 +430,15 @@ export default function App() {
           <ProfileView language={language} notify={notify} sendToXPage={sendToXPage} />
         ) : null}
         {view === 'write' ? (
-          <WriteView language={language} notify={notify} sendToXPage={sendToXPage} />
+          <WriteView
+            language={language}
+            notify={notify}
+            sendToXPage={sendToXPage}
+            onOpenCadence={() => {
+              setView('settings');
+              setSettingsPage('compose');
+            }}
+          />
         ) : null}
         {view === 'ai' ? (
           <AiView language={language} notify={notify} sendToXPage={sendToXPage} />

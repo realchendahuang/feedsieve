@@ -14,6 +14,7 @@ import type { ScheduledEvent, ScheduledPost } from './scheduled-parse';
 export const SCHEDULE_SETTINGS_KEY = 'composeScheduleV1';
 export const SCHEDULED_CACHE_KEY = 'scheduledPostsV1';
 export const SCHEDULE_LAST_PICK_KEY = 'scheduleLastPickV1';
+export const SCHEDULE_ASSIGNMENTS_KEY = 'scheduleAssignmentsV1';
 
 export interface ScheduledCache {
   /** 这份列表属于哪个 X 账号（小写 handle；未知为 null） */
@@ -27,6 +28,7 @@ export const EMPTY_SCHEDULED_CACHE: ScheduledCache = { account: null, syncedAt: 
 
 /** 过了发布时刻 1 分钟的帖子从缓存里拿掉（X 已经发出去了） */
 const PAST_GRACE_MS = 60_000;
+const MINUTE_MS = 60_000;
 
 export function asScheduledCache(value: unknown): ScheduledCache {
   const raw = value && typeof value === 'object' ? (value as Partial<ScheduledCache>) : null;
@@ -78,6 +80,130 @@ export function reduceScheduledCache(
 /** 还没发出去的排期时间（算空档用）。 */
 export function upcomingTimes(cache: ScheduledCache, now: number): number[] {
   return cache.posts.filter((p) => p.executeAt > now).map((p) => p.executeAt);
+}
+
+// ---------- 已分配、还没在 X 里确认的时间 ----------
+//
+// 排班时先在本机占一个位置，避免两条草稿被分到同一个小时；X 里确认后
+// （CreateScheduledTweet / 预排期列表）再把这条分配拿掉。只存在本机。
+
+/** 分配只在「打开发帖框、等你点确认」的这段时间里有效；不确认就释放，别一直占着名额 */
+const ASSIGNMENT_ACTIVE_MS = 30 * MINUTE_MS;
+const ASSIGNMENT_PAST_MS = 2 * 60 * MINUTE_MS;
+
+export interface ScheduleAssignment {
+  id: string;
+  /** 来自草稿队列时记下草稿 id；直接到发帖框排的为 null */
+  draftId: string | null;
+  /** 正文指纹，用来和 X 里排好的帖子对上 */
+  textKey: string;
+  /** 分配到的发布时刻（Unix 毫秒） */
+  at: number;
+  createdAt: number;
+}
+
+export function asAssignments(value: unknown): ScheduleAssignment[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (a): a is ScheduleAssignment =>
+      !!a &&
+      typeof a.id === 'string' &&
+      (a.draftId === null || typeof a.draftId === 'string') &&
+      typeof a.textKey === 'string' &&
+      typeof a.at === 'number' &&
+      Number.isFinite(a.at) &&
+      typeof a.createdAt === 'number' &&
+      Number.isFinite(a.createdAt),
+  );
+}
+
+function liveAssignments(list: ScheduleAssignment[], now: number): ScheduleAssignment[] {
+  return list
+    .filter((a) => a.at > now - ASSIGNMENT_PAST_MS && a.createdAt > now - ASSIGNMENT_ACTIVE_MS)
+    .sort((a, b) => a.at - b.at);
+}
+
+export async function getAssignments(now = Date.now()): Promise<ScheduleAssignment[]> {
+  const stored = await browser.storage.local.get(SCHEDULE_ASSIGNMENTS_KEY);
+  return liveAssignments(asAssignments(stored[SCHEDULE_ASSIGNMENTS_KEY]), now);
+}
+
+let assignmentChain: Promise<unknown> = Promise.resolve();
+
+function writeAssignments(
+  update: (list: ScheduleAssignment[], now: number) => ScheduleAssignment[],
+  now = Date.now(),
+): Promise<ScheduleAssignment[]> {
+  const run = assignmentChain.then(async () => {
+    const stored = await browser.storage.local.get(SCHEDULE_ASSIGNMENTS_KEY);
+    const next = liveAssignments(update(asAssignments(stored[SCHEDULE_ASSIGNMENTS_KEY]), now), now);
+    await browser.storage.local.set({ [SCHEDULE_ASSIGNMENTS_KEY]: next });
+    return next;
+  });
+  assignmentChain = run.catch(() => undefined);
+  return run;
+}
+
+/** 给草稿（或发帖框里临时排的一条）占一个时间。同一个草稿再排会覆盖旧时间。 */
+export async function setAssignment(input: {
+  id?: string;
+  draftId?: string | null;
+  text: string;
+  at: number;
+  now?: number;
+}): Promise<ScheduleAssignment[]> {
+  const now = input.now ?? Date.now();
+  const id = input.id ?? `${now.toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+  const draftId = input.draftId ?? null;
+  const textKey = draftKey(input.text);
+  return writeAssignments((list) => {
+    const kept = list.filter(
+      (a) =>
+        a.id !== id && (!draftId || a.draftId !== draftId) && (!textKey || a.textKey !== textKey),
+    );
+    return [...kept, { id, draftId, textKey, at: input.at, createdAt: now }];
+  }, now);
+}
+
+export async function removeAssignment(id: string): Promise<ScheduleAssignment[]> {
+  return writeAssignments((list) => list.filter((a) => a.id !== id));
+}
+
+export async function removeAssignmentForDraft(draftId: string): Promise<ScheduleAssignment[]> {
+  return writeAssignments((list) => list.filter((a) => a.draftId !== draftId));
+}
+
+/** X 里已经出现这条排期：按正文指纹（或时间）清掉本机分配。 */
+export async function removeAssignmentsMatching(
+  text: string,
+  at?: number,
+): Promise<ScheduleAssignment[]> {
+  const key = draftKey(text);
+  return writeAssignments((list) =>
+    list.filter(
+      (a) => !(key && a.textKey === key) && (at === undefined || Math.abs(a.at - at) >= MINUTE_MS),
+    ),
+  );
+}
+
+/** 打开预排期列表时，一次性把里面已经存在的帖子对应的本机分配清掉。 */
+export async function removeAssignmentsForPosts(
+  posts: ReadonlyArray<{ text: string; executeAt: number }>,
+): Promise<ScheduleAssignment[]> {
+  const keys = new Set(posts.map((post) => draftKey(post.text)).filter(Boolean));
+  const times = posts.map((post) => post.executeAt);
+  return writeAssignments((list) =>
+    list.filter(
+      (a) =>
+        !(a.textKey && keys.has(a.textKey)) && !times.some((at) => Math.abs(a.at - at) < MINUTE_MS),
+    ),
+  );
+}
+
+export function subscribeAssignments(onChange: (list: ScheduleAssignment[]) => void) {
+  return subscribeKey(SCHEDULE_ASSIGNMENTS_KEY, asAssignments, (value) =>
+    onChange(liveAssignments(value, Date.now())),
+  );
 }
 
 function subscribeKey<T>(key: string, parse: (value: unknown) => T, onChange: (value: T) => void) {

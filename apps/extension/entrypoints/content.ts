@@ -44,6 +44,12 @@ import {
   getInsightBadgesEnabled,
   subscribeInsightBadges,
 } from '../src/lib/insight/insight-settings';
+import {
+  DEFAULT_MODULE_SETTINGS,
+  getModuleSettings,
+  subscribeModuleSettings,
+  type ModuleSettings,
+} from '../src/lib/settings/module-settings';
 
 /**
  * Phase 1 content script：黄框标注（带理由）。一键拉黑 = 当前页面全部黄框账号。
@@ -74,6 +80,8 @@ export default defineContentScript({
     const send = (message: unknown): Promise<unknown> =>
       ctx.isValid ? browser.runtime.sendMessage(message) : Promise.resolve(undefined);
     const state = createContentState();
+    // 模块总开关：AI 标签 / 分享菜单（默认全开，设置页可关）
+    let modules: ModuleSettings = DEFAULT_MODULE_SETTINGS;
     // 扫描调度 / 节点索引 / revision 快照 / MutationObserver 全部收敛到 PageScanController；
     // 检测与标注通过 callbacks 注入。scanOne / flushPendingBadges 依赖 controller，
     // 先以占位绑定创建，模块装配完成后再回填（回调只在 observe / fullRescan 之后
@@ -130,6 +138,9 @@ export default defineContentScript({
       getLanguage: () => state.uiLanguage,
       getSelfHandle: () => state.selfHandle,
       isProtected: (handle) => state.allowCache.has(handle) || state.followingCache.has(handle),
+      isAllowlisted: (handle) => state.allowCache.has(handle),
+      isFollowing: (handle) => state.followingCache.has(handle),
+      isEnabled: () => modules.aiCheck,
       send,
       setInterval: (fn, ms) => ctx.setInterval(fn, ms),
     });
@@ -189,7 +200,11 @@ export default defineContentScript({
       },
       onRuleHit: (hit) => ruleHits.push(hit),
     });
-    createShareMenu({ getLanguage: () => state.uiLanguage }).listen();
+    const shareMenu = createShareMenu({
+      getLanguage: () => state.uiLanguage,
+      isEnabled: () => modules.shareMenu,
+    });
+    shareMenu.listen();
     insight.listenHover();
     scanWiring.processOne = scan.scanOne;
     scanWiring.flushBadges = badges.flushPendingBadges;
@@ -262,6 +277,7 @@ export default defineContentScript({
       controller.dispose();
       profileInsight.stop();
       aiCheck.stop();
+      shareMenu.dispose();
       composeSchedule.stop();
       articleHelper.stop();
       insight.dispose();
@@ -298,6 +314,13 @@ export default defineContentScript({
     };
     void getInsightBadgesEnabled().then(setBadgesEnabled);
     subscribeInsightBadges(setBadgesEnabled);
+    // 模块总开关：各模块自己读这个闭包，切换后下一次扫描 / 点击就生效
+    void getModuleSettings().then((value) => {
+      modules = value;
+    });
+    subscribeModuleSettings((value) => {
+      modules = value;
+    });
     // 只有一次观测的流速 = 浏览量 / 帖子年龄，会随时间下降；前台时每分钟重算一次
     ctx.setInterval(() => {
       if (document.visibilityState === 'visible') insight.refreshAll();

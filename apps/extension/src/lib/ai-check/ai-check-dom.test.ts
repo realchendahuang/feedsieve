@@ -163,6 +163,44 @@ describe('回复详情页与评论区标记', () => {
     ai.stop();
   });
 
+  it('同一个号在一页里出现多条时都打标（结论按账号走，不是只标测过的那条）', async () => {
+    const html = [
+      `<div data-testid="cellInnerDiv">${tweet('farm', '410')}</div>`,
+      `<div data-testid="cellInnerDiv">${tweet('farm', '411')}</div>`,
+    ].join('');
+    const { ai, tick } = setup('/op/status/400', html, undefined, {
+      aiListV1: { at: Date.now(), entries: [['farm', 0.92, 1]] },
+    });
+    tick();
+    await new Promise((r) => setTimeout(r, 0));
+    tick();
+    const marks = [...document.querySelectorAll('.fs-ai-mark')];
+    expect(marks).toHaveLength(2);
+    expect(marks[0]!.querySelector('svg')).not.toBeNull();
+    expect(document.querySelectorAll('article[data-fs-ai-tone="ai"]')).toHaveLength(2);
+    // 标签挂在 @handle 那一行：直接挂 User-Name 会被量级标签当成行容器，把「★1.8K」吞进来
+    const nameArea = document.querySelector('article [data-testid="User-Name"]')!;
+    expect(nameArea.querySelector(':scope > .fs-ai-mark')).toBeNull();
+    expect(nameArea.lastElementChild?.querySelector('.fs-ai-mark')).not.toBeNull();
+    // 样式必须在开检测面板之前注入，否则标签只是浏览器默认按钮
+    expect(document.getElementById('feedsieve-ai-check-styles')).not.toBeNull();
+    ai.stop();
+  });
+
+  it('过期的本机结论不再给回复打标', async () => {
+    const { ai, tick } = setup('/op/status/430', tweet('farm', '431'), undefined, {
+      aiChecksV1: {
+        farm: { handle: 'farm', verdict: 'ai', score: 0.9, judgedAt: 1, expiresAt: 1 },
+      },
+    });
+    tick();
+    await new Promise((r) => setTimeout(r, 0));
+    tick();
+    expect(document.querySelector('.fs-ai-mark')).toBeNull();
+    expect(document.querySelector('article[data-fs-ai-tone]')).toBeNull();
+    ai.stop();
+  });
+
   it('点评论区图标：已有结论直接出报告，不跳页面', async () => {
     const { ai, tick } = setup(
       '/op/status/500',
@@ -229,6 +267,114 @@ it('已关注的号：照样有检测图标，但不自动标记', async () => {
   ai.stop();
 });
 
+it('打开「标记已关注账号」后，已关注账号也打标；个人白名单仍然不标', async () => {
+  history.replaceState(null, '', '/op/status/700');
+  document.body.innerHTML = [
+    tweet('op', '700'),
+    tweet('friend', '701'),
+    tweet('allow', '702'),
+  ].join('');
+  (globalThis as unknown as { browser: unknown }).browser = {
+    runtime: { onMessage: { addListener: vi.fn(), removeListener: vi.fn() } },
+    storage: {
+      onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+      local: {
+        get: vi.fn(async () => ({
+          aiListV1: {
+            at: Date.now(),
+            entries: [
+              ['friend', 0.9, 1],
+              ['allow', 0.9, 1],
+            ],
+          },
+          aiCheckSettingsV1: { mode: 'mark', scope: 'all', markFollowing: true },
+        })),
+      },
+    },
+  };
+  const ai = createAiCheck({
+    getLanguage: () => 'zh',
+    getSelfHandle: () => 'me',
+    isProtected: (h) => h === 'friend' || h === 'allow',
+    isFollowing: (h) => h === 'friend',
+    isAllowlisted: (h) => h === 'allow',
+    send: vi.fn(async () => null),
+    setInterval: () => 0,
+  });
+  ai.start();
+  await new Promise((r) => setTimeout(r, 0));
+  ai.start();
+  const articles = document.querySelectorAll('article');
+  expect(articles[1]!.querySelector('.fs-ai-mark')).not.toBeNull();
+  expect(articles[2]!.querySelector('.fs-ai-mark')).toBeNull();
+  ai.stop();
+});
+
+it('模块总开关关掉后撤掉标签和检测入口，重新打开就恢复', async () => {
+  history.replaceState(null, '', '/op/status/900');
+  document.body.innerHTML = [tweet('op', '900'), tweet('farm', '901')].join('');
+  let enabled = false;
+  (globalThis as unknown as { browser: unknown }).browser = {
+    runtime: { onMessage: { addListener: vi.fn(), removeListener: vi.fn() } },
+    storage: {
+      onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+      local: {
+        get: vi.fn(async () => ({ aiListV1: { at: Date.now(), entries: [['farm', 0.9, 1]] } })),
+      },
+    },
+  };
+  const ai = createAiCheck({
+    getLanguage: () => 'zh',
+    getSelfHandle: () => 'me',
+    isEnabled: () => enabled,
+    send: vi.fn(async () => null),
+    setInterval: () => 0,
+  });
+  ai.start();
+  await new Promise((r) => setTimeout(r, 0));
+  ai.start();
+  const reply = document.querySelectorAll('article')[1]!;
+  expect(reply.querySelector('.fs-ai-mark')).toBeNull();
+  expect(reply.querySelector('[data-fs-action="ai"]')).toBeNull();
+
+  enabled = true;
+  ai.start();
+  expect(reply.querySelector('.fs-ai-mark')).not.toBeNull();
+  expect(reply.querySelector('[data-fs-action="ai"]')).not.toBeNull();
+
+  enabled = false;
+  ai.start();
+  expect(reply.querySelector('.fs-ai-mark')).toBeNull();
+  expect(reply.querySelector('[data-fs-action="ai"]')).toBeNull();
+  ai.stop();
+});
+
+it('模块关掉时，从弹窗带 fs_ai 发起的检测仍会打开报告', async () => {
+  history.replaceState(null, '', '/farm/with_replies?fs_ai=farm');
+  document.body.innerHTML = '';
+  (globalThis as unknown as { browser: unknown }).browser = {
+    runtime: { onMessage: { addListener: vi.fn(), removeListener: vi.fn() } },
+    storage: {
+      onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+      local: { get: vi.fn(async () => ({})) },
+    },
+  };
+  const ai = createAiCheck({
+    getLanguage: () => 'zh',
+    getSelfHandle: () => 'me',
+    isEnabled: () => false,
+    send: vi.fn(async () => null),
+    setInterval: () => 0,
+  });
+  ai.start();
+  await new Promise((r) => setTimeout(r, 0));
+  ai.start();
+  expect(location.search).not.toContain('fs_ai');
+  expect(document.querySelector('#fs-ai-panel')).not.toBeNull();
+  expect(document.querySelector('[data-fs-ai-tab]')).toBeNull();
+  ai.stop();
+});
+
 describe('通知页的 AI 图标', () => {
   function replyCard(handle: string, postId: string, to: string): string {
     return `<article data-testid="tweet">
@@ -241,12 +387,15 @@ describe('通知页的 AI 图标', () => {
   }
 
   it('只给别人的回复加，聚合通知、普通帖子和自己的回复不加', () => {
-    const { ai, tick } = setup('/notifications', [
-      `<article data-testid="notification"><div>新帖子通知</div></article>`,
-      replyCard('replier', '300', 'me'),
-      tweet('poster', '301'),
-      replyCard('me', '302', 'someone'),
-    ].join(''));
+    const { ai, tick } = setup(
+      '/notifications',
+      [
+        `<article data-testid="notification"><div>新帖子通知</div></article>`,
+        replyCard('replier', '300', 'me'),
+        tweet('poster', '301'),
+        replyCard('me', '302', 'someone'),
+      ].join(''),
+    );
     tick();
     const articles = [...document.querySelectorAll('article')];
     expect(articles[0]!.querySelector('[data-fs-action="ai"]')).toBeNull();

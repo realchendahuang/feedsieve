@@ -86,8 +86,12 @@ function navRow(root: HTMLElement, label: string): HTMLButtonElement {
   return row;
 }
 
+/** 设置二级页：过滤下的关键词 / 名单先从首页进「过滤」，其余直接进对应模块。 */
 async function openSettingsPage(root: HTMLElement, label: string): Promise<void> {
   await act(async () => buttonWithText(root, '设置').click());
+  if (['关键词', '拉黑记录', '白名单', '关注保护'].includes(label)) {
+    await act(async () => navRow(root, '过滤').click());
+  }
   await act(async () => navRow(root, label).click());
 }
 
@@ -258,14 +262,82 @@ describe('popup App 渲染冒烟', () => {
     await act(async () => adultTitle?.click());
     expect(rootEl.textContent).toContain('同城上门约炮');
 
-    // 再点「设置」回到设置首页
+    // 再点「设置」回到设置首页：功能模块直接列出来
     await act(async () => buttonWithText(rootEl, '设置').click());
-    expect(rootEl.textContent).toContain('页面标黄');
-    expect(rootEl.textContent).toContain('拉黑记录');
-    expect(rootEl.textContent).toContain('关注保护');
+    for (const label of [
+      '页面标黄',
+      '流速与量级',
+      'AI 味标注',
+      '发帖辅助',
+      '分享菜单',
+      '过滤',
+      '数据与隐私',
+      '语言与关于',
+    ])
+      expect(rootEl.textContent).toContain(label);
+
+    // 每个模块的二级页就是它自己的配置
+    await act(async () => navRow(rootEl, 'AI 味标注').click());
+    const aiToggle = rootEl.querySelector<HTMLInputElement>(
+      'input[role="switch"][aria-label="AI 味标注"]',
+    );
+    expect(aiToggle?.checked).toBe(true);
+    await act(async () => {
+      aiToggle?.click();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(storageSet).toHaveBeenCalledWith({
+      moduleSettingsV1: { aiCheck: false, shareMenu: true },
+    });
+    await act(async () => rootEl.querySelector<HTMLButtonElement>('.back-button')!.click());
+
+    await act(async () => navRow(rootEl, '发帖辅助').click());
+    const composeToggle = rootEl.querySelector<HTMLInputElement>(
+      'input[role="switch"][aria-label="发帖辅助"]',
+    );
+    expect(composeToggle?.checked).toBe(true);
+    await act(async () => {
+      composeToggle?.click();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(storageSet).toHaveBeenCalledWith({
+      composeScheduleV1: expect.objectContaining({ composeHelper: false, articleHelper: false }),
+    });
+
+    // 回首页进「语言与关于」切英文
+    await act(async () => rootEl.querySelector<HTMLButtonElement>('.back-button')!.click());
+    await act(async () => navRow(rootEl, '语言与关于').click());
     await act(async () => buttonWithText(rootEl, 'EN').click());
     expect(rootEl.textContent).toContain('FeedSieve');
+    // 回首页进「过滤」页确认英文文案
+    await act(async () => rootEl.querySelector<HTMLButtonElement>('.back-button')!.click());
+    await act(async () => navRow(rootEl, 'Filtering').click());
     expect(rootEl.textContent).toContain('Detection level');
+  });
+
+  it('发帖节奏：发帖辅助二级页里改每小时条数写回本机', async () => {
+    const rootEl = renderApp();
+    await new Promise((r) => setTimeout(r, 150));
+    await openSettingsPage(rootEl, '发帖辅助');
+    expect(rootEl.textContent).toContain('集中时段');
+    expect(rootEl.textContent).toContain('本周最多');
+
+    const perHour = rootEl.querySelector<HTMLSelectElement>('select[aria-label="每小时最多"]');
+    if (!perHour) throw new Error('per-hour select not found');
+    await act(async () => {
+      perHour.value = '2';
+      perHour.dispatchEvent(new Event('change', { bubbles: true }));
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(storageSet).toHaveBeenCalledWith({
+      composeScheduleV1: expect.objectContaining({
+        windows: expect.arrayContaining([expect.objectContaining({ perHour: 2 })]),
+      }),
+    });
+
+    // 返回上一层是设置首页
+    await act(async () => rootEl.querySelector<HTMLButtonElement>('.back-button')!.click());
+    expect(rootEl.textContent).toContain('页面标黄');
   });
 
   it('白名单 tab 手动添加账号：写入本地白名单并显示瞬时反馈', async () => {
@@ -440,6 +512,7 @@ describe('popup App 渲染冒烟', () => {
     const rootEl = renderApp();
     await new Promise((resolve) => setTimeout(resolve, 150));
     await act(async () => buttonWithText(rootEl, '设置').click());
+    await act(async () => navRow(rootEl, '数据与隐私').click());
     const row = [...rootEl.querySelectorAll<HTMLElement>('.row')].find((candidate) =>
       candidate.textContent?.includes('仅本地运行'),
     );
@@ -459,6 +532,7 @@ describe('popup App 渲染冒烟', () => {
     const rootEl = renderApp();
     await new Promise((resolve) => setTimeout(resolve, 150));
     await act(async () => buttonWithText(rootEl, '设置').click());
+    await act(async () => navRow(rootEl, '数据与隐私').click());
     const rowInput = (label: string) =>
       [...rootEl.querySelectorAll<HTMLElement>('.row')]
         .find((row) => row.textContent?.includes(label))
@@ -486,6 +560,7 @@ describe('popup App 渲染冒烟', () => {
     const rootEl = renderApp();
     await new Promise((r) => setTimeout(r, 150));
     await act(async () => buttonWithText(rootEl, '设置').click());
+    await act(async () => navRow(rootEl, '数据与隐私').click());
 
     expect(rootEl.textContent).toContain('备份与迁移');
     expect(rootEl.textContent).toContain('导出');
@@ -531,6 +606,7 @@ describe('popup App 渲染冒烟', () => {
     const rootEl = renderApp();
     await new Promise((r) => setTimeout(r, 150));
     await act(async () => buttonWithText(rootEl, '设置').click());
+    await act(async () => navRow(rootEl, '数据与隐私').click());
 
     const input = rootEl.querySelector<HTMLInputElement>('input[type="file"]');
     if (!input) throw new Error('personal config input not found');
@@ -560,6 +636,7 @@ describe('popup App 渲染冒烟', () => {
     const rootEl = renderApp();
     await new Promise((r) => setTimeout(r, 150));
     await act(async () => buttonWithText(rootEl, 'Settings').click());
+    await act(async () => navRow(rootEl, 'Data & privacy').click());
 
     expect(rootEl.textContent).toContain('Backup & migration');
     expect(rootEl.textContent).toContain('Export');
@@ -1045,10 +1122,12 @@ describe('popup App 渲染冒烟', () => {
     expect(rootEl.querySelector('.subpage-head h2')?.textContent).toBe('拉黑记录');
     expect(rootEl.querySelector('.section-nav .is-active')?.textContent).toBe('设置');
 
-    // 返回设置首页
+    // 返回上一层「过滤」，再返回设置首页
+    await act(async () => rootEl.querySelector<HTMLButtonElement>('.back-button')!.click());
+    expect(rootEl.querySelector('.subpage-head h2')?.textContent).toBe('过滤');
     await act(async () => rootEl.querySelector<HTMLButtonElement>('.back-button')!.click());
     expect(rootEl.querySelector('.subpage-head')).toBeNull();
-    expect(rootEl.textContent).toContain('页面标黄');
+    expect(rootEl.textContent).toContain('数据与隐私');
 
     history.replaceState(null, '', '/');
     const second = document.createElement('div');

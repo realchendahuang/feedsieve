@@ -115,15 +115,22 @@ export interface AiListState {
 export interface AiCheckSettings {
   mode: 'off' | 'mark' | 'fold';
   scope: 'all' | 'blue' | 'skipBlue';
+  /** 已关注的账号也自动打标（默认关：避免把结论贴到你关注的人身上） */
+  markFollowing: boolean;
 }
 
-export const DEFAULT_AI_SETTINGS: AiCheckSettings = { mode: 'mark', scope: 'all' };
+export const DEFAULT_AI_SETTINGS: AiCheckSettings = {
+  mode: 'mark',
+  scope: 'all',
+  markFollowing: false,
+};
 
 export function normalizeAiSettings(raw: unknown): AiCheckSettings {
   const value = (raw ?? {}) as Partial<AiCheckSettings>;
   return {
     mode: value.mode === 'off' || value.mode === 'fold' ? value.mode : 'mark',
     scope: value.scope === 'blue' || value.scope === 'skipBlue' ? value.scope : 'all',
+    markFollowing: value.markFollowing === true,
   };
 }
 

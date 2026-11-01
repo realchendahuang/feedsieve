@@ -23,7 +23,7 @@ import {
   type AiVoteOutcome,
 } from '../../../src/lib/ai-check/client';
 import { getSelfHandle } from '../../../src/lib/community/following-allowlist';
-import { AppIcon, HelpIcon } from './shared';
+import { AppIcon, HelpIcon, Toggle } from './shared';
 
 const TONE_COLOR = {
   ai: 'var(--tone-ai)',
@@ -64,12 +64,15 @@ const COPY = {
     noSelf: '先在 X 上登录并打开任意页面',
     settings: '评论区',
     settingsHint:
-      '已进社区 AI 号名单、或你测出 AI 味偏重的账号，在评论区和时间线上怎么显示。已关注和个人白名单里的账号不处理。',
+      '已进社区 AI 号名单、或你测出 AI 味偏重的账号，在评论区和时间线上怎么显示。已关注和个人白名单里的账号默认不处理。',
     mode: '遇到 AI 号',
     modes: { off: '不处理', mark: '标记', fold: '折叠' },
     scope: '识别范围',
     scopeHint: '「仅蓝V」按页面上的认证标记判断，不影响黄推识别。',
     scopes: { all: '全部', blue: '仅蓝V', skipBlue: '跳过蓝V' },
+    markFollowing: '标记已关注账号',
+    markFollowingHint:
+      '默认关：不把检测结论贴到你关注的人身上。打开后已关注账号也照常标记 / 折叠；个人白名单仍然不处理。',
   },
   en: {
     current: 'This account',
@@ -103,12 +106,15 @@ const COPY = {
     noSelf: 'Sign in to X and open any page first',
     settings: 'Replies',
     settingsHint:
-      'How accounts on the community AI list, or ones you found AI-heavy, show up in replies and timelines. Followed and allowlisted accounts are left alone.',
+      'How accounts on the community AI list, or ones you found AI-heavy, show up in replies and timelines. Followed and allowlisted accounts are left alone by default.',
     mode: 'AI accounts',
     modes: { off: 'Ignore', mark: 'Mark', fold: 'Fold' },
     scope: 'Scope',
     scopeHint: '“Blue only” uses the verified badge on the page. Spam detection is unaffected.',
     scopes: { all: 'All', blue: 'Blue only', skipBlue: 'Skip blue' },
+    markFollowing: 'Mark followed accounts',
+    markFollowingHint:
+      'Off by default: keeps results off people you follow. Turn it on to mark / fold followed accounts too; your allowlist is still left alone.',
   },
 } as const;
 
@@ -474,6 +480,17 @@ export function AiView({
               </button>
             ))}
           </div>
+        </div>
+        <div className="row">
+          <span className="row-label">
+            <span>{c.markFollowing}</span>
+            <HelpIcon text={c.markFollowingHint} />
+          </span>
+          <Toggle
+            checked={settings.markFollowing}
+            label={c.markFollowing}
+            onChange={(next) => void updateSettings({ markFollowing: next })}
+          />
         </div>
       </section>
     </div>

@@ -1,40 +1,42 @@
 /**
- * 「发帖」视图：已排期的帖子和接下来的空档（按天）、草稿队列、发帖时间表、文章备份、
- * 发帖框和文章编辑器的助手开关。
+ * 「发帖」视图：下一条排期、本周每小时的名额、草稿队列、文章备份、助手开关。
  *
- * 已排期列表来自 X 自己的「预排期」页（同步 = 让当前 X 页面打开那一页，X 自己去拉，扩展顺带记下），
+ * 排期逻辑不在这里配：用户先在「设置 › 功能开关 › 发帖节奏」里设好集中时段和
+ * 每小时最多几条，这里只负责把内容排进下一个有名额的小时。
+ * 已排期列表来自 X 自己的「预排期」页（同步 = 让当前 X 页面打开那一页，X 自己去拉），
  * 你在 X 里新建 / 改 / 删预排期帖子时也会顺带更新。全部只存本机。
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { analyzeProfile, HEATMAP_SLOT_HOURS } from '@feedsieve/metrics';
 import type { UiLanguage } from '../../../src/lib/platform/i18n';
 import {
   DEFAULT_SCHEDULE_SETTINGS,
-  GAP_OPTIONS,
-  INTERVAL_OPTIONS,
+  capacitySummary,
   dayLabel,
   formatClock,
   localDayKey,
   nextFreeSlots,
-  parseClock,
-  recommendTimes,
+  pickSlotInHour,
   slotLabel,
-  slotsBetween,
-  weekdayLabel,
+  type HourCapacity,
   type ScheduleSettings,
 } from '../../../src/lib/compose/schedule-slots';
 import {
   addDraft,
+  getAssignments,
   getBackups,
   getDrafts,
   moveDraft,
+  removeAssignmentForDraft,
   removeBackup,
   removeDraft,
+  setAssignment,
+  subscribeAssignments,
   subscribeBackups,
   subscribeDrafts,
   tweetLength,
   type ArticleBackup,
   type ComposeDraft,
+  type ScheduleAssignment,
   EMPTY_SCHEDULED_CACHE,
   getScheduledCache,
   getScheduleSettings,
@@ -48,59 +50,47 @@ import {
   COMPOSE_DRAFT_MESSAGE,
   OPEN_SCHEDULED_MESSAGE,
 } from '../../../src/lib/compose/compose-schedule';
-import { getSelfHandle } from '../../../src/lib/community/following-allowlist';
-import { asCatalogEntry } from './profile-model';
 import { AppIcon, formatAgo, HelpIcon, IconButton, Toggle } from './shared';
 
 const DAYS_SHOWN = 7;
 const MINUTE_MS = 60_000;
-const DAY_MS = 24 * 60 * MINUTE_MS;
 
 const COPY = {
   zh: {
     upcoming: '排期',
     upcomingHint:
-      '已排期的帖子来自 X 的「草稿 › 预排期」：点同步会在当前 X 页面打开那一页，由 X 自己加载；你在 X 里新建、修改、删除预排期帖子时也会自动更新。空档按下面的时间表算。只存在本机。',
+      '已排期的帖子来自 X 的「草稿 › 预排期」：点同步会在当前 X 页面打开那一页，由 X 自己加载；你在 X 里新建、修改、删除预排期帖子时也会自动更新。「待确认」是本机已经占好时间、还没在 X 点确认的帖子。只存在本机。',
     sync: '同步预排期列表',
     synced: (ago: string) => `同步于 ${ago}`,
     neverSynced: '还没同步过',
-    next: '下一个空档',
-    noSlot: '没有空档',
-    free: '空档',
-    empty: '接下来 7 天没有排期，也没有空档',
+    next: '下一条',
+    noSlot: '节奏里没有空位',
+    remaining: (n: number) => `本周还能排 ${n} 条`,
+    scheduleNext: '排下一条',
     needXTab: '先在当前窗口打开 X',
     syncing: '已在 X 页面打开预排期列表',
     media: (n: number) => `${n} 张图`,
     noText: '（只有图片）',
-    schedule: '时间表',
-    scheduleHint:
-      '发帖框里点日历旁的「下一个空档」按钮（或 Alt+N），会打开 X 的安排表并填好这里的下一个空档，你只需点 X 的「确认」。前后间隔内已有排期的时间算被占。',
-    mode: '方式',
-    modes: { times: '固定时间', interval: '按间隔' },
-    times: '时间点',
-    add: '添加',
-    remove: (t: string) => `删除 ${t}`,
-    recommend: '按我的数据推荐',
-    recommendHint:
-      '用「主页」里你自己账号各发帖时段的爆款倍数，挑表现最好的 3 个时段。要先打开过自己的主页。',
-    recommendNone: '自己主页的数据还不够，先打开自己的主页刷一会儿',
-    recommended: (list: string) => `已换成 ${list}`,
-    days: '星期',
-    from: '从',
-    to: '到',
-    every: '每隔',
-    minutes: (m: number) => (m % 60 === 0 ? `${m / 60} 小时` : `${m} 分钟`),
-    gap: '最小间隔',
-    gapHint: '离已排期的帖子不到这么久的时间点，不算空档。',
-    gapNone: '不限',
-    lead: '最早',
-    leadHint: '空档至少在现在之后这么多分钟，留出写完的时间。',
+    pending: '待确认',
+    pendingPost: '待确认的排期',
+    empty: '接下来 7 天没有排期',
+    capacity: '本周容量',
+    capacityHint:
+      '每个小时显示「已排 / 上限」。点一个还有空位的小时，会把队列里的下一条排进这个小时（分钟内随机）；满了的小时不能再点。到「设置 › 功能开关 › 发帖节奏」里改时段和每小时条数。',
+    adjust: '调整节奏',
+    capacityValue: (used: number, cap: number) => `${used}/${cap}`,
+    noDraft: '先写一条草稿',
+    noCapacity: '这个小时已经满了',
     drafts: '草稿',
     draftsHint:
-      '先在这里写好几条，再一条条点日历按钮：会在当前 X 页面打开发帖框、贴好正文、填好下一个空档，你检查后点 X 的「确认」和「预排期」。排好后这条草稿自动从这里拿掉。只存在本机。',
+      '先在这里写好几条，再点日历按钮：会按顺序排进下一个有名额的小时，在当前 X 页面打开发帖框、贴好正文、填好时间；你检查后点 X 的「确认」和「预排期」。排好后这条草稿自动从这里拿掉。只存在本机。',
     draftPlaceholder: '写一条，⌘↵ 加入',
     addDraft: '加入草稿',
-    scheduleDraft: '排进下一个空档',
+    scheduleDraft: '排下一条',
+    openDraft: '打开发帖框',
+    reroll: '换一个时间',
+    clearAssignment: '取消分配',
+    assigned: '待确认',
     copyDraft: '复制',
     deleteDraft: '删除',
     moveUp: '上移',
@@ -121,7 +111,7 @@ const COPY = {
     helpers: '助手',
     composeHelper: '发帖框排期按钮',
     composeHelperHint:
-      '发帖框日历图标旁的「下一个空档」按钮，以及 X 安排表顶上的快捷时间（+1 小时、明天此时、同上一条、±15 分钟）。',
+      '发帖框日历图标旁的「排下一条」按钮，以及 X 安排表顶上的快捷时间（+1 小时、明天此时、同上一条、±15 分钟）。',
     articleHelper: '文章编辑增强',
     articleHelperHint:
       '在 X 文章编辑器里粘贴 Markdown 自动排版（标题、列表、引用、加粗、链接、代码块），开头的 # 标题自动填进文章标题；右下角显示字数、阅读时长和大纲，可导入 .md 文件。⌘⇧V 粘贴原文。',
@@ -129,53 +119,44 @@ const COPY = {
   en: {
     upcoming: 'Schedule',
     upcomingHint:
-      'Scheduled posts come from X’s Drafts › Scheduled page: Sync opens that page in the current X tab and X loads it itself. Creating, editing or deleting scheduled posts on X also updates this list. Free slots follow the schedule below. Stored on this device only.',
+      'Scheduled posts come from X’s Drafts › Scheduled page: Sync opens that page in the current X tab and X loads it itself. Creating, editing or deleting scheduled posts on X also updates this list. Pending means the time is reserved on this device but not confirmed on X yet. Stored on this device only.',
     sync: 'Sync scheduled posts',
     synced: (ago: string) => `Synced ${ago}`,
     neverSynced: 'Not synced yet',
-    next: 'Next free slot',
-    noSlot: 'No free slot',
-    free: 'Free',
-    empty: 'Nothing scheduled and no free slots in the next 7 days',
+    next: 'Next',
+    noSlot: 'No open slot in your cadence',
+    remaining: (n: number) => `${n} left this week`,
+    scheduleNext: 'Schedule next',
     needXTab: 'Open X in this window first',
     syncing: 'Opened the scheduled list on X',
     media: (n: number) => `${n} media`,
     noText: '(media only)',
-    schedule: 'Posting times',
-    scheduleHint:
-      'In the composer, the Next slot button next to the calendar icon (or Alt+N) opens X’s schedule dialog filled with the next free slot; you only click Confirm. Times within the gap of a scheduled post count as taken.',
-    mode: 'Mode',
-    modes: { times: 'Fixed times', interval: 'Interval' },
-    times: 'Times',
-    add: 'Add',
-    remove: (t: string) => `Remove ${t}`,
-    recommend: 'Suggest from my data',
-    recommendHint:
-      'Picks the 3 best posting periods from your own Profile view. Open your own profile first.',
-    recommendNone: 'Not enough data yet; open your own profile and scroll a bit',
-    recommended: (list: string) => `Changed to ${list}`,
-    days: 'Days',
-    from: 'From',
-    to: 'to',
-    every: 'Every',
-    minutes: (m: number) => (m % 60 === 0 ? `${m / 60} h` : `${m} min`),
-    gap: 'Minimum gap',
-    gapHint: 'Times closer than this to a scheduled post are not free.',
-    gapNone: 'None',
-    lead: 'Earliest',
-    leadHint: 'Free slots start at least this many minutes from now.',
+    pending: 'Pending',
+    pendingPost: 'Pending post',
+    empty: 'Nothing scheduled in the next 7 days',
+    capacity: 'This week',
+    capacityHint:
+      'Each hour shows used / limit. Click an hour with room to put the next queued draft there (a random minute inside the hour). Full hours cannot be clicked. Change windows and per-hour limits in Settings › Modules › Posting cadence.',
+    adjust: 'Edit cadence',
+    capacityValue: (used: number, cap: number) => `${used}/${cap}`,
+    noDraft: 'Write a draft first',
+    noCapacity: 'This hour is full',
     drafts: 'Drafts',
     draftsHint:
-      'Write a few posts here, then press the calendar button on one: X’s composer opens in the current tab with the text and the next free slot filled in; review it and click Confirm and Schedule on X. Scheduled drafts are removed from this list. Stored on this device only.',
-    draftPlaceholder: 'Write a post, ⌘↵ to add',
+      'Write a few posts here, then press the calendar button on one: it schedules into the next open hour, opens X’s composer in the current tab, pastes the text and fills the time; review it and click Confirm and Schedule on X. Scheduled drafts are removed from this list. Stored on this device only.',
+    draftPlaceholder: 'Write one, ⌘↵ to add',
     addDraft: 'Add draft',
-    scheduleDraft: 'Schedule in next slot',
+    scheduleDraft: 'Schedule next',
+    openDraft: 'Open composer',
+    reroll: 'Change time',
+    clearAssignment: 'Clear time',
+    assigned: 'Pending',
     copyDraft: 'Copy',
     deleteDraft: 'Delete',
     moveUp: 'Move up',
     moveDown: 'Move down',
-    draftOpened: 'Opened on X with the time filled in; confirm, then Schedule',
-    draftBusy: 'X’s composer still has unfinished text; deal with it first',
+    draftOpened: 'Opened X’s composer with the time filled in; click Schedule',
+    draftBusy: 'X’s composer still has unfinished text',
     copied: 'Copied',
     length: (n: number) => `${n}/280`,
     backups: 'Article backups',
@@ -190,41 +171,48 @@ const COPY = {
     helpers: 'Helpers',
     composeHelper: 'Composer schedule button',
     composeHelperHint:
-      'The Next slot button next to the calendar icon in the composer, and quick times at the top of X’s schedule dialog.',
+      'The Schedule next button next to the calendar icon in the composer, and quick times at the top of X’s schedule dialog.',
     articleHelper: 'Article editor',
     articleHelperHint:
       'Paste Markdown into the X article editor to format it; a leading # heading becomes the title. A panel shows word count, reading time and outline, and imports .md files. ⌘⇧V pastes plain text.',
   },
 } as const;
 
-const LEAD_OPTIONS = [0, 5, 10, 30, 60] as const;
-
 function clockOf(at: number): string {
   const d = new Date(at);
   return formatClock(d.getHours() * 60 + d.getMinutes());
 }
 
+interface DayItem {
+  at: number;
+  id: string;
+  text: string;
+  media: number;
+  pending: boolean;
+}
+
 interface DayGroup {
   key: string;
   at: number;
-  posts: Array<{ at: number; id: string; text: string; media: number }>;
-  slots: number[];
+  items: DayItem[];
 }
 
 export function WriteView({
   language,
   notify,
   sendToXPage,
+  onOpenCadence,
 }: {
   language: UiLanguage;
   notify: (message: string | null) => void;
-  sendToXPage: (message: { type: string; text?: string }) => Promise<unknown>;
+  sendToXPage: (message: { type: string; text?: string; at?: number }) => Promise<unknown>;
+  onOpenCadence: () => void;
 }) {
   const c = COPY[language];
   const [settings, setSettings] = useState<ScheduleSettings>(DEFAULT_SCHEDULE_SETTINGS);
   const [cache, setCache] = useState<ScheduledCache>(EMPTY_SCHEDULED_CACHE);
+  const [assignments, setAssignments] = useState<ScheduleAssignment[]>([]);
   const [now, setNow] = useState(() => Date.now());
-  const [draftTime, setDraftTime] = useState('');
   const [drafts, setDrafts] = useState<ComposeDraft[]>([]);
   const [draftText, setDraftText] = useState('');
   const [backups, setBackups] = useState<ArticleBackup[]>([]);
@@ -233,11 +221,13 @@ export function WriteView({
   useEffect(() => {
     void getScheduleSettings().then(setSettings);
     void getScheduledCache().then(setCache);
+    void getAssignments().then(setAssignments);
     void getDrafts().then(setDrafts);
     void getBackups().then(setBackups);
     const unsubs = [
       subscribeScheduleSettings(setSettings),
       subscribeScheduledCache(setCache),
+      subscribeAssignments(setAssignments),
       subscribeDrafts(setDrafts),
       subscribeBackups(setBackups),
     ];
@@ -252,40 +242,78 @@ export function WriteView({
     void setScheduleSettings(patch).then(setSettings);
   }, []);
 
-  const occupied = useMemo(() => upcomingTimes(cache, now), [cache, now]);
+  const occupied = useMemo(
+    () => [
+      ...upcomingTimes(cache, now),
+      ...assignments.filter((assignment) => assignment.at > now).map((assignment) => assignment.at),
+    ],
+    [cache, now, assignments],
+  );
   const next = useMemo(
     () => nextFreeSlots(settings, occupied, now, 1)[0] ?? null,
     [settings, occupied, now],
   );
+  const summary = useMemo(
+    () => capacitySummary(settings, occupied, now, DAYS_SHOWN),
+    [settings, occupied, now],
+  );
 
-  // 按天分组：所有已排期的帖子；空档只列接下来 7 天，一天一行
+  const assignmentByDraft = useMemo(() => {
+    const map = new Map<string, ScheduleAssignment>();
+    for (const assignment of assignments) {
+      if (assignment.draftId && assignment.at > now) map.set(assignment.draftId, assignment);
+    }
+    return map;
+  }, [assignments, now]);
+
+  const firstQueued = drafts.find((draft) => !assignmentByDraft.has(draft.id)) ?? null;
+
+  // 已排期 + 待确认，按天分组；同一分钟已经有 X 排期时不再重复显示分配
   const days = useMemo(() => {
-    const until = new Date(now + DAYS_SHOWN * DAY_MS).setHours(0, 0, 0, 0);
     const groups = new Map<string, DayGroup>();
     const group = (at: number): DayGroup => {
       const key = localDayKey(at);
       let value = groups.get(key);
       if (!value) {
-        value = { key, at, posts: [], slots: [] };
+        value = { key, at, items: [] };
         groups.set(key, value);
       }
       return value;
     };
-    for (const p of cache.posts) {
-      if (p.executeAt > now)
-        group(p.executeAt).posts.push({ at: p.executeAt, id: p.id, text: p.text, media: p.media });
+    const scheduledTimes = new Set<number>();
+    for (const post of cache.posts) {
+      if (post.executeAt <= now) continue;
+      scheduledTimes.add(post.executeAt);
+      group(post.executeAt).items.push({
+        at: post.executeAt,
+        id: post.id,
+        text: post.text,
+        media: post.media,
+        pending: false,
+      });
     }
-    for (const at of nextFreeSlots(settings, occupied, now, 200)) {
-      if (at < until) group(at).slots.push(at);
+    for (const assignment of assignments) {
+      if (assignment.at <= now) continue;
+      if (
+        [...scheduledTimes].some((at) => Math.abs(at - assignment.at) < MINUTE_MS) ||
+        assignment.at < now
+      )
+        continue;
+      const draft = assignment.draftId
+        ? drafts.find((item) => item.id === assignment.draftId)
+        : undefined;
+      group(assignment.at).items.push({
+        at: assignment.at,
+        id: `pending-${assignment.id}`,
+        text: draft?.text ?? '',
+        media: 0,
+        pending: true,
+      });
     }
-    return [...groups.values()].sort((a, b) => a.at - b.at);
-  }, [cache.posts, settings, occupied, now]);
-
-  // 本周的槽位数（看时间表是不是空的）
-  const hasSlots = useMemo(
-    () => slotsBetween(settings, now, now + 7 * DAY_MS).length > 0,
-    [settings, now],
-  );
+    return [...groups.values()]
+      .map((day) => ({ ...day, items: day.items.sort((a, b) => a.at - b.at) }))
+      .sort((a, b) => a.at - b.at);
+  }, [cache.posts, assignments, drafts, now]);
 
   async function sync(): Promise<void> {
     try {
@@ -296,27 +324,78 @@ export function WriteView({
     }
   }
 
-  async function openScheduled(): Promise<void> {
-    await sync();
-  }
-
   function saveDraft(): void {
     if (!draftText.trim()) return;
     void addDraft(draftText).then(setDrafts);
     setDraftText('');
   }
 
-  async function scheduleDraft(draft: ComposeDraft): Promise<void> {
+  async function scheduleDraft(draft: ComposeDraft, at?: number): Promise<void> {
+    const target = at ?? assignmentByDraft.get(draft.id)?.at ?? next;
+    if (target === null || target === undefined) {
+      notify(c.noSlot);
+      return;
+    }
+    const list = await setAssignment({ draftId: draft.id, text: draft.text, at: target });
+    setAssignments(list);
     try {
-      const result = (await sendToXPage({ type: COMPOSE_DRAFT_MESSAGE, text: draft.text })) as {
-        ok?: boolean;
-        reason?: string;
-      } | null;
+      const result = (await sendToXPage({
+        type: COMPOSE_DRAFT_MESSAGE,
+        text: draft.text,
+        at: target,
+      })) as { ok?: boolean; reason?: string } | null;
       if (result?.ok) notify(c.draftOpened);
       else notify(result?.reason === 'busy' ? c.draftBusy : c.needXTab);
     } catch {
       notify(c.needXTab);
     }
+  }
+
+  async function scheduleNext(): Promise<void> {
+    if (!firstQueued) {
+      notify(c.noDraft);
+      return;
+    }
+    await scheduleDraft(firstQueued);
+  }
+
+  async function rerollDraft(draft: ComposeDraft): Promise<void> {
+    const current = assignmentByDraft.get(draft.id);
+    const at = nextFreeSlots(
+      settings,
+      current ? occupied.filter((time) => time !== current.at) : occupied,
+      now,
+      1,
+    )[0];
+    if (at === undefined) {
+      notify(c.noSlot);
+      return;
+    }
+    await scheduleDraft(draft, at);
+  }
+
+  async function assignToHour(hour: HourCapacity): Promise<void> {
+    if (!firstQueued) {
+      notify(c.noDraft);
+      return;
+    }
+    const at = pickSlotInHour(hour, settings, occupied, now);
+    if (at === null) {
+      notify(c.noCapacity);
+      return;
+    }
+    await scheduleDraft(firstQueued, at);
+  }
+
+  async function clearAssignment(draft: ComposeDraft): Promise<void> {
+    const list = await removeAssignmentForDraft(draft.id);
+    setAssignments(list);
+  }
+
+  async function deleteDraft(draft: ComposeDraft): Promise<void> {
+    const list = await removeAssignmentForDraft(draft.id);
+    setAssignments(list);
+    setDrafts(await removeDraft(draft.id));
   }
 
   function copyText(text: string): void {
@@ -334,50 +413,17 @@ export function WriteView({
     else await browser.tabs.create({ url });
   }
 
-  async function recommend(): Promise<void> {
-    const self = await getSelfHandle();
-    const entry = self
-      ? asCatalogEntry(
-          await browser.runtime
-            .sendMessage({ type: 'feedsieve:profile-get', handle: self })
-            .catch(() => null),
-          self,
-        )
-      : null;
-    const heatmap = entry ? analyzeProfile(Object.values(entry.posts), Date.now()).heatmap : null;
-    const times = heatmap ? recommendTimes(heatmap.cells, HEATMAP_SLOT_HOURS, 3) : [];
-    if (times.length === 0) {
-      notify(c.recommendNone);
-      return;
-    }
-    update({ mode: 'times', times });
-    notify(c.recommended(times.join('、')));
-  }
-
-  function addTime(): void {
-    const minutes = parseClock(draftTime);
-    if (minutes === null) return;
-    update({ times: [...settings.times, formatClock(minutes)] });
-    setDraftTime('');
-  }
-
-  function toggleDay(day: number): void {
-    update({
-      days: settings.days.includes(day)
-        ? settings.days.filter((d) => d !== day)
-        : [...settings.days, day],
-    });
-  }
-
-  const weekOrder = [1, 2, 3, 4, 5, 6, 0];
+  const pendingCount = assignments.filter((assignment) => assignment.at > now).length;
 
   return (
     <section className="view write-view">
       <section className="block" aria-label={c.upcoming}>
         <div className="block-head">
           <h2>{c.upcoming}</h2>
-          {cache.posts.length ? (
-            <span className="count">{cache.posts.filter((p) => p.executeAt > now).length}</span>
+          {cache.posts.length || pendingCount ? (
+            <span className="count">
+              {cache.posts.filter((post) => post.executeAt > now).length + pendingCount}
+            </span>
           ) : null}
           <HelpIcon text={c.upcomingHint} />
           <span className="row-meta write-synced">
@@ -393,6 +439,18 @@ export function WriteView({
             {next !== null ? slotLabel(next, now, language) : c.noSlot}
           </span>
         </div>
+        <div className="write-next-actions">
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={!firstQueued || next === null}
+            onClick={() => void scheduleNext()}
+          >
+            <AppIcon name="calendar" size={14} />
+            <span>{c.scheduleNext}</span>
+          </button>
+          <span className="row-meta">{c.remaining(summary.free)}</span>
+        </div>
         {days.length === 0 ? (
           <div className="empty-state is-clean">
             <p>{c.empty}</p>
@@ -401,28 +459,65 @@ export function WriteView({
           days.map((day) => (
             <div className="write-day" key={day.key}>
               <h3 className="write-day-title">{dayLabel(day.at, now, language)}</h3>
-              {day.posts.map((post) => (
+              {day.items.map((item) => (
                 <button
-                  key={post.id}
+                  key={item.id}
                   type="button"
-                  className="write-item is-post"
-                  onClick={() => void openScheduled()}
+                  className={`write-item${item.pending ? ' is-pending' : ' is-post'}`}
+                  onClick={() => (item.pending ? undefined : void sync())}
                 >
-                  <span className="write-time">{clockOf(post.at)}</span>
-                  <span className="write-text">{post.text || c.noText}</span>
-                  {post.media ? <span className="row-meta">{c.media(post.media)}</span> : null}
+                  <span className="write-time">{clockOf(item.at)}</span>
+                  <span className="write-text">{item.text || c.noText}</span>
+                  {item.pending ? <span className="row-meta">{c.pending}</span> : null}
+                  {item.media ? <span className="row-meta">{c.media(item.media)}</span> : null}
                 </button>
               ))}
-              {day.slots.length ? (
-                <div className="write-item is-slot">
-                  <span className="write-time">{c.free}</span>
-                  <span className="write-slots">
-                    {day.slots.map((at) => (
-                      <span key={at}>{clockOf(at)}</span>
-                    ))}
-                  </span>
-                </div>
-              ) : null}
+            </div>
+          ))
+        )}
+      </section>
+
+      <section className="block" aria-label={c.capacity}>
+        <div className="block-head">
+          <h2>{c.capacity}</h2>
+          <span className="count">{c.capacityValue(summary.used, summary.capacity)}</span>
+          <HelpIcon text={c.capacityHint} />
+          <button type="button" className="text-button toolbar-end" onClick={onOpenCadence}>
+            {c.adjust}
+          </button>
+        </div>
+        {summary.days.length === 0 ? (
+          <div className="empty-state is-clean">
+            <p>{c.noSlot}</p>
+          </div>
+        ) : (
+          summary.days.map((day) => (
+            <div className="write-day" key={day.at}>
+              <h3 className="write-day-title">
+                <span>{dayLabel(day.at, now, language)}</span>
+                <span className="row-meta">{c.capacityValue(day.used, day.capacity)}</span>
+              </h3>
+              <div className="write-hours">
+                {day.hours.map((hour) => {
+                  const full = hour.used >= hour.capacity;
+                  return (
+                    <button
+                      key={hour.at}
+                      type="button"
+                      className={`write-hour${full ? ' is-full' : ''}`}
+                      disabled={full}
+                      title={`${slotLabel(hour.at, now, language)} · ${c.capacityValue(
+                        hour.used,
+                        hour.capacity,
+                      )}`}
+                      onClick={() => void assignToHour(hour)}
+                    >
+                      <span>{clockOf(hour.at)}</span>
+                      <span className="row-meta">{c.capacityValue(hour.used, hour.capacity)}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           ))
         )}
@@ -463,212 +558,74 @@ export function WriteView({
             </button>
           </div>
         </div>
-        {drafts.map((draft, index) => (
-          <div className="write-draft" key={draft.id}>
-            <p className="write-draft-text">{draft.text}</p>
-            <div className="write-draft-foot">
-              <span className={`row-meta${tweetLength(draft.text) > 280 ? ' write-over' : ''}`}>
-                {c.length(tweetLength(draft.text))}
-              </span>
-              <span className="write-draft-actions">
-                <IconButton
-                  icon="calendar"
-                  label={c.scheduleDraft}
-                  hint={next !== null ? slotLabel(next, now, language) : c.noSlot}
-                  onClick={() => void scheduleDraft(draft)}
-                />
-                <IconButton icon="copy" label={c.copyDraft} onClick={() => copyText(draft.text)} />
-                <IconButton
-                  icon="up"
-                  label={c.moveUp}
-                  disabled={index === 0}
-                  onClick={() => void moveDraft(draft.id, -1).then(setDrafts)}
-                />
-                <IconButton
-                  icon="down"
-                  label={c.moveDown}
-                  disabled={index === drafts.length - 1}
-                  onClick={() => void moveDraft(draft.id, 1).then(setDrafts)}
-                />
-                <IconButton
-                  icon="x"
-                  label={c.deleteDraft}
-                  onClick={() => void removeDraft(draft.id).then(setDrafts)}
-                />
-              </span>
-            </div>
-          </div>
-        ))}
-      </section>
-
-      <section className="block" aria-label={c.schedule}>
-        <div className="block-head">
-          <h2>{c.schedule}</h2>
-          <HelpIcon text={c.scheduleHint} />
-          <button
-            type="button"
-            className="text-button toolbar-end"
-            onClick={() => void recommend()}
-          >
-            <AppIcon name="sparkles" size={14} />
-            <span>{c.recommend}</span>
-          </button>
-          <HelpIcon text={c.recommendHint} />
-        </div>
-        <div className="row">
-          <span className="row-label">
-            <span>{c.mode}</span>
-          </span>
-          <div className="row-control segmented" role="radiogroup" aria-label={c.mode}>
-            {(['times', 'interval'] as const).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                role="radio"
-                aria-checked={settings.mode === mode}
-                className={settings.mode === mode ? 'is-selected' : ''}
-                onClick={() => update({ mode })}
-              >
-                {c.modes[mode]}
-              </button>
-            ))}
-          </div>
-        </div>
-        {settings.mode === 'times' ? (
-          <div className="row write-times">
-            <span className="row-label">
-              <span>{c.times}</span>
-            </span>
-            <div className="write-chips">
-              {settings.times.map((time) => (
-                <span key={time} className="chip is-on write-chip">
-                  {time}
-                  <button
-                    type="button"
-                    aria-label={c.remove(time)}
-                    title={c.remove(time)}
-                    onClick={() => update({ times: settings.times.filter((t) => t !== time) })}
-                  >
-                    <AppIcon name="x" size={12} />
-                  </button>
+        {drafts.map((draft, index) => {
+          const assignment = assignmentByDraft.get(draft.id);
+          return (
+            <div className="write-draft" key={draft.id}>
+              <p className="write-draft-text">{draft.text}</p>
+              <div className="write-draft-foot">
+                <span className={`row-meta${tweetLength(draft.text) > 280 ? ' write-over' : ''}`}>
+                  {c.length(tweetLength(draft.text))}
                 </span>
-              ))}
-              <span className="write-add">
-                <input
-                  type="time"
-                  className="number-input write-time-input"
-                  value={draftTime}
-                  aria-label={c.add}
-                  onChange={(event) => setDraftTime(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') addTime();
-                  }}
-                />
-                <IconButton
-                  icon="plus"
-                  label={c.add}
-                  disabled={parseClock(draftTime) === null}
-                  onClick={addTime}
-                />
-              </span>
+                {assignment ? (
+                  <span className="row-meta write-assigned">
+                    {slotLabel(assignment.at, now, language)} · {c.assigned}
+                  </span>
+                ) : null}
+                <span className="write-draft-actions">
+                  <IconButton
+                    icon="calendar"
+                    label={assignment ? c.openDraft : c.scheduleDraft}
+                    hint={
+                      assignment
+                        ? slotLabel(assignment.at, now, language)
+                        : next !== null
+                          ? slotLabel(next, now, language)
+                          : c.noSlot
+                    }
+                    onClick={() => void scheduleDraft(draft)}
+                  />
+                  {assignment ? (
+                    <>
+                      <IconButton
+                        icon="refresh"
+                        label={c.reroll}
+                        onClick={() => void rerollDraft(draft)}
+                      />
+                      <IconButton
+                        icon="x"
+                        label={c.clearAssignment}
+                        onClick={() => void clearAssignment(draft)}
+                      />
+                    </>
+                  ) : null}
+                  <IconButton
+                    icon="copy"
+                    label={c.copyDraft}
+                    onClick={() => copyText(draft.text)}
+                  />
+                  <IconButton
+                    icon="up"
+                    label={c.moveUp}
+                    disabled={index === 0}
+                    onClick={() => void moveDraft(draft.id, -1).then(setDrafts)}
+                  />
+                  <IconButton
+                    icon="down"
+                    label={c.moveDown}
+                    disabled={index === drafts.length - 1}
+                    onClick={() => void moveDraft(draft.id, 1).then(setDrafts)}
+                  />
+                  <IconButton
+                    icon="x"
+                    label={c.deleteDraft}
+                    onClick={() => void deleteDraft(draft)}
+                  />
+                </span>
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="row">
-            <span className="row-label">
-              <span>{c.from}</span>
-            </span>
-            <div className="row-control write-interval">
-              <input
-                type="time"
-                className="number-input write-time-input"
-                value={settings.intervalStart}
-                aria-label={c.from}
-                onChange={(event) =>
-                  event.target.value && update({ intervalStart: event.target.value })
-                }
-              />
-              <span className="row-meta">{c.to}</span>
-              <input
-                type="time"
-                className="number-input write-time-input"
-                value={settings.intervalEnd}
-                aria-label={c.to}
-                onChange={(event) =>
-                  event.target.value && update({ intervalEnd: event.target.value })
-                }
-              />
-              <span className="row-meta">{c.every}</span>
-              <select
-                className="sort-select"
-                value={settings.intervalMinutes}
-                aria-label={c.every}
-                onChange={(event) => update({ intervalMinutes: Number(event.target.value) })}
-              >
-                {INTERVAL_OPTIONS.map((m) => (
-                  <option key={m} value={m}>
-                    {c.minutes(m)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        )}
-        <div className="row">
-          <span className="row-label">
-            <span>{c.days}</span>
-          </span>
-          <div className="row-control write-days" role="group" aria-label={c.days}>
-            {weekOrder.map((day) => (
-              <button
-                key={day}
-                type="button"
-                aria-pressed={settings.days.includes(day)}
-                className={`chip${settings.days.includes(day) ? ' is-on' : ''}`}
-                onClick={() => toggleDay(day)}
-              >
-                {weekdayLabel(day, language).replace('周', '')}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="row">
-          <span className="row-label">
-            <span>{c.gap}</span>
-            <HelpIcon text={c.gapHint} />
-          </span>
-          <select
-            className="sort-select row-control"
-            value={settings.minGapMinutes}
-            aria-label={c.gap}
-            onChange={(event) => update({ minGapMinutes: Number(event.target.value) })}
-          >
-            {GAP_OPTIONS.map((m) => (
-              <option key={m} value={m}>
-                {m === 0 ? c.gapNone : c.minutes(m)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="row">
-          <span className="row-label">
-            <span>{c.lead}</span>
-            <HelpIcon text={c.leadHint} />
-          </span>
-          <select
-            className="sort-select row-control"
-            value={settings.leadMinutes}
-            aria-label={c.lead}
-            onChange={(event) => update({ leadMinutes: Number(event.target.value) })}
-          >
-            {LEAD_OPTIONS.map((m) => (
-              <option key={m} value={m}>
-                {m === 0 ? c.gapNone : c.minutes(m)}
-              </option>
-            ))}
-          </select>
-        </div>
-        {!hasSlots ? <p className="row-meta write-warn">{c.noSlot}</p> : null}
+          );
+        })}
       </section>
 
       <section className="block" aria-label={c.backups}>

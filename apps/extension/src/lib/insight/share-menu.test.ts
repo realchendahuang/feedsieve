@@ -114,6 +114,17 @@ describe('createShareMenu', () => {
     expect(second.querySelector(`[${SHARE_ITEM_ATTRIBUTE}]`)).not.toBeNull();
     menu.dispose();
   });
+
+  it('模块关掉后不接管分享按钮', async () => {
+    const article = renderTweet('alice', '333');
+    const menu = createShareMenu({ getLanguage: () => 'zh', isEnabled: () => false });
+    menu.listen();
+    (article.querySelector('.share') as HTMLElement).click();
+    const dropdown = renderMenu();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(dropdown.querySelector(`[${SHARE_ITEM_ATTRIBUTE}]`)).toBeNull();
+    menu.dispose();
+  });
 });
 
 describe('scrollToPost', () => {

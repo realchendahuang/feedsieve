@@ -25,15 +25,57 @@ import {
   setInsightBadgesEnabled,
   subscribeInsightBadges,
 } from '../../../src/lib/insight/insight-settings';
+import {
+  getScheduleSettings,
+  setScheduleSettings,
+  subscribeScheduleSettings,
+} from '../../../src/lib/compose/schedule-store';
+import type { ScheduleSettings } from '../../../src/lib/compose/schedule-slots';
+import {
+  getModuleSettings,
+  setModuleSettings,
+  subscribeModuleSettings,
+  type ModuleSettings,
+} from '../../../src/lib/settings/module-settings';
 import { AppIcon, HelpIcon, STRENGTH_HINTS, STRENGTH_LABELS, Toggle } from './shared';
 import KeywordsView from './KeywordsView';
+import CadencePage from './settings/CadencePage';
 import BackupRow from './settings/BackupRow';
 import BlockedPage from './settings/BlockedPage';
 import AllowlistPage from './settings/AllowlistPage';
 import FollowingPage from './settings/FollowingPage';
 import type { SubpageSendToXPage } from './settings/types';
 
-export type SettingsPage = 'home' | 'keywords' | 'blocked' | 'allowlist' | 'following';
+export type SettingsPage =
+  | 'home'
+  | 'highlight'
+  | 'stats'
+  | 'ai'
+  | 'compose'
+  | 'share'
+  | 'filter'
+  | 'data'
+  | 'about'
+  | 'keywords'
+  | 'blocked'
+  | 'allowlist'
+  | 'following';
+
+/** 二级页的返回目标：功能模块回设置首页，名单页回「过滤」。 */
+const PARENT_PAGE: Record<Exclude<SettingsPage, 'home'>, SettingsPage> = {
+  highlight: 'home',
+  stats: 'home',
+  ai: 'home',
+  compose: 'home',
+  share: 'home',
+  filter: 'home',
+  data: 'home',
+  about: 'home',
+  keywords: 'filter',
+  blocked: 'filter',
+  allowlist: 'filter',
+  following: 'filter',
+};
 
 interface SettingsViewProps {
   language: UiLanguage;
@@ -138,7 +180,7 @@ function NavRow({
   onOpen,
 }: {
   label: string;
-  meta: string | number | null;
+  meta?: string | number | null;
   onOpen: () => void;
 }) {
   return (
@@ -146,7 +188,7 @@ function NavRow({
       <span className="row-label">
         <span>{label}</span>
       </span>
-      <span className="row-meta">{meta ?? '…'}</span>
+      {meta === null || meta === undefined ? null : <span className="row-meta">{meta}</span>}
       <span className="chevron" aria-hidden="true">
         <AppIcon name="chevron" size={14} />
       </span>
@@ -175,10 +217,14 @@ export default function SettingsView({
   // 用户自定日上限：null = 还没读到；'' 允许临时输入态，失焦校验
   const [budgetDraft, setBudgetDraft] = useState<string | null>(null);
   const [insightBadges, setInsightBadges] = useState<boolean | null>(null);
+  const [modules, setModules] = useState<ModuleSettings | null>(null);
+  const [schedule, setSchedule] = useState<ScheduleSettings | null>(null);
   const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     void getInsightBadgesEnabled().then(setInsightBadges);
+    void getModuleSettings().then(setModules);
+    void getScheduleSettings().then(setSchedule);
     void getSafetyBudgetOverride().then((value) =>
       setBudgetDraft(String(value ?? SAFETY_PRESETS[DEFAULT_PRESET].dailyLimit)),
     );
@@ -186,6 +232,8 @@ export default function SettingsView({
     void getKeywordPackCatalog().then(setCatalog);
     const unsubs = [
       subscribeInsightBadges(setInsightBadges),
+      subscribeModuleSettings(setModules),
+      subscribeScheduleSettings(setSchedule),
       subscribeKeywordRules(setKeywordRules),
       subscribeKeywordPackCatalog(setCatalog),
     ];
@@ -197,6 +245,19 @@ export default function SettingsView({
     notify(null);
     onLanguageChange(next);
     await setUiLanguage(next);
+  }
+
+  async function updateModule(key: 'aiCheck' | 'shareMenu', enabled: boolean): Promise<void> {
+    setModules((prev) => (prev ? { ...prev, [key]: enabled } : prev));
+    await setModuleSettings(key === 'aiCheck' ? { aiCheck: enabled } : { shareMenu: enabled });
+  }
+
+  /** 发帖辅助是一个总开关，两个细项一起开 / 一起关；细项仍可在「发帖」页单独调。 */
+  async function updateComposeAssist(enabled: boolean): Promise<void> {
+    setSchedule((prev) =>
+      prev ? { ...prev, composeHelper: enabled, articleHelper: enabled } : prev,
+    );
+    await setScheduleSettings({ composeHelper: enabled, articleHelper: enabled });
   }
 
   async function setLocalOnly(localOnly: boolean): Promise<void> {
@@ -259,27 +320,302 @@ export default function SettingsView({
     }
   }
 
+  const keywordMeta = keywordRules
+    ? t.keywordSummary(
+        keywordRules.customRules.length,
+        catalog.packs.filter((pack) => isOfficialKeywordCategorySubscribed(keywordRules, pack.id))
+          .length,
+      )
+    : null;
+  const strengthHint = MARK_STRENGTHS.map(
+    (strength) => `${STRENGTH_LABELS[language][strength]}：${STRENGTH_HINTS[language][strength]}`,
+  ).join('\n');
+
+  if (!community) {
+    return (
+      <div className="view settings-view">
+        <div className="loading-list" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
+      </div>
+    );
+  }
+
+  const onOff = (on: boolean): string => (on ? t.personalConfigOn : t.personalConfigOff);
+
   if (page !== 'home') {
     const titles: Record<Exclude<SettingsPage, 'home'>, string> = {
+      highlight: t.enabled,
+      stats: t.insightBadges,
+      ai: t.moduleAi,
+      compose: t.moduleCompose,
+      share: t.moduleShare,
+      filter: t.groupFilter,
+      data: t.groupData,
+      about: t.aboutLinks,
       keywords: t.keywords,
       blocked: t.manageBlocked,
       allowlist: t.falsePositiveList,
       following: t.followingTab,
     };
+    const parent = PARENT_PAGE[page];
+    const backLabel = parent === 'home' ? t.settings : titles[parent];
     return (
       <div className="view subpage">
         <header className="subpage-head">
           <button
             type="button"
             className="back-button"
-            aria-label={`${t.goBack} · ${t.settings}`}
-            onClick={() => onNavigate('home')}
+            aria-label={`${t.goBack} · ${backLabel}`}
+            onClick={() => onNavigate(parent)}
           >
             <AppIcon name="chevron" size={14} className="is-back" />
-            {t.settings}
+            {backLabel}
           </button>
           <h2>{titles[page]}</h2>
         </header>
+
+        {page === 'highlight' ? (
+          <section className="group">
+            <Row label={t.enabled} hint={t.enabledHint}>
+              <Toggle
+                checked={community.enabled}
+                label={t.enabled}
+                onChange={(enabled) => void onUpdateCommunity({ enabled })}
+              />
+            </Row>
+          </section>
+        ) : null}
+
+        {page === 'stats' ? (
+          <section className="group">
+            <Row label={t.insightBadges} hint={t.insightBadgesHint}>
+              <Toggle
+                checked={insightBadges ?? true}
+                disabled={insightBadges === null}
+                label={t.insightBadges}
+                onChange={(enabled) => {
+                  setInsightBadges(enabled);
+                  void setInsightBadgesEnabled(enabled);
+                }}
+              />
+            </Row>
+          </section>
+        ) : null}
+
+        {page === 'ai' ? (
+          <section className="group">
+            <Row label={t.moduleAi} hint={t.moduleAiHint}>
+              <Toggle
+                checked={modules?.aiCheck ?? true}
+                disabled={modules === null}
+                label={t.moduleAi}
+                onChange={(enabled) => void updateModule('aiCheck', enabled)}
+              />
+            </Row>
+          </section>
+        ) : null}
+
+        {page === 'share' ? (
+          <section className="group">
+            <Row label={t.moduleShare} hint={t.moduleShareHint}>
+              <Toggle
+                checked={modules?.shareMenu ?? true}
+                disabled={modules === null}
+                label={t.moduleShare}
+                onChange={(enabled) => void updateModule('shareMenu', enabled)}
+              />
+            </Row>
+          </section>
+        ) : null}
+
+        {page === 'compose' ? (
+          <>
+            <section className="group">
+              <Row label={t.moduleCompose} hint={t.moduleComposeHint}>
+                <Toggle
+                  checked={schedule ? schedule.composeHelper || schedule.articleHelper : true}
+                  disabled={schedule === null}
+                  label={t.moduleCompose}
+                  onChange={(enabled) => void updateComposeAssist(enabled)}
+                />
+              </Row>
+              <Row label={t.composeHelper} hint={t.composeHelperHint}>
+                <Toggle
+                  checked={schedule?.composeHelper ?? true}
+                  disabled={schedule === null}
+                  label={t.composeHelper}
+                  onChange={(composeHelper) =>
+                    void setScheduleSettings({ composeHelper }).then(setSchedule)
+                  }
+                />
+              </Row>
+              <Row label={t.articleHelper} hint={t.articleHelperHint}>
+                <Toggle
+                  checked={schedule?.articleHelper ?? true}
+                  disabled={schedule === null}
+                  label={t.articleHelper}
+                  onChange={(articleHelper) =>
+                    void setScheduleSettings({ articleHelper }).then(setSchedule)
+                  }
+                />
+              </Row>
+            </section>
+            {schedule ? (
+              <CadencePage language={language} schedule={schedule} notify={notify} />
+            ) : null}
+          </>
+        ) : null}
+
+        {page === 'filter' ? (
+          <section className="group">
+            <Row label={t.strength} hint={strengthHint}>
+              <div className="segmented" role="group" aria-label={t.strength}>
+                {MARK_STRENGTHS.map((strength: MarkStrength) => (
+                  <button
+                    key={strength}
+                    type="button"
+                    className={community.strength === strength ? 'is-selected' : ''}
+                    aria-pressed={community.strength === strength}
+                    onClick={() => void onUpdateCommunity({ strength })}
+                  >
+                    {STRENGTH_LABELS[language][strength]}
+                  </button>
+                ))}
+              </div>
+            </Row>
+            <NavRow label={t.keywords} meta={keywordMeta} onOpen={() => onNavigate('keywords')} />
+            <NavRow
+              label={t.manageBlocked}
+              meta={counts.blocked ?? '…'}
+              onOpen={() => onNavigate('blocked')}
+            />
+            <NavRow
+              label={t.falsePositiveList}
+              meta={counts.allowlist ?? '…'}
+              onOpen={() => onNavigate('allowlist')}
+            />
+            <NavRow
+              label={t.followingTab}
+              meta={counts.following ?? '…'}
+              onOpen={() => onNavigate('following')}
+            />
+            <Row label={t.dailyBudget} hint={t.dailyBudgetHint}>
+              <input
+                type="number"
+                min={1}
+                inputMode="numeric"
+                aria-label={t.dailyBudget}
+                value={budgetDraft ?? ''}
+                placeholder={budgetDraft == null ? '…' : undefined}
+                onChange={(event) => setBudgetDraft(event.target.value)}
+                onBlur={() => void commitBudget()}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') event.currentTarget.blur();
+                }}
+                className="number-input"
+              />
+            </Row>
+          </section>
+        ) : null}
+
+        {page === 'data' ? (
+          <section className="group">
+            <Row label={t.localOnly} hint={t.localOnlyHint}>
+              <Toggle
+                checked={!community.autoContribute}
+                label={t.localOnly}
+                onChange={(localOnly) => void setLocalOnly(localOnly)}
+              />
+            </Row>
+            <Row label={t.hotContribute} hint={t.hotContributeHint}>
+              <Toggle
+                checked={community.autoContribute && community.hotContribute}
+                // 「仅本地运行」打开时所有上报都停，这个开关跟着锁住
+                disabled={!community.autoContribute}
+                label={t.hotContribute}
+                onChange={(hotContribute) => void onUpdateCommunity({ hotContribute })}
+              />
+            </Row>
+            <Row label={t.hitContribute} hint={t.hitContributeHint}>
+              <Toggle
+                checked={community.autoContribute && community.hitContribute}
+                // 「仅本地运行」打开时所有上报都停，这个开关跟着锁住
+                disabled={!community.autoContribute}
+                label={t.hitContribute}
+                onChange={(hitContribute) => void onUpdateCommunity({ hitContribute })}
+              />
+            </Row>
+            <Row label={t.manualSync} hint={t.manualSyncHint}>
+              <button
+                type="button"
+                className="text-button"
+                disabled={syncing}
+                onClick={() => void syncNow()}
+              >
+                {syncing ? t.processing : t.manualSyncAction}
+              </button>
+            </Row>
+            <Row label={t.profileClear} hint={t.profileClearHint}>
+              <ClearProfilesButton language={language} notify={notify} />
+            </Row>
+            <BackupRow
+              language={language}
+              keywordRules={keywordRules}
+              setKeywordRules={setKeywordRules}
+              catalog={catalog}
+              community={community}
+              onUpdateCommunity={onUpdateCommunity}
+              onLanguageChange={onLanguageChange}
+            />
+          </section>
+        ) : null}
+
+        {page === 'about' ? (
+          <section className="group">
+            <Row label={t.languageSetting}>
+              <div className="segmented" role="group" aria-label={t.language}>
+                <button
+                  type="button"
+                  className={language === 'zh' ? 'is-selected' : ''}
+                  aria-pressed={language === 'zh'}
+                  onClick={() => void selectLanguage('zh')}
+                >
+                  中文
+                </button>
+                <button
+                  type="button"
+                  className={language === 'en' ? 'is-selected' : ''}
+                  aria-pressed={language === 'en'}
+                  onClick={() => void selectLanguage('en')}
+                >
+                  EN
+                </button>
+              </div>
+            </Row>
+            <Row label={`${t.brand} ${extensionVersion()}`.trim()} hint={t.brandHint}>
+              <a
+                className="text-button"
+                href="https://github.com/realchendahuang/feedsieve"
+                target="_blank"
+                rel="noreferrer noopener"
+              >
+                {t.githubLink}
+              </a>
+              <a
+                className="text-button"
+                href="https://feedsieve.win"
+                target="_blank"
+                rel="noreferrer noopener"
+              >
+                {t.officialSiteLink}
+              </a>
+            </Row>
+          </section>
+        ) : null}
+
         {page === 'keywords' ? <KeywordsView language={language} notify={notify} /> : null}
         {page === 'blocked' ? (
           <BlockedPage
@@ -305,195 +641,60 @@ export default function SettingsView({
     );
   }
 
-  const keywordMeta = keywordRules
-    ? t.keywordSummary(
-        keywordRules.customRules.length,
-        catalog.packs.filter((pack) => isOfficialKeywordCategorySubscribed(keywordRules, pack.id))
-          .length,
-      )
-    : null;
-  const strengthHint = MARK_STRENGTHS.map(
-    (strength) => `${STRENGTH_LABELS[language][strength]}：${STRENGTH_HINTS[language][strength]}`,
-  ).join('\n');
-
-  if (!community) {
-    return (
-      <div className="view settings-view">
-        <div className="loading-list" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-        </div>
-      </div>
-    );
-  }
+  const composeOn = schedule ? schedule.composeHelper || schedule.articleHelper : true;
+  const moduleMeta = (on: boolean | null): string => (on === null ? '…' : onOff(on));
 
   return (
     <div className="view settings-view">
       <section className="group">
-        <h3 className="group-title">{t.groupFilter}</h3>
-        <Row label={t.enabled}>
-          <Toggle
-            checked={community.enabled}
-            label={t.enabled}
-            onChange={(enabled) => void onUpdateCommunity({ enabled })}
-          />
-        </Row>
-        <Row label={t.strength} hint={strengthHint}>
-          <div className="segmented" role="group" aria-label={t.strength}>
-            {MARK_STRENGTHS.map((strength: MarkStrength) => (
-              <button
-                key={strength}
-                type="button"
-                className={community.strength === strength ? 'is-selected' : ''}
-                aria-pressed={community.strength === strength}
-                onClick={() => void onUpdateCommunity({ strength })}
-              >
-                {STRENGTH_LABELS[language][strength]}
-              </button>
-            ))}
-          </div>
-        </Row>
-        <NavRow label={t.keywords} meta={keywordMeta} onOpen={() => onNavigate('keywords')} />
         <NavRow
-          label={t.manageBlocked}
-          meta={counts.blocked}
-          onOpen={() => onNavigate('blocked')}
+          label={t.enabled}
+          meta={onOff(community.enabled)}
+          onOpen={() => onNavigate('highlight')}
         />
         <NavRow
-          label={t.falsePositiveList}
-          meta={counts.allowlist}
-          onOpen={() => onNavigate('allowlist')}
+          label={t.insightBadges}
+          meta={moduleMeta(insightBadges)}
+          onOpen={() => onNavigate('stats')}
         />
         <NavRow
-          label={t.followingTab}
-          meta={counts.following}
-          onOpen={() => onNavigate('following')}
+          label={t.moduleAi}
+          meta={moduleMeta(modules ? modules.aiCheck : null)}
+          onOpen={() => onNavigate('ai')}
         />
-        <Row label={t.dailyBudget} hint={t.dailyBudgetHint}>
-          <input
-            type="number"
-            min={1}
-            inputMode="numeric"
-            aria-label={t.dailyBudget}
-            value={budgetDraft ?? ''}
-            placeholder={budgetDraft == null ? '…' : undefined}
-            onChange={(event) => setBudgetDraft(event.target.value)}
-            onBlur={() => void commitBudget()}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') event.currentTarget.blur();
-            }}
-            className="number-input"
-          />
-        </Row>
-      </section>
-
-      <section className="group">
-        <h3 className="group-title">{t.groupDisplay}</h3>
-        <Row label={t.insightBadges} hint={t.insightBadgesHint}>
-          <Toggle
-            checked={insightBadges ?? true}
-            disabled={insightBadges === null}
-            label={t.insightBadges}
-            onChange={(enabled) => {
-              setInsightBadges(enabled);
-              void setInsightBadgesEnabled(enabled);
-            }}
-          />
-        </Row>
-        <Row label={t.languageSetting}>
-          <div className="segmented" role="group" aria-label={t.language}>
-            <button
-              type="button"
-              className={language === 'zh' ? 'is-selected' : ''}
-              aria-pressed={language === 'zh'}
-              onClick={() => void selectLanguage('zh')}
-            >
-              中文
-            </button>
-            <button
-              type="button"
-              className={language === 'en' ? 'is-selected' : ''}
-              aria-pressed={language === 'en'}
-              onClick={() => void selectLanguage('en')}
-            >
-              EN
-            </button>
-          </div>
-        </Row>
-      </section>
-
-      <section className="group">
-        <h3 className="group-title">{t.groupData}</h3>
-        <Row label={t.localOnly} hint={t.localOnlyHint}>
-          <Toggle
-            checked={!community.autoContribute}
-            label={t.localOnly}
-            onChange={(localOnly) => void setLocalOnly(localOnly)}
-          />
-        </Row>
-        <Row label={t.hotContribute} hint={t.hotContributeHint}>
-          <Toggle
-            checked={community.autoContribute && community.hotContribute}
-            // 「仅本地运行」打开时所有上报都停，这个开关跟着锁住
-            disabled={!community.autoContribute}
-            label={t.hotContribute}
-            onChange={(hotContribute) => void onUpdateCommunity({ hotContribute })}
-          />
-        </Row>
-        <Row label={t.hitContribute} hint={t.hitContributeHint}>
-          <Toggle
-            checked={community.autoContribute && community.hitContribute}
-            // 「仅本地运行」打开时所有上报都停，这个开关跟着锁住
-            disabled={!community.autoContribute}
-            label={t.hitContribute}
-            onChange={(hitContribute) => void onUpdateCommunity({ hitContribute })}
-          />
-        </Row>
-        <Row label={t.manualSync} hint={t.manualSyncHint}>
-          <button
-            type="button"
-            className="text-button"
-            disabled={syncing}
-            onClick={() => void syncNow()}
-          >
-            {syncing ? t.processing : t.manualSyncAction}
-          </button>
-        </Row>
-        <Row label={t.profileClear} hint={t.profileClearHint}>
-          <ClearProfilesButton language={language} notify={notify} />
-        </Row>
-        <BackupRow
-          language={language}
-          keywordRules={keywordRules}
-          setKeywordRules={setKeywordRules}
-          catalog={catalog}
-          community={community}
-          onUpdateCommunity={onUpdateCommunity}
-          onLanguageChange={onLanguageChange}
+        <NavRow
+          label={t.moduleCompose}
+          meta={
+            !composeOn
+              ? t.personalConfigOff
+              : schedule
+                ? t.cadenceMeta(schedule.windows.length)
+                : undefined
+          }
+          onOpen={() => onNavigate('compose')}
+        />
+        <NavRow
+          label={t.moduleShare}
+          meta={moduleMeta(modules ? modules.shareMenu : null)}
+          onOpen={() => onNavigate('share')}
         />
       </section>
-
       <section className="group">
-        <h3 className="group-title">{t.aboutLinks}</h3>
-        <Row label={`${t.brand} ${extensionVersion()}`.trim()} hint={t.brandHint}>
-          <a
-            className="text-button"
-            href="https://github.com/realchendahuang/feedsieve"
-            target="_blank"
-            rel="noreferrer noopener"
-          >
-            {t.githubLink}
-          </a>
-          <a
-            className="text-button"
-            href="https://feedsieve.win"
-            target="_blank"
-            rel="noreferrer noopener"
-          >
-            {t.officialSiteLink}
-          </a>
-        </Row>
+        <NavRow
+          label={t.groupFilter}
+          meta={STRENGTH_LABELS[language][community.strength]}
+          onOpen={() => onNavigate('filter')}
+        />
+        <NavRow
+          label={t.groupData}
+          meta={community.autoContribute ? undefined : t.localOnly}
+          onOpen={() => onNavigate('data')}
+        />
+        <NavRow
+          label={t.aboutLinks}
+          meta={extensionVersion() || undefined}
+          onOpen={() => onNavigate('about')}
+        />
       </section>
     </div>
   );

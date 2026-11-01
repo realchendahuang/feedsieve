@@ -128,4 +128,25 @@ describe('AiView', () => {
       force: false,
     });
   });
+
+  it('已关注账号打标是独立开关，默认关', async () => {
+    const { host } = await render();
+    const input = host.querySelector<HTMLInputElement>(
+      'input[role="switch"][aria-label="标记已关注账号"]',
+    )!;
+    expect(input.checked).toBe(false);
+    await act(async () => {
+      input.click();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(input.checked).toBe(true);
+    const browserMock = (
+      globalThis as unknown as {
+        browser: { storage: { local: { set: ReturnType<typeof vi.fn> } } };
+      }
+    ).browser;
+    expect(browserMock.storage.local.set).toHaveBeenCalledWith({
+      aiCheckSettingsV1: { mode: 'mark', scope: 'all', markFollowing: true },
+    });
+  });
 });

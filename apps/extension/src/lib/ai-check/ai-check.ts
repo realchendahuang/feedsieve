@@ -55,6 +55,7 @@ import { actionIcon, alignActionSlot, createActionSlot } from '../content/action
 
 const SITE_BASE = 'https://feedsieve.win';
 const MARK_ATTR = 'data-fs-ai-mark';
+const TONE_ATTR = 'data-fs-ai-tone';
 const FOLD_ATTR = 'data-fs-ai-fold';
 const AUTOSTART_KEY = 'fs-ai-autostart';
 const BUTTON_ATTR = 'data-fs-ai';
@@ -114,6 +115,7 @@ const TEXT = {
       `测了一下 ${name} 的回复：AI 味 ${pct}%（${level}）`,
     mark: (pct: number) => `AI 味 ${pct}%`,
     markListed: '社区 AI 号',
+    markTip: (label: string) => `${label} · 点开看检测报告`,
     folded: (name: string, pct: string) => `已折叠 ${name} 的回复 · ${pct}`,
     unfold: '显示',
   },
@@ -163,6 +165,7 @@ const TEXT = {
       `Checked ${name}'s replies: ${pct}% AI flavor (${level})`,
     mark: (pct: number) => `AI ${pct}%`,
     markListed: 'Community AI list',
+    markTip: (label: string) => `${label} · Open the report`,
     folded: (name: string, pct: string) => `Folded a reply from ${name} · ${pct}`,
     unfold: 'Show',
   },
@@ -245,12 +248,17 @@ function ensureStyles(): void {
     .fs-ai-note { margin-top: 10px; padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.07);
       color: rgba(255,255,255,.75); font-size: 12px; text-align: center; }
     .fs-ai-stop { margin-top: 12px; }
-    /* 评论区：名字后面一个小标签，点开看报告 */
-    .fs-ai-mark { display: inline-flex; align-items: center; height: 18px; margin-left: 6px; padding: 0 7px;
-      border-radius: 9999px; font: 700 11px/1 system-ui, sans-serif; cursor: pointer; white-space: nowrap;
-      border: 0; background: rgba(255,77,109,.12); color: #f4212e; flex: none; align-self: center; }
-    .fs-ai-mark[data-tone="mixed"] { background: rgba(255,176,32,.15); color: #b45309; }
-    .fs-ai-mark:hover { filter: brightness(.95); text-decoration: underline; }
+    /* 评论区：名字后面高对比标签 + 卡片左侧色条，点开看报告 */
+    .fs-ai-mark { display: inline-flex; align-items: center; gap: 4px; height: 22px; margin-left: 6px;
+      padding: 0 9px 0 7px; border-radius: 999px; font: 700 12px/1 system-ui, sans-serif; letter-spacing: .01em;
+      border: 0; background: #d81e2f; color: #fff; flex: none; align-self: center; white-space: nowrap;
+      box-shadow: 0 1px 2px rgba(0,0,0,.28); }
+    .fs-ai-mark svg { width: 14px; height: 14px; flex: none; }
+    .fs-ai-mark[data-tone="mixed"] { background: #b45309; }
+    .fs-ai-mark:hover { filter: brightness(1.1); }
+    .fs-ai-mark:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+    article[data-fs-ai-tone="ai"] { box-shadow: inset 3px 0 0 #d81e2f; }
+    article[data-fs-ai-tone="mixed"] { box-shadow: inset 3px 0 0 #ffb020; }
     /* 折叠：整条回复收成一行，点「显示」展开 */
     [data-fs-ai-fold="1"] > :not(.fs-ai-foldbar) { display: none !important; }
     .fs-ai-foldbar { display: flex; align-items: center; gap: 8px; padding: 10px 16px;
@@ -299,8 +307,14 @@ function fromRecord(record: AiCheckRecord, myVote: 'ai' | 'human' | null): Known
 export function createAiCheck(deps: {
   getLanguage: () => Lang;
   getSelfHandle: () => string | null;
-  /** 已关注、个人白名单：不标记、不折叠 */
+  /** 已关注、个人白名单：不标记、不折叠（已关注可在设置里单独放开） */
   isProtected?: (handle: string) => boolean;
+  /** 个人白名单：永远不自动标记 */
+  isAllowlisted?: (handle: string) => boolean;
+  /** 用户自己关注的人：默认不自动标记，markFollowing 打开后照常标 */
+  isFollowing?: (handle: string) => boolean;
+  /** 模块总开关：关掉后页面上的标签、折叠、检测按钮和主页 Tab 全部撤掉 */
+  isEnabled?: () => boolean;
   send: (message: unknown) => Promise<unknown>;
   setInterval: (fn: () => void, ms: number) => unknown;
 }) {
@@ -310,6 +324,8 @@ export function createAiCheck(deps: {
   let panelPath: string | null = null;
   let token = 0;
   let stopped = false;
+  /** 模块总开关当前是否生效：从关到开时补一次名单同步 */
+  let moduleOn: boolean | null = null;
   /** 用户在检测中点了「停止」 */
   let stopRequested = false;
   /** 点了 Tab / 面板、等切到回复页后要开测的账号 */
@@ -422,7 +438,7 @@ export function createAiCheck(deps: {
     handle: string,
   ): { percent: number; tone: 'ai' | 'mixed'; listed: boolean } | null {
     const k = known.get(handle);
-    if (judged(k)) {
+    if (judged(k) && !k.expired) {
       if (k.verdict === 'human') return null;
       const f = flavorOf(k.score, k.verdict, k.rhythm, deps.getLanguage(), handle);
       return f.tone === 'human'
@@ -435,8 +451,15 @@ export function createAiCheck(deps: {
       const f = flavorOf(entry.score, 'suspect', null, deps.getLanguage(), handle);
       return f.tone === 'human' ? null : { percent: f.percent, tone: f.tone, listed: entry.listed };
     }
+    // 本机记录也有有效期：过期结论不再给别人的回复打标
     const mine = records[handle];
-    if (mine && mine.score !== null && (mine.verdict === 'ai' || mine.verdict === 'suspect')) {
+    const fresh = !mine?.expiresAt || mine.expiresAt * 1000 > Date.now();
+    if (
+      mine &&
+      fresh &&
+      mine.score !== null &&
+      (mine.verdict === 'ai' || mine.verdict === 'suspect')
+    ) {
       const f = flavorOf(mine.score, mine.verdict, mine.rhythm ?? null, deps.getLanguage(), handle);
       return f.tone === 'human' ? null : { percent: f.percent, tone: f.tone, listed: false };
     }
@@ -473,6 +496,13 @@ export function createAiCheck(deps: {
     return settings.scope === 'blue' ? isBlue(article) : !isBlue(article);
   }
 
+  /** 个人白名单永远保护；已关注由设置决定；没提供细分回调时退回 isProtected */
+  function protectedFromAutoMark(handle: string): boolean {
+    if (deps.isAllowlisted?.(handle) === true) return true;
+    if (deps.isFollowing?.(handle) === true) return !settings.markFollowing;
+    return deps.isProtected?.(handle) === true;
+  }
+
   /** 通知页的回复卡片在 User-Name 后面有一行「回复 @你 / Replying to @you」 */
   function hasReplyContext(article: Element): boolean {
     const name = article.querySelector(tweetSelectors.authorNameArea);
@@ -482,6 +512,18 @@ export function createAiCheck(deps: {
     const at = text.indexOf(nameText);
     const head = at >= 0 ? text.slice(at + nameText.length, at + nameText.length + 120) : '';
     return /(?:回复|Replying to)\s*@/i.test(head);
+  }
+
+  /**
+   * 标签挂在 @handle 那一行，而不是直接挂到 User-Name。
+   * 量级标签把 User-Name 的最后一个子元素当成「handle 行」并向里追加，
+   * 直接挂会让「AI 味 85%」把「★1.8K」吞进按钮里。
+   */
+  function nameRowOf(article: Element): Element | null {
+    const area = article.querySelector(tweetSelectors.authorNameArea);
+    if (!area) return null;
+    const rows = [...area.children];
+    return rows[rows.length - 1] ?? area;
   }
 
   // ---- 入口二、三：回复上的机器人图标，已有结论的号加标签 / 折叠 ----
@@ -502,9 +544,10 @@ export function createAiCheck(deps: {
         focalSeen = true;
         focalAuthor = handle;
       }
-      // 自己、官方机器人：哪里都不加。已关注 / 白名单：照样给检测入口（主动去测没问题），只是不自动标记、不折叠
+      // 自己、官方机器人：哪里都不加。已关注 / 白名单：照样给检测入口（主动去测没问题），
+      // 只是不自动标记、不折叠；已关注可在设置里打开自动标记
       const exempt = handle === self || EXEMPT.has(handle);
-      const protectedAccount = exempt || deps.isProtected?.(handle) === true;
+      const protectedAccount = exempt || protectedFromAutoMark(handle);
 
       // 机器人图标：详情页加在「回复」上；通知页加在别人对你的回复上
       if (focal || notifications) {
@@ -555,19 +598,20 @@ export function createAiCheck(deps: {
       if (article.getAttribute(MARK_ATTR) !== markKey) {
         article.setAttribute(MARK_ATTR, markKey);
         article.querySelectorAll('.fs-ai-mark').forEach((m) => m.remove());
+        if (mark) article.setAttribute(TONE_ATTR, mark.tone);
+        else article.removeAttribute(TONE_ATTR);
         const cell = article.closest(tweetSelectors.timelineCell);
         cell?.removeAttribute(FOLD_ATTR);
         cell?.querySelectorAll(':scope > .fs-ai-foldbar').forEach((b) => b.remove());
         if (mark) {
-          const nameRow = article.querySelector(tweetSelectors.authorNameArea);
-          const pill = el(
-            'button',
-            'fs-ai-mark',
-            mark.percent < 0 ? t().markListed : t().mark(mark.percent),
-          );
+          const nameRow = nameRowOf(article);
+          const label = mark.percent < 0 ? t().markListed : t().mark(mark.percent);
+          const pill = el('button', 'fs-ai-mark');
           pill.type = 'button';
           pill.dataset.tone = mark.tone;
-          pill.title = t().buttonTip;
+          pill.title = t().markTip(label);
+          pill.setAttribute('aria-label', t().markTip(label));
+          pill.append(actionIcon('robot'), document.createTextNode(label));
           pill.addEventListener('click', (event) => {
             event.preventDefault();
             event.stopPropagation();
@@ -642,6 +686,8 @@ export function createAiCheck(deps: {
   }
 
   function ensureTab(): void {
+    // 模块关掉时，检测完成后 showResult 也会走到这里：别再往主页上加 Tab
+    if (deps.isEnabled?.() === false) return;
     const profile = profileFromPath(location.pathname);
     const handle = profile && profile.tab !== 'other' ? profile.handle : null;
     for (const stale of document.querySelectorAll(`[${TAB_ATTR}]`)) {
@@ -1226,13 +1272,42 @@ export function createAiCheck(deps: {
     }
     if (changes[AI_SETTINGS_KEY]) settings = normalizeAiSettings(changes[AI_SETTINGS_KEY].newValue);
     // 让标签 / 折叠按新数据重画
-    document.querySelectorAll(`[${MARK_ATTR}]`).forEach((a) => a.removeAttribute(MARK_ATTR));
+    document.querySelectorAll(`[${MARK_ATTR}]`).forEach((a) => {
+      a.removeAttribute(MARK_ATTR);
+      a.removeAttribute(TONE_ATTR);
+    });
   };
+
+  function clearDecorations(): void {
+    closePanel();
+    document
+      .querySelectorAll('[data-fs-action="ai"], .fs-ai-mark, .fs-ai-foldbar')
+      .forEach((b) => b.remove());
+    document.querySelectorAll(`[${TAB_ATTR}]`).forEach((n) => n.remove());
+    document.querySelectorAll(`[${FOLD_ATTR}]`).forEach((n) => n.removeAttribute(FOLD_ATTR));
+    document.querySelectorAll(`[${BUTTON_ATTR}], [${MARK_ATTR}], [${TONE_ATTR}]`).forEach((a) => {
+      a.removeAttribute(BUTTON_ATTR);
+      a.removeAttribute(MARK_ATTR);
+      a.removeAttribute(TONE_ATTR);
+    });
+  }
 
   function tick(): void {
     if (stopped) return;
-    decorateArticles();
-    ensureTab();
+    if (deps.isEnabled?.() === false) {
+      // 模块关掉：页面上不留标签 / 按钮 / Tab，已打开的面板也收掉。
+      // 但用户从弹窗主动发起的检测还要继续（见下面的 fs_ai 自动开测）。
+      if (moduleOn !== false) clearDecorations();
+      moduleOn = false;
+    } else {
+      if (moduleOn !== true) {
+        moduleOn = true;
+        // 社区 AI 号名单：后台按 30 分钟节流同步；模块重新打开时补一次
+        void deps.send({ type: AI_LIST_SYNC_MESSAGE }).catch(() => undefined);
+      }
+      decorateArticles();
+      ensureTab();
+    }
     const profile = profileFromPath(location.pathname);
     // 换了页面就收起卡片；正在切到这个人的「回复」Tab 去测的不算
     if (panelHandle && panelPath !== location.pathname && !(pending && pending === panelHandle)) {
@@ -1266,6 +1341,8 @@ export function createAiCheck(deps: {
   return {
     ingest,
     start(): void {
+      // 标记 / 折叠条的样式也要在开面板之前就位：不然名单里的号只显示浏览器默认按钮
+      ensureStyles();
       runtime?.onMessage.addListener(onPanelMessage);
       storage?.onChanged.addListener(onStorage);
       void storage?.local
@@ -1276,8 +1353,6 @@ export function createAiCheck(deps: {
           settings = normalizeAiSettings(stored[AI_SETTINGS_KEY]);
         })
         .catch(() => undefined);
-      // 社区 AI 号名单：后台按 30 分钟节流同步
-      void deps.send({ type: AI_LIST_SYNC_MESSAGE }).catch(() => undefined);
       deps.setInterval(tick, 1_000);
       tick();
     },
@@ -1285,16 +1360,7 @@ export function createAiCheck(deps: {
       stopped = true;
       runtime?.onMessage.removeListener(onPanelMessage);
       storage?.onChanged.removeListener(onStorage);
-      closePanel();
-      document
-        .querySelectorAll('[data-fs-action="ai"], .fs-ai-mark, .fs-ai-foldbar')
-        .forEach((b) => b.remove());
-      document.querySelectorAll(`[${TAB_ATTR}]`).forEach((n) => n.remove());
-      document.querySelectorAll(`[${FOLD_ATTR}]`).forEach((n) => n.removeAttribute(FOLD_ATTR));
-      document.querySelectorAll(`[${BUTTON_ATTR}], [${MARK_ATTR}]`).forEach((a) => {
-        a.removeAttribute(BUTTON_ATTR);
-        a.removeAttribute(MARK_ATTR);
-      });
+      clearDecorations();
     },
   };
 }

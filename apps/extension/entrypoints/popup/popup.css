@@ -2182,12 +2182,108 @@ input:not([type]):focus,
   font-weight: 600;
 }
 
+.write-next-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 0 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.write-next-actions .secondary-button {
+  gap: 6px;
+}
+
+.write-next-actions .secondary-button:disabled {
+  color: var(--faint);
+  border-color: var(--line);
+  font-weight: 500;
+}
+
+.write-item.is-pending {
+  color: var(--muted);
+  cursor: default;
+}
+
+.write-hours {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 2px 0 6px;
+}
+
+.write-hour {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.write-hour:hover {
+  background: var(--hover);
+}
+
+.write-hour.is-full {
+  color: var(--faint);
+  background: var(--fill);
+  cursor: default;
+}
+
+.write-hour.is-full .row-meta {
+  color: var(--faint);
+}
+
+.write-assigned {
+  margin-left: auto;
+}
+
+.cadence-window {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.cadence-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-bottom: 6px;
+}
+
+.cadence-days .chip {
+  min-width: 28px;
+  justify-content: center;
+  padding: 0 6px;
+}
+
+.cadence-time {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.cadence-foot {
+  padding-top: 10px;
+}
+
 .write-day {
   padding: 6px 0 2px;
   border-bottom: 1px solid var(--line);
 }
 
 .write-day-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 4px 0 2px;
   color: var(--muted);
   font-size: 12px;
