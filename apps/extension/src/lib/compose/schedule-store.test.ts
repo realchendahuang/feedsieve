@@ -6,17 +6,13 @@ import {
   removeAssignmentsMatching,
   removeAssignmentForDraft,
   setAssignment,
-  setComposeIntent,
-  takeComposeIntent,
 } from './schedule-store';
 
 let store: Record<string, unknown>;
-let session: Record<string, unknown>;
 let setMock: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   store = {};
-  session = {};
   setMock = vi.fn(async (value: Record<string, unknown>) => {
     Object.assign(store, value);
   });
@@ -25,15 +21,6 @@ beforeEach(() => {
       local: {
         get: vi.fn(async (key: string) => ({ [key]: store[key] })),
         set: setMock,
-      },
-      session: {
-        get: vi.fn(async (key: string) => ({ [key]: session[key] })),
-        set: vi.fn(async (value: Record<string, unknown>) => {
-          Object.assign(session, value);
-        }),
-        remove: vi.fn(async (key: string) => {
-          delete session[key];
-        }),
       },
       onChanged: {
         addListener: vi.fn(),
@@ -90,20 +77,5 @@ describe('排期分配', () => {
     await setAssignment({ draftId: 'd1', text: 'hello', at: now + 24 * 60 * 60_000, now });
     expect(await getAssignments(now + 10 * 60_000)).toHaveLength(1);
     expect(await getAssignments(now + 31 * 60_000)).toEqual([]);
-  });
-});
-
-describe('写新帖的预填时间', () => {
-  it('只取一次，过期或已过去的时间不取', async () => {
-    const now = Date.now();
-    await setComposeIntent(now + 60_000, now);
-    expect(await takeComposeIntent(now + 1_000)).toBe(now + 60_000);
-    expect(await takeComposeIntent(now + 1_000)).toBeNull();
-
-    await setComposeIntent(now + 60_000, now);
-    expect(await takeComposeIntent(now + 11 * 60_000)).toBeNull();
-
-    await setComposeIntent(now - 1, now);
-    expect(await takeComposeIntent(now + 1_000)).toBeNull();
   });
 });

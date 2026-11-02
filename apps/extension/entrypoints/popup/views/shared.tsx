@@ -7,13 +7,7 @@ import { normalizeStrictHandle } from '../../../src/lib/platform/xhr-bridge-guar
 import { openOfficialPage, SITE_URLS, type SiteList } from '../../../src/lib/platform/site-links';
 import { localizedDetectionReason, type UiLanguage } from '../../../src/lib/platform/i18n';
 import { formatAgo as sharedFormatAgo } from '@feedsieve/shared';
-import {
-  accountTier,
-  ageHours,
-  replyOpportunity,
-  TIER_LEVELS,
-  TIER_MAX,
-} from '@feedsieve/metrics';
+import { accountTier, ageHours, replyOpportunity, TIER_LEVELS, TIER_MAX } from '@feedsieve/metrics';
 
 export type AppIconName =
   | 'clean'
@@ -148,12 +142,11 @@ export function AppIcon({
         <circle cx="5.25" cy="17.75" r="1" />
       </>
     ),
+    // lucide: settings（齿轮，ISC License）
     settings: (
       <>
-        <path d="M4 7h10M18 7h2M4 17h2M10 17h10M4 12h4M12 12h8" />
-        <circle cx="16" cy="7" r="2" />
-        <circle cx="8" cy="17" r="2" />
-        <circle cx="10" cy="12" r="2" />
+        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+        <circle cx="12" cy="12" r="3" />
       </>
     ),
     refresh: (

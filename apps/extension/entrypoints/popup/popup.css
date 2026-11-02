@@ -189,6 +189,27 @@ ol {
   margin-left: auto;
 }
 
+.section-nav .nav-settings {
+  align-self: center;
+  width: 28px;
+  height: 28px;
+  margin-left: auto;
+  padding: 0;
+  border-radius: 6px;
+}
+
+.section-nav .nav-settings.is-active {
+  background: var(--hover);
+}
+
+.section-nav .nav-settings.is-active::after {
+  display: none;
+}
+
+.section-nav .nav-settings + .masthead-tool {
+  margin-left: 0;
+}
+
 .popup-content {
   flex: 1 1 auto;
   min-height: 0;

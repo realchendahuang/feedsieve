@@ -35,20 +35,15 @@ import {
   subscribeAssignments,
   subscribeScheduledCache,
   subscribeScheduleSettings,
-  takeComposeIntent,
   upcomingTimes,
   type ScheduleAssignment,
   type ScheduledCache,
 } from './schedule-store';
 
 export const OPEN_SCHEDULED_MESSAGE = 'feedsieve:open-scheduled';
-/** 发帖页「草稿 › 排下一条」：打开 X 发帖框、贴好正文、填好已占好的时间 */
-export const COMPOSE_DRAFT_MESSAGE = 'feedsieve:compose-draft';
-export const COMPOSE_PATH = '/compose/post';
 export const SCHEDULED_BRIDGE_EVENT = 'feedsieve:scheduled';
 export const SCHEDULED_LIST_PATH = '/compose/post/unsent/scheduled';
 
-const SLOT_BUTTON_ATTR = 'data-fs-slot-button';
 const BAR_ATTR = 'data-fs-sched-bar';
 const STYLE_ID = 'feedsieve-compose-styles';
 const CONFIRM_SELECTOR = '[data-testid="scheduledConfirmationPrimaryAction"]';
@@ -253,13 +248,6 @@ function ensureComposeStyles(): void {
   const style = document.createElement('style');
   style.id = STYLE_ID;
   style.textContent = `
-    [${SLOT_BUTTON_ATTR}] {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 34px; height: 34px; margin: 0; padding: 0; border: 0; border-radius: 999px;
-      background: transparent; color: rgb(29, 155, 240); cursor: pointer; flex: none;
-    }
-    [${SLOT_BUTTON_ATTR}]:hover { background: rgba(29, 155, 240, 0.1); }
-    [${SLOT_BUTTON_ATTR}] svg { width: 20px; height: 20px; }
     [${BAR_ATTR}] {
       display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
       padding: 4px 16px 12px; font: 13px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -278,9 +266,6 @@ function ensureComposeStyles(): void {
   (document.head ?? document.documentElement).append(style);
 }
 
-// 日历 + 右箭头：表达「下一个空档」，和 X 自带的日历 + 时钟区分开
-const SLOT_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="M14 17h7"/><path d="M18 14l3 3-3 3"/></svg>`;
-
 // ---------- 主体 ----------
 
 export interface ComposeScheduleDeps {
@@ -298,10 +283,6 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
   let lastPick: number | null = null;
   let sessionUsed: Array<{ at: number; recordedAt: number }> = [];
   let pendingFill: { at: number; record: boolean } | null = null;
-  /** 「配图」交接：正文已贴好、时间先留着，等用户加完图打开安排表再填 */
-  let stashedSlot: { at: number; recordedAt: number } | null = null;
-  let composerWasOpen = false;
-  let composerCloseTimer: number | null = null;
   /** 同一个「下一条」在页面上保持稳定，别每次扫描都换一个随机分钟 */
   let preview: { at: number; computedAt: number } | null = null;
   /** 发帖框里刚占的时间；没点确认就关掉安排表时把它释放 */
@@ -345,7 +326,7 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
       .then((list) => {
         assignments = list;
         invalidatePreview();
-        refreshSlotTitles();
+        refreshBars();
       })
       .catch(() => undefined);
   }
@@ -358,58 +339,7 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
     });
   }
 
-  function findComposer(): HTMLElement | null {
-    return document.querySelector<HTMLElement>('[role="dialog"] [data-testid="tweetTextarea_0"]');
-  }
-
-  function clearComposerCloseTimer(): void {
-    if (composerCloseTimer === null) return;
-    window.clearTimeout(composerCloseTimer);
-    composerCloseTimer = null;
-  }
-
-  /** 用户没在 X 里确认就把发帖框关了：把本机占的时间还回去。 */
-  function releaseStashedSlot(): void {
-    const stashed = stashedSlot;
-    stashedSlot = null;
-    if (!stashed) return;
-    void removeAssignmentsMatching('', stashed.at)
-      .then((list) => {
-        assignments = list;
-        invalidatePreview();
-        refreshSlotTitles();
-      })
-      .catch(() => undefined);
-  }
-
-  /** 发帖框关掉后稍等一会儿再释放：打开安排表时 X 可能先卸载发帖框再挂上弹窗。 */
-  function watchComposer(): void {
-    if (findComposer()) {
-      composerWasOpen = true;
-      clearComposerCloseTimer();
-      return;
-    }
-    if (!composerWasOpen || composerCloseTimer !== null) return;
-    composerCloseTimer = window.setTimeout(() => {
-      composerCloseTimer = null;
-      if (findComposer() || document.querySelector(CONFIRM_SELECTOR)) return;
-      composerWasOpen = false;
-      releaseStashedSlot();
-    }, 1200);
-  }
-
   function scan(): void {
-    if (stashedSlot !== null || composerWasOpen) watchComposer();
-    if (stashedSlot !== null && now() - stashedSlot.recordedAt > 10 * MINUTE_MS) {
-      releaseStashedSlot();
-    }
-    if (settings.composeHelper) {
-      for (const option of document.querySelectorAll<HTMLElement>(SCHEDULE_OPTION_SELECTOR)) {
-        ensureSlotButton(option);
-      }
-    } else {
-      document.querySelectorAll(`[${SLOT_BUTTON_ATTR}]`).forEach((el) => el.remove());
-    }
     const confirm = document.querySelector(CONFIRM_SELECTOR);
     const dialog = confirm?.closest('[role="dialog"]');
     if (!dialog) {
@@ -418,13 +348,7 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
     }
     if (settings.composeHelper) ensureBar(dialog);
     else dialog.querySelector(`[${BAR_ATTR}]`)?.remove();
-    const fields = findScheduleFields(dialog);
-    if (!fields) return;
-    if (stashedSlot !== null) {
-      const at = stashedSlot.at;
-      stashedSlot = null;
-      void fill(dialog, at);
-    }
+    if (!findScheduleFields(dialog)) return;
     if (pendingFill !== null) {
       const pending = pendingFill;
       pendingFill = null;
@@ -432,59 +356,22 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
     }
   }
 
-  function refreshSlotTitles(): void {
-    const at = nextSlot();
-    const label =
-      at === null ? copy().noSlot : copy().nextTitle(slotLabel(at, now(), deps.getLanguage()));
-    for (const button of document.querySelectorAll<HTMLButtonElement>(`[${SLOT_BUTTON_ATTR}]`)) {
-      button.title = label;
-      button.setAttribute('aria-label', label);
-    }
+  function refreshBars(): void {
     for (const bar of document.querySelectorAll(`[${BAR_ATTR}]`)) renderBar(bar as HTMLElement);
   }
 
-  function ensureSlotButton(option: HTMLElement): void {
-    // X 的工具栏按钮外面包了几层；往上找到工具栏那一行的直接子元素，按钮插在它后面
-    let wrapper: HTMLElement = option;
-    while (
-      wrapper.parentElement &&
-      wrapper.parentElement.querySelectorAll('button, [role="button"]').length <= 1
-    ) {
-      wrapper = wrapper.parentElement;
-    }
-    if (wrapper.nextElementSibling?.hasAttribute(SLOT_BUTTON_ATTR)) return;
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.setAttribute(SLOT_BUTTON_ATTR, '');
-    button.innerHTML = SLOT_ICON;
-    // 跟 X 工具栏图标取同一个颜色：直接抄 option 的文字色会变成纯黑，和旁边的原生图标不一致
-    const color = getComputedStyle(option.querySelector('svg') ?? option).color;
-    if (color) button.style.color = color;
-    button.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      openWithSlot(option);
-    });
-    wrapper.after(button);
-    refreshSlotTitles();
-  }
-
-  /**
-   * 打开 X 的「安排表」，等它出来后填时间。
-   * `preferred` 来自发帖页（已经占好位），不传就在当前节奏里找下一条。
-   */
-  function openWithSlot(option?: HTMLElement | null, preferred?: number): void {
+  /** 打开 X 的「安排表」，等它出来后填当前节奏里的下一条。 */
+  function openWithSlot(option?: HTMLElement | null): void {
     const target = option ?? document.querySelector<HTMLElement>(SCHEDULE_OPTION_SELECTOR);
     const confirm = document.querySelector(CONFIRM_SELECTOR);
     const dialog = confirm?.closest('[role="dialog"]');
-    const at = preferred ?? nextSlot();
-    const record = preferred === undefined;
+    const at = nextSlot();
     if (dialog && findScheduleFields(dialog)) {
-      if (at !== null) void fill(dialog, at, record);
+      if (at !== null) void fill(dialog, at, true);
       return;
     }
     if (!target) return;
-    pendingFill = at === null ? null : { at, record };
+    pendingFill = at === null ? null : { at, record: true };
     target.click();
   }
 
@@ -501,7 +388,7 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
       if (record) {
         sessionUsed.push({ at, recordedAt: now() });
         invalidatePreview();
-        refreshSlotTitles();
+        refreshBars();
       }
     }
   }
@@ -656,7 +543,7 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
         .then((list) => {
           assignments = list;
           invalidatePreview();
-          refreshSlotTitles();
+          refreshBars();
         })
         .catch(() => undefined);
     } else if (scheduled.kind === 'list') {
@@ -664,73 +551,18 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
         .then((list) => {
           assignments = list;
           invalidatePreview();
-          refreshSlotTitles();
+          refreshBars();
         })
         .catch(() => undefined);
     }
     void applyScheduledEvent(scheduled, deps.getAccount(), now()).catch(() => undefined);
   }
 
-  /**
-   * 打开 X 的发帖框并贴好正文。
-   * `openSchedule` 为 false 时不自动打开安排表，只把时间先留着 ——
-   * 用户要先在原生框里加图片 / 视频，加完自己点日历，时间会填好。
-   * 发帖框里已经有没写完的内容时不动它，返回 busy。
-   */
-  async function composeDraft(
-    text: string,
-    at?: number,
-    openSchedule = true,
-  ): Promise<{ ok: boolean; reason?: string }> {
-    if (!findComposer()) {
-      history.pushState(history.state, '', COMPOSE_PATH);
-      window.dispatchEvent(new PopStateEvent('popstate', { state: history.state }));
-    }
-    let composer: HTMLElement | null = null;
-    for (let i = 0; i < 60 && !composer; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      composer = findComposer();
-    }
-    if (!composer) return { ok: false, reason: 'no-composer' };
-    if ((composer.textContent ?? '').trim() !== '') return { ok: false, reason: 'busy' };
-    composerWasOpen = true;
-    composer.focus();
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    const data = new DataTransfer();
-    data.setData('text/plain', text);
-    composer.dispatchEvent(
-      new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }),
-    );
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    const dialog = composer.closest('[role="dialog"]');
-    const option = dialog?.querySelector<HTMLElement>(SCHEDULE_OPTION_SELECTOR) ?? null;
-    if (openSchedule) {
-      if (option) openWithSlot(option, at);
-    } else if (at !== undefined) {
-      stashedSlot = { at, recordedAt: now() };
-      // 用户可能已经先点开了日历；补一次扫描，让暂存时间立刻填进去
-      scheduleScan();
-    }
-    return { ok: true };
-  }
-
   function onMessage(message: unknown): Promise<unknown> | undefined {
-    const msg = message as {
-      type?: string;
-      text?: unknown;
-      at?: unknown;
-      openSchedule?: unknown;
-    } | null;
+    const msg = message as { type?: string } | null;
     if (msg?.type === OPEN_SCHEDULED_MESSAGE) {
       openScheduledList();
       return Promise.resolve({ ok: true });
-    }
-    if (msg?.type === COMPOSE_DRAFT_MESSAGE && typeof msg.text === 'string' && msg.text.trim()) {
-      const at =
-        typeof msg.at === 'number' && Number.isFinite(msg.at) && msg.at > now()
-          ? msg.at
-          : undefined;
-      return composeDraft(msg.text, at, msg.openSchedule !== false);
     }
     return undefined;
   }
@@ -744,40 +576,32 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
     void getScheduledCache().then((value) => {
       cache = value;
       invalidatePreview();
-      refreshSlotTitles();
+      refreshBars();
     });
     void getAssignments().then((value) => {
       assignments = value;
       invalidatePreview();
-      refreshSlotTitles();
+      refreshBars();
     });
     void getLastPick().then((value) => {
       lastPick = value;
     });
-    // 发帖页点空档「写新帖」时，新窗口从这里取预填时间
-    if (location.pathname === COMPOSE_PATH) {
-      void takeComposeIntent().then((at) => {
-        if (at === null) return;
-        stashedSlot = { at, recordedAt: now() };
-        scheduleScan();
-      });
-    }
     cleanups.push(
       subscribeScheduleSettings((value) => {
         settings = value;
         invalidatePreview();
         scan();
-        refreshSlotTitles();
+        refreshBars();
       }),
       subscribeScheduledCache((value) => {
         cache = value;
         invalidatePreview();
-        refreshSlotTitles();
+        refreshBars();
       }),
       subscribeAssignments((value) => {
         assignments = value;
         invalidatePreview();
-        refreshSlotTitles();
+        refreshBars();
       }),
     );
     document.addEventListener(SCHEDULED_BRIDGE_EVENT, onBridge);
@@ -798,7 +622,6 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
   function stop(): void {
     observer?.disconnect();
     observer = null;
-    clearComposerCloseTimer();
     if (frame) cancelAnimationFrame(frame);
     frame = 0;
     cleanups.splice(0).forEach((fn) => {
@@ -808,7 +631,7 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
         // 上下文失效后扩展 API 会抛错，清理照常继续
       }
     });
-    document.querySelectorAll(`[${SLOT_BUTTON_ATTR}], [${BAR_ATTR}]`).forEach((el) => el.remove());
+    document.querySelectorAll(`[${BAR_ATTR}]`).forEach((el) => el.remove());
     document.getElementById(STYLE_ID)?.remove();
   }
 

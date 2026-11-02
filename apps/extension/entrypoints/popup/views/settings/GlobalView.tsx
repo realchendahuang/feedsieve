@@ -12,6 +12,7 @@ import { MODULES, type ModuleDef } from '../../../../src/lib/settings/modules';
 import type { ModuleSettings } from '../../../../src/lib/settings/module-settings';
 import { setUiLanguage, UI_COPY, type UiLanguage } from '../../../../src/lib/platform/i18n';
 import { AppIcon, Toggle } from '../shared';
+import ArticleBackups from './ArticleBackups';
 import BackupRow from './BackupRow';
 import type { GlobalPage } from './pages';
 import { ClearProfilesButton, extensionVersion, NavRow, Row } from './shared';
@@ -139,53 +140,56 @@ export default function GlobalView({
         </header>
 
         {page === 'data' ? (
-          <section className="group">
-            <Row label={t.localOnly} hint={t.localOnlyHint}>
-              <Toggle
-                checked={!community.autoContribute}
-                label={t.localOnly}
-                onChange={(localOnly) => void setLocalOnly(localOnly)}
+          <>
+            <section className="group">
+              <Row label={t.localOnly} hint={t.localOnlyHint}>
+                <Toggle
+                  checked={!community.autoContribute}
+                  label={t.localOnly}
+                  onChange={(localOnly) => void setLocalOnly(localOnly)}
+                />
+              </Row>
+              <Row label={t.hotContribute} hint={t.hotContributeHint}>
+                <Toggle
+                  checked={community.autoContribute && community.hotContribute}
+                  disabled={!community.autoContribute}
+                  label={t.hotContribute}
+                  onChange={(hotContribute) => void onUpdateCommunity({ hotContribute })}
+                />
+              </Row>
+              <Row label={t.hitContribute} hint={t.hitContributeHint}>
+                <Toggle
+                  checked={community.autoContribute && community.hitContribute}
+                  disabled={!community.autoContribute}
+                  label={t.hitContribute}
+                  onChange={(hitContribute) => void onUpdateCommunity({ hitContribute })}
+                />
+              </Row>
+              <Row label={t.manualSync} hint={t.manualSyncHint}>
+                <button
+                  type="button"
+                  className="text-button"
+                  disabled={syncing}
+                  onClick={() => void syncNow()}
+                >
+                  {syncing ? t.processing : t.manualSyncAction}
+                </button>
+              </Row>
+              <Row label={t.profileClear} hint={t.profileClearHint}>
+                <ClearProfilesButton language={language} notify={notify} />
+              </Row>
+              <BackupRow
+                language={language}
+                keywordRules={keywordRules}
+                setKeywordRules={setKeywordRules}
+                catalog={catalog}
+                community={community}
+                onUpdateCommunity={onUpdateCommunity}
+                onLanguageChange={onLanguageChange}
               />
-            </Row>
-            <Row label={t.hotContribute} hint={t.hotContributeHint}>
-              <Toggle
-                checked={community.autoContribute && community.hotContribute}
-                disabled={!community.autoContribute}
-                label={t.hotContribute}
-                onChange={(hotContribute) => void onUpdateCommunity({ hotContribute })}
-              />
-            </Row>
-            <Row label={t.hitContribute} hint={t.hitContributeHint}>
-              <Toggle
-                checked={community.autoContribute && community.hitContribute}
-                disabled={!community.autoContribute}
-                label={t.hitContribute}
-                onChange={(hitContribute) => void onUpdateCommunity({ hitContribute })}
-              />
-            </Row>
-            <Row label={t.manualSync} hint={t.manualSyncHint}>
-              <button
-                type="button"
-                className="text-button"
-                disabled={syncing}
-                onClick={() => void syncNow()}
-              >
-                {syncing ? t.processing : t.manualSyncAction}
-              </button>
-            </Row>
-            <Row label={t.profileClear} hint={t.profileClearHint}>
-              <ClearProfilesButton language={language} notify={notify} />
-            </Row>
-            <BackupRow
-              language={language}
-              keywordRules={keywordRules}
-              setKeywordRules={setKeywordRules}
-              catalog={catalog}
-              community={community}
-              onUpdateCommunity={onUpdateCommunity}
-              onLanguageChange={onLanguageChange}
-            />
-          </section>
+            </section>
+            <ArticleBackups language={language} notify={notify} />
+          </>
         ) : (
           <section className="group">
             <Row label={t.officialSiteLink}>

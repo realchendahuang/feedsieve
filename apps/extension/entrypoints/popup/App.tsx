@@ -42,9 +42,7 @@ import { isGlobalPage } from './views/settings/pages';
 // 其余视图按需加载：打开弹窗只要热帖这一屏，没理由先把五个界面全部解析一遍。
 // 首屏多出的那次 chunk 读取在扩展本地几乎察觉不到，省下的是每次打开都要付的解析时间。
 const ProfileView = lazy(() => import('./views/ProfileView'));
-const AiView = lazy(() =>
-  import('./views/AiView').then((module) => ({ default: module.AiView })),
-);
+const AiView = lazy(() => import('./views/AiView').then((module) => ({ default: module.AiView })));
 const WriteView = lazy(() =>
   import('./views/WriteView').then((module) => ({ default: module.WriteView })),
 );
@@ -508,20 +506,34 @@ export default function App() {
         {/* 顶部只留栏目：不放商标和名字（侧边栏顶部 Chrome 已经显示了图标和名字，
             弹窗里也不需要）。关于信息在设置最底下 */}
         <nav className="section-nav" aria-label={t.primaryNavigation}>
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              className={effectiveView === tab.id ? 'is-active' : ''}
-              aria-current={effectiveView === tab.id ? 'page' : undefined}
-              onClick={() => selectSection(tab.id)}
-            >
-              <span>{tab.label}</span>
-              {tab.id === 'filter' && pageCount ? (
-                <span className="nav-badge">{Math.min(pageCount, 99)}</span>
-              ) : null}
-            </button>
-          ))}
+          {tabs.map((tab) =>
+            tab.id === 'global' ? (
+              <button
+                key={tab.id}
+                type="button"
+                className={`icon-button nav-settings${effectiveView === tab.id ? ' is-active' : ''}`}
+                aria-label={tab.label}
+                aria-current={effectiveView === tab.id ? 'page' : undefined}
+                title={tab.label}
+                onClick={() => selectSection(tab.id)}
+              >
+                <AppIcon name="settings" size={16} />
+              </button>
+            ) : (
+              <button
+                key={tab.id}
+                type="button"
+                className={effectiveView === tab.id ? 'is-active' : ''}
+                aria-current={effectiveView === tab.id ? 'page' : undefined}
+                onClick={() => selectSection(tab.id)}
+              >
+                <span>{tab.label}</span>
+                {tab.id === 'filter' && pageCount ? (
+                  <span className="nav-badge">{Math.min(pageCount, 99)}</span>
+                ) : null}
+              </button>
+            ),
+          )}
           {canOpenSidePanel && !isSidePanel ? (
             // 侧边栏模式不提供切回弹窗的按钮：关闭面板会连带杀掉刚打开的 action popup
             <button
@@ -559,7 +571,7 @@ export default function App() {
               language={language}
               notify={notify}
               sendToXPage={sendToXPage}
-              onOpenCadence={() => openModuleSettings('write')}
+              onOpenSettings={() => openModuleSettings('write')}
             />
           ) : null}
           {viewReady && effectiveView === 'ai' && !effectiveModuleSettingsOpen ? (
@@ -585,7 +597,9 @@ export default function App() {
               onOpenSettings={() => openModuleSettings('filter')}
             />
           ) : null}
-          {viewReady && effectiveModuleSettingsOpen && effectiveView === effectiveModuleSettingsOpen ? (
+          {viewReady &&
+          effectiveModuleSettingsOpen &&
+          effectiveView === effectiveModuleSettingsOpen ? (
             <ModuleSettingsView
               module={moduleById(effectiveModuleSettingsOpen)}
               page={settingsPage}

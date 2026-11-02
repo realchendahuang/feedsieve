@@ -198,7 +198,6 @@ const previewAt = (offset: number, hour: number, minute: number): number => {
   date.setHours(hour, minute, 0, 0);
   return date.getTime();
 };
-const previewPendingText = '带图：排期台重做后，空档和已排期终于是同一条时间线了。';
 
 const storageData = {
   uiLanguage: new URLSearchParams(location.search).get('lang') === 'en' ? 'en' : 'zh',
@@ -247,32 +246,6 @@ const storageData = {
       },
     ],
   },
-  scheduleAssignmentsV1: [
-    {
-      id: 'preview-pending-1',
-      draftId: 'preview-draft-2',
-      textKey: previewPendingText,
-      at: previewAt(1, 21, 38),
-      createdAt: now,
-    },
-  ],
-  composeDraftsV1: [
-    {
-      id: 'preview-draft-1',
-      text: '为什么浏览器扩展不该自己重做发帖器：图片、视频、投票都交给 X。',
-      createdAt: now - 20 * 60_000,
-    },
-    {
-      id: 'preview-draft-2',
-      text: previewPendingText,
-      createdAt: now - 10 * 60_000,
-    },
-    {
-      id: 'preview-draft-3',
-      text: '下一条：把本周的排期空档填满，再统一检查一遍撞车。',
-      createdAt: now - 5 * 60_000,
-    },
-  ],
   communitySettings: {
     enabled: true,
     strength: 'standard',

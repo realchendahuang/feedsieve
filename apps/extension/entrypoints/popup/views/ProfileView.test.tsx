@@ -330,10 +330,21 @@ describe('ProfileView', () => {
     const labels = [...el.querySelectorAll('.profile-tools button')].map((b) =>
       b.getAttribute('aria-label'),
     );
-    // 没数据时更需要「补全」：滚动加载是这里唯一的自救入口
-    expect(labels).toEqual(['补全这个博主', '在 X 搜高赞帖', '用 Google 搜他的帖子']);
+    // 没数据时更需要「补全」：滚动加载是这里唯一的自救入口；齿轮始终在
+    expect(labels).toEqual([
+      '补全这个博主',
+      '在 X 搜高赞帖',
+      '用 Google 搜他的帖子',
+      '主页设置',
+    ]);
     // 没有赤裸裸的大按钮
     expect(el.querySelector('.secondary-button')).toBeNull();
+  });
+
+  it('keeps the settings gear in the tool row when posts are collected', async () => {
+    const { el } = await render();
+    expect(el.querySelector('.profile-tools button[aria-label="主页设置"]')).not.toBeNull();
+    expect(el.querySelector('.view-toolbar button[aria-label="主页设置"]')).toBeNull();
   });
 
   it('asks to open a profile when the tab is not one', async () => {

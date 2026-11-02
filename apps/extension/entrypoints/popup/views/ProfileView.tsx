@@ -625,7 +625,10 @@ export default function ProfileView({
       setEntry(next);
       setNow(Date.now());
       // 用本地库的前后差值：滚动时看到的别人帖子（引用、转推）不算补全
-      const added = Math.max(0, (next ? Object.keys(next.posts).length : beforeCount) - beforeCount);
+      const added = Math.max(
+        0,
+        (next ? Object.keys(next.posts).length : beforeCount) - beforeCount,
+      );
       if (result?.ok) {
         if (added > 0) notify(t.profileFillDone(added));
         else if (result.stopped === 'stagnant') notify(t.profileFillEnd);
@@ -807,6 +810,7 @@ export default function ProfileView({
           onClick={exportCsv}
         />
       ) : null}
+      <IconButton icon="settings" label={t.profileSettings} onClick={onOpenSettings} />
     </>
   );
 
@@ -848,17 +852,6 @@ export default function ProfileView({
   if (!entry || !hasPosts) {
     return (
       <div className="view profile-view" ref={rootRef}>
-        <div className="view-toolbar">
-          <button
-            type="button"
-            className="icon-button toolbar-end"
-            aria-label={t.profileSettings}
-            title={t.profileSettings}
-            onClick={onOpenSettings}
-          >
-            <AppIcon name="settings" size={15} />
-          </button>
-        </div>
         {entry ? <AccountCard entry={entry} now={now} language={language} tools={tools} /> : null}
         {googlePanel}
         <div className="empty-state">
@@ -929,15 +922,6 @@ export default function ProfileView({
           }}
         >
           {t.profileIncludeReplies}
-        </button>
-        <button
-          type="button"
-          className="icon-button toolbar-end"
-          aria-label={t.profileSettings}
-          title={t.profileSettings}
-          onClick={onOpenSettings}
-        >
-          <AppIcon name="settings" size={15} />
         </button>
       </div>
 

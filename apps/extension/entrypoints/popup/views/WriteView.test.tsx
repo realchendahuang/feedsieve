@@ -3,24 +3,41 @@ import React, { act } from 'react';
 import ReactDOM from 'react-dom/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WriteView } from './WriteView';
-import { COMPOSE_DRAFT_MESSAGE } from '../../../src/lib/compose/compose-schedule';
-import { SCHEDULE_ASSIGNMENTS_KEY } from '../../../src/lib/compose/schedule-store';
-import { DEFAULT_SCHEDULE_SETTINGS } from '../../../src/lib/compose/schedule-slots';
+import { OPEN_SCHEDULED_MESSAGE } from '../../../src/lib/compose/compose-schedule';
 
-let storageSet: ReturnType<typeof vi.fn>;
 let sendToXPage: ReturnType<typeof vi.fn>;
-let windowsCreate: ReturnType<typeof vi.fn>;
+let onOpenSettings: () => void;
 let sessionStored: Record<string, unknown>;
 const mounted: Array<{ unmount: () => void }> = [];
+
+function tomorrowAt(hour: number, minute: number): number {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  date.setHours(hour, minute, 0, 0);
+  return date.getTime();
+}
+
+function scheduledPosts(count = 3): Record<string, unknown> {
+  const base = tomorrowAt(10, 0);
+  return {
+    account: 'demo_creator',
+    syncedAt: Date.now() - 60_000,
+    posts: Array.from({ length: count }, (_, index) => ({
+      id: `post-${index + 1}`,
+      executeAt: base + index * 30 * 60_000,
+      text: `第 ${index + 1} 条排期`,
+      media: index === 0 ? 2 : 0,
+    })),
+  };
+}
 
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   for (const root of mounted.splice(0)) root.unmount();
   document.body.replaceChildren();
-  storageSet = vi.fn().mockResolvedValue(undefined);
   sessionStored = {};
   sendToXPage = vi.fn().mockResolvedValue({ ok: true });
-  windowsCreate = vi.fn().mockResolvedValue({});
+  onOpenSettings = vi.fn() as unknown as () => void;
   vi.stubGlobal('browser', {
     storage: {
       session: {
@@ -29,7 +46,7 @@ beforeEach(() => {
       },
       local: {
         get: vi.fn().mockResolvedValue({}),
-        set: storageSet,
+        set: vi.fn().mockResolvedValue(undefined),
       },
       onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
     },
@@ -39,7 +56,6 @@ beforeEach(() => {
       create: vi.fn(),
       sendMessage: vi.fn(),
     },
-    windows: { create: windowsCreate },
     runtime: { onMessage: { addListener: vi.fn(), removeListener: vi.fn() } },
   });
 });
@@ -54,116 +70,69 @@ async function renderWriteView(): Promise<HTMLElement> {
       React.createElement(WriteView, {
         language: 'zh' as const,
         notify: vi.fn(),
-        sendToXPage: sendToXPage as unknown as (message: {
-          type: string;
-          text?: string;
-          at?: number;
-          openSchedule?: boolean;
-        }) => Promise<unknown>,
-        onOpenCadence: vi.fn(),
+        sendToXPage: sendToXPage as unknown as (message: { type: string }) => Promise<unknown>,
+        onOpenSettings,
       }),
     );
-    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
   });
   return rootEl;
 }
 
-describe('发帖页排期', () => {
-  it('按新节奏把队列里的第一条排到下一条，并先在本机占位', async () => {
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    const createdAt = start.getTime();
+describe('发帖页只读排期台', () => {
+  it('显示排期数量、条目和详情，不出现写帖/排队列按钮', async () => {
     (browser.storage.local.get as unknown as ReturnType<typeof vi.fn>).mockImplementation(
       async (key: string) => {
-        if (key === 'composeScheduleV1')
-          return {
-            composeScheduleV1: {
-              ...DEFAULT_SCHEDULE_SETTINGS,
-              windows: [
-                {
-                  id: 'w',
-                  days: [0, 1, 2, 3, 4, 5, 6],
-                  start: '00:00',
-                  end: '23:59',
-                  perHour: 2,
-                },
-              ],
-              leadMinutes: 0,
-              randomize: false,
-              horizonDays: 14,
-            },
-          };
-        if (key === 'composeDraftsV1')
-          return { composeDraftsV1: [{ id: 'd1', text: 'hello', createdAt }] };
+        if (key === 'scheduledPostsV1') return { scheduledPostsV1: scheduledPosts(3) };
         return {};
       },
     );
 
     const rootEl = await renderWriteView();
-    expect(rootEl.textContent).toContain('排下一条');
+    expect(rootEl.querySelector('.write-view .count')?.textContent).toBe('3');
+    expect(rootEl.textContent).toContain('第 1 条排期');
+    expect(rootEl.textContent).toContain('第 3 条排期');
+    expect(rootEl.textContent).toContain('2');
+    expect(rootEl.textContent).not.toContain('写新帖');
+    expect(rootEl.textContent).not.toContain('排下一条');
+    expect(rootEl.textContent).not.toContain('配图');
+    expect(rootEl.textContent).not.toContain('文案队列');
 
-    const button = [...rootEl.querySelectorAll('button')].find(
-      (candidate) => candidate.textContent?.trim() === '排下一条',
-    );
-    if (!button) throw new Error('schedule next button not found');
-    await act(async () => {
-      button.click();
-      await new Promise((r) => setTimeout(r, 0));
-    });
-
-    expect(sendToXPage).toHaveBeenCalledWith(
-      expect.objectContaining({ type: COMPOSE_DRAFT_MESSAGE, text: 'hello' }),
-    );
-    expect(sendToXPage.mock.calls[0]?.[0]).toMatchObject({ at: expect.any(Number) });
-    expect(storageSet).toHaveBeenCalledWith({
-      [SCHEDULE_ASSIGNMENTS_KEY]: [
-        expect.objectContaining({ draftId: 'd1', textKey: 'hello', at: expect.any(Number) }),
-      ],
-    });
+    const item = rootEl.querySelector<HTMLButtonElement>('.write-item.is-post');
+    if (!item) throw new Error('scheduled item not found');
+    await act(async () => item.click());
+    expect(rootEl.querySelector('.write-detail')?.textContent).toContain('已排期');
+    expect(rootEl.querySelector('.write-detail')?.textContent).toContain('在 X 里改时间');
+    expect(rootEl.querySelector('.write-detail')?.textContent).toContain('第 1 条排期');
   });
 
-  it('配图：只贴正文，不自动打开安排表', async () => {
-    const createdAt = Date.now();
-    (browser.storage.local.get as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-      async (key: string) => {
-        if (key === 'composeDraftsV1')
-          return { composeDraftsV1: [{ id: 'd1', text: '带图文案', createdAt }] };
-        return {};
-      },
-    );
-
+  it('同步按钮只让 X 打开预排期页', async () => {
     const rootEl = await renderWriteView();
-    const button = rootEl.querySelector<HTMLButtonElement>('[aria-label="配图"]');
-    if (!button) throw new Error('media button not found');
+    const button = rootEl.querySelector<HTMLButtonElement>('[aria-label="同步预排期列表"]');
+    if (!button) throw new Error('sync button not found');
     await act(async () => {
       button.click();
-      await new Promise((r) => setTimeout(r, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
-
-    expect(sendToXPage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: COMPOSE_DRAFT_MESSAGE,
-        text: '带图文案',
-        openSchedule: false,
-        at: expect.any(Number),
-      }),
-    );
+    expect(sendToXPage).toHaveBeenCalledWith({ type: OPEN_SCHEDULED_MESSAGE });
   });
 
-  it('写新帖：打开 X 的原生发帖窗口', async () => {
+  it('齿轮打开发帖模块设置', async () => {
     const rootEl = await renderWriteView();
-    const button = [...rootEl.querySelectorAll('button')].find(
-      (candidate) => candidate.textContent?.trim() === '写新帖',
-    );
-    if (!button) throw new Error('new post button not found');
-    await act(async () => {
-      button.click();
-      await new Promise((r) => setTimeout(r, 0));
-    });
+    const button = rootEl.querySelector<HTMLButtonElement>('[aria-label="发帖设置"]');
+    if (!button) throw new Error('settings button not found');
+    await act(async () => button.click());
+    expect(onOpenSettings).toHaveBeenCalled();
+  });
 
-    expect(windowsCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ url: 'https://x.com/compose/post', type: 'popup' }),
-    );
+  it('可以翻到下一周', async () => {
+    const rootEl = await renderWriteView();
+    const before = rootEl.querySelector('.write-week-head')?.textContent;
+    const next = rootEl.querySelector<HTMLButtonElement>('.write-week-arrow:not(.is-prev)');
+    if (!next) throw new Error('next week button not found');
+    await act(async () => next.click());
+    const after = rootEl.querySelector('.write-week-head')?.textContent;
+    expect(after).not.toBe(before);
   });
 });
 
@@ -171,9 +140,7 @@ describe('发帖页滚动位置', () => {
   it('切走再回来回到原来的位置', async () => {
     (browser.storage.local.get as unknown as ReturnType<typeof vi.fn>).mockImplementation(
       async (key: string) => {
-        if (key === 'composeDraftsV1') {
-          return { composeDraftsV1: [{ id: 'd1', text: '草稿', createdAt: Date.now() }] };
-        }
+        if (key === 'scheduledPostsV1') return { scheduledPostsV1: scheduledPosts(30) };
         return {};
       },
     );
@@ -188,18 +155,13 @@ describe('发帖页滚动位置', () => {
           React.createElement(WriteView, {
             language: 'zh' as const,
             notify: vi.fn(),
-            sendToXPage: sendToXPage as unknown as (message: {
-              type: string;
-              text?: string;
-              at?: number;
-              openSchedule?: boolean;
-            }) => Promise<unknown>,
-            onOpenCadence: vi.fn(),
+            sendToXPage: sendToXPage as unknown as (message: { type: string }) => Promise<unknown>,
+            onOpenSettings,
           }),
         );
       });
       await act(async () => {
-        await new Promise((r) => setTimeout(r, 0));
+        await new Promise((resolve) => setTimeout(resolve, 0));
       });
       return { host, root };
     }

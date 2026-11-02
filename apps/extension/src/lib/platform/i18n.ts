@@ -368,9 +368,9 @@ export const UI_COPY = {
     cadence: '发帖节奏',
     cadenceHint: '集中在哪些天、哪些时段发，每小时最多几条，分钟随机与最多提前多久。',
     cadenceMeta: (n: number) => `${n} 个时段`,
-    composeHelper: '发帖框排期按钮',
+    composeHelper: '安排表快捷时间',
     composeHelperHint:
-      '发帖框日历图标旁的「排下一条」按钮，以及 X 安排表顶上的快捷时间（+1 小时、明天此时、同上一条、±15 分钟）。',
+      '只在 X 的「安排表」顶部出现：下一条空档、+1 小时、+3 小时、明天此时、同上一条、±15 分钟。不改发帖框本身。',
     articleHelper: '文章编辑增强',
     articleHelperHint:
       '在 X 文章编辑器里粘贴 Markdown 自动排版（标题、列表、引用、加粗、链接、代码块），开头的 # 标题自动填进文章标题；右下角显示字数、阅读时长和大纲，可导入 .md 文件。⌘⇧V 粘贴原文。',
@@ -791,9 +791,9 @@ export const UI_COPY = {
     cadenceHint:
       'Which days and windows you post in, how many per hour at most, random minutes and how far ahead to schedule.',
     cadenceMeta: (n: number) => `${n} window${n === 1 ? '' : 's'}`,
-    composeHelper: 'Composer schedule button',
+    composeHelper: 'Schedule dialog shortcuts',
     composeHelperHint:
-      'The Schedule next button next to the calendar icon in the composer, and quick times at the top of X’s schedule dialog.',
+      'Only at the top of X’s schedule dialog: next open slot, +1h, +3h, tomorrow, same as last, ±15 min. The composer itself is untouched.',
     articleHelper: 'Article editor',
     articleHelperHint:
       'Paste Markdown into the X article editor to format it; a leading # heading becomes the title. A panel shows word count, reading time and outline, and imports .md files. ⌘⇧V pastes plain text.',

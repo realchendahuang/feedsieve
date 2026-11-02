@@ -124,7 +124,9 @@ async function openModuleSettings(
 /** 全局页（模块开关 / 通用 / 数据与隐私 / 关于）。 */
 async function openGlobal(root: HTMLElement): Promise<void> {
   await waitForLazy(() => root.querySelector('.section-nav button') !== null, 400);
-  await act(async () => buttonWithText(root, '全局').click());
+  await act(async () =>
+    root.querySelector<HTMLButtonElement>('.section-nav .nav-settings')!.click(),
+  );
   await waitForLazy(() => root.textContent?.includes('模块开关') ?? false);
 }
 
@@ -314,7 +316,9 @@ describe('popup App 渲染冒烟', () => {
     expect(rootEl.textContent).toContain('本页标黄');
     expect(rootEl.textContent).toContain('本页没有标黄的账号');
     expect(rootEl.textContent).toContain('社区黑名单');
-    const nav = [...rootEl.querySelectorAll('.section-nav button')].map((b) => b.textContent);
+    const nav = [...rootEl.querySelectorAll('.section-nav button')].map(
+      (button) => button.getAttribute('aria-label') ?? button.textContent,
+    );
     expect(nav).toEqual(['热帖', '主页', '发帖', 'AI 味', '过滤', '全局']);
 
     await openSettingsPage(rootEl, '关键词');
@@ -386,10 +390,14 @@ describe('popup App 渲染冒烟', () => {
       hotSwitch.click();
       await new Promise((r) => setTimeout(r, 0));
     });
-    const nav = [...rootEl.querySelectorAll('.section-nav button')].map((b) => b.textContent);
+    const nav = [...rootEl.querySelectorAll('.section-nav button')].map(
+      (button) => button.getAttribute('aria-label') ?? button.textContent,
+    );
     expect(nav).not.toContain('热帖');
     expect(nav).toContain('全局');
-    expect(rootEl.querySelector('.section-nav .is-active')?.textContent).toBe('全局');
+    expect(rootEl.querySelector('.section-nav .is-active')?.getAttribute('aria-label')).toBe(
+      '全局',
+    );
   });
 
   it('发帖节奏：发帖辅助二级页里改每小时条数写回本机', async () => {
@@ -712,7 +720,9 @@ describe('popup App 渲染冒烟', () => {
     get.mockResolvedValue({ uiLanguage: 'en' });
     const rootEl = renderApp();
     await new Promise((r) => setTimeout(r, 150));
-    await act(async () => buttonWithText(rootEl, 'Global').click());
+    await act(async () =>
+      rootEl.querySelector<HTMLButtonElement>('.section-nav .nav-settings')!.click(),
+    );
     await waitForLazy(() => rootEl.textContent?.includes('Modules') ?? false);
     await act(async () => navRow(rootEl, 'Data & privacy').click());
 
