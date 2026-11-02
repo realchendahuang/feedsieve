@@ -595,7 +595,12 @@ export default function ProfileView({ language, notify, sendToXPage }: ProfileVi
       const result = (await sendToXPage({
         type: 'feedsieve:profile-fill',
         handle,
-      })) as { ok?: boolean; added?: number; stopped?: string } | null;
+      })) as {
+        ok?: boolean;
+        added?: number;
+        stopped?: string;
+        retryAfterMs?: number;
+      } | null;
       const next = await load(handle);
       setEntry(next);
       setNow(Date.now());
@@ -605,6 +610,12 @@ export default function ProfileView({ language, notify, sendToXPage }: ProfileVi
         if (added > 0) notify(t.profileFillDone(added));
         else if (result.stopped === 'stagnant') notify(t.profileFillEnd);
         else notify(t.profileFillNone);
+      } else if (result?.stopped === 'cooldown') {
+        const minutes = Math.max(1, Math.ceil((result.retryAfterMs ?? 0) / 60_000));
+        notify(t.profileFillCooldown(minutes));
+      } else if (result?.stopped === 'user') {
+        // 第二下点击撞上了正在跑的一轮
+        notify(t.profileFillRunning);
       } else if (result?.stopped === 'not-profile') {
         notify(t.profileFillNotProfile);
       } else {

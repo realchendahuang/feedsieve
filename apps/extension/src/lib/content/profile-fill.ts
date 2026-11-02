@@ -3,7 +3,11 @@
  *
  * 只由用户显式触发（主页洞察面板工具条上的图标），不自动滚；随时可以再点一次停止。
  * 每一步直接滚到当前页面底部（等同按 End），等 X 加载出下一批帖子再继续；加载快时
- * 几乎不停，最多等 1.2 秒。一直到底（连续 4 批没有新内容），或到 40 批的保险上限。
+ * 几乎不停，最多等 1.2 秒。一直到底（连续 8 批没有新内容），或到 200 批的保险上限。
+ *
+ * 防封号的两条约束：
+ * - 同一个博主 3 分钟内只能补全一次（防连点，也防对同一个主页反复刷分页请求）；
+ * - 页面在后台时不滚也不查（后台定时器被节流，容易看起来像脚本），切回前台再继续。
  */
 import { tweetSelectors } from '@feedsieve/x-adapter';
 
@@ -13,13 +17,17 @@ export const PROFILE_FILL_POLL_MS = 150;
 export const PROFILE_FILL_WAIT_MS = 1_200;
 /** 连续这么多批没有新帖子就当作到底。 */
 export const PROFILE_FILL_STAGNANT_LIMIT = 8;
+/** 同一个博主两次补全之间的最短间隔。 */
+export const PROFILE_FILL_COOLDOWN_MS = 3 * 60_000;
 
-export type ProfileFillStop = 'user' | 'limit' | 'stagnant' | 'not-profile';
+export type ProfileFillStop = 'user' | 'limit' | 'stagnant' | 'not-profile' | 'cooldown';
 
 export interface ProfileFillResult {
   ok: boolean;
   added: number;
   stopped?: ProfileFillStop;
+  /** stopped 为 cooldown 时，还要等多久（毫秒）。 */
+  retryAfterMs?: number;
 }
 
 /** 当前页面是不是这个博主的主页（/handle，不含子路径）。 */
@@ -53,16 +61,48 @@ function scrollToBottom(): void {
   window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
 }
 
-export function createProfileFill(options: { sleep?: (ms: number) => Promise<void> } = {}) {
+export function createProfileFill(
+  options: { sleep?: (ms: number) => Promise<void>; now?: () => number } = {},
+) {
   const sleep = options.sleep ?? ((ms) => new Promise((resolve) => window.setTimeout(resolve, ms)));
+  const now = options.now ?? (() => Date.now());
   let running = false;
   let stopRequested = false;
+  /** 每个博主上次开始补全的时间：同一个主页短时间内不重复刷分页。 */
+  const lastRunAt = new Map<string, number>();
 
-  async function fill(handle: string): Promise<ProfileFillResult> {
+  /** 页面在后台时不滚也不查；切回前台再继续。等 visibilitychange，不依赖被节流的定时器。 */
+  async function waitForVisible(): Promise<void> {
+    while (document.hidden && !stopRequested) {
+      await new Promise<void>((resolve) => {
+        function wake(): void {
+          document.removeEventListener('visibilitychange', wake);
+          window.clearTimeout(timer);
+          resolve();
+        }
+        // 兜底：即使事件没送来，一秒后也重新看一眼
+        const timer = window.setTimeout(wake, 1_000);
+        document.addEventListener('visibilitychange', wake);
+      });
+    }
+  }
+
+  async function fill(rawHandle: string): Promise<ProfileFillResult> {
+    const handle = rawHandle.toLowerCase();
     if (running) return { ok: false, added: 0, stopped: 'user' };
     if (!isProfilePath(location.pathname, handle)) {
       return { ok: false, added: 0, stopped: 'not-profile' };
     }
+    const last = lastRunAt.get(handle);
+    if (last !== undefined && now() - last < PROFILE_FILL_COOLDOWN_MS) {
+      return {
+        ok: false,
+        added: 0,
+        stopped: 'cooldown',
+        retryAfterMs: PROFILE_FILL_COOLDOWN_MS - (now() - last),
+      };
+    }
+    lastRunAt.set(handle, now());
     running = true;
     stopRequested = false;
     const seen = collectPostIds();
@@ -75,14 +115,22 @@ export function createProfileFill(options: { sleep?: (ms: number) => Promise<voi
           stopped = 'user';
           break;
         }
+        // 后台标签页里不滚，等用户切回来
+        await waitForVisible();
+        if (stopRequested) {
+          stopped = 'user';
+          break;
+        }
         // 直接到底，等 X 加载完这一批再继续
         scrollToBottom();
-        // 等 X 把这一批加载出来：加载快就立刻继续，最多等 1.5 秒
+        // 等 X 把这一批加载出来：加载快就立刻继续，最多等 1.2 秒
         let grew = false;
         const maxPolls = Math.ceil(PROFILE_FILL_WAIT_MS / PROFILE_FILL_POLL_MS);
         for (let poll = 0; poll < maxPolls; poll++) {
           await sleep(PROFILE_FILL_POLL_MS);
           if (stopRequested) break;
+          // 中途切到后台：先停手，回到循环顶部等页面可见
+          if (document.hidden) break;
           // 只有「新出现的帖子 ID」才算这一批有收获；scrollHeight 会因渲染/推荐位变化，
           // 拿它判断容易空跑
           for (const id of collectPostIds()) {
@@ -97,6 +145,8 @@ export function createProfileFill(options: { sleep?: (ms: number) => Promise<voi
           stopped = 'user';
           break;
         }
+        // 这一批是在后台被中断的，不算空转
+        if (document.hidden) continue;
         // 连续多批没有新帖子就当作到底
         stagnant = grew ? 0 : stagnant + 1;
         if (stagnant >= PROFILE_FILL_STAGNANT_LIMIT) {

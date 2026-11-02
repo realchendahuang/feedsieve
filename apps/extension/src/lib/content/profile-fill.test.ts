@@ -1,11 +1,13 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createProfileFill, isProfilePath } from './profile-fill';
+import { PROFILE_FILL_COOLDOWN_MS, createProfileFill, isProfilePath } from './profile-fill';
 
 afterEach(() => {
   document.body.innerHTML = '';
   vi.restoreAllMocks();
   history.replaceState(null, '', '/');
+  // happy-dom 的 document.hidden 在原型上，删掉实例上的覆盖就能恢复
+  Reflect.deleteProperty(document, 'hidden');
 });
 
 let articleSeq = 0;
@@ -68,5 +70,48 @@ describe('profile-fill', () => {
     const result = await fill.fill('alice');
     expect(result).toEqual({ ok: false, added: 0, stopped: 'not-profile' });
     expect(scrollTo).not.toHaveBeenCalled();
+  });
+
+  it('同一个博主 3 分钟内只补全一次', async () => {
+    history.replaceState(null, '', '/alice');
+    addArticles(1);
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    let time = 1_000_000;
+    const fill = createProfileFill({ sleep: async () => undefined, now: () => time });
+    expect((await fill.fill('alice')).ok).toBe(true);
+    const again = await fill.fill('alice');
+    expect(again).toEqual({
+      ok: false,
+      added: 0,
+      stopped: 'cooldown',
+      retryAfterMs: PROFILE_FILL_COOLDOWN_MS,
+    });
+    // 冷却期内不滚动
+    const calls = scrollTo.mock.calls.length;
+    time += PROFILE_FILL_COOLDOWN_MS;
+    expect((await fill.fill('alice')).ok).toBe(true);
+    expect(scrollTo.mock.calls.length).toBeGreaterThan(calls);
+  });
+
+  it('页面在后台时不滚动，切回前台再继续', async () => {
+    history.replaceState(null, '', '/alice');
+    addArticles(1);
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    let hidden = true;
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => hidden });
+    const fill = createProfileFill({ sleep: async () => undefined, now: () => 0 });
+    let scrollWhileHidden = -1;
+    // 10ms 后切回前台
+    const back = window.setTimeout(() => {
+      scrollWhileHidden = scrollTo.mock.calls.length;
+      hidden = false;
+      document.dispatchEvent(new Event('visibilitychange'));
+    }, 10);
+    const result = await fill.fill('alice');
+    window.clearTimeout(back);
+    expect(result.ok).toBe(true);
+    // 后台期间一次都没滚
+    expect(scrollWhileHidden).toBe(0);
+    expect(scrollTo).toHaveBeenCalled();
   });
 });

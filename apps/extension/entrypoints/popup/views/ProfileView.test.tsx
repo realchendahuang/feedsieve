@@ -123,7 +123,9 @@ async function render() {
   const root = ReactDOM.createRoot(el);
   mounted.push(root);
   const notify = vi.fn();
-  const sendToXPage = vi.fn(async () => ({ ok: true, added: 3, stopped: 'limit' }));
+  const sendToXPage = vi.fn(
+    async (): Promise<unknown> => ({ ok: true, added: 3, stopped: 'limit' }),
+  );
   await act(async () => {
     root.render(
       React.createElement(ProfileView, {
@@ -171,6 +173,21 @@ describe('ProfileView', () => {
       handle: 'alice',
     });
     expect(notify).toHaveBeenCalledWith('补全了 3 条');
+  });
+
+  it('says how long to wait when the same profile was just completed', async () => {
+    const { el, notify, sendToXPage } = await render();
+    sendToXPage.mockResolvedValueOnce({
+      ok: false,
+      added: 0,
+      stopped: 'cooldown',
+      retryAfterMs: 120_000,
+    });
+    await act(async () => {
+      el.querySelector<HTMLButtonElement>('button[aria-label="补全这个博主"]')!.click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(notify).toHaveBeenCalledWith('刚补过，2 分钟后再试');
   });
 
   it('shows the account, the baseline and outliers first', async () => {
