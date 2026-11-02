@@ -58,6 +58,7 @@ import {
   type ProfileRange,
   type ProfileSort,
 } from './profile-model';
+import { useListPosition } from './use-list-position';
 
 const PAGE_SIZE = 20;
 const UPDATE_DEBOUNCE_MS = 500;
@@ -67,6 +68,8 @@ const SORT_KEY = 'profileSortV1';
 const RANGE_KEY = 'profileRangeV1';
 const REPLIES_KEY = 'profileRepliesV1';
 const PATTERNS_KEY = 'profilePatternsOpenV1';
+/** 离开时停在列表哪里（storage.session）：切到别的栏目再回来还在这儿。 */
+const POSITION_KEY = 'profilePositionV1';
 const YEAR_MS = 365.25 * 24 * 60 * 60 * 1000;
 /** 爆款率达到这个比例时数字用金色。 */
 const OUTLIER_RATE_ACCENT = 0.1;
@@ -441,6 +444,7 @@ export default function ProfileView({ language, notify, sendToXPage }: ProfileVi
   /** 只有还停在这个博主的主页时才显示「停止」：切到别的标签页就发不到原来那轮了 */
   const filling = fillingHandle !== null && fillingHandle === handle;
   const sentinelRef = useRef<HTMLLIElement | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     void browser.storage.local
@@ -522,6 +526,17 @@ export default function ProfileView({ language, notify, sendToXPage }: ProfileVi
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, [hasMore, visibleCount]);
+
+  // 切走再回来：回到上次停的位置（条数一起恢复，否则列表撑不到那里）
+  useListPosition({
+    storageKey: POSITION_KEY,
+    pageKey: nextPageKey,
+    rootRef,
+    ready: Boolean(entry && posts.length > 0),
+    count: visibleCount,
+    restoreCount: setVisibleCount,
+    minCount: PAGE_SIZE,
+  });
 
   function save(key: string, value: unknown): void {
     void browser.storage.local.set({ [key]: value }).catch(() => undefined);
@@ -711,7 +726,7 @@ export default function ProfileView({ language, notify, sendToXPage }: ProfileVi
 
   if (!handle) {
     return (
-      <div className="view profile-view">
+      <div className="view profile-view" ref={rootRef}>
         <div className="empty-state">
           <p>{t.profileNotOnProfile}</p>
           <HelpIcon text={t.profileNotOnProfileHint} />
@@ -722,7 +737,7 @@ export default function ProfileView({ language, notify, sendToXPage }: ProfileVi
 
   if (entry === undefined) {
     return (
-      <div className="view profile-view">
+      <div className="view profile-view" ref={rootRef}>
         <div className="loading-list" aria-hidden="true">
           <span />
           <span />
@@ -818,7 +833,7 @@ export default function ProfileView({ language, notify, sendToXPage }: ProfileVi
 
   if (!entry || !hasPosts) {
     return (
-      <div className="view profile-view">
+      <div className="view profile-view" ref={rootRef}>
         {entry ? <AccountCard entry={entry} now={now} language={language} tools={tools} /> : null}
         {googlePanel}
         <div className="empty-state">
@@ -830,7 +845,7 @@ export default function ProfileView({ language, notify, sendToXPage }: ProfileVi
   }
 
   return (
-    <div className="view profile-view">
+    <div className="view profile-view" ref={rootRef}>
       <AccountCard entry={entry} now={now} language={language} tools={tools} />
       {googlePanel}
       <BaselineLine analysis={analysis} entry={entry} now={now} language={language} />

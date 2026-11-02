@@ -5,7 +5,7 @@
  * 「开始检测 / 重新检测 / 测测我自己」让 X 页面去那个人的回复页开测（页面端见 ai-check.ts），
  * 测完这里自动刷新。查询不花 token；只有真的去测才会调判定。
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { profileFromPath } from '@feedsieve/x-adapter';
 import type { UiLanguage } from '../../../src/lib/platform/i18n';
 import { flavorOf, type AiVerdict } from '@feedsieve/shared';
@@ -24,6 +24,7 @@ import {
 } from '../../../src/lib/ai-check/client';
 import { getSelfHandle } from '../../../src/lib/community/following-allowlist';
 import { AppIcon, HelpIcon, Toggle } from './shared';
+import { useListPosition } from './use-list-position';
 
 const TONE_COLOR = {
   ai: 'var(--tone-ai)',
@@ -235,8 +236,17 @@ export function AiView({
   // 查询结果按账号存：当前账号还没查回来就算加载中（不在 effect 里同步 setState）
   const [result, setResult] = useState<{ handle: string; value: AiLookupOutcome } | null>(null);
   const [records, setRecords] = useState<AiCheckRecord[]>([]);
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const [settings, setSettings] = useState<AiCheckSettings>(DEFAULT_AI_SETTINGS);
   const [voting, setVoting] = useState(false);
+
+  // 切走再回来：回到上次看的位置
+  useListPosition({
+    storageKey: 'aiPositionV1',
+    pageKey: 'ai',
+    rootRef,
+    ready: records.length > 0,
+  });
 
   const loadRecords = useCallback(() => {
     void browser.runtime
@@ -352,7 +362,7 @@ export function AiView({
   const remote = lookup && lookup !== 'loading' ? lookup.remote : null;
 
   return (
-    <div className="view ai-view">
+    <div className="view ai-view" ref={rootRef}>
       <section className="block" aria-label={c.current}>
         <div className="block-head">
           <h2>{handle ? `@${handle}` : c.current}</h2>

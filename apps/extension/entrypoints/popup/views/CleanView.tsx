@@ -19,6 +19,7 @@ import {
 import { addAllowlist } from '../../../src/lib/community/allowlist';
 import { categoryLabel, UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
 import { AppIcon, FAILURE_LABELS, HelpIcon, OfficialLinkIcon, type PageMarkedItem } from './shared';
+import { useListPosition } from './use-list-position';
 import QueuePanel from './QueuePanel';
 
 interface PageBlockResult {
@@ -101,6 +102,7 @@ export default function CleanView({
   // 安全额度：滚动 24h 已用数（账本事件驱动更新，渲染期不调 Date.now）
   const [safety, setSafety] = useState<SafetyLedger | null>(null);
   const [safetyUsed, setSafetyUsed] = useState(0);
+  const rootRef = useRef<HTMLDivElement | null>(null);
 
   /** 瞬时成功反馈 4 秒后自动消失，遵守 AGENTS 约定 */
   useEffect(() => {
@@ -159,6 +161,14 @@ export default function CleanView({
     [displayedItems, deselectedHandles],
   );
   const pendingCount = pendingItems.length;
+
+  // 切走再回来：回到上次看的位置
+  useListPosition({
+    storageKey: 'cleanPositionV1',
+    pageKey: 'clean',
+    rootRef,
+    ready: displayedItems.length > 0,
+  });
 
   function toggleSelect(handle: string): void {
     setDeselectedHandles((prev) => {
@@ -330,7 +340,7 @@ export default function CleanView({
   const busy = running || queueActive || pauseDestructive;
 
   return (
-    <div className="view clean-view">
+    <div className="view clean-view" ref={rootRef}>
       {pauseDestructive ? (
         <p className="alert" role="status">
           {killSwitchActive ? t.killSwitchActive(killSwitchReason) : t.blockUnavailable}

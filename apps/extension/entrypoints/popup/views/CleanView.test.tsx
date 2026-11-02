@@ -8,6 +8,7 @@ import CleanView from './CleanView';
 import type { PageMarkedItem } from './shared';
 
 let storageSet: ReturnType<typeof vi.fn>;
+let sessionStored: Record<string, unknown>;
 const mountedRoots: Array<{ unmount: () => void }> = [];
 
 beforeEach(() => {
@@ -15,6 +16,7 @@ beforeEach(() => {
   for (const root of mountedRoots.splice(0)) root.unmount();
   document.body.replaceChildren();
   storageSet = vi.fn().mockResolvedValue(undefined);
+  sessionStored = {};
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}')));
   vi.stubGlobal('browser', {
     runtime: {
@@ -22,6 +24,10 @@ beforeEach(() => {
       sendMessage: vi.fn().mockResolvedValue(undefined),
     },
     storage: {
+      session: {
+        get: vi.fn(async () => ({ ...sessionStored })),
+        set: vi.fn(async (items: Record<string, unknown>) => Object.assign(sessionStored, items)),
+      },
       local: {
         get: vi.fn().mockResolvedValue({ uiLanguage: 'zh' }),
         set: storageSet,
@@ -171,5 +177,54 @@ describe('CleanView 移除', () => {
           (m as { type?: string }).type === 'feedsieve:run-page-block',
       ) as { handles?: string[] } | undefined;
     expect(msg?.handles).toEqual(['misfavored']);
+  });
+});
+
+describe('CleanView 滚动位置', () => {
+  it('切走再回来回到列表原来的位置', async () => {
+    const many: PageMarkedItem[] = Array.from({ length: 40 }, (_, i) => ({
+      handle: `spam_${i}`,
+      category: 'bot_spam',
+      reason: '关键词命中',
+      snippet: '推文正文',
+    }));
+    async function mount(): Promise<{ host: HTMLDivElement; root: ReactDOM.Root }> {
+      const host = document.createElement('div');
+      host.className = 'popup-content';
+      document.body.append(host);
+      const root = ReactDOM.createRoot(host);
+      mountedRoots.push(root);
+      await act(async () => {
+        root.render(
+          React.createElement(CleanView, {
+            language: 'zh' as const,
+            notify: vi.fn(),
+            sendToXPage: vi.fn().mockResolvedValue({}),
+            pageMarked: many,
+            refreshPageMarked: vi.fn().mockResolvedValue(undefined),
+            pauseDestructive: false,
+            killSwitchActive: false,
+            communityEligible: [],
+            communityLoading: false,
+          }),
+        );
+      });
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+      return { host, root };
+    }
+
+    const first = await mount();
+    first.host.scrollTop = 640;
+    await act(async () => {
+      first.host.dispatchEvent(new Event('scroll'));
+    });
+    // 立刻切走：此时 DOM 已经换掉、scrollTop 归零，保存要靠滚动时记下的值
+    await act(async () => first.root.unmount());
+    first.host.remove();
+
+    const second = await mount();
+    expect(second.host.scrollTop).toBe(640);
   });
 });

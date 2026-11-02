@@ -6,7 +6,7 @@
  * 已排期列表来自 X 自己的「预排期」页（同步 = 让当前 X 页面打开那一页，X 自己去拉），
  * 你在 X 里新建 / 改 / 删预排期帖子时也会顺带更新。全部只存本机。
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { UiLanguage } from '../../../src/lib/platform/i18n';
 import {
   DEFAULT_SCHEDULE_SETTINGS,
@@ -51,6 +51,7 @@ import {
   OPEN_SCHEDULED_MESSAGE,
 } from '../../../src/lib/compose/compose-schedule';
 import { AppIcon, formatAgo, HelpIcon, IconButton, Toggle } from './shared';
+import { useListPosition } from './use-list-position';
 
 const DAYS_SHOWN = 7;
 const MINUTE_MS = 60_000;
@@ -217,6 +218,15 @@ export function WriteView({
   const [draftText, setDraftText] = useState('');
   const [backups, setBackups] = useState<ArticleBackup[]>([]);
   const [versionPick, setVersionPick] = useState<Record<string, number>>({});
+  const rootRef = useRef<HTMLElement | null>(null);
+
+  // 切走再回来：回到上次看的位置（排期、草稿、备份里随便哪一段）
+  useListPosition({
+    storageKey: 'writePositionV1',
+    pageKey: 'write',
+    rootRef,
+    ready: drafts.length > 0 || backups.length > 0 || assignments.length > 0,
+  });
 
   useEffect(() => {
     void getScheduleSettings().then(setSettings);
@@ -416,7 +426,7 @@ export function WriteView({
   const pendingCount = assignments.filter((assignment) => assignment.at > now).length;
 
   return (
-    <section className="view write-view">
+    <section className="view write-view" ref={rootRef}>
       <section className="block" aria-label={c.upcoming}>
         <div className="block-head">
           <h2>{c.upcoming}</h2>

@@ -7,11 +7,13 @@ import { accountFromUrl, AiView } from './AiView';
 const tabUrl = 'https://x.com/Alice';
 let lookup: unknown;
 let records: unknown[];
+let sessionStored: Record<string, unknown>;
 const mounted: Array<{ unmount: () => void }> = [];
 
 beforeEach(() => {
   lookup = { remote: null, myVote: null, mine: null };
   records = [];
+  sessionStored = {};
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
   (globalThis as unknown as { browser: unknown }).browser = {
     tabs: {
@@ -31,6 +33,10 @@ beforeEach(() => {
       ),
     },
     storage: {
+      session: {
+        get: vi.fn(async () => ({ ...sessionStored })),
+        set: vi.fn(async (items: Record<string, unknown>) => Object.assign(sessionStored, items)),
+      },
       onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
       local: { get: vi.fn(async () => ({})), set: vi.fn(async () => undefined) },
     },
@@ -44,6 +50,7 @@ afterEach(() => {
 
 async function render(sendToXPage = vi.fn(async () => ({ ok: true }))) {
   const host = document.createElement('div');
+  host.className = 'popup-content';
   document.body.appendChild(host);
   const root = ReactDOM.createRoot(host);
   mounted.push(root);
@@ -53,7 +60,7 @@ async function render(sendToXPage = vi.fn(async () => ({ ok: true }))) {
   await act(async () => {
     await new Promise((r) => setTimeout(r, 0));
   });
-  return { host, sendToXPage };
+  return { host, root, sendToXPage };
 }
 
 describe('AiView', () => {
@@ -195,5 +202,26 @@ describe('AiView', () => {
     expect(browserMock.storage.local.set).toHaveBeenCalledWith({
       aiCheckSettingsV1: { mode: 'mark', scope: 'all', markFollowing: true },
     });
+  });
+
+  it('切走再回来回到记录列表原来的位置', async () => {
+    records = Array.from({ length: 40 }, (_, i) => ({
+      handle: `user${i}`,
+      verdict: 'ai',
+      score: 0.9,
+      judgedAt: i,
+      vote: 'ai',
+    }));
+    const first = await render();
+    first.host.scrollTop = 640;
+    await act(async () => {
+      first.host.dispatchEvent(new Event('scroll'));
+    });
+    // 立刻切走：此时 DOM 已经换掉、scrollTop 归零，保存要靠滚动时记下的值
+    await act(async () => first.root.unmount());
+    first.host.remove();
+
+    const second = await render();
+    expect(second.host.scrollTop).toBe(640);
   });
 });

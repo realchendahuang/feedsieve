@@ -25,6 +25,7 @@ let updatedListeners: Array<
   (id: number, change: { url?: string }, tab: { active?: boolean }) => void
 >;
 let clipboard: string | null;
+let sessionStored: Record<string, unknown>;
 
 function post(id: string, views: number, extra: Record<string, unknown> = {}) {
   return {
@@ -77,10 +78,15 @@ beforeEach(() => {
   entry = typical();
   clipboard = null;
   updatedListeners = [];
+  sessionStored = {};
   tabsCreate = vi.fn().mockResolvedValue({ id: 9 });
   const stored: Record<string, unknown> = {};
   vi.stubGlobal('browser', {
     storage: {
+      session: {
+        get: vi.fn(async () => ({ ...sessionStored })),
+        set: vi.fn(async (items: Record<string, unknown>) => Object.assign(sessionStored, items)),
+      },
       local: {
         get: vi.fn(async () => ({ ...stored })),
         set: vi.fn(async (items: Record<string, unknown>) => Object.assign(stored, items)),
@@ -138,7 +144,7 @@ async function render() {
   await act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
-  return { el, notify, sendToXPage };
+  return { el, root, notify, sendToXPage };
 }
 
 const texts = (el: HTMLElement) =>
@@ -393,5 +399,29 @@ describe('profile-model', () => {
       { now: NOW, formatNumber: String },
     );
     expect(md).toBe('# alice\n\nask\n');
+  });
+
+  it('restores the list position after the view is unmounted', async () => {
+    entry = catalog(
+      Array.from({ length: 40 }, (_, i) =>
+        post(`1850000000000002${String(i).padStart(2, '0')}`, 10_000 + i * 100),
+      ),
+    );
+    const first = await render();
+    first.el.scrollTop = 640;
+    await act(async () => {
+      first.el.dispatchEvent(new Event('scroll'));
+    });
+    // 立刻切走：此时 DOM 已经换掉、scrollTop 归零，保存要靠滚动时记下的值
+    await act(async () => first.root.unmount());
+    first.el.remove();
+
+    const second = await render();
+    expect(second.el.scrollTop).toBe(640);
+    expect(sessionStored.profilePositionV1).toMatchObject({
+      key: 'alice|multiple|all|false',
+      top: 640,
+      count: 20,
+    });
   });
 });

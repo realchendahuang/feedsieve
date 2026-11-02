@@ -9,6 +9,7 @@ import { DEFAULT_SCHEDULE_SETTINGS } from '../../../src/lib/compose/schedule-slo
 
 let storageSet: ReturnType<typeof vi.fn>;
 let sendToXPage: ReturnType<typeof vi.fn>;
+let sessionStored: Record<string, unknown>;
 const mounted: Array<{ unmount: () => void }> = [];
 
 beforeEach(() => {
@@ -16,9 +17,14 @@ beforeEach(() => {
   for (const root of mounted.splice(0)) root.unmount();
   document.body.replaceChildren();
   storageSet = vi.fn().mockResolvedValue(undefined);
+  sessionStored = {};
   sendToXPage = vi.fn().mockResolvedValue({ ok: true });
   vi.stubGlobal('browser', {
     storage: {
+      session: {
+        get: vi.fn(async () => ({ ...sessionStored })),
+        set: vi.fn(async (items: Record<string, unknown>) => Object.assign(sessionStored, items)),
+      },
       local: {
         get: vi.fn().mockResolvedValue({}),
         set: storageSet,
@@ -110,5 +116,55 @@ describe('发帖页排期', () => {
         expect.objectContaining({ draftId: 'd1', textKey: 'hello', at: expect.any(Number) }),
       ],
     });
+  });
+});
+
+describe('发帖页滚动位置', () => {
+  it('切走再回来回到原来的位置', async () => {
+    (browser.storage.local.get as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      async (key: string) => {
+        if (key === 'composeDraftsV1') {
+          return { composeDraftsV1: [{ id: 'd1', text: '草稿', createdAt: Date.now() }] };
+        }
+        return {};
+      },
+    );
+    async function mount(): Promise<{ host: HTMLDivElement; root: ReactDOM.Root }> {
+      const host = document.createElement('div');
+      host.className = 'popup-content';
+      document.body.append(host);
+      const root = ReactDOM.createRoot(host);
+      mounted.push(root);
+      await act(async () => {
+        root.render(
+          React.createElement(WriteView, {
+            language: 'zh' as const,
+            notify: vi.fn(),
+            sendToXPage: sendToXPage as unknown as (message: {
+              type: string;
+              text?: string;
+              at?: number;
+            }) => Promise<unknown>,
+            onOpenCadence: vi.fn(),
+          }),
+        );
+      });
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 0));
+      });
+      return { host, root };
+    }
+
+    const first = await mount();
+    first.host.scrollTop = 640;
+    await act(async () => {
+      first.host.dispatchEvent(new Event('scroll'));
+    });
+    // 立刻切走：此时 DOM 已经换掉、scrollTop 归零，保存要靠滚动时记下的值
+    await act(async () => first.root.unmount());
+    first.host.remove();
+
+    const second = await mount();
+    expect(second.host.scrollTop).toBe(640);
   });
 });
