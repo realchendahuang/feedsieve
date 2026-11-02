@@ -49,6 +49,8 @@ export function createScan(deps: {
   authorFacts?: (handle: string) => DetectAuthor | undefined;
   /** 本地规则打了黄框：匿名上报给服务器做误伤统计与佐证（rule-hit-uplink.ts）。 */
   onRuleHit?: (hit: RuleHitItem) => void;
+  /** 过滤模块总开关：关掉后不检测、不挂手动拉黑入口；流速装饰仍由 hot 模块控制。 */
+  isFilterEnabled?: () => boolean;
 }) {
   const { state, controller, fold, badges, manual, insight } = deps;
   const { markCell } = badges;
@@ -106,6 +108,11 @@ export function createScan(deps: {
     }
     // 先于 revision 早退：指标会变而 DOM 不变；文案不变时 decorate 不写 DOM
     insight?.decorate(element, item);
+    // 过滤模块关闭：检测、黄框、手动拉黑入口全部不出现；已注入的由 content 在开关变化时清掉
+    if (deps.isFilterEnabled?.() === false) {
+      for (const action of article.querySelectorAll('[data-fs-action="block"]')) action.remove();
+      return;
+    }
     const bio = state.bioCache.get(handle);
     const facts = deps.authorFacts?.(handle);
     // X 的默认头像不在 pbs.twimg.com，接口数据里会被消毒掉，只能从页面上看

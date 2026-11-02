@@ -30,6 +30,8 @@ export function createStateSync(deps: {
   state: ContentState;
   controller: PageScanController;
   fold: BlockedFold;
+  /** 过滤模块总开关：关掉后即使「自动标黄」子开关还开着也不检测 */
+  isFilterEnabled?: () => boolean;
 }) {
   const { state, controller, fold } = deps;
 
@@ -104,7 +106,7 @@ export function createStateSync(deps: {
   async function refreshCommunity(): Promise<void> {
     state.community = await buildRuntimeCommunity();
     const settings = await getCommunitySettings();
-    state.detectionEnabled = settings.enabled;
+    state.detectionEnabled = settings.enabled && (deps.isFilterEnabled?.() ?? true);
     state.strength = settings.strength;
     state.autoContribute = settings.autoContribute;
     controller.reset();

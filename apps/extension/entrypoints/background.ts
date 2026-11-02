@@ -27,10 +27,28 @@ import { PANEL_VIEW_REQUEST_KEY } from '../src/lib/platform/panel-route';
 import { INSIGHT_READ_MESSAGE, INSIGHT_SEEN_MESSAGE } from '../src/lib/insight/read-tracker';
 import { getSelfHandle } from '../src/lib/community/following-allowlist';
 import { getCommunitySettings } from '../src/lib/community/community-store';
+import {
+  DEFAULT_MODULE_SETTINGS,
+  getModuleSettings,
+  subscribeModuleSettings,
+  type ModuleSettings,
+} from '../src/lib/settings/module-settings';
 import { handleAiCheckMessage } from '../src/lib/ai-check/client';
 
 export default defineBackground(() => {
   registerRuntimeDataWorker();
+
+  // 模块总开关：后台只做防御性兜底（正常路径上内容脚本已经不再发对应消息）。
+  // SW 随时可能被回收，这里在每次启动时读一次并订阅变化。
+  let modules: ModuleSettings = DEFAULT_MODULE_SETTINGS;
+  void getModuleSettings()
+    .then((value) => {
+      modules = value;
+    })
+    .catch(() => undefined);
+  subscribeModuleSettings((value) => {
+    modules = value;
+  });
 
   // 热帖：所有 X 标签页的观测在这里合并，存在 storage.session（浏览器关闭即清空、不上传）。
   // 有新数据时广播一次，开着的弹窗 / 侧边栏自己重新取，不需要用户手动刷新。
@@ -142,31 +160,40 @@ export default defineBackground(() => {
     if (sender.id !== browser.runtime.id) return undefined;
     const msg = message as { type?: string; observations?: unknown; sort?: unknown } | null;
     if (msg?.type === RULE_HIT_MESSAGE) {
+      if (!modules.filter) return Promise.resolve({ ok: true });
       return ruleHitUplink.observe((msg as { hits?: unknown }).hits).then(() => ({ ok: true }));
     }
     if (msg?.type === INSIGHT_OBSERVE_MESSAGE) {
-      // 先合并进共享 store，上报时才能按汇总后的流速挑出正在火的帖子
-      return sharedInsight.ingest(msg.observations).then((recorded) => {
-        void hotUplink.observe(msg.observations).catch(() => undefined);
-        // 用户在刷 X：顺手看看规则命中是不是到了该上报的时候
-        void ruleHitUplink.observe([]).catch(() => undefined);
-        // 先进本机帖子库（打开主页时在这里建档），再拉服务端的、报新的
-        void profileCatalog
-          .ingest(msg.observations)
-          .then(() => profileSync.observe(msg.observations))
-          .catch(() => undefined);
-        return { recorded };
+      // 热帖 / 主页都关掉时不再收观测；只剩其中一个时只跑对应的链路
+      if (!modules.hot && !modules.profile) return Promise.resolve({ recorded: 0 });
+      const recorded = modules.hot
+        ? sharedInsight.ingest(msg.observations)
+        : Promise.resolve(0);
+      return recorded.then((count) => {
+        if (modules.hot) {
+          void hotUplink.observe(msg.observations).catch(() => undefined);
+          // 用户在刷 X：顺手看看规则命中是不是到了该上报的时候
+          if (modules.filter) void ruleHitUplink.observe([]).catch(() => undefined);
+        }
+        if (modules.profile) {
+          // 先进本机帖子库（打开主页时在这里建档），再拉服务端的、报新的
+          void profileCatalog
+            .ingest(msg.observations)
+            .then(() => profileSync.observe(msg.observations))
+            .catch(() => undefined);
+        }
+        return { recorded: count };
       });
     }
     const handle = (message as { handle?: unknown }).handle;
     if (msg?.type === 'feedsieve:profile-get') {
-      if (typeof handle !== 'string') return null;
+      if (!modules.profile || typeof handle !== 'string') return null;
       // 侧边栏打开时也拉一次（10 分钟内拉过的不重复拉），拉到后经 PROFILE_UPDATED 刷新
       void profileSync.pull(handle.toLowerCase());
       return profileCatalog.get(handle.toLowerCase());
     }
     if (msg?.type === 'feedsieve:profile-summary') {
-      if (typeof handle !== 'string') return null;
+      if (!modules.profile || typeof handle !== 'string') return null;
       return profileCatalog
         .get(handle.toLowerCase())
         .then((entry) => (entry ? summarizeProfile(entry, Date.now()) : null));
@@ -178,6 +205,7 @@ export default defineBackground(() => {
       return profileCatalog.size();
     }
     if (msg?.type === 'feedsieve:open-profile-panel') {
+      if (!modules.profile) return { opened: false, via: null };
       // 主页资料卡下的那一行被点击：打开侧边栏并落到「主页」视图。
       // 先发起写入、不等它：await 之后再 open 会丢掉用户手势。侧边栏启动时读它，已开着的侧边栏监听变化
       void browser.storage.session
@@ -214,22 +242,27 @@ export default defineBackground(() => {
       );
     }
     if (msg?.type === 'feedsieve:hot-posts') {
+      if (!modules.hot) return Promise.resolve([]);
       return sharedInsight.hotList(isHotSort(msg.sort) ? msg.sort : 'heat');
     }
     if (msg?.type === 'feedsieve:hot-brief') {
+      if (!modules.hot) return Promise.resolve(null);
       return sharedInsight.brief();
     }
     if (msg?.type === INSIGHT_READ_MESSAGE) {
+      if (!modules.hot) return Promise.resolve({ added: 0 });
       return sharedInsight
         .markRead((message as { postIds?: unknown }).postIds)
         .then((added) => ({ added }));
     }
     if (msg?.type === INSIGHT_SEEN_MESSAGE) {
+      if (!modules.hot) return Promise.resolve({ recorded: 0 });
       return sharedInsight
         .markSeen((message as { posts?: unknown }).posts)
         .then((recorded) => ({ recorded }));
     }
     if (msg?.type === 'feedsieve:hot-read-ids') {
+      if (!modules.hot) return Promise.resolve([]);
       return sharedInsight.readIds();
     }
     // AI 味检测：判定 / 投票转发到福滤娃服务器（见 ai-check/client.ts）

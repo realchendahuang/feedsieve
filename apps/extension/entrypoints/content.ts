@@ -15,6 +15,7 @@ import {
 } from '../src/lib/queue/block-queue-store';
 import { getUiLanguage, subscribeUiLanguage } from '../src/lib/platform/i18n';
 import { createContentState, MARK_ATTRIBUTE } from '../src/lib/content/page-state';
+import { HIDDEN_TWEET_CELL_ATTRIBUTE } from '../src/lib/platform/remove-tweets';
 import { createBlockOne } from '../src/lib/content/block-core';
 import { createBlockedFold } from '../src/lib/content/blocked-fold';
 import { createManualActions } from '../src/lib/content/manual-actions';
@@ -85,7 +86,7 @@ export default defineContentScript({
     const send = (message: unknown): Promise<unknown> =>
       ctx.isValid ? browser.runtime.sendMessage(message) : Promise.resolve(undefined);
     const state = createContentState();
-    // 模块总开关：AI 标签 / 分享菜单（默认全开，设置页可关）
+    // 模块总开关（默认全开，设置页可关）：hot / profile / write / aiCheck / filter / shareMenu
     let modules: ModuleSettings = DEFAULT_MODULE_SETTINGS;
     // 扫描调度 / 节点索引 / revision 快照 / MutationObserver 全部收敛到 PageScanController；
     // 检测与标注通过 callbacks 注入。scanOne / flushPendingBadges 依赖 controller，
@@ -130,7 +131,7 @@ export default defineContentScript({
     let profileLineEnabled = false;
     const profileInsight = createProfileInsight({
       getLanguage: () => state.uiLanguage,
-      isEnabled: () => profileLineEnabled,
+      isEnabled: () => modules.profile && profileLineEnabled,
       request: (handle) => send({ type: 'feedsieve:profile-summary', handle }),
       openPanel: () => {
         void send({ type: 'feedsieve:open-profile-panel' }).catch(() => {});
@@ -140,10 +141,12 @@ export default defineContentScript({
     const insight = createInsightDecorations({
       store: insightStore,
       getLanguage: () => state.uiLanguage,
-      onArticle: readTracker.watch,
+      onArticle: (article) => {
+        if (modules.hot) readTracker.watch(article);
+      },
       profileBaseline: () => profileInsight.baseline(),
     });
-    profileInsight.start();
+    // 主页洞察由页面巡检驱动（tick），模块关闭时巡检不再调用它
     // AI 味检测：详情页回复上的「AI?」按钮 + 回复页的检测卡
     const aiCheck = createAiCheck({
       getLanguage: () => state.uiLanguage,
@@ -166,9 +169,19 @@ export default defineContentScript({
       getLanguage: () => state.uiLanguage,
     });
     articleHelper.start();
-    void getScheduleSettings().then((settings) => articleHelper.setEnabled(settings.articleHelper));
-    subscribeScheduleSettings((settings) => articleHelper.setEnabled(settings.articleHelper));
-    readTracker.visit(location.pathname);
+    let articleHelperEnabled = true;
+    const applyArticleHelper = (): void => {
+      articleHelper.setEnabled(modules.write && articleHelperEnabled);
+    };
+    void getScheduleSettings().then((settings) => {
+      articleHelperEnabled = settings.articleHelper;
+      applyArticleHelper();
+    });
+    subscribeScheduleSettings((settings) => {
+      articleHelperEnabled = settings.articleHelper;
+      applyArticleHelper();
+    });
+    if (modules.hot) readTracker.visit(location.pathname);
     // SPA 路由切换：上一条路由的黄框账本必须作废，否则「一键拉黑本页」会把
     // 首页刷过、已经不在屏幕上的账号一起提交。清空后重扫当前 DOM 重建。
     const resetPageLedger = (): void => {
@@ -185,13 +198,19 @@ export default defineContentScript({
     ticker.add(() => {
       if (location.pathname === lastPath) return;
       lastPath = location.pathname;
-      readTracker.visit(lastPath);
+      if (modules.hot) readTracker.visit(lastPath);
       resetPageLedger();
       controller.fullRescan();
     });
-    ticker.add(aiCheck.tick);
-    ticker.add(profileInsight.tick);
-    ticker.add(articleHelper.tick);
+    ticker.add(() => {
+      if (modules.aiCheck) aiCheck.tick();
+    });
+    ticker.add(() => {
+      if (modules.profile) profileInsight.tick();
+    });
+    ticker.add(() => {
+      if (modules.write) articleHelper.tick();
+    });
     ticker.start();
     // 规则命中：本页去重、攒 5 秒交给后台，后台按节奏匿名上报（见 rule-hit-uplink.ts）
     const ruleHits = createRuleHitQueue({
@@ -215,13 +234,14 @@ export default defineContentScript({
         };
       },
       onRuleHit: (hit) => ruleHits.push(hit),
+      isFilterEnabled: () => modules.filter,
     });
     const shareMenu = createShareMenu({
       getLanguage: () => state.uiLanguage,
       isEnabled: () => modules.shareMenu,
     });
     shareMenu.listen();
-    // 界面净化（设置 › 界面净化）：默认关闭，只改 X 自己的外观
+    // 界面净化（过滤 › 过滤设置 › 界面净化）：默认关闭，只改 X 自己的外观
     const cleanUi = createCleanUi();
     cleanUi.start();
     // 主页补全：用户点工具条图标后才慢慢往下滚，模拟人滑动的节奏
@@ -231,7 +251,12 @@ export default defineContentScript({
     scanWiring.flushBadges = badges.flushPendingBadges;
     // AI 标签 / 折叠 / 入口按整页顺序判断，等这一轮脏节点扫完再画一次
     scanWiring.scanDone = aiCheck.decorate;
-    const sync = createStateSync({ state, controller, fold });
+    const sync = createStateSync({
+      state,
+      controller,
+      fold,
+      isFilterEnabled: () => modules.filter,
+    });
     // Following 全量同步（分页循环 / draft 原子替换）收敛到 following-sync。
     const followingSync = createFollowingSync();
     // 热帖：本标签页的观测每 2 秒批量交给后台，和其他 X 标签页的合并（见 shared-insight.ts）
@@ -245,8 +270,12 @@ export default defineContentScript({
       resetPageDecorationsForHandles: sync.resetPageDecorationsForHandles,
       insightStore,
       insight,
-      onInsightObserved: insightUplink.push,
-      onTweets: (tweets) =>
+      // 关掉热帖和主页后不再把观测交给后台；AI 模块关闭后也不再喂检测材料
+      onInsightObserved: (observation) => {
+        if (modules.hot || modules.profile) insightUplink.push(observation);
+      },
+      onTweets: (tweets) => {
+        if (!modules.aiCheck) return;
         aiCheck.ingest(
           tweets.map((tweet) => ({
             postId: tweet.postId,
@@ -255,7 +284,8 @@ export default defineContentScript({
             inReplyToId: tweet.inReplyToId,
             inReplyToHandle: tweet.inReplyToHandle,
           })),
-        ),
+        );
+      },
     });
     // 持久队列生命周期（心跳 / resume 双跑防御 / 孤儿降级）收敛到 queue-supervisor：
     // 状态机纯函数可单测，这里只注入存储适配与真实执行体。supervisor 与 runner
@@ -333,9 +363,14 @@ export default defineContentScript({
       insight.refreshAll();
       profileInsight.ensureLine();
     });
-    // 「流速与量级」开关只管推文上的标签和倍数
+    // 「流速与量级」开关只管推文上的标签和倍数；热帖模块关闭时整体不生效
+    let badgesEnabled = true;
+    const applyInsightEnabled = (): void => {
+      insight.setEnabled(badgesEnabled && modules.hot);
+    };
     const setBadgesEnabled = (enabled: boolean): void => {
-      insight.setEnabled(enabled);
+      badgesEnabled = enabled;
+      applyInsightEnabled();
     };
     void getInsightBadgesEnabled().then(setBadgesEnabled);
     subscribeInsightBadges(setBadgesEnabled);
@@ -346,16 +381,55 @@ export default defineContentScript({
     };
     void getProfileLineEnabled().then(setProfileLineEnabled);
     subscribeProfileLineEnabled(setProfileLineEnabled);
-    // 模块总开关：各模块自己读这个闭包，切换后下一次扫描 / 点击就生效
-    void getModuleSettings().then((value) => {
-      modules = value;
-    });
-    subscribeModuleSettings((value) => {
-      modules = value;
-    });
+    // 模块总开关：关掉 = 停止采集 / 注入 / 监听，并把已注入的元素撤掉；数据保留。
+    // 各模块仍读 modules 闭包做兜底；这里负责开关切换时的启动 / 停止。
+    function applyModules(next: ModuleSettings): void {
+      const previous = modules;
+      modules = next;
+      if (previous.hot !== next.hot) {
+        applyInsightEnabled();
+        if (next.hot) controller.fullRescan();
+        else insight.clearAll();
+      }
+      if (previous.profile !== next.profile) {
+        if (next.profile) profileInsight.tick();
+        else profileInsight.stop();
+      }
+      if (previous.write !== next.write) {
+        if (next.write) {
+          composeSchedule.start();
+          articleHelper.start();
+          applyArticleHelper();
+        } else {
+          composeSchedule.stop();
+          articleHelper.stop();
+        }
+      }
+      if (previous.filter !== next.filter) {
+        if (next.filter) {
+          cleanUi.start();
+          void sync.refreshCommunity().catch(() => undefined);
+        } else {
+          state.detectionEnabled = false;
+          sync.resetPageDecorations();
+          for (const cell of document.querySelectorAll(`[${HIDDEN_TWEET_CELL_ATTRIBUTE}]`)) {
+            cell.removeAttribute(HIDDEN_TWEET_CELL_ATTRIBUTE);
+          }
+          cleanUi.stop();
+        }
+      }
+      if (previous.aiCheck !== next.aiCheck) {
+        // aiCheck.tick 内部按 isEnabled 决定补画还是清掉页面上的 AI 标签
+        aiCheck.tick();
+      }
+    }
+    void getModuleSettings()
+      .then(applyModules)
+      .catch(() => applyModules(DEFAULT_MODULE_SETTINGS));
+    subscribeModuleSettings(applyModules);
     // 只有一次观测的流速 = 浏览量 / 帖子年龄，会随时间下降；前台时每分钟重算一次
     ctx.setInterval(() => {
-      if (document.visibilityState === 'visible') insight.refreshAll();
+      if (modules.hot && document.visibilityState === 'visible') insight.refreshAll();
     }, 60_000);
     subscribeKeywordRules((settings) => {
       state.keywordHeuristics = createKeywordHeuristics(settings, state.keywordCatalog);
@@ -395,6 +469,8 @@ export default defineContentScript({
       startPersistentQueue: queueRunner.startPersistentQueue,
       runManualSpamBlock: manual.runManualSpamBlock,
       profileFill,
+      isFilterEnabled: () => modules.filter,
+      isProfileEnabled: () => modules.profile,
     });
     // 快照/设置变化（同步、换强度档）实时生效到下一次扫描；只订阅一次
     subscribeCommunity(() => {

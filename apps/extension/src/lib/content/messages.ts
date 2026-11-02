@@ -27,6 +27,10 @@ export function registerContentMessageHandlers(deps: {
   startPersistentQueue: BlockQueueRunner['startPersistentQueue'];
   runManualSpamBlock: ManualActions['runManualSpamBlock'];
   profileFill: ProfileFill;
+  /** 过滤模块关闭后，拉黑 / 名单 / 关注同步入口直接拒绝 */
+  isFilterEnabled?: () => boolean;
+  /** 主页模块关闭后，补全入口直接拒绝 */
+  isProfileEnabled?: () => boolean;
 }): void {
   const {
     state,
@@ -36,6 +40,8 @@ export function registerContentMessageHandlers(deps: {
     runManualSpamBlock,
     profileFill,
   } = deps;
+  const filterOn = (): boolean => deps.isFilterEnabled?.() ?? true;
+  const profileOn = (): boolean => deps.isProfileEnabled?.() ?? true;
 
   /**
    * popup「一键拉黑 / 一键撤销」入口：这里执行需要页面会话的原生操作，
@@ -84,6 +90,7 @@ export function registerContentMessageHandlers(deps: {
       });
     }
     if (type === 'feedsieve:manual-spam-block' && msg?.handle) {
+      if (!filterOn()) return Promise.resolve({ ok: false, code: 'module-disabled' });
       // reason=null 是用户明确选择「仅拉黑」；缺字段/非法值不能悄悄当成 other 投票。
       const rawReason = msg.reason;
       const reason =
@@ -95,6 +102,7 @@ export function registerContentMessageHandlers(deps: {
     }
     if (type === 'feedsieve:profile-fill' && typeof msg?.handle === 'string') {
       // 用户点「补全」：向下滚动让 X 自己加载更多帖子（不额外请求 X）
+      if (!profileOn()) return Promise.resolve({ ok: false, code: 'module-disabled' });
       return profileFill.fill(msg.handle.toLowerCase());
     }
     if (type === 'feedsieve:profile-fill-stop') {
@@ -102,9 +110,13 @@ export function registerContentMessageHandlers(deps: {
       return Promise.resolve({ ok: true });
     }
     if (type === 'feedsieve:following-sync-start') {
+      if (!filterOn()) return Promise.resolve({ status: 'error', error: 'module-disabled' });
       return followingSync.start();
     }
     if (type === 'feedsieve:community-block-start' && Array.isArray(msg?.items)) {
+      if (!filterOn()) {
+        return { status: 'error', error: 'module-disabled', id: '', count: 0 };
+      }
       // 消息通道可跨上下文伪造/携带畸形条目（review F1/F6）：逐条严格校验后才入队
       const items = (msg.items as unknown[])
         .map(sanitizeQueueItem)
@@ -142,6 +154,7 @@ export function registerContentMessageHandlers(deps: {
     if (type === 'feedsieve:page-marked-list') {
       // 必须 Promise：Chrome 原生 onMessage 只认 true / Promise 作为异步响应，
       // 同步返回数组会被忽略，popup 收到 undefined（v0.7.0 真机回归捕获）
+      if (!filterOn()) return Promise.resolve([]);
       return Promise.resolve(
         [...state.pageMarked.values()].map((m) => ({
           handle: m.handle,
