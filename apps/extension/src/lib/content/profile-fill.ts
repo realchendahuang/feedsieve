@@ -92,7 +92,7 @@ export function createProfileFill(
   async function fill(rawHandle: string): Promise<ProfileFillResult> {
     const handle = rawHandle.toLowerCase();
     if (running) return { ok: false, added: 0, stopped: 'user' };
-    if (!isProfilePath(location.pathname, handle)) {
+    if (!handle || !isProfilePath(location.pathname, handle)) {
       return { ok: false, added: 0, stopped: 'not-profile' };
     }
     const last = lastRunAt.get(handle);
@@ -112,6 +112,7 @@ export function createProfileFill(
     const beforeCount = seen.size;
     let stagnant = 0;
     let stopped: ProfileFillStop = 'limit';
+    let navigatedAway = false;
     try {
       // 正常会由 stagnant 结束；这里的时长只防页面永远加载不完
       while (now() - startedAt < PROFILE_FILL_MAX_MS) {
@@ -125,6 +126,12 @@ export function createProfileFill(
         startedAt += now() - pausedAt;
         if (stopRequested) {
           stopped = 'user';
+          break;
+        }
+        // X 是单页应用：中途点去别的页面时，不能接着把新页面滚到底
+        if (!isProfilePath(location.pathname, handle)) {
+          navigatedAway = true;
+          stopped = 'not-profile';
           break;
         }
         // 直接到底，等 X 加载完这一批再继续
@@ -163,7 +170,11 @@ export function createProfileFill(
     } finally {
       running = false;
     }
-    return { ok: true, added: Math.max(0, seen.size - beforeCount), stopped };
+    return {
+      ok: !navigatedAway,
+      added: Math.max(0, seen.size - beforeCount),
+      stopped,
+    };
   }
 
   return {

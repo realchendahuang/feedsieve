@@ -95,6 +95,29 @@ describe('profile-fill', () => {
     expect(time - 5_000_000).toBeGreaterThanOrEqual(PROFILE_FILL_MAX_MS);
   });
 
+  it('中途离开这个博主的主页就停手', async () => {
+    history.replaceState(null, '', '/alice');
+    addArticles(1);
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    let callsAtNav = -1;
+    let round = 0;
+    const fill = createProfileFill({
+      sleep: async () => {
+        round += 1;
+        if (round === 2) {
+          callsAtNav = scrollTo.mock.calls.length;
+          history.replaceState(null, '', '/bob');
+        }
+      },
+      now: () => 0,
+    });
+    const result = await fill.fill('alice');
+    expect(result.ok).toBe(false);
+    expect(result.stopped).toBe('not-profile');
+    // 切到 /bob 之后不再滚动新页面
+    expect(scrollTo.mock.calls.length).toBe(callsAtNav);
+  });
+
   it('同一个博主 3 分钟内只补全一次', async () => {
     history.replaceState(null, '', '/alice');
     addArticles(1);

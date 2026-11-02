@@ -437,7 +437,9 @@ export default function ProfileView({ language, notify, sendToXPage }: ProfileVi
   const [googleRange, setGoogleRange] = useState<GoogleRange>('any');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [visited, setVisited] = useState<Set<string>>(() => new Set());
-  const [filling, setFilling] = useState(false);
+  const [fillingHandle, setFillingHandle] = useState<string | null>(null);
+  /** 只有还停在这个博主的主页时才显示「停止」：切到别的标签页就发不到原来那轮了 */
+  const filling = fillingHandle !== null && fillingHandle === handle;
   const sentinelRef = useRef<HTMLLIElement | null>(null);
 
   useEffect(() => {
@@ -588,7 +590,7 @@ export default function ProfileView({ language, notify, sendToXPage }: ProfileVi
       await sendToXPage({ type: 'feedsieve:profile-fill-stop' }).catch(() => undefined);
       return;
     }
-    setFilling(true);
+    setFillingHandle(handle);
     notify(t.profileFillRunning);
     const beforeCount = entry ? Object.keys(entry.posts).length : 0;
     try {
@@ -609,6 +611,7 @@ export default function ProfileView({ language, notify, sendToXPage }: ProfileVi
       if (result?.ok) {
         if (added > 0) notify(t.profileFillDone(added));
         else if (result.stopped === 'stagnant') notify(t.profileFillEnd);
+        else if (result.stopped === 'user') notify(t.profileFillStopped);
         else notify(t.profileFillNone);
       } else if (result?.stopped === 'cooldown') {
         const minutes = Math.max(1, Math.ceil((result.retryAfterMs ?? 0) / 60_000));
@@ -624,7 +627,7 @@ export default function ProfileView({ language, notify, sendToXPage }: ProfileVi
     } catch {
       notify(t.profileFillFailed);
     } finally {
-      setFilling(false);
+      setFillingHandle((current) => (current === handle ? null : current));
     }
   }
 

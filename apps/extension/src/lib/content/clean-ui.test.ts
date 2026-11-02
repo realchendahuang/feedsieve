@@ -1,6 +1,8 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_UI_SETTINGS } from '../settings/ui-settings';
 import {
+  createCleanUi,
   isFollowingTab,
   isForYouTab,
   isThinPremiumReply,
@@ -12,6 +14,8 @@ import {
 
 afterEach(() => {
   document.body.innerHTML = '';
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
 });
 
 function tab(text: string): HTMLElement {
@@ -88,5 +92,44 @@ describe('clean-ui 选择器', () => {
     expect(isThinPremiumReply(unverified, 1)).toBe(false);
     const border = 'x'.repeat(PREMIUM_REPLY_MAX_CHARS);
     expect(isThinPremiumReply(article({ text: border, verified: true }), 1)).toBe(false);
+  });
+
+  it('stop 之后清干净，迟到的设置不会再改页面', async () => {
+    vi.useFakeTimers();
+    const listeners: Array<(changes: Record<string, unknown>, area: string) => void> = [];
+    vi.stubGlobal('browser', {
+      storage: {
+        local: {
+          get: vi.fn(async () => ({
+            uiSettingsV1: { ...DEFAULT_UI_SETTINGS, cleanUi: true },
+          })),
+          set: vi.fn(async () => undefined),
+        },
+        onChanged: {
+          addListener: (fn: (typeof listeners)[number]) => listeners.push(fn),
+          removeListener: vi.fn(),
+        },
+      },
+    });
+    document.body.innerHTML = '<a href="/i/grok">Grok</a>';
+    const clean = createCleanUi();
+    clean.start();
+    // 让设置读完、首屏补扫跑完
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(document.getElementById('feedsieve-clean-ui-styles')).toBeTruthy();
+    expect(document.querySelector('a')?.getAttribute('data-fs-clean')).toBe('grok');
+
+    clean.stop();
+    expect(document.getElementById('feedsieve-clean-ui-styles')).toBeNull();
+    expect(document.querySelector('a')?.hasAttribute('data-fs-clean')).toBe(false);
+    expect(document.documentElement.hasAttribute('data-fs-clean-grok')).toBe(false);
+
+    // stop 之后才送达的 storage 变化（比如读设置有延迟）不能再把页面改回去
+    for (const listener of listeners) {
+      listener({ uiSettingsV1: { newValue: { ...DEFAULT_UI_SETTINGS, cleanUi: true } } }, 'local');
+    }
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(document.getElementById('feedsieve-clean-ui-styles')).toBeNull();
+    expect(document.querySelector('a')?.hasAttribute('data-fs-clean')).toBe(false);
   });
 });

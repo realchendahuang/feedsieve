@@ -190,6 +190,16 @@ describe('ProfileView', () => {
     expect(notify).toHaveBeenCalledWith('刚补过，2 分钟后再试');
   });
 
+  it('does not claim there was nothing to load when stopped by hand', async () => {
+    const { el, notify, sendToXPage } = await render();
+    sendToXPage.mockResolvedValueOnce({ ok: true, added: 0, stopped: 'user' });
+    await act(async () => {
+      el.querySelector<HTMLButtonElement>('button[aria-label="补全这个博主"]')!.click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(notify).toHaveBeenCalledWith('已停止补全');
+  });
+
   it('shows the account, the baseline and outliers first', async () => {
     const { el } = await render();
     expect(el.querySelector('.profile-card .post-name')?.textContent).toBe('Alice');

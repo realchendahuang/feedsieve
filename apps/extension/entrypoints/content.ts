@@ -288,6 +288,8 @@ export default defineContentScript({
       composeSchedule.stop();
       articleHelper.stop();
       cleanUi.stop();
+      // 扩展被重载/停用后别再继续滚页面
+      profileFill.stop();
       insight.dispose();
       clearPageDecorations();
     });

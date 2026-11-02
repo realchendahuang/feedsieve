@@ -91,8 +91,10 @@ export function createCleanUi() {
   let settings: UiSettings | null = null;
   let observer: MutationObserver | null = null;
   let timer: number | undefined;
+  let initialTimer: number | undefined;
   let switchedToFollowing = false;
   let unsubscribe: (() => void) | null = null;
+  let active = false;
 
   function ensureStyle(): void {
     if (document.getElementById(STYLE_ID)) return;
@@ -182,6 +184,8 @@ export function createCleanUi() {
   }
 
   function apply(next: UiSettings): void {
+    // stop 之后到达的异步结果不能再改页面
+    if (!active) return;
     settings = next;
     applyFlags(next);
     if (next.cleanUi) ensureStyle();
@@ -189,20 +193,27 @@ export function createCleanUi() {
   }
 
   function start(): void {
+    active = true;
     observer = new MutationObserver(schedule);
     observer.observe(document.documentElement, { childList: true, subtree: true });
     void getUiSettings().then(apply);
     unsubscribe = subscribeUiSettings(apply);
     // X 首屏渲染比 content script 晚，补一次
-    window.setTimeout(schedule, 1500);
+    initialTimer = window.setTimeout(schedule, 1500);
   }
 
   function stop(): void {
+    active = false;
     observer?.disconnect();
     observer = null;
     unsubscribe?.();
     unsubscribe = null;
     window.clearTimeout(timer);
+    window.clearTimeout(initialTimer);
+    timer = undefined;
+    initialTimer = undefined;
+    // 置空后，万一还有排队的 scan 也只会清标记，不会重新注入
+    settings = null;
     document.getElementById(STYLE_ID)?.remove();
     for (const flag of [
       'data-fs-clean-font',
