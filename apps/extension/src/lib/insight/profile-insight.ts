@@ -5,7 +5,8 @@
  * - 给推文装饰提供这个博主的基线，主人自己的帖子显示倍数（decorations.ts）。
  *
  * 概况来自后台的本地帖子库（profile-catalog.ts），只传基线和几个数，不传整份帖子。
- * X 会重渲染资料卡，所以每秒检查一次这一行还在不在；内容不变时不写 DOM。全部文本走 textContent。
+ * X 会重渲染资料卡，所以由页面统一巡检（page-ticker）每秒调用 tick 检查这一行还在不在；
+ * 内容不变时不写 DOM。全部文本走 textContent。
  */
 import { TIER_NAMES, type AccountTier, type ProfileBaseline } from '@feedsieve/metrics';
 import { profileFromPath, profileSelectors } from '@feedsieve/x-adapter';
@@ -24,7 +25,6 @@ const REFRESH_MS = 15_000;
  */
 const RETRY_MS = 1_000;
 const MAX_RETRIES = 8;
-const TICK_MS = 1_000;
 
 const LINE_COPY = {
   zh: {
@@ -78,7 +78,6 @@ export function createProfileInsight(deps: {
   let handle: string | null = null;
   let summary: ProfileSummary | null = null;
   let fetchTimer: number | undefined;
-  let tickTimer: number | undefined;
   /** 当前主页连续取不到概况的次数（换主页时清零）。 */
   let misses = 0;
 
@@ -163,13 +162,10 @@ export function createProfileInsight(deps: {
 
   function start(): void {
     tick();
-    tickTimer ??= window.setInterval(tick, TICK_MS);
   }
 
   function stop(): void {
-    window.clearInterval(tickTimer);
     window.clearTimeout(fetchTimer);
-    tickTimer = undefined;
     removeLine();
   }
 

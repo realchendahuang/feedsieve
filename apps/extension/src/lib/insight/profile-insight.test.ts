@@ -117,11 +117,12 @@ describe('profile line', () => {
     await vi.advanceTimersByTimeAsync(1_600);
     profileHeader();
     expect(document.querySelector(`.${PROFILE_LINE_CLASS}`)).toBeNull();
-    await vi.advanceTimersByTimeAsync(1_000);
+    // 页面巡检（page-ticker）每秒调一次 tick：X 重渲染资料卡后这一行要补回来
+    insight.tick();
     expect(document.querySelector(`.${PROFILE_LINE_CLASS}`)).not.toBeNull();
     // 点进帖子详情：不是主页了
     go('/alice/status/123');
-    await vi.advanceTimersByTimeAsync(1_000);
+    insight.tick();
     expect(document.querySelector(`.${PROFILE_LINE_CLASS}`)).toBeNull();
     expect(insight.baseline()).toBeNull();
     insight.stop();

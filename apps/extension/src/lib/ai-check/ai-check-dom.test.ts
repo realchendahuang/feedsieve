@@ -33,7 +33,6 @@ function setup(
     getLanguage: () => 'zh',
     getSelfHandle: () => 'me',
     send,
-    setInterval: () => 0,
   });
   return { ai, send, tick: () => ai.start() };
 }
@@ -260,7 +259,6 @@ it('已关注的号：照样有检测图标，但不自动标记', async () => {
     getSelfHandle: () => 'me',
     isProtected: (h) => h === 'friend',
     send: vi.fn(async () => null),
-    setInterval: () => 0,
   });
   ai.start();
   await new Promise((r) => setTimeout(r, 0));
@@ -303,7 +301,6 @@ it('打开「标记已关注账号」后，已关注账号也打标；个人白�
     isFollowing: (h) => h === 'friend',
     isAllowlisted: (h) => h === 'allow',
     send: vi.fn(async () => null),
-    setInterval: () => 0,
   });
   ai.start();
   await new Promise((r) => setTimeout(r, 0));
@@ -336,7 +333,6 @@ it('模块总开关关掉后撤掉标签和检测入口，重新打开就恢复'
     getSelfHandle: () => 'me',
     isEnabled: () => enabled,
     send: vi.fn(async () => null),
-    setInterval: () => 0,
   });
   ai.start();
   await new Promise((r) => setTimeout(r, 0));
@@ -377,7 +373,6 @@ it('模块关掉时，从弹窗带 fs_ai 发起的检测仍会打开报告', asy
     getSelfHandle: () => 'me',
     isEnabled: () => false,
     send: vi.fn(async () => null),
-    setInterval: () => 0,
   });
   ai.start();
   await new Promise((r) => setTimeout(r, 0));

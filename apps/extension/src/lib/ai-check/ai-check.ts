@@ -326,7 +326,6 @@ export function createAiCheck(deps: {
   /** 模块总开关：关掉后页面上的标签、折叠、检测按钮和主页 Tab 全部撤掉 */
   isEnabled?: () => boolean;
   send: (message: unknown) => Promise<unknown>;
-  setInterval: (fn: () => void, ms: number) => unknown;
 }) {
   let running: { handle: string; token: number } | null = null;
   let panelHandle: string | null = null;
@@ -1394,7 +1393,8 @@ export function createAiCheck(deps: {
     ingest,
     /** 页面扫完一轮：按整页顺序重画标签 / 折叠 / 入口（见 decorate 注释）。 */
     decorate,
-    /** 轻量的每秒巡检：页面地址变化、面板收起、带 fs_ai 的自动开测、模块开关。 */
+    /** 轻量的每秒巡检：页面地址变化、面板收起、带 fs_ai 的自动开测、模块开关。
+     *  由页面统一巡检驱动（page-ticker），模块自己不再起定时器。 */
     tick,
     start(): void {
       // 标记 / 折叠条的样式也要在开面板之前就位：不然名单里的号只显示浏览器默认按钮
@@ -1411,7 +1411,6 @@ export function createAiCheck(deps: {
           decorate();
         })
         .catch(() => undefined);
-      deps.setInterval(tick, 1_000);
       tick();
     },
     stop(): void {

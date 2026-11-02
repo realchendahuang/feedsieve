@@ -37,6 +37,7 @@ import { createInsightDecorations } from '../src/lib/insight/decorations';
 import { createProfileInsight } from '../src/lib/insight/profile-insight';
 import { createShareMenu } from '../src/lib/insight/share-menu';
 import { createCleanUi } from '../src/lib/content/clean-ui';
+import { createPageTicker } from '../src/lib/content/page-ticker';
 import { createProfileFill } from '../src/lib/content/profile-fill';
 import { createAiCheck } from '../src/lib/ai-check/ai-check';
 import { createComposeSchedule } from '../src/lib/compose/compose-schedule';
@@ -149,7 +150,6 @@ export default defineContentScript({
       isFollowing: (handle) => state.followingCache.has(handle),
       isEnabled: () => modules.aiCheck,
       send,
-      setInterval: (fn, ms) => ctx.setInterval(fn, ms),
     });
     aiCheck.start();
     // 发帖：发帖框「下一个空档」、安排表快捷时间、预排期列表顺带记下（只在本机）
@@ -161,7 +161,6 @@ export default defineContentScript({
     // 文章编辑器：粘贴 Markdown 自动排版、大纲与字数
     const articleHelper = createArticleHelper({
       getLanguage: () => state.uiLanguage,
-      setInterval: (fn, ms) => ctx.setInterval(fn, ms),
     });
     articleHelper.start();
     void getScheduleSettings().then((settings) => articleHelper.setEnabled(settings.articleHelper));
@@ -175,15 +174,22 @@ export default defineContentScript({
       state.notifyPageMarkedChanged();
       controller.reset();
     };
-    // X 是单页应用：地址变化没有事件，借扫描节奏之外的轻量轮询跟踪详情页
+    // 全页统一巡检：地址轮询、AI 味面板巡检、主页洞察那一行、文章编辑器挂载检测
+    // 共用一只每秒定时器；页面隐藏时整个停掉，切回来立即补一次（page-ticker.ts）。
+    const ticker = createPageTicker();
+    // X 是单页应用：地址变化没有事件，借巡检跟踪详情页
     let lastPath = location.pathname;
-    ctx.setInterval(() => {
+    ticker.add(() => {
       if (location.pathname === lastPath) return;
       lastPath = location.pathname;
       readTracker.visit(lastPath);
       resetPageLedger();
       controller.fullRescan();
-    }, 1_000);
+    });
+    ticker.add(aiCheck.tick);
+    ticker.add(profileInsight.tick);
+    ticker.add(articleHelper.tick);
+    ticker.start();
     // 规则命中：本页去重、攒 5 秒交给后台，后台按节奏匿名上报（见 rule-hit-uplink.ts）
     const ruleHits = createRuleHitQueue({
       send: (hits) => send({ type: RULE_HIT_MESSAGE, hits }),
@@ -288,6 +294,7 @@ export default defineContentScript({
       insight.clearAll();
     };
     ctx.onInvalidated(() => {
+      ticker.stop();
       controller.dispose();
       profileInsight.stop();
       aiCheck.stop();

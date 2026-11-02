@@ -143,7 +143,6 @@ const ICONS = {
 
 export interface ArticleHelperDeps {
   getLanguage: () => UiLanguage;
-  setInterval: (fn: () => void, ms: number) => unknown;
 }
 
 export function createArticleHelper(deps: ArticleHelperDeps) {
@@ -401,7 +400,7 @@ export function createArticleHelper(deps: ArticleHelperDeps) {
     panel.replaceChildren(head, list);
   }
 
-  /** 每秒看一次：进出文章页、编辑器换了节点时重新挂监听。 */
+  /** 每秒看一次：进出文章页、编辑器换了节点时重新挂监听（由页面巡检驱动）。 */
   function poll(): void {
     const editorEl = enabled ? editor() : null;
     if (editorEl !== observed) {
@@ -428,7 +427,6 @@ export function createArticleHelper(deps: ArticleHelperDeps) {
     document.addEventListener('keydown', onKeydown, true);
     // 标题框不在编辑器里，改标题也要备份
     document.addEventListener('input', onTitleInput, true);
-    deps.setInterval(poll, 1_000);
     poll();
   }
 
@@ -456,5 +454,5 @@ export function createArticleHelper(deps: ArticleHelperDeps) {
     for (const id of [PANEL_ID, STYLE_ID, TOAST_ID]) document.getElementById(id)?.remove();
   }
 
-  return { start, stop, setEnabled, render };
+  return { start, stop, setEnabled, render, tick: poll };
 }
