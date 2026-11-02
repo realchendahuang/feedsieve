@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   parseSnapshotBody,
   type CommunityEntry,
@@ -28,12 +28,19 @@ import {
   UI_COPY,
   type UiLanguage,
 } from '../../src/lib/platform/i18n';
-import CleanView from './views/CleanView';
-import SettingsView, { type SettingsPage } from './views/SettingsView';
 import HotView from './views/HotView';
-import ProfileView from './views/ProfileView';
-import { AiView } from './views/AiView';
-import { WriteView } from './views/WriteView';
+import type { SettingsPage } from './views/SettingsView';
+// 其余视图按需加载：打开弹窗只要热帖这一屏，没理由先把五个界面全部解析一遍。
+// 首屏多出的那次 chunk 读取在扩展本地几乎察觉不到，省下的是每次打开都要付的解析时间。
+const ProfileView = lazy(() => import('./views/ProfileView'));
+const AiView = lazy(() =>
+  import('./views/AiView').then((module) => ({ default: module.AiView })),
+);
+const WriteView = lazy(() =>
+  import('./views/WriteView').then((module) => ({ default: module.WriteView })),
+);
+const CleanView = lazy(() => import('./views/CleanView'));
+const SettingsView = lazy(() => import('./views/SettingsView'));
 import { isProfileUrl } from './views/profile-model';
 import { PANEL_VIEW_REQUEST_KEY, readPanelViewRequest } from '../../src/lib/platform/panel-route';
 import { AppIcon, asPageMarkedList, getChromeSidePanel, type PageMarkedItem } from './views/shared';
@@ -444,61 +451,63 @@ export default function App() {
       </header>
 
       <div className="popup-content">
-        {viewReady && view === 'hot' ? (
-          <HotView language={language} sendToXPage={sendToXPage} />
-        ) : null}
-        {view === 'profile' ? (
-          <ProfileView language={language} notify={notify} sendToXPage={sendToXPage} />
-        ) : null}
-        {view === 'write' ? (
-          <WriteView
-            language={language}
-            notify={notify}
-            sendToXPage={sendToXPage}
-            onOpenCadence={() => {
-              setView('settings');
-              setSettingsPage('compose');
-            }}
-          />
-        ) : null}
-        {view === 'ai' ? (
-          <AiView language={language} notify={notify} sendToXPage={sendToXPage} />
-        ) : null}
-        {view === 'clean' ? (
-          <CleanView
-            language={language}
-            notify={notify}
-            sendToXPage={sendToXPage}
-            pageMarked={pageMarked}
-            refreshPageMarked={refreshPageMarked}
-            pauseDestructive={pauseDestructive}
-            killSwitchActive={killSwitchActive}
-            killSwitchReason={killSwitch?.reason}
-            communityEligible={communityEligible}
-            communityLoading={communityEntriesLoading}
-          />
-        ) : null}
-        {view === 'settings' ? (
-          <SettingsView
-            language={language}
-            notify={notify}
-            page={settingsPage}
-            onNavigate={setSettingsPage}
-            community={community}
-            onUpdateCommunity={updateCommunity}
-            onLanguageChange={setLanguage}
-            onSyncCommunity={refreshCommunitySnapshot}
-            sendToXPage={sendToXPage}
-            refreshPageMarked={refreshPageMarked}
-            pauseDestructive={pauseDestructive}
-            counts={{
-              blocked: blocked?.length ?? null,
-              allowlist: allowlist?.length ?? null,
-              following: following?.length ?? null,
-            }}
-            recommendList={recommendList}
-          />
-        ) : null}
+        <Suspense fallback={null}>
+          {viewReady && view === 'hot' ? (
+            <HotView language={language} sendToXPage={sendToXPage} />
+          ) : null}
+          {view === 'profile' ? (
+            <ProfileView language={language} notify={notify} sendToXPage={sendToXPage} />
+          ) : null}
+          {view === 'write' ? (
+            <WriteView
+              language={language}
+              notify={notify}
+              sendToXPage={sendToXPage}
+              onOpenCadence={() => {
+                setView('settings');
+                setSettingsPage('compose');
+              }}
+            />
+          ) : null}
+          {view === 'ai' ? (
+            <AiView language={language} notify={notify} sendToXPage={sendToXPage} />
+          ) : null}
+          {view === 'clean' ? (
+            <CleanView
+              language={language}
+              notify={notify}
+              sendToXPage={sendToXPage}
+              pageMarked={pageMarked}
+              refreshPageMarked={refreshPageMarked}
+              pauseDestructive={pauseDestructive}
+              killSwitchActive={killSwitchActive}
+              killSwitchReason={killSwitch?.reason}
+              communityEligible={communityEligible}
+              communityLoading={communityEntriesLoading}
+            />
+          ) : null}
+          {view === 'settings' ? (
+            <SettingsView
+              language={language}
+              notify={notify}
+              page={settingsPage}
+              onNavigate={setSettingsPage}
+              community={community}
+              onUpdateCommunity={updateCommunity}
+              onLanguageChange={setLanguage}
+              onSyncCommunity={refreshCommunitySnapshot}
+              sendToXPage={sendToXPage}
+              refreshPageMarked={refreshPageMarked}
+              pauseDestructive={pauseDestructive}
+              counts={{
+                blocked: blocked?.length ?? null,
+                allowlist: allowlist?.length ?? null,
+                following: following?.length ?? null,
+              }}
+              recommendList={recommendList}
+            />
+          ) : null}
+        </Suspense>
       </div>
 
       {notice ? (

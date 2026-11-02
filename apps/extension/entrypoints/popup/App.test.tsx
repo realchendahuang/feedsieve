@@ -66,6 +66,26 @@ async function waitForCondition(predicate: () => boolean, timeoutMs = 1200): Pro
   }
 }
 
+/**
+ * 视图是 React.lazy 的：点完栏目要等一次异步导入才挂上。
+ * 真实定时器等宏任务；测试里开了假定时器时手动推进，不然导入永远排不上。
+ */
+async function waitForLazy(predicate: () => boolean, timeoutMs = 2_000): Promise<void> {
+  const startedAt = Date.now();
+  while (!predicate()) {
+    if (Date.now() - startedAt > timeoutMs) throw new Error('lazy view did not render');
+    if (vi.isFakeTimers()) {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(16);
+      });
+    } else {
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 16));
+      });
+    }
+  }
+}
+
 function buttonWithText(root: HTMLElement, label: string): HTMLButtonElement {
   const button = [...root.querySelectorAll('button')].find((candidate) => {
     const clone = candidate.cloneNode(true) as HTMLElement;
@@ -88,9 +108,13 @@ function navRow(root: HTMLElement, label: string): HTMLButtonElement {
 
 /** 设置二级页：过滤下的关键词 / 名单先从首页进「过滤」，其余直接进对应模块。 */
 async function openSettingsPage(root: HTMLElement, label: string): Promise<void> {
+  // 首帧提交也走调度：刚 render 完就点会找不到栏目按钮
+  await waitForLazy(() => root.querySelector('.section-nav button') !== null, 400);
   await act(async () => buttonWithText(root, '设置').click());
+  await waitForLazy(() => root.querySelector('.nav-row') !== null);
   if (['关键词', '拉黑记录', '白名单', '关注保护'].includes(label)) {
     await act(async () => navRow(root, '过滤').click());
+    await waitForLazy(() => navRow(root, '关键词') !== null);
   }
   await act(async () => navRow(root, label).click());
 }
@@ -183,16 +207,14 @@ async function chooseFile(input: HTMLInputElement, file: File): Promise<void> {
 
 describe('popup App 渲染冒烟', () => {
   it('automatically clears transient notices', async () => {
+    const rootEl = renderApp();
+    // 先按真实定时器把按需加载的视图挂上，再切到假定时器测「提示自动消失」
+    await openSettingsPage(rootEl, '关键词');
+    const syncButton = rootEl.querySelector<HTMLButtonElement>('button[aria-label="同步词库"]');
+    if (!syncButton) throw new Error('keyword-pack sync button not found');
+
     vi.useFakeTimers();
     try {
-      const rootEl = renderApp();
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(150);
-      });
-
-      await openSettingsPage(rootEl, '关键词');
-      const syncButton = rootEl.querySelector<HTMLButtonElement>('button[aria-label="同步词库"]');
-      if (!syncButton) throw new Error('keyword-pack sync button not found');
       await act(async () => {
         syncButton.click();
         await Promise.resolve();
@@ -232,9 +254,8 @@ describe('popup App 渲染冒烟', () => {
 
   it('renders header and empty page-marked hint without throwing', async () => {
     const rootEl = renderApp();
-    // 等 storage/tabs 异步 resolve 完成（加载态「…」过渡到空态提示）；
-    // 全量 verify 高并发时放宽到 250ms
-    await new Promise((r) => setTimeout(r, 250));
+    // 等 storage/tabs 异步 resolve 完成（加载态「…」过渡到空态提示）
+    await waitForLazy(() => rootEl.textContent?.includes('本页没有标黄的账号') ?? false);
 
     // 顶部只有栏目，不放商标和名字
     expect(rootEl.querySelector('.masthead')?.textContent).not.toContain('福滤娃');
