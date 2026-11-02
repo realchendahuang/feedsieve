@@ -159,6 +159,10 @@ const MAX_MUTED = 500;
 const LAST_LIST_KEY = 'hotLastListV1';
 const MAX_LAST_LIST = 600;
 const LAST_LIST_WRITE_MS = 500;
+/** 各「范围 + 排序」停在哪（storage.session）：切到别的栏目再回来也回到原处。 */
+const POSITIONS_KEY = 'hotPositionsV1';
+const POSITIONS_WRITE_MS = 500;
+const MAX_SAVED_COUNT = 10_000;
 /** 滚动停下这么久之后，才算「没在看」，新帖子才会直接插进来。 */
 const SCROLL_SETTLE_MS = 1_000;
 const TOAST_MS = 1_500;
@@ -211,6 +215,20 @@ function RankTrend({
 
 function viewKey(scope: HotScope, sort: HotSort): string {
   return `${scope}|${effectiveSort(scope, sort)}`;
+}
+
+/** 读回上次存下的滚动位置；坏数据（非数字、负数）直接跳过。 */
+function parsePositions(value: unknown): Map<string, { top: number; count: number }> {
+  const positions = new Map<string, { top: number; count: number }>();
+  if (!value || typeof value !== 'object') return positions;
+  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
+    if (!raw || typeof raw !== 'object') continue;
+    const { top, count } = raw as { top?: unknown; count?: unknown };
+    if (typeof top !== 'number' || !Number.isFinite(top) || top < 0) continue;
+    if (typeof count !== 'number' || !Number.isFinite(count) || count < PAGE_SIZE) continue;
+    positions.set(key, { top, count: Math.min(MAX_SAVED_COUNT, Math.floor(count)) });
+  }
+  return positions;
 }
 
 function stringList(value: unknown, max: number): string[] {
@@ -400,6 +418,8 @@ export default function HotView({ language, sendToXPage }: HotViewProps) {
   // 每种「范围 + 排序」各自的滚动位置和已加载条数
   const positions = useRef(new Map<string, { top: number; count: number }>());
   const pendingRestore = useRef<number | null>(null);
+  // 滚动时记下的最新位置：切走时弹窗内容已经换掉，不能再从 DOM 读 scrollTop
+  const lastScrollTop = useRef(0);
   const toastSeq = useRef(0);
 
   // 偏好跨次打开保留
@@ -410,12 +430,13 @@ export default function HotView({ language, sendToXPage }: HotViewProps) {
         .get([LANG_KEY, HIDE_READ_KEY, SORT_KEY, DISMISSED_KEY, MUTED_KEY])
         .catch(() => ({}) as Record<string, unknown>),
       session
-        ? session.get(LAST_LIST_KEY).catch(() => ({}) as Record<string, unknown>)
+        ? session.get([LAST_LIST_KEY, POSITIONS_KEY]).catch(() => ({}) as Record<string, unknown>)
         : Promise.resolve({} as Record<string, unknown>),
     ]).then(([stored, last]) => {
       if (stored[LANG_KEY] === 'zh' || stored[LANG_KEY] === 'all') setLangFilter(stored[LANG_KEY]);
       if (typeof stored[HIDE_READ_KEY] === 'boolean') setHideRead(stored[HIDE_READ_KEY]);
-      if (isHotSort(stored[SORT_KEY])) setSort(stored[SORT_KEY]);
+      const savedSort = isHotSort(stored[SORT_KEY]) ? stored[SORT_KEY] : 'heat';
+      setSort(savedSort);
       setDismissed(new Set(stringList(stored[DISMISSED_KEY], MAX_DISMISSED)));
       setMuted(new Set(stringList(stored[MUTED_KEY], MAX_MUTED)));
       const lastList = (last[LAST_LIST_KEY] ?? {}) as Partial<Record<HotScope, unknown>>;
@@ -423,6 +444,11 @@ export default function HotView({ language, sendToXPage }: HotViewProps) {
         mine: new Set(stringList(lastList.mine, MAX_LAST_LIST)),
         global: new Set(stringList(lastList.global, MAX_LAST_LIST)),
       });
+      // 上次离开时停在哪：连已加载条数一起恢复，否则列表不够长撑不起这个位置
+      positions.current = parsePositions(last[POSITIONS_KEY]);
+      const saved = positions.current.get(viewKey('mine', savedSort));
+      setVisibleCount(saved?.count ?? PAGE_SIZE);
+      pendingRestore.current = saved?.top ?? 0;
       setPrefsReady(true);
     });
   }, []);
@@ -639,6 +665,15 @@ export default function HotView({ language, sendToXPage }: HotViewProps) {
     return listTopRef.current?.closest('.popup-content') ?? null;
   }
 
+  /** 把各排序的位置写回 storage.session：下次打开弹窗、或切回这一屏时恢复。 */
+  function persistPositions(): void {
+    const session = sessionStorageArea();
+    if (!session) return;
+    void session
+      .set({ [POSITIONS_KEY]: Object.fromEntries(positions.current) })
+      .catch(() => undefined);
+  }
+
   /** 切换范围 / 排序：记下这一页的位置，切到的那一页回到它上次的位置。 */
   function switchView(nextScope: HotScope, nextSort: HotSort): void {
     const nextKey = viewKey(nextScope, nextSort);
@@ -682,6 +717,11 @@ export default function HotView({ language, sendToXPage }: HotViewProps) {
   // 「最近刷到」就是回看刚滑过的帖子，停留过的也要在；只有从弹窗点开过的变淡
   const applyHideRead = hideRead && activeSort !== 'recent';
   const key = viewKey(scope, sort);
+  // 滚动回调里读最新的 key 和已加载条数
+  const viewState = useRef({ key, count: visibleCount });
+  useEffect(() => {
+    viewState.current = { key, count: visibleCount };
+  }, [key, visibleCount]);
   const incoming: HotPostItem[] | null = !prefsReady
     ? null
     : isGlobal
@@ -800,7 +840,10 @@ export default function HotView({ language, sendToXPage }: HotViewProps) {
   useLayoutEffect(() => {
     if (pendingRestore.current === null || !current) return;
     const container = scrollContainer();
-    if (container) container.scrollTop = pendingRestore.current;
+    if (container) {
+      container.scrollTop = pendingRestore.current;
+      lastScrollTop.current = container.scrollTop;
+    }
     pendingRestore.current = null;
   }, [key, current]);
 
@@ -809,16 +852,28 @@ export default function HotView({ language, sendToXPage }: HotViewProps) {
     const container = scrollContainer();
     if (!container) return;
     let settle: number | undefined;
+    let save: number | undefined;
     const onScroll = (): void => {
+      lastScrollTop.current = container.scrollTop;
+      const state = viewState.current;
+      positions.current.set(state.key, { top: container.scrollTop, count: state.count });
       setAtTop(container.scrollTop <= AT_TOP_PX);
       setScrolling(true);
       window.clearTimeout(settle);
       settle = window.setTimeout(() => setScrolling(false), SCROLL_SETTLE_MS);
+      // 滚停后再写存储，滚动过程中不反复写
+      window.clearTimeout(save);
+      save = window.setTimeout(persistPositions, POSITIONS_WRITE_MS);
     };
     container.addEventListener('scroll', onScroll, { passive: true });
     return () => {
       window.clearTimeout(settle);
+      window.clearTimeout(save);
       container.removeEventListener('scroll', onScroll);
+      // 切到别的栏目时内容已经换掉，DOM 里的 scrollTop 归零，用滚动时记下的位置
+      const state = viewState.current;
+      positions.current.set(state.key, { top: lastScrollTop.current, count: state.count });
+      persistPositions();
     };
   }, []);
 

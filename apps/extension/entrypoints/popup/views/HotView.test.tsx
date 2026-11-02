@@ -860,7 +860,9 @@ describe('smoother reading', () => {
   });
 
   it('remembers the scroll position of each sort', async () => {
-    const many = Array.from({ length: 30 }, (_, i) => post(String(1850000000000000500 + i)));
+    const many = Array.from({ length: 30 }, (_, i) =>
+      post(String(1850000000000000500n + BigInt(i))),
+    );
     const container = document.createElement('div');
     container.className = 'popup-content';
     document.body.append(container);
@@ -882,5 +884,42 @@ describe('smoother reading', () => {
     expect(container.scrollTop).toBe(0);
     await chooseSort(container, 'heat');
     expect(container.scrollTop).toBe(640);
+  }, 20_000);
+
+  it('restores the scroll position after the view is unmounted', async () => {
+    const many = Array.from({ length: 30 }, (_, i) =>
+      post(String(1850000000000000600n + BigInt(i))),
+    );
+    runtimeSend.mockImplementation(async (message: { type: string }) =>
+      message.type === 'feedsieve:hot-posts' ? many : null,
+    );
+    async function mount(): Promise<{ container: HTMLDivElement; root: ReactDOM.Root }> {
+      const container = document.createElement('div');
+      container.className = 'popup-content';
+      document.body.append(container);
+      const root = ReactDOM.createRoot(container);
+      mountedRoots.push(root);
+      await act(async () => {
+        root.render(
+          React.createElement(HotView, {
+            language: 'zh' as const,
+            sendToXPage: async () => null,
+          }),
+        );
+      });
+      return { container, root };
+    }
+
+    const first = await mount();
+    first.container.scrollTop = 640;
+    await act(async () => {
+      first.container.dispatchEvent(new Event('scroll'));
+    });
+    // 立刻切走：此时 DOM 已经换掉、scrollTop 归零，保存要靠滚动时记下的值
+    await act(async () => first.root.unmount());
+    first.container.remove();
+
+    const second = await mount();
+    expect(second.container.scrollTop).toBe(640);
   }, 20_000);
 });
