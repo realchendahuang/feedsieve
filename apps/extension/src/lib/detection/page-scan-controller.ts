@@ -13,7 +13,7 @@ import { INSIGHT_DECORATION_SELECTOR } from '../insight/decorations';
  * 插件自己插进页面的节点：Observer 必须忽略它们的增删与内部变化，
  * 否则每次插入都会把所在推文标脏、触发重扫，形成反馈环。
  */
-const OWN_DECORATION_SELECTOR = `.fs-badge, .fs-manual-mark, [data-fs-action], ${INSIGHT_DECORATION_SELECTOR}`;
+const OWN_DECORATION_SELECTOR = `.fs-badge, .fs-manual-mark, [data-fs-action], .fs-ai-mark, .fs-ai-foldbar, [data-fs-ai-tab], ${INSIGHT_DECORATION_SELECTOR}`;
 
 /** mutation 停止后到扫描的固定间隔。 */
 export const SCAN_DEBOUNCE_MS = 300;
@@ -34,6 +34,11 @@ export interface ScanCallbacks {
   ): void;
   /** 批量插入待插徽章（DOM 批量插入减少滚动锚定抖动）。 */
   flushBadges(pendingBadges: PendingBadge[]): void;
+  /**
+   * 这一轮脏节点扫完了。给「要按整页顺序判断」的装饰用（AI 味：主帖 / 楼上祖先帖 /
+   * 主帖作者要靠遍历顺序区分），它们不必自己再起一个全页轮询。
+   */
+  scanDone?(): void;
   /** 扫描正常 / 失败的心跳（X 能力快照 timelineParsing 的输入）。 */
   noteHealth(ok: boolean, reason?: string): void;
 }
@@ -279,5 +284,6 @@ export class PageScanController {
       }
       this.callbacks.flushBadges(pendingBadges);
     }
+    this.callbacks.scanDone?.();
   }
 }

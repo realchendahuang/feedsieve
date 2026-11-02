@@ -91,9 +91,11 @@ export default defineContentScript({
     const scanWiring: {
       processOne: ScanCallbacks['processOne'];
       flushBadges: ScanCallbacks['flushBadges'];
+      scanDone: NonNullable<ScanCallbacks['scanDone']>;
     } = {
       processOne: () => {},
       flushBadges: () => {},
+      scanDone: () => {},
     };
     const controller = new PageScanController({
       processOne: (article, context, pendingBadges) => {
@@ -101,6 +103,9 @@ export default defineContentScript({
       },
       flushBadges: (pendingBadges) => {
         scanWiring.flushBadges(pendingBadges);
+      },
+      scanDone: () => {
+        scanWiring.scanDone();
       },
       noteHealth: (ok, reason) => {
         noteTimelineHealth(ok, reason);
@@ -215,6 +220,8 @@ export default defineContentScript({
     insight.listenHover();
     scanWiring.processOne = scan.scanOne;
     scanWiring.flushBadges = badges.flushPendingBadges;
+    // AI 标签 / 折叠 / 入口按整页顺序判断，等这一轮脏节点扫完再画一次
+    scanWiring.scanDone = aiCheck.decorate;
     const sync = createStateSync({ state, controller, fold });
     // Following 全量同步（分页循环 / draft 原子替换）收敛到 following-sync。
     const followingSync = createFollowingSync();

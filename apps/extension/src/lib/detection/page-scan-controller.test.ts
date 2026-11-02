@@ -19,6 +19,7 @@ function setup(processOne?: ScanCallbacks['processOne']) {
   const processed: Array<{ article: Element; pending: number }> = [];
   const flushed: PendingBadge[][] = [];
   const health: Array<{ ok: boolean; reason?: string }> = [];
+  let done = 0;
   const controller = new PageScanController({
     processOne:
       processOne ??
@@ -26,9 +27,12 @@ function setup(processOne?: ScanCallbacks['processOne']) {
         processed.push({ article, pending: pendingBadges.length });
       }),
     flushBadges: (pending) => flushed.push([...pending]),
+    scanDone: () => {
+      done += 1;
+    },
     noteHealth: (ok, reason) => health.push({ ok, reason }),
   });
-  return { controller, processed, flushed, health };
+  return { controller, processed, flushed, health, scanDone: () => done };
 }
 
 beforeEach(() => {
@@ -81,6 +85,14 @@ describe('PageScanController', () => {
     await vi.advanceTimersByTimeAsync(SCAN_DEBOUNCE_MS);
     expect(ctx.processed).toHaveLength(1);
     expect(ctx.health).toEqual([{ ok: true }]);
+    // 整页装饰（AI 标签按遍历顺序判断）在扫完之后才跑一次
+    expect(ctx.scanDone()).toBe(1);
+  });
+
+  it('没有脏节点时不会触发 scanDone', async () => {
+    const ctx = setup();
+    await vi.advanceTimersByTimeAsync(SCAN_DEBOUNCE_MS);
+    expect(ctx.scanDone()).toBe(0);
   });
 
   it('schedule 在已排程时去重；执行中再次标脏会自动续扫', async () => {

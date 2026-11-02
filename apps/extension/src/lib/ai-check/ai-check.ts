@@ -62,6 +62,8 @@ const BUTTON_ATTR = 'data-fs-ai';
 const TAB_ATTR = 'data-fs-ai-tab';
 const PANEL_ID = 'fs-ai-panel';
 const STYLE_ID = 'feedsieve-ai-check-styles';
+/** 名单 / 设置 / 单条查询接连回来时，装饰合并成一次（不每条都全页重画）。 */
+const DECORATE_THROTTLE_MS = 150;
 /** 官方机器人不测 */
 const EXEMPT = new Set(['grok']);
 const MAX_SCROLL_STEPS = 20;
@@ -431,6 +433,8 @@ export function createAiCheck(deps: {
         const value = merge(handle, raw as AiLookupOutcome | null);
         known.set(handle, value);
         ensureTab();
+        // 结论回来了：评论区里这个人的 AI 标签要补上（合并到一次装饰里）
+        scheduleDecorate();
         return value;
       });
     lookups.set(handle, promise);
@@ -1291,6 +1295,7 @@ export function createAiCheck(deps: {
       a.removeAttribute(MARK_ATTR);
       a.removeAttribute(TONE_ATTR);
     });
+    scheduleDecorate();
   };
 
   function clearDecorations(): void {
@@ -1307,20 +1312,52 @@ export function createAiCheck(deps: {
     });
   }
 
-  function tick(): void {
+  /**
+   * 整页装饰：AI 标签 / 折叠条 / 检测入口，以及主页的「AI 味」Tab。
+   *
+   * 由页面变化驱动（PageScanController 扫完一轮回调 scanDone），不再自己每秒
+   * 轮询全页——X 的虚拟列表在滚动时每秒把每条推文重新解析一遍是白烧 CPU，
+   * 页面静止时更是纯浪费。名单、设置、单条查询结果回来时各自补一次。
+   */
+  function decorate(): void {
     if (stopped) return;
     if (deps.isEnabled?.() === false) {
       // 模块关掉：页面上不留标签 / 按钮 / Tab，已打开的面板也收掉。
       // 但用户从弹窗主动发起的检测还要继续（见下面的 fs_ai 自动开测）。
       if (moduleOn !== false) clearDecorations();
       moduleOn = false;
+      return;
+    }
+    if (moduleOn !== true) {
+      moduleOn = true;
+      // 社区 AI 号名单：后台按 30 分钟节流同步；模块重新打开时补一次
+      void deps.send({ type: AI_LIST_SYNC_MESSAGE }).catch(() => undefined);
+    }
+    decorateArticles();
+    ensureTab();
+  }
+
+  // 接连回来的名单 / 查询结果合并成一次装饰：一次全页重画就够
+  let decorateTimer: ReturnType<typeof setTimeout> | null = null;
+  function scheduleDecorate(): void {
+    if (stopped || decorateTimer !== null) return;
+    decorateTimer = globalThis.setTimeout(() => {
+      decorateTimer = null;
+      decorate();
+    }, DECORATE_THROTTLE_MS);
+  }
+
+  function tick(): void {
+    if (stopped) return;
+    // 模块开关：关掉时撤装饰；重新打开时补一次全页装饰（之后交给扫描回调）
+    if (deps.isEnabled?.() === false) {
+      if (moduleOn !== false) clearDecorations();
+      moduleOn = false;
+    } else if (moduleOn !== true) {
+      decorate();
     } else {
-      if (moduleOn !== true) {
-        moduleOn = true;
-        // 社区 AI 号名单：后台按 30 分钟节流同步；模块重新打开时补一次
-        void deps.send({ type: AI_LIST_SYNC_MESSAGE }).catch(() => undefined);
-      }
-      decorateArticles();
+      // 主页 Tab 是照 X 原生 Tab 克隆出来的：X 重渲染 tablist 时会把它一起换掉，
+      // 这里每次巡检补回去（只查几个节点，很便宜；全页重画才是贵的）。
       ensureTab();
     }
     const profile = profileFromPath(location.pathname);
@@ -1355,6 +1392,10 @@ export function createAiCheck(deps: {
 
   return {
     ingest,
+    /** 页面扫完一轮：按整页顺序重画标签 / 折叠 / 入口（见 decorate 注释）。 */
+    decorate,
+    /** 轻量的每秒巡检：页面地址变化、面板收起、带 fs_ai 的自动开测、模块开关。 */
+    tick,
     start(): void {
       // 标记 / 折叠条的样式也要在开面板之前就位：不然名单里的号只显示浏览器默认按钮
       ensureStyles();
@@ -1366,6 +1407,8 @@ export function createAiCheck(deps: {
           applyList(stored[AI_LIST_KEY] as AiListState | undefined);
           records = (stored[AI_RECORDS_KEY] as Record<string, AiCheckRecord>) ?? {};
           settings = normalizeAiSettings(stored[AI_SETTINGS_KEY]);
+          // 存下来的名单 / 记录可能比首屏那次装饰晚到：到了就重画一次
+          decorate();
         })
         .catch(() => undefined);
       deps.setInterval(tick, 1_000);
@@ -1373,6 +1416,10 @@ export function createAiCheck(deps: {
     },
     stop(): void {
       stopped = true;
+      if (decorateTimer !== null) {
+        globalThis.clearTimeout(decorateTimer);
+        decorateTimer = null;
+      }
       runtime?.onMessage.removeListener(onPanelMessage);
       storage?.onChanged.removeListener(onStorage);
       clearDecorations();
