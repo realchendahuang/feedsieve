@@ -184,7 +184,8 @@ export default defineBackground(() => {
         .set({ [PANEL_VIEW_REQUEST_KEY]: { view: 'profile', at: Date.now() } })
         .catch(() => undefined);
       // sidePanel.open 要求用户手势；内容脚本转发过来时部分浏览器不认。
-      // 打不开就退回独立小窗口，不能静默失败（见 profile-panel.ts）
+      // 打不开就退回独立小窗口；手机上连 windows API 都没有，最后退回标签页，
+      // 不能静默失败（见 profile-panel.ts）
       const handle = profileHandleFromUrl(sender.tab?.url);
       return openProfilePanel({
         sidePanel: getChromeSidePanel(),
@@ -194,6 +195,7 @@ export default defineBackground(() => {
         ),
         openWindow: (url) =>
           browser.windows.create({ url, type: 'popup', width: 420, height: 680 }),
+        openTab: (url) => browser.tabs.create({ url }),
       });
     }
     if (msg?.type === 'feedsieve:open-tab') {

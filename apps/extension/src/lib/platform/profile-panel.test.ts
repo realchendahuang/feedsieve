@@ -46,6 +46,34 @@ describe('openProfilePanel', () => {
       openProfilePanel({ sidePanel: { open }, windowId: 7, openWindow, popupUrl: POPUP }),
     ).resolves.toEqual({ opened: false, via: null });
   });
+
+  it('手机上没有 windows API 时退回标签页打开', async () => {
+    const openWindow = vi.fn(() => {
+      throw new Error('browser.windows is undefined');
+    });
+    const openTab = vi.fn().mockResolvedValue({ id: 1 });
+    await expect(
+      openProfilePanel({ windowId: 7, openWindow, openTab, popupUrl: POPUP }),
+    ).resolves.toEqual({ opened: true, via: 'tab' });
+    expect(openTab).toHaveBeenCalledWith(POPUP);
+  });
+
+  it('侧边栏和独立窗口都失败时也退回标签页', async () => {
+    const open = vi.fn().mockRejectedValue(new Error('no gesture'));
+    const openWindow = vi.fn().mockRejectedValue(new Error('blocked'));
+    const openTab = vi.fn().mockResolvedValue({ id: 1 });
+    await expect(
+      openProfilePanel({ sidePanel: { open }, windowId: 7, openWindow, openTab, popupUrl: POPUP }),
+    ).resolves.toEqual({ opened: true, via: 'tab' });
+  });
+
+  it('标签页也开不了才返回 opened:false', async () => {
+    const openWindow = vi.fn().mockRejectedValue(new Error('blocked'));
+    const openTab = vi.fn().mockRejectedValue(new Error('blocked'));
+    await expect(
+      openProfilePanel({ openWindow, openTab, popupUrl: POPUP }),
+    ).resolves.toEqual({ opened: false, via: null });
+  });
 });
 
 describe('profileHandleFromUrl', () => {

@@ -6,13 +6,17 @@
  * 用户看到的是「点了没反应」。这里失败后退回一个和工具栏弹窗同尺寸的独立
  * 窗口，保证点击一定有反馈。
  *
+ * 手机上的 Chrome 既没有 `sidePanel` 也没有 `windows` API（`browser.windows`
+ * 根本不存在），前两步都必然失败；最后一步退回普通标签页打开同一个页面，
+ * 否则移动端点这一行完全没反应。
+ *
  * 注意：`sidePanel.open()` 必须在 `openProfilePanel()` 被调用的同一拍发起，
  * 不能先 await 其它东西，否则用户手势会过期。
  */
 import { profileFromPath } from '@feedsieve/x-adapter';
 import type { ChromeSidePanelApi } from './sidepanel';
 
-export type ProfilePanelVia = 'panel' | 'window';
+export type ProfilePanelVia = 'panel' | 'window' | 'tab';
 
 /** 从点击发生的标签页 URL 取主页主人，独立窗口才能落到同一个博主。 */
 export function profileHandleFromUrl(url: string | undefined): string | null {
@@ -35,11 +39,13 @@ export interface ProfilePanelDeps {
   windowId?: number;
   /** 打开独立窗口（popup.html?view=profile&panel=1） */
   openWindow: (url: string) => Promise<unknown>;
+  /** 独立窗口也开不了时（Chrome Android 没有 windows API）退回普通标签页 */
+  openTab?: (url: string) => Promise<unknown>;
   popupUrl: string;
 }
 
 export async function openProfilePanel(deps: ProfilePanelDeps): Promise<ProfilePanelResult> {
-  const { sidePanel, windowId, openWindow, popupUrl } = deps;
+  const { sidePanel, windowId, openWindow, openTab, popupUrl } = deps;
   if (windowId !== undefined && sidePanel?.open) {
     try {
       await sidePanel.open({ windowId });
@@ -51,6 +57,13 @@ export async function openProfilePanel(deps: ProfilePanelDeps): Promise<ProfileP
   try {
     await openWindow(popupUrl);
     return { opened: true, via: 'window' };
+  } catch {
+    // Chrome Android 没有 windows API：下面的标签页是最后一条路
+  }
+  if (!openTab) return { opened: false, via: null };
+  try {
+    await openTab(popupUrl);
+    return { opened: true, via: 'tab' };
   } catch {
     return { opened: false, via: null };
   }
