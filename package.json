@@ -21,6 +21,7 @@
     "check:extension:firefox": "node scripts/check-firefox.mjs",
     "zip:extension:firefox": "pnpm --filter @feedsieve/extension zip:firefox",
     "verify": "sh scripts/verify.sh",
+    "smoke:extension": "node scripts/smoke-extension-runtime.mjs",
     "release": "sh scripts/release.sh",
     "variant-tables:build": "node scripts/build-variant-tables.mjs"
   },

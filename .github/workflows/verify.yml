@@ -49,3 +49,7 @@ jobs:
       - run: pnpm build:extension
       - run: pnpm build:extension:firefox
       - run: pnpm check:extension:firefox
+      # 真实 MV3 冷启动 / 断网恢复验收：把构建产物装进 Chromium 跑一遍。
+      # 发版走的是同一个脚本（pack-store.sh），CI 在这里提前拦住回归。
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm smoke:extension
