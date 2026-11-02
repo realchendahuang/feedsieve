@@ -3,7 +3,8 @@
  *
  * 只由用户显式触发（主页洞察面板工具条上的图标），不自动滚；随时可以再点一次停止。
  * 每一步直接滚到当前页面底部（等同按 End），等 X 加载出下一批帖子再继续；加载快时
- * 几乎不停，最多等 1.2 秒。一直到底（连续 8 批没有新内容），或到 200 批的保险上限。
+ * 几乎不停，最多等 1.2 秒。正常的结束条件是「到底」：连续 8 批没有新帖子。
+ * 另有一条 10 分钟的保险丝，只在页面异常、永远加载不完时兜底，正常主页到不了。
  *
  * 防封号的两条约束：
  * - 同一个博主 3 分钟内只能补全一次（防连点，也防对同一个主页反复刷分页请求）；
@@ -11,7 +12,8 @@
  */
 import { tweetSelectors } from '@feedsieve/x-adapter';
 
-export const PROFILE_FILL_MAX_STEPS = 200;
+/** 保险丝：一轮最多滚 10 分钟。到底由下面的 stagnant 判断，不靠这个数。 */
+export const PROFILE_FILL_MAX_MS = 10 * 60_000;
 /** 等新内容时每 150ms 看一次；最多等 1.2 秒。 */
 export const PROFILE_FILL_POLL_MS = 150;
 export const PROFILE_FILL_WAIT_MS = 1_200;
@@ -105,18 +107,22 @@ export function createProfileFill(
     lastRunAt.set(handle, now());
     running = true;
     stopRequested = false;
+    let startedAt = now();
     const seen = collectPostIds();
     const beforeCount = seen.size;
     let stagnant = 0;
     let stopped: ProfileFillStop = 'limit';
     try {
-      for (let step = 0; step < PROFILE_FILL_MAX_STEPS; step++) {
+      // 正常会由 stagnant 结束；这里的时长只防页面永远加载不完
+      while (now() - startedAt < PROFILE_FILL_MAX_MS) {
         if (stopRequested) {
           stopped = 'user';
           break;
         }
-        // 后台标签页里不滚，等用户切回来
+        // 后台标签页里不滚，等用户切回来；这段暂停不算进保险丝
+        const pausedAt = now();
         await waitForVisible();
+        startedAt += now() - pausedAt;
         if (stopRequested) {
           stopped = 'user';
           break;

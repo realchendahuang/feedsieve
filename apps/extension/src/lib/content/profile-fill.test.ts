@@ -1,6 +1,11 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { PROFILE_FILL_COOLDOWN_MS, createProfileFill, isProfilePath } from './profile-fill';
+import {
+  PROFILE_FILL_COOLDOWN_MS,
+  PROFILE_FILL_MAX_MS,
+  createProfileFill,
+  isProfilePath,
+} from './profile-fill';
 
 afterEach(() => {
   document.body.innerHTML = '';
@@ -70,6 +75,24 @@ describe('profile-fill', () => {
     const result = await fill.fill('alice');
     expect(result).toEqual({ ok: false, added: 0, stopped: 'not-profile' });
     expect(scrollTo).not.toHaveBeenCalled();
+  });
+
+  it('页面一直有新帖也最多滚 10 分钟', async () => {
+    history.replaceState(null, '', '/alice');
+    addArticles(1);
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    let time = 5_000_000;
+    const fill = createProfileFill({
+      sleep: async () => {
+        // 每步都有新帖，永远不会进入 stagnant
+        time += 60_000;
+        addArticles(1);
+      },
+      now: () => time,
+    });
+    const result = await fill.fill('alice');
+    expect(result.stopped).toBe('limit');
+    expect(time - 5_000_000).toBeGreaterThanOrEqual(PROFILE_FILL_MAX_MS);
   });
 
   it('同一个博主 3 分钟内只补全一次', async () => {
