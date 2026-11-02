@@ -64,7 +64,7 @@ describe('outlierMultiple', () => {
 });
 
 describe('analyzeProfile', () => {
-  it('flags outliers, keeps likely-boosted posts out of the rate, and compares formats', () => {
+  it('flags outliers and compares formats', () => {
     const posts: ProfilePost[] = [
       ...ordinary(),
       // 有机爆款：浏览 6 倍，互动正常
@@ -77,25 +77,15 @@ describe('analyzeProfile', () => {
         kind: 'original',
         media: 'photo',
       },
-      // 疑似投流：浏览 20 倍，几乎没有互动
-      {
-        postId: '901',
-        createdAt: NOW - 4 * DAY,
-        views: 31_000,
-        likes: 1,
-        kind: 'original',
-        media: 'none',
-      },
     ];
     // 帖子分散在周二到周五晚上（20–24 点那一段）
     const analysis = analyzeProfile(posts, NOW, {
       localParts: (ts) => ({ day: 2 + (Math.floor(ts / DAY) % 4), hour: 21 }),
     });
-    expect(analysis.baseline?.sample).toBe(14);
-    expect(analysis.scores.get('900')).toMatchObject({ boosted: false, estimated: false });
+    expect(analysis.baseline?.sample).toBe(13);
+    expect(analysis.scores.get('900')).toMatchObject({ estimated: false });
     expect(analysis.scores.get('900')!.multiple).toBeGreaterThan(5);
-    expect(analysis.scores.get('901')!.boosted).toBe(true);
-    // 13 条有机帖子里 1 条爆款
+    // 13 条成熟帖子里 1 条爆款
     expect(analysis.outlierRate).toBeCloseTo(1 / 13);
     // 纯文字 12 条够了；图片只有 1 条不显示
     expect(analysis.formats.map((item) => item.format)).toEqual(['text']);
@@ -108,31 +98,12 @@ describe('analyzeProfile', () => {
     expect(single.heatmap).toBeNull();
   });
 
-  it('does not mistake an organic hit with a lower engagement rate for a boosted post', () => {
-    // 传出粉丝圈的爆款：浏览 8 倍，互动率比平时低一截，但远没到「几乎没人互动」
-    const posts: ProfilePost[] = [
-      ...ordinary(),
-      {
-        postId: '902',
-        createdAt: NOW - 3 * DAY,
-        views: 12_400,
-        likes: 160,
-        replies: 3,
-        kind: 'original',
-      },
-    ];
-    const analysis = analyzeProfile(posts, NOW);
-    expect(analysis.scores.get('902')!.multiple).toBeGreaterThan(5);
-    expect(analysis.scores.get('902')!.boosted).toBe(false);
-  });
-
   it('returns scores without multiples when the sample is too small', () => {
     const analysis = analyzeProfile(ordinary(3), NOW);
     expect(analysis.baseline).toBeNull();
     expect(analysis.scores.get('100')).toEqual({
       multiple: null,
       estimated: false,
-      boosted: false,
     });
     expect(analysis.formats).toEqual([]);
     expect(analysis.heatmap).toBeNull();

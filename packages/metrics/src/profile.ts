@@ -8,7 +8,7 @@
  * 刚发的帖子用「预计 24 小时浏览」算倍数，标记为估算。
  */
 import { resolveConfig, type MetricsConfig } from './config';
-import { ageHours, engagementRate, projectedViews } from './tweet';
+import { ageHours, projectedViews } from './tweet';
 
 export type ProfilePostKind = 'original' | 'reply' | 'quote';
 export type ProfilePostMedia = 'none' | 'photo' | 'video' | 'gif' | 'mixed';
@@ -36,13 +36,6 @@ export const PROFILE_MIN_SAMPLE = 10;
 export const PROFILE_MATURE_HOURS = 24;
 /** 倍数达到这个值算爆款。 */
 export const OUTLIER_MULTIPLE = 3;
-/**
- * 疑似投流：浏览至少是中位数的这么多倍，互动率却不到这个博主最低 10% 那条线的一半。
- * 真爆款传出粉丝圈以后互动率本来就会下降，所以线要压得比「最低 10%」更低，不误伤有机爆款。
- */
-export const BOOST_VIEWS_MULTIPLE = 5;
-const BOOST_RATE_QUANTILE = 0.1;
-const BOOST_RATE_FACTOR = 0.5;
 /** 各形式至少这么多条才显示。 */
 export const PROFILE_GROUP_MIN = 5;
 /**
@@ -66,8 +59,6 @@ export interface PostScore {
   multiple: number | null;
   /** 发出不满 24 小时，倍数按预计浏览估算。 */
   estimated: boolean;
-  /** 疑似投流：不计入爆款率。 */
-  boosted: boolean;
 }
 
 export interface FormatStat {
@@ -79,7 +70,7 @@ export interface FormatStat {
 export interface ProfileAnalysis {
   baseline: ProfileBaseline | null;
   scores: Map<string, PostScore>;
-  /** 成熟基线帖子里倍数 ≥ 3 的比例（不算疑似投流）。 */
+  /** 成熟基线帖子里倍数 ≥ 3 的比例。 */
   outlierRate: number | null;
   /** 样本够的形式，按中位倍数从高到低。 */
   formats: FormatStat[];
@@ -99,12 +90,6 @@ export function median(values: readonly number[]): number | null {
   const sorted = [...values].sort((a, b) => a - b);
   const mid = sorted.length >> 1;
   return sorted.length % 2 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
-}
-
-function quantile(values: readonly number[], q: number): number | null {
-  if (values.length === 0) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * q))]!;
 }
 
 /** 能参与基线的帖子：不是回复，有浏览数和发帖时间。 */
@@ -170,38 +155,22 @@ export function analyzeProfile(
   const baseline = profileBaseline(posts, now);
   const scores = new Map<string, PostScore>();
   const mature = posts.filter((post) => isBaselinePost(post) && isMature(post, now));
-  // 疑似投流的互动率线：这个博主成熟帖子里最低的 10%
-  const rates = mature.flatMap((post) => {
-    const rate = engagementRate(post);
-    return rate === null ? [] : [rate];
-  });
-  const lowRate = rates.length >= PROFILE_MIN_SAMPLE ? quantile(rates, BOOST_RATE_QUANTILE) : null;
 
   for (const post of posts) {
     const result = outlierMultiple(post, baseline, now);
-    const rate = engagementRate(post);
-    const boosted =
-      result !== null &&
-      !result.estimated &&
-      lowRate !== null &&
-      rate !== null &&
-      result.value >= BOOST_VIEWS_MULTIPLE &&
-      rate < lowRate * BOOST_RATE_FACTOR;
     scores.set(post.postId, {
       multiple: result?.value ?? null,
       estimated: result?.estimated ?? false,
-      boosted,
     });
   }
 
   if (!baseline) return { baseline, scores, outlierRate: null, formats: [], heatmap: null };
 
-  const organic = mature.filter((post) => !scores.get(post.postId)!.boosted);
-  const outliers = organic.filter((post) => scores.get(post.postId)!.multiple! >= OUTLIER_MULTIPLE);
-  const outlierRate = organic.length > 0 ? outliers.length / organic.length : null;
+  const outliers = mature.filter((post) => scores.get(post.postId)!.multiple! >= OUTLIER_MULTIPLE);
+  const outlierRate = mature.length > 0 ? outliers.length / mature.length : null;
 
   const byFormat = new Map<ProfileFormat, number[]>();
-  for (const post of organic) {
+  for (const post of mature) {
     const format = formatOf(post);
     byFormat.set(format, [...(byFormat.get(format) ?? []), scores.get(post.postId)!.multiple!]);
   }
@@ -213,7 +182,7 @@ export function analyzeProfile(
   const grid: number[][][] = Array.from({ length: 7 }, () =>
     Array.from({ length: HEATMAP_SLOTS }, () => []),
   );
-  for (const post of organic) {
+  for (const post of mature) {
     const { day, hour } = localParts(post.createdAt!);
     grid[day]?.[Math.floor(hour / HEATMAP_SLOT_HOURS)]?.push(scores.get(post.postId)!.multiple!);
   }

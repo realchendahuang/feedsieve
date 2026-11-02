@@ -121,28 +121,25 @@ function useActiveHandle(): string | null {
 function MultipleBadge({
   value,
   estimated,
-  boosted,
   views,
   medianViews,
   language,
 }: {
   value: number;
   estimated: boolean;
-  boosted: boolean;
   views: number | undefined;
   medianViews: number;
   language: UiLanguage;
 }) {
   const t = UI_COPY[language];
-  // 疑似投流的高倍数不是本事：不标金色
-  const outlier = value >= OUTLIER_MULTIPLE && !boosted;
+  const outlier = value >= OUTLIER_MULTIPLE;
   const lines = [
     t.profileMultipleTip(
       views === undefined ? '—' : formatCount(views, language),
       formatCount(Math.round(medianViews), language),
       formatMultipleText(value),
     ),
-    estimated ? t.profileEstimated : boosted ? t.profileBoostedHint : t.profileMultipleOutlier,
+    estimated ? t.profileEstimated : t.profileMultipleOutlier,
   ];
   const tip = useTip(lines.join('\n'));
   return (
@@ -940,17 +937,11 @@ export default function ProfileView({ language, notify, sendToXPage }: ProfileVi
                         {post.kind === 'quote' || post.kind === 'reply' ? (
                           <span className="kind-tag">{t.profileKind[post.kind]}</span>
                         ) : null}
-                        {score?.boosted ? (
-                          <span className="kind-tag is-warn" title={t.profileBoostedHint}>
-                            {t.profileBoosted}
-                          </span>
-                        ) : null}
                       </div>
                       {score?.multiple !== null && score?.multiple !== undefined ? (
                         <MultipleBadge
                           value={score.multiple}
                           estimated={score.estimated}
-                          boosted={score.boosted}
                           views={post.views}
                           medianViews={analysis.baseline?.medianViews ?? 0}
                           language={language}

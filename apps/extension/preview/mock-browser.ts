@@ -46,7 +46,7 @@ const pageMarked = [
 ];
 
 // 本页热帖预览：覆盖 🚀/🔥/普通流速、高破圈、无正文、超长昵称等展示分支
-/** 预览用的博主帖子库：40 条普通帖子 + 几条爆款 + 一条疑似投流 + 回复。 */
+/** 预览用的博主帖子库：40 条普通帖子 + 几条爆款 + 回复。 */
 const previewProfile = (() => {
   const now = Date.now();
   const day = 24 * 60 * 60 * 1000;
@@ -79,7 +79,6 @@ const previewProfile = (() => {
     kind: 'quote',
     snippet: '这条说得对。补充一点：冷启动最重要的是找到第一批愿意反馈的人。',
   });
-  add(43, 410_000, { likes: 40, replies: 1, bookmarks: 2, snippet: '限时优惠，点击了解 👇' });
   add(44, 3_000, { kind: 'reply', snippet: '@someone 谢谢！确实是这样。' });
   add(45, 9_000, { pinned: true, createdAt: now - 200 * day, snippet: '置顶：我是谁、在做什么。' });
   add(46, 30_000, { createdAt: now - 3 * 3_600_000, snippet: '刚发的：今天把主页洞察做出来了。' });

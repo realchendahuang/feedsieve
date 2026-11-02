@@ -151,9 +151,8 @@ export function saveRate(post: CatalogPost): number | null {
 function sortKey(post: CatalogPost, score: PostScore | undefined, sort: ProfileSort): number {
   switch (sort) {
     case 'multiple':
-      // 疑似投流的不算数：排在所有有机帖子后面（倍数 ≥ 0，所以减一个足够大的数）
       if (score?.multiple === null || score?.multiple === undefined) return -Infinity;
-      return score.boosted ? score.multiple - 1e9 : score.multiple;
+      return score.multiple;
     case 'views':
       return post.views ?? -1;
     case 'likes':
@@ -190,7 +189,7 @@ export function visiblePosts(
     );
 }
 
-/** 爆款 Top N：只取有倍数、不是疑似投流的原创和引用。 */
+/** 爆款 Top N：只取有倍数的原创和引用。 */
 export function topOutliers(
   posts: readonly CatalogPost[],
   analysis: ProfileAnalysis,
@@ -199,9 +198,7 @@ export function topOutliers(
   return posts
     .filter((post) => {
       const score = analysis.scores.get(post.postId);
-      return (
-        post.kind !== 'reply' && score?.multiple !== null && score !== undefined && !score.boosted
-      );
+      return post.kind !== 'reply' && score?.multiple !== null && score !== undefined;
     })
     .sort(
       (a, b) =>
@@ -290,7 +287,6 @@ export function postsCsv(
     'bookmarks',
     'multiple',
     'estimated',
-    'likely_boosted',
     'text',
   ];
   const rows = posts.map((post) => {
@@ -310,7 +306,6 @@ export function postsCsv(
       post.bookmarks,
       score?.multiple !== null && score?.multiple !== undefined ? score.multiple.toFixed(2) : '',
       score?.estimated ?? false,
-      score?.boosted ?? false,
       cleanText(post.snippet),
     ]
       .map(csvCell)

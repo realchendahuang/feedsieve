@@ -205,7 +205,7 @@ export default function HomePage() {
             image="/assets/screens/profile.png"
             alt="侧边栏「主页」：博主的中位浏览、爆款率、内容形式与发帖时段"
             points={[
-              '每条帖子是他自己中位浏览的几倍，3 倍以上标金色；疑似投流单独标出',
+              '每条帖子是他自己中位浏览的几倍，3 倍以上标金色',
               '纯文字、图片、视频、引用各自的表现，哪个时段发帖效果最好',
               '一键在 X 搜他的高赞帖、Google 站内搜索、复制 Top 20 给 AI、导出 CSV',
             ]}

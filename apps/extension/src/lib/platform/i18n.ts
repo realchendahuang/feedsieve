@@ -75,7 +75,7 @@ export const UI_COPY = {
     profileCoverageValue: (n: number) => `${n} 条`,
     profileCoverageUnit: '条',
     profileBaselineHint: (sample: number, since: string) =>
-      `基线只算原创和引用、发出满 24 小时的帖子，共 ${sample} 条；不含回复、转推和推广帖。浏览是中位数 3 倍以上的算爆款，疑似投流的不计入。${since} 开始收集。`,
+      `基线只算原创和引用、发出满 24 小时的帖子，共 ${sample} 条；不含回复、转推和推广帖。浏览是中位数 3 倍以上的算爆款。${since} 开始收集。`,
     profileSampleLow: (n: number) => `再收 ${n} 条原创帖子就能算倍数`,
     profileSort: '排序',
     profileSortOptions: {
@@ -90,9 +90,6 @@ export const UI_COPY = {
     profileRangeOptions: { '30': '30 天', '90': '90 天', '365': '1 年', all: '全部' },
     profileIncludeReplies: '含回复',
     profileKind: { quote: '引用', reply: '回复', pinned: '置顶' },
-    profileBoosted: '疑似投流',
-    profileBoostedHint:
-      '浏览是中位数 5 倍以上，互动率却远低于他平时最低的水平，可能投了推广。不计入爆款率。',
     profileEstimated: '发出不满 24 小时，按预计 24 小时浏览估算',
     profileFormats: '内容形式',
     profileFormatsHint:
@@ -114,7 +111,7 @@ export const UI_COPY = {
     profileGoogleRange: { any: '不限时间', y: '一年内', m: '一个月内', w: '一周内' },
     profileGoogleGo: '在 Google 搜',
     profileCopyAiHint:
-      '把倍数最高的 20 条（不含回复和疑似投流）整理成 Markdown，附上分析要求，直接粘贴给 ChatGPT、Claude。',
+      '把倍数最高的 20 条（不含回复）整理成 Markdown，附上分析要求，直接粘贴给 ChatGPT、Claude。',
     profileExportHint: '导出当前筛选下的全部帖子，含各项数字和倍数。',
     profileMultipleTip: (views: string, median: string, multiple: string) =>
       `浏览 ${views}，是他中位浏览 ${median} 的 ${multiple}`,
@@ -468,7 +465,7 @@ export const UI_COPY = {
     profileCoverageValue: (n: number) => `${n}`,
     profileCoverageUnit: '',
     profileBaselineHint: (sample: number, since: string) =>
-      `The baseline uses originals and quotes at least 24 hours old (${sample} posts); replies, reposts and promoted posts are excluded. Posts with 3× the median views count as outliers; likely boosted posts are left out. Collecting since ${since}.`,
+      `The baseline uses originals and quotes at least 24 hours old (${sample} posts); replies, reposts and promoted posts are excluded. Posts with 3× the median views count as outliers. Collecting since ${since}.`,
     profileSampleLow: (n: number) => `${n} more original posts needed for multiples`,
     profileSort: 'Sort',
     profileSortOptions: {
@@ -483,9 +480,6 @@ export const UI_COPY = {
     profileRangeOptions: { '30': '30 days', '90': '90 days', '365': '1 year', all: 'All' },
     profileIncludeReplies: 'Replies',
     profileKind: { quote: 'Quote', reply: 'Reply', pinned: 'Pinned' },
-    profileBoosted: 'Likely boosted',
-    profileBoostedHint:
-      '5× the median views but engagement far below their usual low: probably promoted. Not counted in the outlier rate.',
     profileEstimated: 'Under 24h old: estimated from projected 24h views',
     profileFormats: 'Formats',
     profileFormatsHint:
@@ -507,7 +501,7 @@ export const UI_COPY = {
     profileGoogleRange: { any: 'Any time', y: 'Past year', m: 'Past month', w: 'Past week' },
     profileGoogleGo: 'Search on Google',
     profileCopyAiHint:
-      'Copies the 20 posts with the highest multiples (no replies or likely boosted posts) as Markdown with an analysis prompt, ready for ChatGPT or Claude.',
+      'Copies the 20 posts with the highest multiples (no replies) as Markdown with an analysis prompt, ready for ChatGPT or Claude.',
     profileExportHint: 'Exports every post in the current filter, with all counts and multiples.',
     profileMultipleTip: (views: string, median: string, multiple: string) =>
       `${views} views, ${multiple} their median of ${median}`,
