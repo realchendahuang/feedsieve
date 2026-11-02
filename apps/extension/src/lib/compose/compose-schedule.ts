@@ -708,6 +708,8 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
       if (option) openWithSlot(option, at);
     } else if (at !== undefined) {
       stashedSlot = { at, recordedAt: now() };
+      // 用户可能已经先点开了日历；补一次扫描，让暂存时间立刻填进去
+      scheduleScan();
     }
     return { ok: true };
   }
