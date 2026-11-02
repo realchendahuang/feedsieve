@@ -31,8 +31,20 @@ export const SNAPSHOT_POLICY_VERSION = LISTING_POLICY.version;
  * 新上榜的号最晚要等到第二天；现在扩展按增量同步（/v1/snapshots/delta），发得勤也不费流量。
  */
 export const SNAPSHOT_MIN_INTERVAL_S = 25 * 60;
-export const SNAPSHOT_PACK = 'official.json';
-export const PUBLIC_BLOCKLIST_PACK = 'blocklist.yaml';
+// 键名与包名单独放在 snapshot-keys.ts：上报端点只要那两个 meta 键，
+// 不该为此把整个快照模块（生成/签名/YAML）拉进冷启动。
+export {
+  SNAPSHOT_PACK,
+  PUBLIC_BLOCKLIST_PACK,
+  SNAPSHOT_LATEST_KEY,
+  SNAPSHOT_DIRTY_KEY,
+} from './snapshot-keys';
+import {
+  SNAPSHOT_PACK,
+  PUBLIC_BLOCKLIST_PACK,
+  SNAPSHOT_LATEST_KEY,
+  SNAPSHOT_DIRTY_KEY,
+} from './snapshot-keys';
 
 /** 指纹簇（Campaign）：汉明距离 <= 此值视为同一话术的变体，归同一簇；< 2 个账号的簇不产生 campaign */
 const SIMHASH_HAMMING_THRESHOLD = 2;
@@ -45,7 +57,6 @@ const MIN_CAMPAIGN_ACCOUNTS = 2;
  * 存 meta 表供 O(1) 点读，取代每次轮询的全表排序扫。
  */
 const SNAPSHOT_R2_PREFIX = 'snapshots';
-export const SNAPSHOT_LATEST_KEY = 'latest_snapshot_version';
 
 async function r2Text(env: Cloudflare.Env, key: string): Promise<string | null> {
   const object = await env.KEYWORD_PACKS?.get(key);
@@ -1087,7 +1098,6 @@ export async function killSwitchNeedsPublish(env: Cloudflare.Env): Promise<boole
  * 不产生新快照行，「数据比快照新」会永远为真导致每周期空转全量扫描。
  * value 存置脏时刻（毫秒）；清除带值比对，生成期间到达的新变更会保留标记。
  */
-export const SNAPSHOT_DIRTY_KEY = 'snapshot_dirty';
 
 export async function markSnapshotDirty(env: Cloudflare.Env): Promise<void> {
   await upsertMeta(env, SNAPSHOT_DIRTY_KEY, String(Date.now()));
