@@ -510,6 +510,42 @@ input:not([type]):focus,
   min-width: 0;
 }
 
+/* 漏网账号：输入占一行，原因和拉黑按钮放第二行，避免 420px 下输入框被挤到看不清占位文案 */
+.manual-block-form {
+  flex-wrap: wrap;
+}
+
+.manual-block-form input {
+  flex: 1 1 100%;
+}
+
+.manual-block-form .manual-reason-select {
+  flex: 1 1 auto;
+  max-width: none;
+}
+
+.manual-reason-select {
+  flex: 0 0 auto;
+  max-width: 140px;
+  height: 32px;
+  padding: 0 26px 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23787774' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+    no-repeat right 8px center;
+  color: var(--ink);
+  font-size: 13px;
+  appearance: none;
+  cursor: pointer;
+}
+
+.manual-reason-select:focus {
+  border-color: var(--blue);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(35, 131, 226, 0.15);
+}
+
 .view-toolbar {
   display: flex;
   align-items: center;

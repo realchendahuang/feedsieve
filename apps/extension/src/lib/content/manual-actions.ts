@@ -15,6 +15,8 @@ import type { ContentState } from './page-state';
 import type { BlockCore } from './block-core';
 import type { BlockedFold } from './blocked-fold';
 import { actionIcon, alignActionSlot, createActionSlot, type ActionSlot } from './action-slot';
+import type { ManualReportReason } from '../community/manual-reasons';
+import { openReasonMenu } from './reason-menu';
 
 /** 动作栏图标按钮的状态：图标随状态切换，失败时短暂显示错误码。 */
 function setManualState(
@@ -41,6 +43,8 @@ export function createManualActions(deps: {
     HTMLButtonElement,
     { handle: string; evidence: BlockEvidence }
   >();
+  /** 同一时间只开一个原因浮层；浮层自己在关闭时清空。 */
+  let closeActiveMenu: (() => void) | null = null;
 
   // ---------- 标注 UI ----------
 
@@ -56,8 +60,8 @@ export function createManualActions(deps: {
 
     const title =
       state.uiLanguage === 'zh'
-        ? '福滤娃 · 拉黑此账号，并计入社区名单'
-        : 'FeedSieve · Block this account and count as a community vote';
+        ? '福滤娃 · 拉黑此账号（先选原因）'
+        : 'FeedSieve · Block this account (choose a reason)';
     // 复制 X 原生动作按钮的结构，宽度和对齐跟着 X 走（见 action-slot.ts）
     const slot = createActionSlot(actionGroup, 'block', title);
     const { button } = slot;
@@ -66,50 +70,84 @@ export function createManualActions(deps: {
     button.setAttribute('data-fs-manual-action', 'true');
     setManualState(slot, 'idle');
     button.addEventListener('click', () => {
-      void (async () => {
-        button.disabled = true;
-        setManualState(slot, 'busy');
-        const current = manualEvidence.get(button)!;
-        const outcome = await runManualSpamBlock(current.handle, current.evidence);
-        if (outcome.ok) {
-          setManualState(slot, 'done');
-          // 被拉黑者本人主页豁免折叠（与徽章路径 runBlockNow 同口径，见 blocked-fold）
-          if (fold.shouldFoldBlockedTweets(current.handle)) {
-            hideCellsSoon(fold.collectCellsForHandle(current.handle));
-          }
-          return;
-        }
-        setManualState(
-          slot,
-          'failed',
-          `${state.uiLanguage === 'zh' ? '失败' : 'Failed'} ${outcome.code}`,
-        );
-        window.setTimeout(() => {
-          button.disabled = false;
-          setManualState(slot, 'idle');
-        }, 3000);
-      })();
+      if (button.disabled) return;
+      const current = manualEvidence.get(button);
+      if (!current) return;
+      // 点同一颗按钮 = 收起；点另一颗 = 换到那颗下面。
+      const wasOpen = button.hasAttribute('data-fs-menu');
+      closeActiveMenu?.();
+      closeActiveMenu = null;
+      if (wasOpen) return;
+      button.setAttribute('data-fs-menu', 'open');
+      closeActiveMenu = openReasonMenu(button, {
+        language: state.uiLanguage,
+        onPick: (reason) => {
+          closeActiveMenu = null;
+          button.removeAttribute('data-fs-menu');
+          // 浮层开着时 X 可能又更新了这条 article 的证据，落盘前再取一次最新值
+          void runManualFromMenu(button, slot, manualEvidence.get(button) ?? current, reason);
+        },
+        onClose: () => {
+          closeActiveMenu = null;
+          button.removeAttribute('data-fs-menu');
+        },
+      });
     });
     actionGroup.appendChild(slot.root);
     alignActionSlot(slot.root);
   }
 
+  async function runManualFromMenu(
+    button: HTMLButtonElement,
+    slot: ActionSlot,
+    current: { handle: string; evidence: BlockEvidence },
+    reason: ManualReportReason | null,
+  ): Promise<void> {
+    button.disabled = true;
+    setManualState(slot, 'busy');
+    const outcome = await runManualSpamBlock(current.handle, current.evidence, reason).catch(
+      () => ({ ok: false as const, code: 'unknown' }),
+    );
+    if (outcome.ok) {
+      setManualState(slot, 'done');
+      // 被拉黑者本人主页豁免折叠（与徽章路径 runBlockNow 同口径，见 blocked-fold）
+      if (fold.shouldFoldBlockedTweets(current.handle)) {
+        hideCellsSoon(fold.collectCellsForHandle(current.handle));
+      }
+      return;
+    }
+    setManualState(
+      slot,
+      'failed',
+      `${state.uiLanguage === 'zh' ? '失败' : 'Failed'} ${outcome.code}`,
+    );
+    window.setTimeout(() => {
+      button.disabled = false;
+      setManualState(slot, 'idle');
+    }, 3000);
+  }
+
+  /**
+   * 手动拉黑。reason=null 表示「仅拉黑」：只写本地账本，不参与社区计票；
+   * 选原因时分类就是票面 reason，不再默认写 other。
+   */
   async function runManualSpamBlock(
     rawHandle: string,
     evidence: BlockEvidence = {},
+    reason: ManualReportReason | null = null,
   ): Promise<{ ok: true; handle: string } | { ok: false; code: string }> {
     const handle = normalizeManualHandle(rawHandle);
     if (!handle) return { ok: false, code: 'invalid-handle' };
     const outcome = await blockOne(
       {
         handle,
-        category: 'other',
+        category: reason ?? 'other',
         reason: '',
         evidence: { ...evidence, detectionSource: 'manual' },
       },
       {
-        origin: 'manual-spam',
-        communityVote: true,
+        origin: reason ? 'manual-spam' : 'manual-personal',
+        communityVote: reason !== null,
       },
     );
     if (!outcome.ok) return outcome;

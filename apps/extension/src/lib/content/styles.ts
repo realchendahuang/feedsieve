@@ -340,6 +340,69 @@ export function ensureStyles(): void {
       0%, 30% { box-shadow: inset 0 0 0 2px rgba(245, 158, 11, 0.9); background-color: rgba(245, 158, 11, 0.16); }
       100% { box-shadow: inset 0 0 0 2px rgba(245, 158, 11, 0); background-color: transparent; }
     }
+    /* 手动拉黑的原因浮层：固定定位，避免被 X 的虚拟列表裁剪。 */
+    .fs-reason-menu {
+      position: fixed;
+      z-index: 2147483647;
+      width: 232px;
+      padding: 8px;
+      border-radius: 12px;
+      background: rgb(255, 255, 255);
+      box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08), 0 8px 28px rgba(0, 0, 0, 0.22);
+      color: rgb(15, 20, 25);
+      font-family: inherit;
+      font-size: 14px;
+      line-height: 1.3;
+      text-align: left;
+    }
+    .fs-reason-menu-title {
+      padding: 4px 8px 8px;
+      color: rgb(83, 100, 113);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .fs-reason-menu-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+    }
+    .fs-reason-option {
+      min-height: 34px;
+      padding: 6px 10px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+    .fs-reason-option:hover,
+    .fs-reason-option:focus-visible {
+      background: rgba(245, 158, 11, 0.14);
+      outline: none;
+    }
+    .fs-reason-menu-divider {
+      height: 1px;
+      margin: 6px 4px;
+      background: rgba(0, 0, 0, 0.08);
+    }
+    .fs-reason-personal {
+      width: 100%;
+      color: rgb(83, 100, 113);
+    }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-reason-menu {
+      background: rgb(22, 24, 28);
+      color: rgb(231, 233, 234);
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 8px 28px rgba(0, 0, 0, 0.5);
+    }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-reason-menu-title,
+    html[${THEME_ATTRIBUTE}='dark'] .fs-reason-personal {
+      color: rgb(139, 152, 165);
+    }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-reason-menu-divider {
+      background: rgba(255, 255, 255, 0.12);
+    }
   `;
   document.documentElement.appendChild(style);
   syncPageTheme();

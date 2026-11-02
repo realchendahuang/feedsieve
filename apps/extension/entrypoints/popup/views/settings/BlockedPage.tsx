@@ -5,6 +5,11 @@ import {
   type BlockedAccount,
 } from '../../../../src/lib/community/blocked-accounts';
 import { UI_COPY, type UiLanguage } from '../../../../src/lib/platform/i18n';
+import {
+  MANUAL_REPORT_REASONS,
+  manualReasonLabel,
+  type ManualReportReason,
+} from '../../../../src/lib/community/manual-reasons';
 import type { UnblockBatchResult } from '../../../../src/lib/queue/run-unblock-batch';
 import { FAILURE_LABELS, formatDate, normalizeManualInput } from '../shared';
 import type { SubpageSendToXPage } from './types';
@@ -29,6 +34,8 @@ export default function BlockedPage({
   const [blocked, setBlocked] = useState<BlockedAccount[] | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [handleInput, setHandleInput] = useState('');
+  // '' = 未选；'personal' = 仅拉黑不参与社区；其余是票面分类
+  const [manualReason, setManualReason] = useState<ManualReportReason | 'personal' | ''>('');
   const [manualRunning, setManualRunning] = useState(false);
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<UnblockBatchResult | null>(null);
@@ -51,15 +58,24 @@ export default function BlockedPage({
       notify(t.invalidHandle);
       return;
     }
+    if (!manualReason) {
+      notify(t.manualReasonPlaceholder);
+      return;
+    }
     setManualRunning(true);
     notify(null);
     try {
-      const response = (await sendToXPage({ type: 'feedsieve:manual-spam-block', handle })) as {
+      const response = (await sendToXPage({
+        type: 'feedsieve:manual-spam-block',
+        handle,
+        reason: manualReason === 'personal' ? null : manualReason,
+      })) as {
         ok?: boolean;
         code?: string;
       };
       if (response?.ok) {
         setHandleInput('');
+        setManualReason('');
         notify(t.manualBlocked(handle));
         setBlocked(await getBlockedAccounts());
         await refreshPageMarked();
@@ -93,7 +109,7 @@ export default function BlockedPage({
   return (
     <>
       <form
-        className="inline-form"
+        className="inline-form manual-block-form"
         onSubmit={(event) => {
           event.preventDefault();
           void runManualBlock();
@@ -109,10 +125,33 @@ export default function BlockedPage({
           spellCheck={false}
           onChange={(event) => setHandleInput(event.target.value)}
         />
+        <select
+          className="manual-reason-select"
+          value={manualReason}
+          aria-label={t.manualReason}
+          onChange={(event) =>
+            setManualReason(event.target.value as ManualReportReason | 'personal' | '')
+          }
+        >
+          <option value="" disabled>
+            {t.manualReasonPlaceholder}
+          </option>
+          {MANUAL_REPORT_REASONS.map((reason) => (
+            <option key={reason} value={reason}>
+              {manualReasonLabel(reason, language)}
+            </option>
+          ))}
+          <option value="personal">{t.manualOnly}</option>
+        </select>
         <button
           type="submit"
           className="secondary-button"
-          disabled={manualRunning || handleInput.trim().length === 0 || pauseDestructive}
+          disabled={
+            manualRunning ||
+            handleInput.trim().length === 0 ||
+            manualReason === '' ||
+            pauseDestructive
+          }
         >
           {manualRunning ? t.processing : t.markSpamAndBlock}
         </button>

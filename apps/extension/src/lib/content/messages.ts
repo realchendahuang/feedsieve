@@ -14,6 +14,7 @@ import type { QueueSupervisor } from '../queue/queue-supervisor';
 import type { FollowingSync } from '../community/following-sync';
 import type { ContentState } from './page-state';
 import { communityVoteForDetection } from './block-core';
+import { isManualReportReason } from '../community/manual-reasons';
 import type { BlockQueueRunner } from './block-queue';
 import type { ManualActions } from './manual-actions';
 import type { ProfileFill } from './profile-fill';
@@ -45,6 +46,7 @@ export function registerContentMessageHandlers(deps: {
       type?: string;
       handle?: string;
       handles?: string[];
+      reason?: unknown;
       targetTabId?: number;
       items?: Array<{ handle: string; xUserId?: string; category: string }>;
     } | null;
@@ -82,7 +84,14 @@ export function registerContentMessageHandlers(deps: {
       });
     }
     if (type === 'feedsieve:manual-spam-block' && msg?.handle) {
-      return runManualSpamBlock(msg.handle);
+      // reason=null 是用户明确选择「仅拉黑」；缺字段/非法值不能悄悄当成 other 投票。
+      const rawReason = msg.reason;
+      const reason =
+        rawReason === null ? null : isManualReportReason(rawReason) ? rawReason : undefined;
+      if (reason === undefined) {
+        return Promise.resolve({ ok: false, code: 'invalid-reason' });
+      }
+      return runManualSpamBlock(msg.handle, {}, reason);
     }
     if (type === 'feedsieve:profile-fill' && typeof msg?.handle === 'string') {
       // 用户点「补全」：向下滚动让 X 自己加载更多帖子（不额外请求 X）
