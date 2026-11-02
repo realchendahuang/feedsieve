@@ -18,7 +18,12 @@ export const X_WEB_BEARER =
   'Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA';
 
 export type NativeActionFailureCode =
-  'auth_required' | 'rate_limited' | 'http_error' | 'network_error' | 'missing_csrf';
+  | 'auth_required'
+  | 'challenge'
+  | 'rate_limited'
+  | 'http_error'
+  | 'network_error'
+  | 'missing_csrf';
 
 export type NativeActionResult =
   | { ok: true; handle?: string }
@@ -47,6 +52,28 @@ export function readCsrfToken(): string | null {
     }
   }
   return null;
+}
+
+/**
+ * 人机验证 / 登录墙的响应特征。
+ *
+ * X 对撞上风控的账号可能回 401/403 并在响应里带 arkose / challenge 线索，
+ * 也可能把请求导到 /i/flow/login。只认这几种明确特征，认不出来仍按
+ * auth_required 处理——宁可少判一类，也不把普通 403 误标成人机验证
+ * （误判会把用户引去点一个根本不存在的验证码）。
+ */
+const CHALLENGE_MARKER = /arkose|challenge_id|verification_required|\/i\/flow\/login/i;
+
+async function looksLikeChallenge(response: Response): Promise<boolean> {
+  const clone = (response as { clone?: () => Response }).clone;
+  if (typeof clone !== 'function') return false;
+  try {
+    const body = await response.clone().text();
+    return CHALLENGE_MARKER.test(body.slice(0, 2_048));
+  } catch {
+    // 响应体读不出来（流被消费 / 环境不支持）：当作没有特征
+    return false;
+  }
 }
 
 /**
@@ -91,10 +118,12 @@ export async function runNativeAction(
     if (response.ok) {
       result = { ok: true };
     } else if (response.status === 401 || response.status === 403) {
+      // 401/403 先分「会话失效」和「人机验证」：两者都该停队列，但提示话术不同
+      const challenge = await looksLikeChallenge(response);
       result = {
         ok: false,
-        code: 'auth_required',
-        message: `HTTP ${response.status}`,
+        code: challenge ? 'challenge' : 'auth_required',
+        message: `HTTP ${response.status}${challenge ? '（人机验证）' : ''}`,
         statusCode: response.status,
       };
     } else if (response.status === 429) {

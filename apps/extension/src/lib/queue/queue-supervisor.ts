@@ -28,6 +28,7 @@ export const QUEUE_HEARTBEAT_INTERVAL_MS = 3000;
 const RESUME_RETRYABLE_FAILURE_CODES = [
   'rate_limited',
   'auth_required',
+  'challenge',
   'missing_csrf',
   'network_error',
   'kill_switch',

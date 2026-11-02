@@ -3,7 +3,7 @@
  *
  * 分类决定恢复语义：
  * - transient  —— 限流/网络/5xx：单任务按指数退避重试（含 Retry-After），不阻塞队列其它任务
- * - pause      —— 认证失效 / 缺 CSRF / 官方暂停 / 安全额度用尽：整个队列暂停，
+ * - pause      —— 认证失效 / 人机验证 / 缺 CSRF / 官方暂停 / 安全额度用尽：整个队列暂停，
  *                  等用户重登、开关解除或次日手动继续
  * - permanent  —— 目标不存在 / 永久 4xx：单任务判死
  * - unsupported—— 端点被移除（404/405/410）：X 侧结构性变化，停止并提示版本兼容问题
@@ -25,6 +25,7 @@ export interface FailureInfo {
 export function classifyFailure(failure: FailureInfo): FailureClass {
   switch (failure.code) {
     case 'auth_required':
+    case 'challenge': // 人机验证 / 登录墙：继续发只会加重风控
     case 'missing_csrf':
     case 'no_csrf': // x-adapter resolve-user-id 的会话失效码（cookie 不可读 / 401/403），收敛后宿主无需自行重映射
     case 'kill_switch':

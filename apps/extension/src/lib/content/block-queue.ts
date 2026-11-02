@@ -147,11 +147,10 @@ export function createBlockQueueRunner(deps: {
           return outcome;
         }
         consecutiveRateLimited = 0;
-        // 服务端明确拒绝写操作（登出/风控锁定）：当天预算清零，账号红线收缩
-        // TODO(block-safety PR2)：Arkose/登录墙（challenge）检测
-        // 待真机验证 X 验证码响应特征后在此并链（persistSignal(accountKey, 'challenge')）
-        if (!outcome.ok && outcome.code === 'auth_required') {
-          await persistSignal(accountKey, 'auth_required');
+        // 服务端明确拒绝写操作（登出 / 风控锁定 / 人机验证）：当天预算清零，账号红线收缩。
+        // challenge 与 auth_required 都是「再发只会更糟」，但提示话术不同（见 FAILURE_LABELS）
+        if (!outcome.ok && (outcome.code === 'auth_required' || outcome.code === 'challenge')) {
+          await persistSignal(accountKey, outcome.code);
         }
         return outcome;
       },

@@ -59,8 +59,8 @@ export const FALLBACK_ACCOUNT_KEY = 'no-account';
 
 /**
  * 风控收缩信号：风暴砍半，其余（认证失效 / 人机挑战）当天清零。
- * TODO(block-safety PR2)：`challenge` 分支已支持、尚未接线——
- * 需用真机验证 X 验证码响应的特征（如 429+challenge、登录墙跳转）后在宿主侧检测上报。
+ * `challenge` 由 x-adapter 在 401/403 响应里认出 arkose / challenge 特征时给出，
+ * 比 auth_required 更精准（队列提示「需要人机验证」而不是「登录失效」）。
  */
 export type SafetySignal = 'rate_limit_storm' | 'auth_required' | 'challenge';
 
