@@ -420,6 +420,8 @@ export default function HotView({ language, sendToXPage }: HotViewProps) {
   const pendingRestore = useRef<number | null>(null);
   // 滚动时记下的最新位置：切走时弹窗内容已经换掉，不能再从 DOM 读 scrollTop
   const lastScrollTop = useRef(0);
+  // 没动过列表就不写：StrictMode 会在挂载后先跑一次清理，别拿初始的 0 覆盖上次的位置
+  const dirty = useRef(false);
   const toastSeq = useRef(0);
 
   // 偏好跨次打开保留
@@ -843,6 +845,7 @@ export default function HotView({ language, sendToXPage }: HotViewProps) {
     if (container) {
       container.scrollTop = pendingRestore.current;
       lastScrollTop.current = container.scrollTop;
+      dirty.current = true;
     }
     pendingRestore.current = null;
   }, [key, current]);
@@ -855,6 +858,7 @@ export default function HotView({ language, sendToXPage }: HotViewProps) {
     let save: number | undefined;
     const onScroll = (): void => {
       lastScrollTop.current = container.scrollTop;
+      dirty.current = true;
       const state = viewState.current;
       positions.current.set(state.key, { top: container.scrollTop, count: state.count });
       setAtTop(container.scrollTop <= AT_TOP_PX);
@@ -872,6 +876,7 @@ export default function HotView({ language, sendToXPage }: HotViewProps) {
       container.removeEventListener('scroll', onScroll);
       // 切到别的栏目时内容已经换掉，DOM 里的 scrollTop 归零，用滚动时记下的位置
       const state = viewState.current;
+      if (!dirty.current) return;
       positions.current.set(state.key, { top: lastScrollTop.current, count: state.count });
       persistPositions();
     };

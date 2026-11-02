@@ -61,6 +61,8 @@ export function useListPosition({
   // 滚动时记下的最新位置：切走时弹窗内容已经换掉，不能再从 DOM 读 scrollTop
   const lastTop = useRef(0);
   const current = useRef({ key: pageKey, count: count ?? 0 });
+  // 没动过列表就不写：StrictMode 会在挂载后先跑一次清理，别拿初始的 0 覆盖上次的位置
+  const dirty = useRef(false);
 
   useEffect(() => {
     current.current = { key: pageKey, count: count ?? 0 };
@@ -90,6 +92,7 @@ export function useListPosition({
     if (container) {
       container.scrollTop = restoreTop;
       lastTop.current = container.scrollTop;
+      dirty.current = true;
     }
   }, [restoreTop, ready, rootRef]);
 
@@ -107,6 +110,7 @@ export function useListPosition({
     };
     const onScroll = (): void => {
       lastTop.current = container.scrollTop;
+      dirty.current = true;
       window.clearTimeout(timer);
       timer = window.setTimeout(persist, WRITE_MS);
     };
@@ -114,7 +118,7 @@ export function useListPosition({
     return () => {
       window.clearTimeout(timer);
       container.removeEventListener('scroll', onScroll);
-      persist();
+      if (dirty.current) persist();
     };
   }, [storageKey, rootRef]);
 }

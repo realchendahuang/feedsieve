@@ -269,31 +269,40 @@ const storageData = {
 };
 
 const storageRecord: Record<string, unknown> = storageData;
+/** storage.session：预览里同样只在页面内存里，刷新即清空。 */
+const sessionRecord: Record<string, unknown> = {};
 type StorageListener = (changes: Record<string, { newValue?: unknown }>, areaName: string) => void;
 const listeners = new Set<StorageListener>();
 
 function readStorage(
+  record: Record<string, unknown>,
   keys?: string | string[] | Record<string, unknown> | null,
 ): Record<string, unknown> {
-  if (typeof keys === 'string') return { [keys]: storageRecord[keys] };
+  if (typeof keys === 'string') return { [keys]: record[keys] };
   if (Array.isArray(keys)) {
-    return Object.fromEntries(keys.map((key) => [key, storageRecord[key]]));
+    return Object.fromEntries(keys.map((key) => [key, record[key]]));
   }
   if (keys && typeof keys === 'object') {
     return Object.fromEntries(
       Object.entries(keys).map(([key, fallback]) => [
         key,
-        storageRecord[key] === undefined ? fallback : storageRecord[key],
+        record[key] === undefined ? fallback : record[key],
       ]),
     );
   }
-  return { ...storageRecord };
+  return { ...record };
 }
 
 const previewBrowser = {
   storage: {
+    session: {
+      get: async (keys?: string | string[] | Record<string, unknown> | null) =>
+        readStorage(sessionRecord, keys),
+      set: async (patch: Record<string, unknown>) => Object.assign(sessionRecord, patch),
+    },
     local: {
-      get: async (keys?: string | string[] | Record<string, unknown> | null) => readStorage(keys),
+      get: async (keys?: string | string[] | Record<string, unknown> | null) =>
+        readStorage(storageRecord, keys),
       set: async (patch: Record<string, unknown>) => {
         Object.assign(storageRecord, patch);
         const changes = Object.fromEntries(
