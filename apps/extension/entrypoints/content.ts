@@ -45,7 +45,9 @@ import { createArticleHelper } from '../src/lib/compose/article-editor';
 import { getScheduleSettings, subscribeScheduleSettings } from '../src/lib/compose/schedule-store';
 import {
   getInsightBadgesEnabled,
+  getProfileLineEnabled,
   subscribeInsightBadges,
+  subscribeProfileLineEnabled,
 } from '../src/lib/insight/insight-settings';
 import {
   DEFAULT_MODULE_SETTINGS,
@@ -124,10 +126,11 @@ export default defineContentScript({
       sendSeen: (posts) => send({ type: INSIGHT_SEEN_MESSAGE, posts }),
     });
     // 主页洞察：资料卡下一行概况，主人自己的帖子显示倍数（数据来自后台的本地帖子库）
-    let badgesEnabled = true;
+    // 人气行单独开关（默认关闭），关掉「流速与量级」也不影响它
+    let profileLineEnabled = false;
     const profileInsight = createProfileInsight({
       getLanguage: () => state.uiLanguage,
-      isEnabled: () => badgesEnabled,
+      isEnabled: () => profileLineEnabled,
       request: (handle) => send({ type: 'feedsieve:profile-summary', handle }),
       openPanel: () => {
         void send({ type: 'feedsieve:open-profile-panel' }).catch(() => {});
@@ -330,14 +333,19 @@ export default defineContentScript({
       insight.refreshAll();
       profileInsight.ensureLine();
     });
-    // 「流速与量级」开关同时管主页洞察行和倍数标签
+    // 「流速与量级」开关只管推文上的标签和倍数
     const setBadgesEnabled = (enabled: boolean): void => {
-      badgesEnabled = enabled;
       insight.setEnabled(enabled);
-      profileInsight.ensureLine();
     };
     void getInsightBadgesEnabled().then(setBadgesEnabled);
     subscribeInsightBadges(setBadgesEnabled);
+    // 「主页人气行」：资料卡下那一行，默认关闭
+    const setProfileLineEnabled = (enabled: boolean): void => {
+      profileLineEnabled = enabled;
+      profileInsight.ensureLine();
+    };
+    void getProfileLineEnabled().then(setProfileLineEnabled);
+    subscribeProfileLineEnabled(setProfileLineEnabled);
     // 模块总开关：各模块自己读这个闭包，切换后下一次扫描 / 点击就生效
     void getModuleSettings().then((value) => {
       modules = value;

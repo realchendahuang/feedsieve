@@ -128,6 +128,30 @@ describe('profile line', () => {
     insight.stop();
   });
 
+  it('shows nothing while the popularity line is off', async () => {
+    let enabled = false;
+    const insight = createProfileInsight({
+      getLanguage: () => 'zh',
+      isEnabled: () => enabled,
+      request: vi.fn(async () => SUMMARY),
+      openPanel: vi.fn(),
+      onBaselineChange: vi.fn(),
+      getPath: () => '/alice',
+    });
+    insight.start();
+    await vi.advanceTimersByTimeAsync(1_600);
+    expect(document.querySelector(`.${PROFILE_LINE_CLASS}`)).toBeNull();
+    // 打开开关：下一次巡检补上
+    enabled = true;
+    insight.tick();
+    expect(document.querySelector(`.${PROFILE_LINE_CLASS}`)).not.toBeNull();
+    // 关掉：下一次巡检移除
+    enabled = false;
+    insight.tick();
+    expect(document.querySelector(`.${PROFILE_LINE_CLASS}`)).toBeNull();
+    insight.stop();
+  });
+
   it('shows only what it knows while the sample is small', () => {
     expect(
       profileLineParts(

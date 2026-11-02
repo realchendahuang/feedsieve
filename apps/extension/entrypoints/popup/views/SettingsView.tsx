@@ -22,8 +22,11 @@ import {
 import { setUiLanguage, UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
 import {
   getInsightBadgesEnabled,
+  getProfileLineEnabled,
   setInsightBadgesEnabled,
+  setProfileLineEnabled,
   subscribeInsightBadges,
+  subscribeProfileLineEnabled,
 } from '../../../src/lib/insight/insight-settings';
 import {
   getScheduleSettings,
@@ -225,6 +228,7 @@ export default function SettingsView({
   // 用户自定日上限：null = 还没读到；'' 允许临时输入态，失焦校验
   const [budgetDraft, setBudgetDraft] = useState<string | null>(null);
   const [insightBadges, setInsightBadges] = useState<boolean | null>(null);
+  const [profileLine, setProfileLine] = useState<boolean | null>(null);
   const [modules, setModules] = useState<ModuleSettings | null>(null);
   const [ui, setUi] = useState<UiSettings | null>(null);
   const [schedule, setSchedule] = useState<ScheduleSettings | null>(null);
@@ -232,6 +236,7 @@ export default function SettingsView({
 
   useEffect(() => {
     void getInsightBadgesEnabled().then(setInsightBadges);
+    void getProfileLineEnabled().then(setProfileLine);
     void getModuleSettings().then(setModules);
     void getUiSettings().then(setUi);
     void getScheduleSettings().then(setSchedule);
@@ -242,6 +247,7 @@ export default function SettingsView({
     void getKeywordPackCatalog().then(setCatalog);
     const unsubs = [
       subscribeInsightBadges(setInsightBadges),
+      subscribeProfileLineEnabled(setProfileLine),
       subscribeModuleSettings(setModules),
       subscribeUiSettings(setUi),
       subscribeScheduleSettings(setSchedule),
@@ -417,6 +423,17 @@ export default function SettingsView({
                 onChange={(enabled) => {
                   setInsightBadges(enabled);
                   void setInsightBadgesEnabled(enabled);
+                }}
+              />
+            </Row>
+            <Row label={t.profileLine} hint={t.profileLineHint}>
+              <Toggle
+                checked={profileLine ?? false}
+                disabled={profileLine === null}
+                label={t.profileLine}
+                onChange={(enabled) => {
+                  setProfileLine(enabled);
+                  void setProfileLineEnabled(enabled);
                 }}
               />
             </Row>

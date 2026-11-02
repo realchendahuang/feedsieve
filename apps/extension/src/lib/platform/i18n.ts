@@ -178,6 +178,9 @@ export const UI_COPY = {
     falsePositiveList: '白名单',
     insightBadgesHint:
       '推文右上角显示当前流速（每小时浏览；绿色平稳，红色正在火）；作者名旁显示量级图标和粉丝数。悬停看档位、破圈倍数和详细解释。只用当前页面已加载的数据，不上传。',
+    profileLine: '主页人气行',
+    profileLineHint:
+      '在 X 主页资料卡下显示一行人气数据：量级、粉丝、关注比、中位浏览、爆款率和已收条数；点这一行打开主页洞察。',
     insight: '洞察',
     briefTitle: '最近刷到',
     briefEmpty: '刷一会儿 x.com，正在火的帖子会出现在这里',
@@ -571,6 +574,9 @@ export const UI_COPY = {
     falsePositiveList: 'Allowlist',
     insightBadgesHint:
       'Shows current velocity (views per hour; green is steady, red is heating up) at the top right of posts, plus a tier icon with follower count next to names. Hover for the tier, reach and details. Uses only data already loaded on the page; nothing is uploaded.',
+    profileLine: 'Profile popularity line',
+    profileLineHint:
+      'Shows a popularity line under the profile card on X: tier, followers, follow ratio, median views, outlier rate and posts collected. Click the line to open profile insight.',
     insight: 'Insight',
     briefTitle: 'Recently seen',
     briefEmpty: 'Scroll x.com for a while and posts that are taking off will show up here',
