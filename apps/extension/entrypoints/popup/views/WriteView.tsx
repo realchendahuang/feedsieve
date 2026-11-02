@@ -476,9 +476,9 @@ export function WriteView({
   const weekWindow = useMemo(() => {
     const start = new Date(now);
     start.setHours(0, 0, 0, 0);
-    start.setDate(start.getDate() + weekOffset * 7);
+    start.setDate(start.getDate() + weekOffset * DAYS_SHOWN);
     const end = new Date(start);
-    end.setDate(end.getDate() + 7);
+    end.setDate(end.getDate() + DAYS_SHOWN);
     // 本周从「现在」开始算，免得把今天已经过去的小时当成空档
     const from = weekOffset === 0 ? now : start.getTime();
     const hours = capacityBetween(settings, occupied, from, end.getTime());
