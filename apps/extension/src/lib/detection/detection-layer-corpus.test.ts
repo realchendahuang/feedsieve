@@ -253,41 +253,80 @@ describe('检测管线分层金标', () => {
     expect(result.category).toBe('bot_spam');
   });
 
-  it('黄框理由不冒充票面主张：other 只报票数，证据写事实，具体分类用注脚', () => {
-    // other（无证据、无具体票）：只报票数，绝不出现「标记为其他」
-    expect(
-      communityHitReason(
-        { category: 'other', report_count: 7, domains: undefined, campaign_size: undefined },
-        'zh',
-      ),
-    ).toBe('7 人标记');
+  const communityEntry = (
+    overrides: Partial<Parameters<typeof communityHitReason>[0]> = {},
+  ): Parameters<typeof communityHitReason>[0] => ({
+    category: 'other',
+    report_count: 1,
+    rescue_count: 0,
+    sources: ['community'],
+    domains: undefined,
+    campaign_size: undefined,
+    ...overrides,
+  });
+
+  it('黄框理由不冒充票面主张：other 标注原因未细分，证据写事实，具体分类用注脚', () => {
+    // other（无证据、无具体分类）：承认原因未细分，绝不出现「标记为其他」
+    expect(communityHitReason(communityEntry({ report_count: 7 }), 'zh')).toBe(
+      '7 人标记 · 原因未细分',
+    );
     // 域名证据：写事实，不宣称「N 人标记为诈骗」
     expect(
-      communityHitReason(
-        { category: 'other', report_count: 2, domains: ['spam.example'], campaign_size: undefined },
-        'zh',
-      ),
+      communityHitReason(communityEntry({ report_count: 2, domains: ['spam.example'] }), 'zh'),
     ).toBe('2 人标记 · 外链指向垃圾域名');
     // 同模板簇：写网络事实
-    expect(
-      communityHitReason(
-        { category: 'other', report_count: 1, domains: undefined, campaign_size: 5 },
-        'zh',
-      ),
-    ).toBe('社区名单 · 与 5 个已确认垃圾账号同模板');
+    expect(communityHitReason(communityEntry({ campaign_size: 5 }), 'zh')).toBe(
+      '社区名单 · 与 5 个已确认垃圾账号同模板',
+    );
     // 具体分类（可能来自证据推导）：注脚形式，不再用「标记为」句式
     expect(
-      communityHitReason(
-        { category: 'bot_spam', report_count: 3, domains: undefined, campaign_size: undefined },
-        'zh',
-      ),
+      communityHitReason(communityEntry({ category: 'bot_spam', report_count: 3 }), 'zh'),
     ).toBe('3 人标记 · 机器人');
     expect(
+      communityHitReason(communityEntry({ category: 'bot_spam', report_count: 3 }), 'en'),
+    ).toBe('3 community marks · Bots');
+  });
+
+  it('有抢救票时同时报出，标记不再看起来像一致认定', () => {
+    // 截图里的那条：5 张旧手动票、3 张抢救票、没有细分原因
+    expect(communityHitReason(communityEntry({ report_count: 5, rescue_count: 3 }), 'zh')).toBe(
+      '5 人标记 · 3 人抢救 · 原因未细分',
+    );
+    expect(
       communityHitReason(
-        { category: 'bot_spam', report_count: 3, domains: undefined, campaign_size: undefined },
+        communityEntry({ category: 'advertising', report_count: 5, rescue_count: 2 }),
+        'zh',
+      ),
+    ).toBe('5 人标记 · 2 人抢救 · 广告号');
+    expect(
+      communityHitReason(
+        communityEntry({ category: 'advertising', report_count: 5, rescue_count: 2 }),
         'en',
       ),
-    ).toBe('3 community marks · Bots');
+    ).toBe('5 community marks · 2 rescues · Ads');
+  });
+
+  it('维护者说明优先作为理由；维护者单源不伪装成社区票数', () => {
+    expect(
+      communityHitReason(
+        communityEntry({
+          report_count: 0,
+          sources: ['maintainer'],
+          maintainer_note: '批量转发赌博链接',
+        }),
+        'zh',
+      ),
+    ).toBe('维护者标注 · 批量转发赌博链接');
+    expect(
+      communityHitReason(
+        communityEntry({
+          report_count: 5,
+          sources: ['community', 'maintainer'],
+          maintainer_note: '批量转发赌博链接',
+        }),
+        'zh',
+      ),
+    ).toBe('5 人标记 · 维护者：批量转发赌博链接');
   });
 });
 
