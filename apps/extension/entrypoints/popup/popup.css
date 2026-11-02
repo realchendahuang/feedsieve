@@ -46,12 +46,13 @@
   box-sizing: border-box;
 }
 
-/* 弹窗尺寸必须固定像素：action popup 按内容测尺寸，vw/vh 在测量期自引用会把弹窗塌缩成小方块 */
+/* 弹窗尺寸必须固定像素：action popup 按内容测尺寸，vw/vh 在测量期自引用会把弹窗塌缩成小方块。
+   手机上的宽度由 App.tsx 的 fitPopupToScreen 按 screen.width 收窄（--popup-width）。 */
 html,
 body,
 #root {
-  width: 420px;
-  height: 600px;
+  width: var(--popup-width, 420px);
+  height: var(--popup-height, 600px);
   margin: 0;
   overflow: hidden;
 }

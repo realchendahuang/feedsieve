@@ -108,6 +108,21 @@ function detectSidePanel(): boolean {
   return window.innerHeight > 650;
 }
 
+/**
+ * 手机上的工具栏弹窗：按屏幕宽度收窄，别让固定 420px 超出屏幕。
+ * 不能用 vw/vh——action popup 按内容测尺寸，视口单位会自引用把弹窗塌缩；
+ * screen.width 是设备宽度，不受弹窗测量影响。
+ */
+function fitPopupToScreen(): void {
+  if (typeof window === 'undefined') return;
+  const width = Math.min(420, Math.round(window.screen.width || 420));
+  const height = Math.min(600, Math.round(window.screen.height || 600));
+  document.documentElement.style.setProperty('--popup-width', `${width}px`);
+  document.documentElement.style.setProperty('--popup-height', `${height}px`);
+}
+
+fitPopupToScreen();
+
 export default function App() {
   const [language, setLanguage] = useState<UiLanguage>(defaultUiLanguage);
   const [route] = useState(initialRoute);
