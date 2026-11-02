@@ -35,6 +35,7 @@ import {
   subscribeAssignments,
   subscribeScheduledCache,
   subscribeScheduleSettings,
+  takeComposeIntent,
   upcomingTimes,
   type ScheduleAssignment,
   type ScheduledCache,
@@ -297,6 +298,10 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
   let lastPick: number | null = null;
   let sessionUsed: Array<{ at: number; recordedAt: number }> = [];
   let pendingFill: { at: number; record: boolean } | null = null;
+  /** 「配图」交接：正文已贴好、时间先留着，等用户加完图打开安排表再填 */
+  let stashedSlot: { at: number; recordedAt: number } | null = null;
+  let composerWasOpen = false;
+  let composerCloseTimer: number | null = null;
   /** 同一个「下一条」在页面上保持稳定，别每次扫描都换一个随机分钟 */
   let preview: { at: number; computedAt: number } | null = null;
   /** 发帖框里刚占的时间；没点确认就关掉安排表时把它释放 */
@@ -353,7 +358,51 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
     });
   }
 
+  function findComposer(): HTMLElement | null {
+    return document.querySelector<HTMLElement>('[role="dialog"] [data-testid="tweetTextarea_0"]');
+  }
+
+  function clearComposerCloseTimer(): void {
+    if (composerCloseTimer === null) return;
+    window.clearTimeout(composerCloseTimer);
+    composerCloseTimer = null;
+  }
+
+  /** 用户没在 X 里确认就把发帖框关了：把本机占的时间还回去。 */
+  function releaseStashedSlot(): void {
+    const stashed = stashedSlot;
+    stashedSlot = null;
+    if (!stashed) return;
+    void removeAssignmentsMatching('', stashed.at)
+      .then((list) => {
+        assignments = list;
+        invalidatePreview();
+        refreshSlotTitles();
+      })
+      .catch(() => undefined);
+  }
+
+  /** 发帖框关掉后稍等一会儿再释放：打开安排表时 X 可能先卸载发帖框再挂上弹窗。 */
+  function watchComposer(): void {
+    if (findComposer()) {
+      composerWasOpen = true;
+      clearComposerCloseTimer();
+      return;
+    }
+    if (!composerWasOpen || composerCloseTimer !== null) return;
+    composerCloseTimer = window.setTimeout(() => {
+      composerCloseTimer = null;
+      if (findComposer() || document.querySelector(CONFIRM_SELECTOR)) return;
+      composerWasOpen = false;
+      releaseStashedSlot();
+    }, 1200);
+  }
+
   function scan(): void {
+    if (stashedSlot !== null || composerWasOpen) watchComposer();
+    if (stashedSlot !== null && now() - stashedSlot.recordedAt > 10 * MINUTE_MS) {
+      releaseStashedSlot();
+    }
     if (settings.composeHelper) {
       for (const option of document.querySelectorAll<HTMLElement>(SCHEDULE_OPTION_SELECTOR)) {
         ensureSlotButton(option);
@@ -369,7 +418,14 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
     }
     if (settings.composeHelper) ensureBar(dialog);
     else dialog.querySelector(`[${BAR_ATTR}]`)?.remove();
-    if (pendingFill !== null && findScheduleFields(dialog)) {
+    const fields = findScheduleFields(dialog);
+    if (!fields) return;
+    if (stashedSlot !== null) {
+      const at = stashedSlot.at;
+      stashedSlot = null;
+      void fill(dialog, at);
+    }
+    if (pendingFill !== null) {
       const pending = pendingFill;
       pendingFill = null;
       void fill(dialog, pending.at, pending.record);
@@ -616,26 +672,28 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
   }
 
   /**
-   * 打开 X 的发帖框并贴好正文，再打开安排表填下一个空档。
+   * 打开 X 的发帖框并贴好正文。
+   * `openSchedule` 为 false 时不自动打开安排表，只把时间先留着 ——
+   * 用户要先在原生框里加图片 / 视频，加完自己点日历，时间会填好。
    * 发帖框里已经有没写完的内容时不动它，返回 busy。
    */
   async function composeDraft(
     text: string,
     at?: number,
+    openSchedule = true,
   ): Promise<{ ok: boolean; reason?: string }> {
-    const dialogComposer = () =>
-      document.querySelector<HTMLElement>('[role="dialog"] [data-testid="tweetTextarea_0"]');
-    if (!dialogComposer()) {
+    if (!findComposer()) {
       history.pushState(history.state, '', COMPOSE_PATH);
       window.dispatchEvent(new PopStateEvent('popstate', { state: history.state }));
     }
     let composer: HTMLElement | null = null;
     for (let i = 0; i < 60 && !composer; i++) {
       await new Promise((resolve) => setTimeout(resolve, 100));
-      composer = dialogComposer();
+      composer = findComposer();
     }
     if (!composer) return { ok: false, reason: 'no-composer' };
     if ((composer.textContent ?? '').trim() !== '') return { ok: false, reason: 'busy' };
+    composerWasOpen = true;
     composer.focus();
     await new Promise((resolve) => setTimeout(resolve, 100));
     const data = new DataTransfer();
@@ -646,12 +704,21 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
     await new Promise((resolve) => setTimeout(resolve, 300));
     const dialog = composer.closest('[role="dialog"]');
     const option = dialog?.querySelector<HTMLElement>(SCHEDULE_OPTION_SELECTOR) ?? null;
-    if (option) openWithSlot(option, at);
+    if (openSchedule) {
+      if (option) openWithSlot(option, at);
+    } else if (at !== undefined) {
+      stashedSlot = { at, recordedAt: now() };
+    }
     return { ok: true };
   }
 
   function onMessage(message: unknown): Promise<unknown> | undefined {
-    const msg = message as { type?: string; text?: unknown; at?: unknown } | null;
+    const msg = message as {
+      type?: string;
+      text?: unknown;
+      at?: unknown;
+      openSchedule?: unknown;
+    } | null;
     if (msg?.type === OPEN_SCHEDULED_MESSAGE) {
       openScheduledList();
       return Promise.resolve({ ok: true });
@@ -661,7 +728,7 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
         typeof msg.at === 'number' && Number.isFinite(msg.at) && msg.at > now()
           ? msg.at
           : undefined;
-      return composeDraft(msg.text, at);
+      return composeDraft(msg.text, at, msg.openSchedule !== false);
     }
     return undefined;
   }
@@ -685,6 +752,14 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
     void getLastPick().then((value) => {
       lastPick = value;
     });
+    // 发帖页点空档「写新帖」时，新窗口从这里取预填时间
+    if (location.pathname === COMPOSE_PATH) {
+      void takeComposeIntent().then((at) => {
+        if (at === null) return;
+        stashedSlot = { at, recordedAt: now() };
+        scheduleScan();
+      });
+    }
     cleanups.push(
       subscribeScheduleSettings((value) => {
         settings = value;
@@ -721,6 +796,7 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
   function stop(): void {
     observer?.disconnect();
     observer = null;
+    clearComposerCloseTimer();
     if (frame) cancelAnimationFrame(frame);
     frame = 0;
     cleanups.splice(0).forEach((fn) => {

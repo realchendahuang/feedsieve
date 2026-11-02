@@ -9,6 +9,7 @@ import { DEFAULT_SCHEDULE_SETTINGS } from '../../../src/lib/compose/schedule-slo
 
 let storageSet: ReturnType<typeof vi.fn>;
 let sendToXPage: ReturnType<typeof vi.fn>;
+let windowsCreate: ReturnType<typeof vi.fn>;
 let sessionStored: Record<string, unknown>;
 const mounted: Array<{ unmount: () => void }> = [];
 
@@ -19,6 +20,7 @@ beforeEach(() => {
   storageSet = vi.fn().mockResolvedValue(undefined);
   sessionStored = {};
   sendToXPage = vi.fn().mockResolvedValue({ ok: true });
+  windowsCreate = vi.fn().mockResolvedValue({});
   vi.stubGlobal('browser', {
     storage: {
       session: {
@@ -37,6 +39,7 @@ beforeEach(() => {
       create: vi.fn(),
       sendMessage: vi.fn(),
     },
+    windows: { create: windowsCreate },
     runtime: { onMessage: { addListener: vi.fn(), removeListener: vi.fn() } },
   });
 });
@@ -55,6 +58,7 @@ async function renderWriteView(): Promise<HTMLElement> {
           type: string;
           text?: string;
           at?: number;
+          openSchedule?: boolean;
         }) => Promise<unknown>,
         onOpenCadence: vi.fn(),
       }),
@@ -117,6 +121,50 @@ describe('发帖页排期', () => {
       ],
     });
   });
+
+  it('配图：只贴正文，不自动打开安排表', async () => {
+    const createdAt = Date.now();
+    (browser.storage.local.get as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      async (key: string) => {
+        if (key === 'composeDraftsV1')
+          return { composeDraftsV1: [{ id: 'd1', text: '带图文案', createdAt }] };
+        return {};
+      },
+    );
+
+    const rootEl = await renderWriteView();
+    const button = rootEl.querySelector<HTMLButtonElement>('[aria-label="配图"]');
+    if (!button) throw new Error('media button not found');
+    await act(async () => {
+      button.click();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    expect(sendToXPage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: COMPOSE_DRAFT_MESSAGE,
+        text: '带图文案',
+        openSchedule: false,
+        at: expect.any(Number),
+      }),
+    );
+  });
+
+  it('写新帖：打开 X 的原生发帖窗口', async () => {
+    const rootEl = await renderWriteView();
+    const button = [...rootEl.querySelectorAll('button')].find(
+      (candidate) => candidate.textContent?.trim() === '写新帖',
+    );
+    if (!button) throw new Error('new post button not found');
+    await act(async () => {
+      button.click();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    expect(windowsCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ url: 'https://x.com/compose/post', type: 'popup' }),
+    );
+  });
 });
 
 describe('发帖页滚动位置', () => {
@@ -144,6 +192,7 @@ describe('发帖页滚动位置', () => {
               type: string;
               text?: string;
               at?: number;
+              openSchedule?: boolean;
             }) => Promise<unknown>,
             onOpenCadence: vi.fn(),
           }),

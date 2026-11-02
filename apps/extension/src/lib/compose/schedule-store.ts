@@ -9,12 +9,13 @@ import {
   normalizeScheduleSettings,
   type ScheduleSettings,
 } from './schedule-slots';
-import type { ScheduledEvent, ScheduledPost } from './scheduled-parse';
+import { isMediaUrl, type ScheduledEvent, type ScheduledPost } from './scheduled-parse';
 
 export const SCHEDULE_SETTINGS_KEY = 'composeScheduleV1';
 export const SCHEDULED_CACHE_KEY = 'scheduledPostsV1';
 export const SCHEDULE_LAST_PICK_KEY = 'scheduleLastPickV1';
 export const SCHEDULE_ASSIGNMENTS_KEY = 'scheduleAssignmentsV1';
+export const COMPOSE_INTENT_KEY = 'composeIntentV1';
 
 export interface ScheduledCache {
   /** 这份列表属于哪个 X 账号（小写 handle；未知为 null） */
@@ -36,14 +37,25 @@ export function asScheduledCache(value: unknown): ScheduledCache {
   return {
     account: typeof raw.account === 'string' ? raw.account : null,
     syncedAt: typeof raw.syncedAt === 'number' ? raw.syncedAt : null,
-    posts: raw.posts.filter(
-      (p): p is ScheduledPost =>
-        !!p &&
-        typeof p.id === 'string' &&
-        typeof p.executeAt === 'number' &&
-        typeof p.text === 'string' &&
-        typeof p.media === 'number',
-    ),
+    posts: raw.posts
+      .filter(
+        (p): p is ScheduledPost =>
+          !!p &&
+          typeof p.id === 'string' &&
+          typeof p.executeAt === 'number' &&
+          typeof p.text === 'string' &&
+          typeof p.media === 'number',
+      )
+      .map((post) => {
+        const base = { ...post };
+        delete base.mediaUrls;
+        if (!Array.isArray(post.mediaUrls)) return base;
+        const urls = post.mediaUrls
+          .map(isMediaUrl)
+          .filter((url): url is string => url !== null)
+          .slice(0, 4);
+        return urls.length ? { ...base, mediaUrls: urls } : base;
+      }),
   };
 }
 
@@ -80,6 +92,45 @@ export function reduceScheduledCache(
 /** 还没发出去的排期时间（算空档用）。 */
 export function upcomingTimes(cache: ScheduledCache, now: number): number[] {
   return cache.posts.filter((p) => p.executeAt > now).map((p) => p.executeAt);
+}
+
+// ---------- 新窗口写新帖：把用户点的空档带过去 ----------
+//
+// 发帖页点某个空档写新帖时，先在 storage.session 记下时间；新开的 x.com 发帖窗口
+// 由内容脚本取走、填进安排表。只活 10 分钟，浏览器关闭即清空。
+
+const COMPOSE_INTENT_TTL_MS = 10 * MINUTE_MS;
+
+export interface ComposeIntent {
+  /** 发布时刻，Unix 毫秒 */
+  at: number;
+  createdAt: number;
+}
+
+export async function setComposeIntent(at: number, now = Date.now()): Promise<void> {
+  try {
+    await browser.storage.session?.set({
+      [COMPOSE_INTENT_KEY]: { at, createdAt: now } satisfies ComposeIntent,
+    });
+  } catch {
+    // 旧环境没有 session 存储：写新帖只是不预填时间
+  }
+}
+
+export async function takeComposeIntent(now = Date.now()): Promise<number | null> {
+  try {
+    const stored = await browser.storage.session?.get(COMPOSE_INTENT_KEY);
+    const raw = stored?.[COMPOSE_INTENT_KEY];
+    await browser.storage.session?.remove?.(COMPOSE_INTENT_KEY);
+    if (!raw || typeof raw !== 'object') return null;
+    const value = raw as Partial<ComposeIntent>;
+    if (typeof value.at !== 'number' || typeof value.createdAt !== 'number') return null;
+    if (!Number.isFinite(value.at) || value.at <= now) return null;
+    if (now - value.createdAt > COMPOSE_INTENT_TTL_MS) return null;
+    return value.at;
+  } catch {
+    return null;
+  }
 }
 
 // ---------- 已分配、还没在 X 里确认的时间 ----------

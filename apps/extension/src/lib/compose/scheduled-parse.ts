@@ -19,6 +19,8 @@ export interface ScheduledPost {
   text: string;
   /** 图片 / 视频数 */
   media: number;
+  /** 图片缩略图（最多 4 张）；接口不给 URL 时省略 */
+  mediaUrls?: string[];
 }
 
 export type ScheduledEvent =
@@ -72,6 +74,39 @@ function mediaCount(...sources: unknown[]): number {
   return 0;
 }
 
+/** 只收 X 自己的图片 CDN，避免把页面传来的任意地址塞进 <img src>。 */
+export function isMediaUrl(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'https:') return null;
+    if (url.hostname !== 'pbs.twimg.com' && url.hostname !== 'video.twimg.com') return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+/** `media_entities[]` 里的缩略图；形状随版本变，认不出就只留数量。 */
+function mediaUrls(source: unknown): string[] | undefined {
+  if (!Array.isArray(source)) return undefined;
+  const out: string[] = [];
+  for (const entity of source) {
+    const item = obj(entity);
+    if (!item) continue;
+    const info = obj(item.media_info);
+    const url =
+      isMediaUrl(item.media_url_https) ??
+      isMediaUrl(item.media_url) ??
+      isMediaUrl(item.url) ??
+      isMediaUrl(info?.media_url_https) ??
+      isMediaUrl(info?.media_url);
+    if (url && !out.includes(url)) out.push(url);
+    if (out.length >= 4) break;
+  }
+  return out.length ? out : undefined;
+}
+
 function parseListItem(value: unknown): ScheduledPost | null {
   const item = obj(value);
   if (!item) return null;
@@ -79,11 +114,13 @@ function parseListItem(value: unknown): ScheduledPost | null {
   const executeAt = toMs(obj(item.scheduling_info)?.execute_at);
   if (!id || executeAt === null) return null;
   const request = obj(item.tweet_create_request);
+  const urls = mediaUrls(item.media_entities);
   return {
     id,
     executeAt,
     text: cleanText(request?.status),
     media: mediaCount(item.media_entities, request?.media_ids),
+    ...(urls ? { mediaUrls: urls } : {}),
   };
 }
 
@@ -183,11 +220,18 @@ export function asScheduledEvent(value: unknown): ScheduledEvent | null {
     const executeAt = toMs(p.executeAt);
     if (!id || executeAt === null) return null;
     const media = Number(p.media);
+    const urls = Array.isArray(p.mediaUrls)
+      ? p.mediaUrls
+          .map(isMediaUrl)
+          .filter((url): url is string => url !== null)
+          .slice(0, 4)
+      : [];
     return {
       id,
       executeAt,
       text: cleanText(p.text),
       media: Number.isInteger(media) && media >= 0 && media <= 4 ? media : 0,
+      ...(urls.length ? { mediaUrls: urls } : {}),
     };
   };
   if (event.kind === 'upsert') {

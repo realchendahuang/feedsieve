@@ -190,9 +190,89 @@ const snapshotBody = JSON.stringify({
   ],
 });
 
+const previewDayStart = new Date(now);
+previewDayStart.setHours(0, 0, 0, 0);
+const previewAt = (offset: number, hour: number, minute: number): number => {
+  const date = new Date(previewDayStart);
+  date.setDate(date.getDate() + offset);
+  date.setHours(hour, minute, 0, 0);
+  return date.getTime();
+};
+const previewPendingText = '带图：排期台重做后，空档和已排期终于是同一条时间线了。';
+
 const storageData = {
   uiLanguage: new URLSearchParams(location.search).get('lang') === 'en' ? 'en' : 'zh',
   installationId: 'preview-installation-id',
+  composeScheduleV1: {
+    composeHelper: true,
+    articleHelper: true,
+    windows: [
+      { id: 'w1', days: [0, 1, 2, 3, 4, 5, 6], start: '09:00', end: '10:00', perHour: 1 },
+      { id: 'w2', days: [0, 1, 2, 3, 4, 5, 6], start: '12:00', end: '13:00', perHour: 1 },
+      { id: 'w3', days: [0, 1, 2, 3, 4, 5, 6], start: '18:00', end: '19:00', perHour: 1 },
+      { id: 'w4', days: [0, 1, 2, 3, 4, 5, 6], start: '21:00', end: '22:00', perHour: 1 },
+    ],
+    minGapMinutes: 15,
+    leadMinutes: 0,
+    randomize: false,
+    horizonDays: 14,
+  },
+  scheduledPostsV1: {
+    account: 'demo_creator',
+    syncedAt: now - 2 * 60_000,
+    posts: [
+      {
+        id: 'preview-scheduled-1',
+        executeAt: previewAt(1, 9, 15),
+        text: '把 Claude 工作流整理成了一份清单，先写验收标准，再让模型动手。',
+        media: 2,
+      },
+      {
+        id: 'preview-scheduled-2',
+        executeAt: previewAt(1, 12, 30),
+        text: '今天把发帖页改成排期台：一周概览、当天时间线、图片缩略图。',
+        media: 0,
+      },
+      {
+        id: 'preview-scheduled-3',
+        executeAt: previewAt(1, 18, 45),
+        text: '原生发帖框负责写，福滤娃负责什么时候发。',
+        media: 1,
+      },
+      {
+        id: 'preview-scheduled-4',
+        executeAt: previewAt(2, 9, 15),
+        text: '明天的第一条：内容日历先看这一周，再决定写什么。',
+        media: 0,
+      },
+    ],
+  },
+  scheduleAssignmentsV1: [
+    {
+      id: 'preview-pending-1',
+      draftId: 'preview-draft-2',
+      textKey: previewPendingText,
+      at: previewAt(1, 21, 38),
+      createdAt: now,
+    },
+  ],
+  composeDraftsV1: [
+    {
+      id: 'preview-draft-1',
+      text: '为什么浏览器扩展不该自己重做发帖器：图片、视频、投票都交给 X。',
+      createdAt: now - 20 * 60_000,
+    },
+    {
+      id: 'preview-draft-2',
+      text: previewPendingText,
+      createdAt: now - 10 * 60_000,
+    },
+    {
+      id: 'preview-draft-3',
+      text: '下一条：把本周的排期空档填满，再统一检查一遍撞车。',
+      createdAt: now - 5 * 60_000,
+    },
+  ],
   communitySettings: {
     enabled: true,
     strength: 'standard',
@@ -298,6 +378,9 @@ const previewBrowser = {
       get: async (keys?: string | string[] | Record<string, unknown> | null) =>
         readStorage(sessionRecord, keys),
       set: async (patch: Record<string, unknown>) => Object.assign(sessionRecord, patch),
+      remove: async (keys: string | string[]) => {
+        for (const key of typeof keys === 'string' ? [keys] : keys) delete sessionRecord[key];
+      },
     },
     local: {
       get: async (keys?: string | string[] | Record<string, unknown> | null) =>
@@ -307,6 +390,14 @@ const previewBrowser = {
         const changes = Object.fromEntries(
           Object.entries(patch).map(([key, newValue]) => [key, { newValue }]),
         );
+        listeners.forEach((listener) => listener(changes, 'local'));
+      },
+      remove: async (keys: string | string[]) => {
+        const changes: Record<string, { newValue?: unknown }> = {};
+        for (const key of typeof keys === 'string' ? [keys] : keys) {
+          delete storageRecord[key];
+          changes[key] = { newValue: undefined };
+        }
         listeners.forEach((listener) => listener(changes, 'local'));
       },
     },

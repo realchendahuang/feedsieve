@@ -1,7 +1,10 @@
 /**
- * 「发帖」视图：下一条排期、本周每小时的名额、草稿队列、文章备份、助手开关。
+ * 「发帖」视图：排期台。
  *
- * 排期逻辑不在这里配：用户先在「发帖 › 发帖设置 › 发帖节奏」里设好集中时段和
+ * 只做三件事：看这一周怎么排、把队列里的文案排进空档、在 X 里写新帖。
+ * 内容（图片、视频、投票、引用）全部在 X 原生发帖框里完成，这里不复制发帖器。
+ *
+ * 排期逻辑不在这里配：用户先在「发帖 › 齿轮 › 发帖节奏」里设好集中时段和
  * 每小时最多几条，这里只负责把内容排进下一个有名额的小时。
  * 已排期列表来自 X 自己的「预排期」页（同步 = 让当前 X 页面打开那一页，X 自己去拉），
  * 你在 X 里新建 / 改 / 删预排期帖子时也会顺带更新。全部只存本机。
@@ -10,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
 import {
   DEFAULT_SCHEDULE_SETTINGS,
+  capacityBetween,
   capacitySummary,
   dayLabel,
   formatClock,
@@ -17,6 +21,7 @@ import {
   nextFreeSlots,
   pickSlotInHour,
   slotLabel,
+  weekdayLabel,
   type HourCapacity,
   type ScheduleSettings,
 } from '../../../src/lib/compose/schedule-slots';
@@ -27,9 +32,11 @@ import {
   getDrafts,
   moveDraft,
   removeAssignmentForDraft,
+  removeAssignmentsMatching,
   removeBackup,
   removeDraft,
   setAssignment,
+  setComposeIntent,
   subscribeAssignments,
   subscribeBackups,
   subscribeDrafts,
@@ -54,40 +61,60 @@ import { AppIcon, formatAgo, HelpIcon, IconButton, Toggle } from './shared';
 import { useListPosition } from './use-list-position';
 
 const DAYS_SHOWN = 7;
+const MAX_WEEK_OFFSET = 4;
 const MINUTE_MS = 60_000;
+const COMPOSE_URL = 'https://x.com/compose/post';
+const MEDIA_URL_RE = /^https:\/\/(pbs|video)\.twimg\.com\//;
 
 const COPY = {
   zh: {
     upcoming: '排期',
     upcomingHint:
-      '已排期的帖子来自 X 的「草稿 › 预排期」：点同步会在当前 X 页面打开那一页，由 X 自己加载；你在 X 里新建、修改、删除预排期帖子时也会自动更新。「待确认」是本机已经占好时间、还没在 X 点确认的帖子。只存在本机。',
+      '已排期和待确认来自 X 的「草稿 › 预排期」：点同步会在当前 X 页面打开那一页，由 X 自己加载；你在 X 里新建、修改、删除预排期帖子时也会自动更新。「待确认」是本机已经占好时间、还没在 X 点确认的帖子。一周里每天显示「已排 / 上限」，点一天看当天时间线；点空档会把队列下一条排进去，队列为空时在 X 打开发帖框。只存在本机。',
     sync: '同步预排期列表',
-    synced: (ago: string) => `同步于 ${ago}`,
+    synced: (ago: string) => ago,
     neverSynced: '还没同步过',
-    next: '下一条',
+    next: '下一条空档',
     noSlot: '节奏里没有空位',
     remaining: (n: number) => `本周还能排 ${n} 条`,
+    newPost: '写新帖',
     scheduleNext: '排下一条',
     needXTab: '先在当前窗口打开 X',
     syncing: '已在 X 页面打开预排期列表',
+    openFailed: '打不开 X 发帖框',
     media: (n: number) => `${n} 张图`,
     noText: '（只有图片）',
     pending: '待确认',
-    pendingPost: '待确认的排期',
-    empty: '接下来 7 天没有排期',
-    capacity: '本周容量',
-    capacityHint:
-      '每个小时显示「已排 / 上限」。点一个还有空位的小时，会把队列里的下一条排进这个小时（分钟内随机）；满了的小时不能再点。到「发帖 › 齿轮 › 发帖节奏」里改时段和每小时条数。',
+    pendingPost: '新帖',
+    pendingHint: '在 X 里点确认后才算排上',
+    scheduled: '已排期',
+    empty: '这一周没有排期',
+    emptyHint: '先设好发帖时段，或者打开 X 的预排期页同步一次。',
     adjust: '调整节奏',
+    openScheduled: '打开 X 预排期',
+    week: '一周',
+    prevWeek: '上一周',
+    nextWeek: '下一周',
     capacityValue: (used: number, cap: number) => `${used}/${cap}`,
-    noDraft: '先写一条草稿',
+    dayCount: (n: number) => `${n} 条`,
+    noScheduleDay: '不排',
+    free: '空',
+    nextBadge: '下一条',
+    slotHint: (queue: boolean) => (queue ? '把队列下一条排到这里' : '在这里写新帖'),
+    tooClose: '间隔太近',
+    detail: '排期详情',
+    closeDetail: '收起',
+    editInX: '在 X 里改时间',
+    noDraft: '先加一条文案',
     noCapacity: '这个小时已经满了',
-    drafts: '草稿',
+    drafts: '文案队列',
     draftsHint:
-      '先在这里写好几条，再点日历按钮：会按顺序排进下一个有名额的小时，在当前 X 页面打开发帖框、贴好正文、填好时间；你检查后点 X 的「确认」和「预排期」。排好后这条草稿自动从这里拿掉。只存在本机。',
-    draftPlaceholder: '写一条，⌘↵ 加入',
-    addDraft: '加入草稿',
+      '队列只存文案；图片、视频、投票在 X 发帖框里加。点「配图」会贴好正文、先留时间，但不自动打开安排表；你加完图点日历，时间已经填好。排好后这条自动从这里拿掉。只存在本机。',
+    draftPlaceholder: '写一条文案，⌘↵ 加入',
+    addDraft: '加入队列',
     scheduleDraft: '排下一条',
+    composeMedia: '配图',
+    composeMediaHint: '在 X 打开发帖框并贴好正文，图片在 X 里加',
     openDraft: '打开发帖框',
     reroll: '换一个时间',
     clearAssignment: '取消分配',
@@ -97,6 +124,7 @@ const COPY = {
     moveUp: '上移',
     moveDown: '下移',
     draftOpened: '已在 X 打开发帖框并填好时间，确认后点「预排期」',
+    composeMediaOpened: '正文已贴好，加完图点日历',
     draftBusy: 'X 的发帖框里还有没写完的内容，先处理掉',
     copied: '已复制',
     length: (n: number) => `${n}/280`,
@@ -120,34 +148,52 @@ const COPY = {
   en: {
     upcoming: 'Schedule',
     upcomingHint:
-      'Scheduled posts come from X’s Drafts › Scheduled page: Sync opens that page in the current X tab and X loads it itself. Creating, editing or deleting scheduled posts on X also updates this list. Pending means the time is reserved on this device but not confirmed on X yet. Stored on this device only.',
+      'Scheduled posts and pending times come from X’s Drafts › Scheduled page: Sync opens that page in the current X tab and X loads it itself. Creating, editing or deleting scheduled posts on X also updates this list. Pending means the time is reserved on this device but not confirmed on X yet. The week shows used / limit per day; click a day for its timeline. Click an open slot to place the next queued text, or to open X’s composer when the queue is empty. Stored on this device only.',
     sync: 'Sync scheduled posts',
-    synced: (ago: string) => `Synced ${ago}`,
+    synced: (ago: string) => ago,
     neverSynced: 'Not synced yet',
-    next: 'Next',
+    next: 'Next open slot',
     noSlot: 'No open slot in your cadence',
     remaining: (n: number) => `${n} left this week`,
+    newPost: 'New post',
     scheduleNext: 'Schedule next',
     needXTab: 'Open X in this window first',
     syncing: 'Opened the scheduled list on X',
+    openFailed: 'Could not open X’s composer',
     media: (n: number) => `${n} media`,
     noText: '(media only)',
     pending: 'Pending',
-    pendingPost: 'Pending post',
-    empty: 'Nothing scheduled in the next 7 days',
-    capacity: 'This week',
-    capacityHint:
-      'Each hour shows used / limit. Click an hour with room to put the next queued draft there (a random minute inside the hour). Full hours cannot be clicked. Change windows and per-hour limits in Settings › Modules › Posting cadence.',
+    pendingPost: 'New post',
+    pendingHint: 'It is scheduled only after you confirm on X',
+    scheduled: 'Scheduled',
+    empty: 'Nothing scheduled this week',
+    emptyHint: 'Set posting windows first, or sync X’s scheduled page once.',
     adjust: 'Edit cadence',
+    openScheduled: 'Open X scheduled page',
+    week: 'Week',
+    prevWeek: 'Previous week',
+    nextWeek: 'Next week',
     capacityValue: (used: number, cap: number) => `${used}/${cap}`,
-    noDraft: 'Write a draft first',
+    dayCount: (n: number) => `${n} post${n === 1 ? '' : 's'}`,
+    noScheduleDay: '—',
+    free: 'Open',
+    nextBadge: 'Next',
+    slotHint: (queue: boolean) =>
+      queue ? 'Put the next queued text here' : 'Write a new post here',
+    tooClose: 'Too close',
+    detail: 'Schedule details',
+    closeDetail: 'Close',
+    editInX: 'Change time on X',
+    noDraft: 'Add a text first',
     noCapacity: 'This hour is full',
-    drafts: 'Drafts',
+    drafts: 'Text queue',
     draftsHint:
-      'Write a few posts here, then press the calendar button on one: it schedules into the next open hour, opens X’s composer in the current tab, pastes the text and fills the time; review it and click Confirm and Schedule on X. Scheduled drafts are removed from this list. Stored on this device only.',
+      'The queue stores text only; add images, video and polls in X’s composer. “Add media” pastes the text and reserves the time but does not open the schedule dialog; after you add media and click the calendar icon, the time is already filled in. Scheduled items leave this list automatically. Stored on this device only.',
     draftPlaceholder: 'Write one, ⌘↵ to add',
-    addDraft: 'Add draft',
+    addDraft: 'Add to queue',
     scheduleDraft: 'Schedule next',
+    composeMedia: 'Add media',
+    composeMediaHint: 'Open X’s composer with the text pasted; add media there',
     openDraft: 'Open composer',
     reroll: 'Change time',
     clearAssignment: 'Clear time',
@@ -157,6 +203,7 @@ const COPY = {
     moveUp: 'Move up',
     moveDown: 'Move down',
     draftOpened: 'Opened X’s composer with the time filled in; click Schedule',
+    composeMediaOpened: 'Text pasted; add media, then click the calendar icon',
     draftBusy: 'X’s composer still has unfinished text',
     copied: 'Copied',
     length: (n: number) => `${n}/280`,
@@ -184,11 +231,33 @@ function clockOf(at: number): string {
   return formatClock(d.getHours() * 60 + d.getMinutes());
 }
 
+function untilLabel(at: number, now: number, language: UiLanguage): string {
+  const minutes = Math.max(0, Math.round((at - now) / MINUTE_MS));
+  if (minutes < 1) return language === 'zh' ? '马上' : 'now';
+  if (minutes < 60) return language === 'zh' ? `${minutes} 分钟后` : `in ${minutes} min`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return language === 'zh' ? `${hours} 小时后` : `in ${hours} h`;
+  const days = Math.round(hours / 24);
+  return language === 'zh' ? `${days} 天后` : `in ${days} d`;
+}
+
+function weekRangeLabel(start: number, end: number, language: UiLanguage): string {
+  const from = new Date(start);
+  const to = new Date(end - 1);
+  if (language === 'zh')
+    return `${from.getMonth() + 1}月${from.getDate()}日 – ${to.getMonth() + 1}月${to.getDate()}日`;
+  return `${from.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  })} – ${to.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+}
+
 interface DayItem {
   at: number;
   id: string;
   text: string;
   media: number;
+  mediaUrls?: string[];
   pending: boolean;
 }
 
@@ -196,6 +265,75 @@ interface DayGroup {
   key: string;
   at: number;
   items: DayItem[];
+}
+
+interface WeekDay {
+  key: string;
+  at: number;
+  used: number;
+  capacity: number;
+  free: number;
+  mediaCount: number;
+  hasItems: boolean;
+  hasCapacity: boolean;
+  full: boolean;
+  isToday: boolean;
+  hasConflict: boolean;
+}
+
+type TimelineEntry =
+  | { kind: 'item'; at: number; item: DayItem }
+  | { kind: 'slot'; at: number; hour: HourCapacity; isNext: boolean };
+
+function hasConflict(items: readonly DayItem[], gapMinutes: number): boolean {
+  const gap = Math.max(1, gapMinutes) * MINUTE_MS;
+  return items.some((item, index) =>
+    items.some((other, otherIndex) => otherIndex !== index && Math.abs(item.at - other.at) < gap),
+  );
+}
+
+function MediaThumbs({
+  urls,
+  count,
+  limit,
+  size,
+  label,
+}: {
+  urls?: string[];
+  count: number;
+  limit: number;
+  size: number;
+  label?: string;
+}) {
+  const safe = (urls ?? []).filter((url) => MEDIA_URL_RE.test(url));
+  if (safe.length === 0) {
+    if (!count) return null;
+    return (
+      <span className="write-media-badge">
+        <AppIcon name="image" size={12} />
+        <span>{label ?? count}</span>
+      </span>
+    );
+  }
+  const shown = safe.slice(0, limit);
+  const extra = Math.max(0, count - shown.length);
+  return (
+    <span className="write-thumbs">
+      {shown.map((url) => (
+        <img
+          key={url}
+          className="write-thumb"
+          src={url}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          style={{ width: size, height: size }}
+        />
+      ))}
+      {extra > 0 ? <span className="write-thumb-more">+{extra}</span> : null}
+    </span>
+  );
 }
 
 export function WriteView({
@@ -206,7 +344,12 @@ export function WriteView({
 }: {
   language: UiLanguage;
   notify: (message: string | null) => void;
-  sendToXPage: (message: { type: string; text?: string; at?: number }) => Promise<unknown>;
+  sendToXPage: (message: {
+    type: string;
+    text?: string;
+    at?: number;
+    openSchedule?: boolean;
+  }) => Promise<unknown>;
   onOpenCadence: () => void;
 }) {
   const c = COPY[language];
@@ -218,14 +361,18 @@ export function WriteView({
   const [draftText, setDraftText] = useState('');
   const [backups, setBackups] = useState<ArticleBackup[]>([]);
   const [versionPick, setVersionPick] = useState<Record<string, number>>({});
+  const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [weekOffset, setWeekOffset] = useState(0);
   const rootRef = useRef<HTMLElement | null>(null);
 
-  // 切走再回来：回到上次看的位置（排期、草稿、备份里随便哪一段）
+  // 切走再回来：回到上次看的位置（排期、队列、备份里随便哪一段）
   useListPosition({
     storageKey: 'writePositionV1',
     pageKey: 'write',
     rootRef,
-    ready: drafts.length > 0 || backups.length > 0 || assignments.length > 0,
+    ready:
+      drafts.length > 0 || backups.length > 0 || assignments.length > 0 || cache.posts.length > 0,
   });
 
   useEffect(() => {
@@ -299,6 +446,7 @@ export function WriteView({
         id: post.id,
         text: post.text,
         media: post.media,
+        mediaUrls: post.mediaUrls,
         pending: false,
       });
     }
@@ -325,6 +473,102 @@ export function WriteView({
       .sort((a, b) => a.at - b.at);
   }, [cache.posts, assignments, drafts, now]);
 
+  const weekWindow = useMemo(() => {
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() + weekOffset * 7);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 7);
+    // 本周从「现在」开始算，免得把今天已经过去的小时当成空档
+    const from = weekOffset === 0 ? now : start.getTime();
+    const hours = capacityBetween(settings, occupied, from, end.getTime());
+    const hoursByDay = new Map<string, HourCapacity[]>();
+    for (const hour of hours) {
+      const key = localDayKey(hour.at);
+      const list = hoursByDay.get(key);
+      if (list) list.push(hour);
+      else hoursByDay.set(key, [hour]);
+    }
+    return { start: start.getTime(), end: end.getTime(), hoursByDay };
+  }, [now, weekOffset, settings, occupied]);
+
+  const weekDays = useMemo(() => {
+    const start = new Date(weekWindow.start);
+    const groups = new Map(days.map((day) => [day.key, day]));
+    return Array.from({ length: DAYS_SHOWN }, (_, index) => {
+      const date = new Date(start);
+      date.setDate(date.getDate() + index);
+      const key = localDayKey(date.getTime());
+      const hours = weekWindow.hoursByDay.get(key) ?? [];
+      const items = groups.get(key)?.items ?? [];
+      const capacity = hours.reduce((sum, hour) => sum + hour.capacity, 0);
+      const free = hours.reduce((sum, hour) => sum + hour.free, 0);
+      return {
+        key,
+        at: date.getTime(),
+        used: items.length,
+        capacity,
+        free,
+        mediaCount: items.filter((item) => item.media > 0).length,
+        hasItems: items.length > 0,
+        hasCapacity: hours.length > 0,
+        full: hours.length > 0 && free <= 0,
+        isToday: key === localDayKey(now),
+        hasConflict: hasConflict(items, settings.minGapMinutes),
+      } satisfies WeekDay;
+    });
+  }, [weekWindow, days, now, settings.minGapMinutes]);
+
+  const preferredDayKey = useMemo(() => {
+    const todayKey = localDayKey(now);
+    const today = weekDays.find((day) => day.key === todayKey);
+    if (today?.hasItems) return today.key;
+    const withItems = weekDays.find((day) => day.hasItems);
+    if (withItems) return withItems.key;
+    if (next !== null) {
+      const nextDay = weekDays.find((day) => day.key === localDayKey(next));
+      if (nextDay) return nextDay.key;
+    }
+    return weekDays[0]?.key ?? todayKey;
+  }, [weekDays, next, now]);
+  const activeKey =
+    selectedDayKey && weekDays.some((day) => day.key === selectedDayKey)
+      ? selectedDayKey
+      : preferredDayKey;
+  const activeDay = weekDays.find((day) => day.key === activeKey) ?? weekDays[0] ?? null;
+  const activeItems = useMemo(
+    () => days.find((day) => day.key === activeKey)?.items ?? [],
+    [days, activeKey],
+  );
+  const activeHours = useMemo(
+    () => weekWindow.hoursByDay.get(activeKey) ?? [],
+    [weekWindow, activeKey],
+  );
+
+  const timeline = useMemo(() => {
+    const entries: TimelineEntry[] = activeItems.map((item) => ({
+      kind: 'item',
+      at: item.at,
+      item,
+    }));
+    for (const hour of activeHours) {
+      if (hour.free <= 0) continue;
+      const isNext = next !== null && next >= hour.at && next < hour.at + 60 * MINUTE_MS;
+      entries.push({ kind: 'slot', at: isNext ? next! : hour.at, hour, isNext });
+    }
+    return entries.sort((a, b) => {
+      if (a.at !== b.at) return a.at - b.at;
+      if (a.kind === b.kind) return 0;
+      return a.kind === 'item' ? -1 : 1;
+    });
+  }, [activeItems, activeHours, next]);
+
+  const selectedItem = activeItems.find((item) => item.id === selectedItemId) ?? null;
+  const totalUpcoming =
+    cache.posts.filter((post) => post.executeAt > now).length +
+    assignments.filter((assignment) => assignment.at > now).length;
+  const hasAnySchedule = weekDays.some((day) => day.hasItems || day.hasCapacity);
+
   async function sync(): Promise<void> {
     try {
       await sendToXPage({ type: OPEN_SCHEDULED_MESSAGE });
@@ -334,13 +578,23 @@ export function WriteView({
     }
   }
 
+  function shiftWeek(delta: number): void {
+    setWeekOffset((current) => Math.min(MAX_WEEK_OFFSET, Math.max(0, current + delta)));
+    setSelectedDayKey(null);
+    setSelectedItemId(null);
+  }
+
   function saveDraft(): void {
     if (!draftText.trim()) return;
     void addDraft(draftText).then(setDrafts);
     setDraftText('');
   }
 
-  async function scheduleDraft(draft: ComposeDraft, at?: number): Promise<void> {
+  async function scheduleDraft(
+    draft: ComposeDraft,
+    at?: number,
+    openSchedule = true,
+  ): Promise<void> {
     const target = at ?? assignmentByDraft.get(draft.id)?.at ?? next;
     if (target === null || target === undefined) {
       notify(c.noSlot);
@@ -353,8 +607,9 @@ export function WriteView({
         type: COMPOSE_DRAFT_MESSAGE,
         text: draft.text,
         at: target,
+        openSchedule,
       })) as { ok?: boolean; reason?: string } | null;
-      if (result?.ok) notify(c.draftOpened);
+      if (result?.ok) notify(openSchedule ? c.draftOpened : c.composeMediaOpened);
       else notify(result?.reason === 'busy' ? c.draftBusy : c.needXTab);
     } catch {
       notify(c.needXTab);
@@ -367,6 +622,42 @@ export function WriteView({
       return;
     }
     await scheduleDraft(firstQueued);
+  }
+
+  async function writeNewPost(at?: number): Promise<void> {
+    if (at !== undefined) {
+      setAssignments(await setAssignment({ text: '', at }));
+      await setComposeIntent(at);
+    }
+    try {
+      if (browser.windows?.create) {
+        await browser.windows.create({
+          url: COMPOSE_URL,
+          type: 'popup',
+          width: 620,
+          height: 780,
+          focused: true,
+        });
+      } else {
+        await browser.tabs.create({ url: COMPOSE_URL });
+      }
+    } catch {
+      if (at !== undefined) setAssignments(await removeAssignmentsMatching('', at));
+      notify(c.openFailed);
+    }
+  }
+
+  async function fillSlot(hour: HourCapacity): Promise<void> {
+    const at = pickSlotInHour(hour, settings, occupied, now);
+    if (at === null) {
+      notify(c.noCapacity);
+      return;
+    }
+    if (firstQueued) {
+      await scheduleDraft(firstQueued, at);
+      return;
+    }
+    await writeNewPost(at);
   }
 
   async function rerollDraft(draft: ComposeDraft): Promise<void> {
@@ -382,19 +673,6 @@ export function WriteView({
       return;
     }
     await scheduleDraft(draft, at);
-  }
-
-  async function assignToHour(hour: HourCapacity): Promise<void> {
-    if (!firstQueued) {
-      notify(c.noDraft);
-      return;
-    }
-    const at = pickSlotInHour(hour, settings, occupied, now);
-    if (at === null) {
-      notify(c.noCapacity);
-      return;
-    }
-    await scheduleDraft(firstQueued, at);
   }
 
   async function clearAssignment(draft: ComposeDraft): Promise<void> {
@@ -423,20 +701,20 @@ export function WriteView({
     else await browser.tabs.create({ url });
   }
 
-  const pendingCount = assignments.filter((assignment) => assignment.at > now).length;
-
   return (
     <section className="view write-view" ref={rootRef}>
       <section className="block" aria-label={c.upcoming}>
         <div className="block-head">
           <h2>{c.upcoming}</h2>
-          {cache.posts.length || pendingCount ? (
-            <span className="count">
-              {cache.posts.filter((post) => post.executeAt > now).length + pendingCount}
-            </span>
-          ) : null}
+          {totalUpcoming ? <span className="count">{totalUpcoming}</span> : null}
           <HelpIcon text={c.upcomingHint} />
-          <span className="row-meta write-synced">
+          <span
+            className="row-meta write-synced"
+            title={`${cache.account ? `@${cache.account} · ` : ''}${
+              cache.syncedAt ? c.synced(formatAgo(cache.syncedAt, language)) : c.neverSynced
+            }`}
+          >
+            {cache.account ? `@${cache.account} · ` : ''}
             {cache.syncedAt ? c.synced(formatAgo(cache.syncedAt, language)) : c.neverSynced}
           </span>
           <IconButton icon="refresh" label={c.sync} onClick={() => void sync()} />
@@ -450,15 +728,25 @@ export function WriteView({
             <AppIcon name="settings" size={15} />
           </button>
         </div>
-        <div className="row">
-          <span className="row-label">
-            <span>{c.next}</span>
-          </span>
-          <span className="row-value write-next">
-            {next !== null ? slotLabel(next, now, language) : c.noSlot}
-          </span>
+
+        <div className="write-hero">
+          <div className="write-hero-main">
+            <span className="write-hero-time">
+              <span className="write-hero-label">{c.next}</span>
+              {next !== null ? slotLabel(next, now, language) : c.noSlot}
+            </span>
+            {next !== null ? (
+              <span className="write-hero-until">{untilLabel(next, now, language)}</span>
+            ) : null}
+          </div>
+          <span className="row-meta">{c.remaining(summary.free)}</span>
         </div>
-        <div className="write-next-actions">
+
+        <div className="write-actions">
+          <button type="button" className="primary-button" onClick={() => void writeNewPost()}>
+            <AppIcon name="plus" size={14} />
+            <span>{c.newPost}</span>
+          </button>
           <button
             type="button"
             className="secondary-button"
@@ -468,77 +756,211 @@ export function WriteView({
             <AppIcon name="calendar" size={14} />
             <span>{c.scheduleNext}</span>
           </button>
-          <span className="row-meta">{c.remaining(summary.free)}</span>
         </div>
-        {days.length === 0 ? (
-          <div className="empty-state is-clean">
-            <p>{c.empty}</p>
-          </div>
-        ) : (
-          days.map((day) => (
-            <div className="write-day" key={day.key}>
-              <h3 className="write-day-title">{dayLabel(day.at, now, language)}</h3>
-              {day.items.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={`write-item${item.pending ? ' is-pending' : ' is-post'}`}
-                  onClick={() => (item.pending ? undefined : void sync())}
-                >
-                  <span className="write-time">{clockOf(item.at)}</span>
-                  <span className="write-text">{item.text || c.noText}</span>
-                  {item.pending ? <span className="row-meta">{c.pending}</span> : null}
-                  {item.media ? <span className="row-meta">{c.media(item.media)}</span> : null}
-                </button>
-              ))}
-            </div>
-          ))
-        )}
-      </section>
 
-      <section className="block" aria-label={c.capacity}>
-        <div className="block-head">
-          <h2>{c.capacity}</h2>
-          <span className="count">{c.capacityValue(summary.used, summary.capacity)}</span>
-          <HelpIcon text={c.capacityHint} />
-          <button type="button" className="text-button toolbar-end" onClick={onOpenCadence}>
-            {c.adjust}
-          </button>
-        </div>
-        {summary.days.length === 0 ? (
-          <div className="empty-state is-clean">
-            <p>{c.noSlot}</p>
-          </div>
-        ) : (
-          summary.days.map((day) => (
-            <div className="write-day" key={day.at}>
-              <h3 className="write-day-title">
-                <span>{dayLabel(day.at, now, language)}</span>
-                <span className="row-meta">{c.capacityValue(day.used, day.capacity)}</span>
-              </h3>
-              <div className="write-hours">
-                {day.hours.map((hour) => {
-                  const full = hour.used >= hour.capacity;
-                  return (
-                    <button
-                      key={hour.at}
-                      type="button"
-                      className={`write-hour${full ? ' is-full' : ''}`}
-                      disabled={full}
-                      title={`${slotLabel(hour.at, now, language)} · ${c.capacityValue(
-                        hour.used,
-                        hour.capacity,
-                      )}`}
-                      onClick={() => void assignToHour(hour)}
-                    >
-                      <span>{clockOf(hour.at)}</span>
-                      <span className="row-meta">{c.capacityValue(hour.used, hour.capacity)}</span>
-                    </button>
-                  );
-                })}
-              </div>
+        {weekDays.length ? (
+          <>
+            <div className="write-week-head">
+              <span className="row-meta">
+                {weekRangeLabel(weekWindow.start, weekWindow.end, language)}
+              </span>
+              <span className="write-week-arrows">
+                <button
+                  type="button"
+                  className="icon-button write-week-arrow is-prev"
+                  aria-label={c.prevWeek}
+                  title={c.prevWeek}
+                  disabled={weekOffset === 0}
+                  onClick={() => shiftWeek(-1)}
+                >
+                  <AppIcon name="chevron" size={14} />
+                </button>
+                <button
+                  type="button"
+                  className="icon-button write-week-arrow"
+                  aria-label={c.nextWeek}
+                  title={c.nextWeek}
+                  disabled={weekOffset >= MAX_WEEK_OFFSET}
+                  onClick={() => shiftWeek(1)}
+                >
+                  <AppIcon name="chevron" size={14} />
+                </button>
+              </span>
             </div>
-          ))
+            <div className="write-week" role="tablist" aria-label={c.week}>
+              {weekDays.map((day) => {
+                const count =
+                  day.capacity > 0
+                    ? c.capacityValue(day.used, day.capacity)
+                    : day.used > 0
+                      ? c.dayCount(day.used)
+                      : c.noScheduleDay;
+                return (
+                  <button
+                    key={day.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={day.key === activeKey}
+                    className={`write-weekday${day.key === activeKey ? ' is-selected' : ''}${
+                      day.isToday ? ' is-today' : ''
+                    }${day.full ? ' is-full' : ''}${
+                      day.capacity > 0 && day.used > day.capacity ? ' is-over' : ''
+                    }`}
+                    title={`${dayLabel(day.at, now, language)} · ${count}${
+                      day.mediaCount ? ` · ${c.media(day.mediaCount)}` : ''
+                    }`}
+                    onClick={() => {
+                      setSelectedDayKey(day.key);
+                      setSelectedItemId(null);
+                    }}
+                  >
+                    <span className="write-weekday-name">
+                      {day.isToday
+                        ? dayLabel(day.at, now, language)
+                        : weekdayLabel(new Date(day.at).getDay(), language)}
+                    </span>
+                    <span className="write-weekday-date">{new Date(day.at).getDate()}</span>
+                    <span className="write-weekday-count">{count}</span>
+                    {day.mediaCount ? (
+                      <span className="write-weekday-media" aria-hidden="true" />
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        ) : null}
+
+        {hasAnySchedule && activeDay ? (
+          <>
+            <h3 className="write-day-title">
+              <span>{dayLabel(activeDay.at, now, language)}</span>
+              <span className="row-meta">
+                {activeDay.capacity > 0
+                  ? c.capacityValue(activeDay.used, activeDay.capacity)
+                  : activeDay.used > 0
+                    ? c.dayCount(activeDay.used)
+                    : c.noScheduleDay}
+              </span>
+              {activeDay.hasConflict ? (
+                <span className="write-warn-inline">{c.tooClose}</span>
+              ) : null}
+            </h3>
+
+            {timeline.length === 0 ? (
+              <div className="empty-state is-clean">
+                <p>{c.noScheduleDay}</p>
+              </div>
+            ) : (
+              <div className="write-timeline">
+                {timeline.map((entry) =>
+                  entry.kind === 'item' ? (
+                    <button
+                      key={entry.item.id}
+                      type="button"
+                      className={`write-item is-post${
+                        entry.item.pending ? ' is-pending' : ''
+                      }${entry.item.id === selectedItemId ? ' is-selected' : ''}`}
+                      onClick={() =>
+                        setSelectedItemId((current) =>
+                          current === entry.item.id ? null : entry.item.id,
+                        )
+                      }
+                    >
+                      <span className="write-time">{clockOf(entry.item.at)}</span>
+                      <MediaThumbs
+                        urls={entry.item.mediaUrls}
+                        count={entry.item.media}
+                        limit={2}
+                        size={24}
+                      />
+                      <span className="write-text">
+                        {entry.item.text ||
+                          (entry.item.media ? c.noText : entry.item.pending ? c.pendingPost : '')}
+                      </span>
+                      {entry.item.pending ? (
+                        <span className="write-status is-pending">{c.pending}</span>
+                      ) : null}
+                    </button>
+                  ) : (
+                    <button
+                      key={`slot-${entry.hour.at}`}
+                      type="button"
+                      className={`write-item is-slot${entry.isNext ? ' is-next' : ''}`}
+                      title={`${slotLabel(entry.at, now, language)} · ${c.slotHint(
+                        firstQueued !== null,
+                      )}`}
+                      onClick={() => void fillSlot(entry.hour)}
+                    >
+                      <span className="write-time">{clockOf(entry.at)}</span>
+                      <AppIcon name="plus" size={14} />
+                      <span className="write-text">{c.free}</span>
+                      {entry.isNext ? (
+                        <span className="write-status is-next">{c.nextBadge}</span>
+                      ) : null}
+                    </button>
+                  ),
+                )}
+              </div>
+            )}
+
+            {selectedItem ? (
+              <section className="write-detail" aria-label={c.detail}>
+                <div className="write-detail-head">
+                  <span className="write-detail-time">
+                    {slotLabel(selectedItem.at, now, language)}
+                  </span>
+                  <span className={`write-status${selectedItem.pending ? ' is-pending' : ''}`}>
+                    {selectedItem.pending ? c.pending : c.scheduled}
+                  </span>
+                  <IconButton
+                    icon="x"
+                    label={c.closeDetail}
+                    onClick={() => setSelectedItemId(null)}
+                  />
+                </div>
+                {selectedItem.text ? (
+                  <p className="write-detail-text">{selectedItem.text}</p>
+                ) : selectedItem.pending ? (
+                  <p className="write-detail-text">{c.pendingPost}</p>
+                ) : null}
+                <MediaThumbs
+                  urls={selectedItem.mediaUrls}
+                  count={selectedItem.media}
+                  limit={4}
+                  size={40}
+                  label={c.media(selectedItem.media)}
+                />
+                <div className="write-detail-actions">
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    disabled={!selectedItem.text}
+                    onClick={() => copyText(selectedItem.text)}
+                  >
+                    <AppIcon name="copy" size={14} />
+                    <span>{c.copyDraft}</span>
+                  </button>
+                  {selectedItem.pending ? (
+                    <span className="row-meta">{c.pendingHint}</span>
+                  ) : (
+                    <button type="button" className="secondary-button" onClick={() => void sync()}>
+                      <AppIcon name="external" size={14} />
+                      <span>{c.editInX}</span>
+                    </button>
+                  )}
+                </div>
+              </section>
+            ) : null}
+          </>
+        ) : (
+          <div className="empty-state is-clean write-empty">
+            <p>{c.empty}</p>
+            <span className="row-meta">{c.emptyHint}</span>
+            <button type="button" className="secondary-button" onClick={onOpenCadence}>
+              {c.adjust}
+            </button>
+          </div>
         )}
       </section>
 
@@ -567,12 +989,7 @@ export function WriteView({
             <span className={`row-meta${tweetLength(draftText) > 280 ? ' write-over' : ''}`}>
               {c.length(tweetLength(draftText))}
             </span>
-            <button
-              type="button"
-              className="secondary-button"
-              disabled={!draftText.trim()}
-              onClick={saveDraft}
-            >
+            <button type="button" className="secondary-button" onClick={saveDraft}>
               {c.addDraft}
             </button>
           </div>
@@ -603,6 +1020,12 @@ export function WriteView({
                           : c.noSlot
                     }
                     onClick={() => void scheduleDraft(draft)}
+                  />
+                  <IconButton
+                    icon="image"
+                    label={c.composeMedia}
+                    hint={c.composeMediaHint}
+                    onClick={() => void scheduleDraft(draft, undefined, false)}
                   />
                   {assignment ? (
                     <>

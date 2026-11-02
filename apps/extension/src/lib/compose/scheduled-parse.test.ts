@@ -86,6 +86,58 @@ describe('X 预排期接口解析', () => {
     );
   });
 
+  it('列表里带图片时保留缩略图，只收 X 的 CDN', () => {
+    const posts = parseScheduledList({
+      data: {
+        viewer: {
+          scheduled_tweet_list: [
+            {
+              rest_id: '3',
+              scheduling_info: { execute_at: 1793600000 },
+              tweet_create_request: { status: '带图' },
+              media_entities: [
+                { media_url_https: 'https://pbs.twimg.com/media/a.jpg' },
+                { media_url: 'https://pbs.twimg.com/media/b.jpg' },
+                { media_url_https: 'https://evil.example/c.jpg' },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(posts).toEqual([
+      {
+        id: '3',
+        executeAt: 1793600000000,
+        text: '带图',
+        media: 3,
+        mediaUrls: ['https://pbs.twimg.com/media/a.jpg', 'https://pbs.twimg.com/media/b.jpg'],
+      },
+    ]);
+
+    expect(
+      asScheduledEvent({
+        kind: 'upsert',
+        post: {
+          id: '1',
+          executeAt: 1793500000000,
+          text: 't',
+          media: 2,
+          mediaUrls: ['https://pbs.twimg.com/media/a.jpg', 'https://evil.example/x.jpg'],
+        },
+      }),
+    ).toEqual({
+      kind: 'upsert',
+      post: {
+        id: '1',
+        executeAt: 1793500000000,
+        text: 't',
+        media: 2,
+        mediaUrls: ['https://pbs.twimg.com/media/a.jpg'],
+      },
+    });
+  });
+
   it('内容脚本侧再校验一遍', () => {
     expect(asScheduledEvent({ kind: 'delete', id: '<x>' })).toBeNull();
     expect(

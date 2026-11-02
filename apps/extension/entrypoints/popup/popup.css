@@ -2211,7 +2211,11 @@ input:not([type]):focus,
 
 /* ---------- 发帖 ---------- */
 .write-view .write-synced {
+  max-width: 180px;
   margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .write-next {
@@ -2237,9 +2241,299 @@ input:not([type]):focus,
   font-weight: 500;
 }
 
+/* 排期台：下一条、一周、当天时间线 */
+.write-hero {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 2px 0 8px;
+}
+
+.write-hero-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.write-hero-time {
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.write-hero-label {
+  margin-right: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.write-hero-until {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.write-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 0 10px;
+}
+
+.write-actions .primary-button,
+.write-actions .secondary-button {
+  gap: 6px;
+}
+
+.write-week-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0 0;
+}
+
+.write-week-arrows {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.write-week-arrow {
+  width: 24px;
+  height: 24px;
+}
+
+.write-week-arrow.is-prev svg {
+  transform: rotate(180deg);
+}
+
+.write-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  padding: 2px 0 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.write-weekday {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 0;
+  padding: 5px 2px 4px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--surface-sunken);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.write-weekday:hover {
+  background: var(--hover);
+}
+
+.write-weekday.is-selected {
+  border-color: var(--blue);
+  background: var(--blue-tint);
+}
+
+.write-weekday-name {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.write-weekday.is-today .write-weekday-name {
+  color: var(--blue);
+}
+
+.write-weekday-date {
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.write-weekday-count {
+  color: var(--muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.write-weekday.is-full .write-weekday-count {
+  color: var(--faint);
+}
+
+.write-weekday.is-over .write-weekday-count {
+  color: var(--warn-fg-strong);
+}
+
+.write-weekday-media {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--blue);
+}
+
+.write-timeline {
+  padding: 2px 0 4px;
+}
+
+.write-item.is-selected {
+  background: var(--hover);
+}
+
+.write-item.is-next {
+  background: var(--blue-tint);
+}
+
+.write-item.is-next .write-time {
+  color: var(--blue);
+}
+
+.write-item.is-slot:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+.write-status {
+  flex: none;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--fill);
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.write-status.is-pending {
+  color: var(--warn-fg-strong);
+}
+
+.write-status.is-next {
+  background: var(--blue-tint);
+  color: var(--blue);
+}
+
+.write-thumbs {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}
+
+.write-thumb {
+  border-radius: 4px;
+  background: var(--fill);
+  object-fit: cover;
+}
+
+.write-thumb-more {
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background: var(--fill);
+  color: var(--muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.write-media-badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.write-warn-inline {
+  color: var(--warn-fg-strong);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.write-empty {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 14px 0 10px;
+}
+
+.write-empty p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.write-detail {
+  margin: 4px 0 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-sunken);
+}
+
+.write-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.write-detail-time {
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.write-detail-head .icon-button {
+  margin-left: auto;
+}
+
+.write-detail-text {
+  margin: 6px 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.write-detail .write-thumbs {
+  margin: 4px 0 8px;
+}
+
+.write-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.write-detail-actions .secondary-button {
+  gap: 6px;
+}
+
 .write-item.is-pending {
   color: var(--muted);
-  cursor: default;
+  cursor: pointer;
 }
 
 .write-hours {
@@ -2321,7 +2615,8 @@ input:not([type]):focus,
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 4px 0 2px;
+  margin: 0;
+  padding: 8px 0 2px;
   color: var(--muted);
   font-size: 12px;
   font-weight: 600;
