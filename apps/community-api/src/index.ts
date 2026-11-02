@@ -4,33 +4,12 @@ import { chargeProfileRead, getProfile, ingestProfileObservations } from './prof
 import { and, countDistinct, eq, sql } from 'drizzle-orm';
 import { describeDbError, getDb, withDb } from './db/client';
 import { accounts, activeLabels, meta } from './db/schema';
-import { ingestTrainingSamples } from './training-samples';
 import { bodyLimit } from 'hono/body-limit';
 import { cors } from 'hono/cors';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import { isAdminHost } from './lib/hosts';
-import { hashInstallationId } from './lib/hash';
-import { submitApplication, verifyApplication } from './applications';
-/**
- * 公示名单（/v1/roster/latest、/v1/whitelist/handles）按需加载：roster 依赖快照读取，
- * 而快照模块带着生成/签名/YAML，不该进上报路径的冷启动。
- */
-let rosterModule: Promise<typeof import('./roster')> | null = null;
-function loadRoster() {
-  rosterModule ??= import('./roster').catch((error: unknown) => {
-    rosterModule = null;
-    throw error;
-  });
-  return rosterModule;
-}
-import { processRetractionBatch } from './labels';
-import { checkAiAccount } from './ai-accounts/check';
-import { judgeAiAccount } from './ai-accounts/judge';
-import { voteAiAccount } from './ai-accounts/vote';
-import { listAiAccounts, lookupAiAccount } from './ai-accounts/lookup';
-import { recordClientOutcome } from './ai-accounts/review';
-import { sha256Hex } from './lib/hash';
+import { hashInstallationId, sha256Hex } from './lib/hash';
 import { POLICY, processReportBatch, publicPolicy } from './reports';
 import { processRescueBatch } from './rescues';
 import {
@@ -41,17 +20,34 @@ import {
 } from './snapshot-keys';
 
 /**
- * 快照读取按需加载：生成、签名与 YAML 序列化都不轻，而 `/v1/*` 上报路径只用得到
- * 两个 meta 键（见 snapshot-keys.ts）；这几个读端点又基本被边缘缓存兜住。
+ * 低频模块的按需加载器。
+ *
+ * 快照读取、公示名单、AI 账号判定、入册申请、反馈样本、撤回落库这几族接口都不在
+ * 上报主路径上，却各自带一坨依赖（生成/签名/YAML、共识、评级、分类推断）。顶层
+ * import 会让每次 `/v1/*` 冷启动都替它们付求值成本——实测冷启动是这台 Worker 的
+ * 主要 CPU 开销，所以改成命中时再加载。
+ *
+ * 失败不缓存 rejected promise：否则一次瞬时错误会把整台 isolate 永久钉死。
  */
-let snapshotModule: Promise<typeof import('./snapshot')> | null = null;
-function loadSnapshot() {
-  snapshotModule ??= import('./snapshot').catch((error: unknown) => {
-    snapshotModule = null;
-    throw error;
-  });
-  return snapshotModule;
+function lazy<T>(load: () => Promise<T>): () => Promise<T> {
+  let cached: Promise<T> | null = null;
+  return () =>
+    (cached ??= load().catch((error: unknown) => {
+      cached = null;
+      throw error;
+    }));
 }
+
+const loadSnapshot = lazy(() => import('./snapshot'));
+const loadRoster = lazy(() => import('./roster'));
+const loadAiCheck = lazy(() => import('./ai-accounts/check'));
+const loadAiJudge = lazy(() => import('./ai-accounts/judge'));
+const loadAiVote = lazy(() => import('./ai-accounts/vote'));
+const loadAiLookup = lazy(() => import('./ai-accounts/lookup'));
+const loadAiReview = lazy(() => import('./ai-accounts/review'));
+const loadLabels = lazy(() => import('./labels'));
+const loadApplications = lazy(() => import('./applications'));
+const loadTrainingSamples = lazy(() => import('./training-samples'));
 
 function staticAssetRequest(request: Request): Request {
   // assets.not_found_handling = single-page-application resolves TanStack routes
@@ -122,7 +118,9 @@ export function createApp() {
     bodyLimit({ maxSize: 450_000, onError: (c) => c.json({ error: 'samples_too_large' }, 413) }),
     async (c) => {
       c.header('Cache-Control', 'no-store');
-      const result = await ingestTrainingSamples(
+      const result = await (
+        await loadTrainingSamples()
+      ).ingestTrainingSamples(
         c.env,
         await c.req.json().catch(() => null),
         c.req.header('cf-connecting-ip'),
@@ -173,7 +171,9 @@ export function createApp() {
     bodyLimit({ maxSize: 2_000, onError: (c) => c.json({ error: 'request_too_large' }, 413) }),
     async (c) => {
       c.header('Cache-Control', 'no-store');
-      const result = await checkAiAccount(
+      const result = await (
+        await loadAiCheck()
+      ).checkAiAccount(
         c.env,
         await c.req.json().catch(() => null),
         c.req.header('cf-connecting-ip'),
@@ -189,7 +189,9 @@ export function createApp() {
     bodyLimit({ maxSize: 120_000, onError: (c) => c.json({ error: 'request_too_large' }, 413) }),
     async (c) => {
       c.header('Cache-Control', 'no-store');
-      const result = await judgeAiAccount(
+      const result = await (
+        await loadAiJudge()
+      ).judgeAiAccount(
         c.env,
         await c.req.json().catch(() => null),
         c.req.header('cf-connecting-ip'),
@@ -200,7 +202,7 @@ export function createApp() {
 
   // AI 号名单：可公开的 AI / 疑似账号，扩展同步到本机，在评论区标记 / 折叠（必须注册在 :handle 前面）
   app.get('/v1/ai-accounts/list', async (c) => {
-    const body = JSON.stringify({ entries: await listAiAccounts(c.env) });
+    const body = JSON.stringify({ entries: await (await loadAiLookup()).listAiAccounts(c.env) });
     const etag = `"${(await sha256Hex(body)).slice(0, 32)}"`;
     c.header('Cache-Control', 'public, max-age=300, s-maxage=600');
     c.header('ETag', etag);
@@ -214,14 +216,16 @@ export function createApp() {
     bodyLimit({ maxSize: 200, onError: (c) => c.json({ error: 'request_too_large' }, 413) }),
     async (c) => {
       c.header('Cache-Control', 'no-store');
-      const ok = await recordClientOutcome(c.env, await c.req.json().catch(() => null));
+      const ok = await (
+        await loadAiReview()
+      ).recordClientOutcome(c.env, await c.req.json().catch(() => null));
       return ok ? c.body(null, 204) : c.json({ error: 'invalid_outcome' }, 400);
     },
   );
 
   // AI 号只读查询：主页「AI 味」Tab 直接显示已有结论和票数，不调第三方、不计额度
   app.get('/v1/ai-accounts/:handle', async (c) => {
-    const result = await lookupAiAccount(c.env, c.req.param('handle'));
+    const result = await (await loadAiLookup()).lookupAiAccount(c.env, c.req.param('handle'));
     if (!result) {
       c.header('Cache-Control', 'no-store');
       return c.json({ error: 'invalid_handle' }, 400);
@@ -236,7 +240,9 @@ export function createApp() {
     bodyLimit({ maxSize: 2_000, onError: (c) => c.json({ error: 'request_too_large' }, 413) }),
     async (c) => {
       c.header('Cache-Control', 'no-store');
-      const result = await voteAiAccount(c.env, await c.req.json().catch(() => null));
+      const result = await (
+        await loadAiVote()
+      ).voteAiAccount(c.env, await c.req.json().catch(() => null));
       return c.json(result.body, result.status);
     },
   );
@@ -491,7 +497,7 @@ export function createApp() {
 
   app.post('/v1/labels/retract', async (c) => {
     const body = await c.req.json().catch(() => undefined);
-    const result = await processRetractionBatch(c.env, body);
+    const result = await (await loadLabels()).processRetractionBatch(c.env, body);
     c.header('Cache-Control', 'no-store');
     if (!result.ok) {
       return c.json({ error: result.error }, result.httpStatus);
@@ -511,7 +517,9 @@ export function createApp() {
 
   // 名单公示申请：提交（发邮箱验证码）→ 验证 → 进维护者队列。无安装语义。
   app.post('/v1/applications', async (c) => {
-    const result = await submitApplication(
+    const result = await (
+      await loadApplications()
+    ).submitApplication(
       c.env,
       await c.req.json().catch(() => undefined),
       c.req.header('cf-connecting-ip'),
@@ -521,7 +529,9 @@ export function createApp() {
     return c.json(result.value);
   });
   app.post('/v1/applications/verify', async (c) => {
-    const result = await verifyApplication(c.env, await c.req.json().catch(() => undefined));
+    const result = await (
+      await loadApplications()
+    ).verifyApplication(c.env, await c.req.json().catch(() => undefined));
     if (!result.ok) return c.json({ error: result.error }, result.httpStatus);
     c.header('Cache-Control', 'no-store');
     return c.json(result.value);
