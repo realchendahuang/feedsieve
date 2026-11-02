@@ -5,6 +5,26 @@
 - 每个版本的详细工程记录见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)。
 - 二进制产物见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)；正式用户请从 [Chrome 应用商店](https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph)接收更新。
 
+## [0.15.0] — 2026-11-02
+
+### 性能
+
+- 页面巡检合并成一只定时器：地址轮询、AI 味巡检、主页洞察那一行、文章编辑器挂载检测原来各起一只每秒定时器，现在共用一只；页面切到后台时整体停掉，不查 DOM、不发请求，切回来立即补一次。
+- AI 味标注不再每秒重解析整页推文：改由页面扫描驱动，页面有新内容才重画；静止页面零开销。
+- 弹窗按需加载：热帖保持首屏同步，主页 / 发帖 / AI 味 / 清理 / 设置拆成独立 chunk，首屏 JS 从 144 KB 降到 101 KB（gzip）。
+
+### 手机端
+
+- 手机上点主页资料卡下的洞察行不再没反应：没有侧边栏、也没有独立窗口 API 时，退到标签页打开同一个页面。
+
+### 批量拉黑
+
+- 认得出人机验证：X 撞上风控返回 401/403 且响应里带 arkose / challenge 特征时，队列暂停、当天预算清零，提示「需要人机验证」；此前一律显示「登录已失效」，会把人引去重新登录。
+
+### 工程
+
+- CI 每个 PR 都跑真实 MV3 冷启动与断网恢复验收（`pnpm smoke:extension`），不再等发版时才发现。
+
 ## [0.14.2] — 2026-11-02
 
 ### 手机端
@@ -517,6 +537,7 @@
 - WXT + React 19 + MV3 最小权限架构；X DOM fixtures 锁定 reader→detector 契约；95 个单元测试；pre-push 本地质量门禁。
 
 [Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.13.2...HEAD
+[0.15.0]: https://github.com/realchendahuang/feedsieve/compare/v0.14.2...v0.15.0
 [0.14.2]: https://github.com/realchendahuang/feedsieve/compare/v0.14.1...v0.14.2
 [0.14.1]: https://github.com/realchendahuang/feedsieve/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/realchendahuang/feedsieve/compare/v0.13.2...v0.14.0
