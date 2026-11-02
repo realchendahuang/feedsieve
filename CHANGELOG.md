@@ -5,6 +5,17 @@
 - 每个版本的详细工程记录见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)。
 - 二进制产物见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)；正式用户请从 [Chrome 应用商店](https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph)接收更新。
 
+## [0.14.1] — 2026-11-02
+
+### 依赖安全
+
+- 清掉 Dependabot 的开发依赖告警：undici 7.30.1、brace-expansion 5.0.12、minimatch 11.0.3、esbuild 0.25.12、vitest 4.1.12；现在 `pnpm audit` 为 0。这些依赖都在开发/构建链，不进扩展与 API 的运行时产物。
+
+### 社区 API
+
+- 冷启动只求值上报主路径：SSR、OG 分享图、管理台和定时任务改成按需加载，减少 `/v1/*` 每次冷启动的 CPU 开销。
+- `/v1/*` 的 CORS 预检缓存改为一天，扩展每 15 分钟一轮上报不再每轮都发一次 OPTIONS。
+
 ## [0.14.0] — 2026-11-02
 
 ### 界面净化
@@ -500,6 +511,7 @@
 - WXT + React 19 + MV3 最小权限架构；X DOM fixtures 锁定 reader→detector 契约；95 个单元测试；pre-push 本地质量门禁。
 
 [Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.13.2...HEAD
+[0.14.1]: https://github.com/realchendahuang/feedsieve/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/realchendahuang/feedsieve/compare/v0.13.2...v0.14.0
 [0.13.2]: https://github.com/realchendahuang/feedsieve/compare/v0.13.1...v0.13.2
 [0.13.1]: https://github.com/realchendahuang/feedsieve/compare/v0.13.0...v0.13.1
