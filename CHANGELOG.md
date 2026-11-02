@@ -5,6 +5,19 @@
 - 每个版本的详细工程记录见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)。
 - 二进制产物见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)；正式用户请从 [Chrome 应用商店](https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph)接收更新。
 
+## [0.14.0] — 2026-11-02
+
+### 界面净化
+
+- 设置新增「界面净化」，默认关闭：总开关打开后，可分别隐藏首页「为你推荐」、右侧栏趋势与推荐关注、时间线付费推广、左侧导航 Grok；中文改用 PingFang SC 等系统字体；评论区里只为回复位买蓝 V 的短回复降低不透明度。
+- 只改本机页面外观，不上传数据、不额外请求 X；关掉总开关立即恢复原样。
+
+### 主页洞察
+
+- 主页工具条新增「补全这个博主」：手动触发，一路滚到页面底部，让 X 自己加载更多帖子；正常几十秒，随时可再点停止。页面切到后台或你离开这个主页时自动停下，同一博主 3 分钟内只补一次。
+- 取消主页帖子库的粉丝数门槛：粉丝再少的博主也参与众包；上报的作者没有资料时，服务端补一条只有 handle 的账号行，帖子照样入库。
+- `PRIVACY.md` 同步：删除「只收粉丝 ≥ 1000」的说法，并写明补全只在用户点按钮时滚动。
+
 ## [0.13.2] — 2026-11-02
 
 ### 主页洞察
@@ -487,6 +500,7 @@
 - WXT + React 19 + MV3 最小权限架构；X DOM fixtures 锁定 reader→detector 契约；95 个单元测试；pre-push 本地质量门禁。
 
 [Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.13.2...HEAD
+[0.14.0]: https://github.com/realchendahuang/feedsieve/compare/v0.13.2...v0.14.0
 [0.13.2]: https://github.com/realchendahuang/feedsieve/compare/v0.13.1...v0.13.2
 [0.13.1]: https://github.com/realchendahuang/feedsieve/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/realchendahuang/feedsieve/compare/v0.12.2...v0.13.0
