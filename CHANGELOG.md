@@ -5,6 +5,12 @@
 - 每个版本的详细工程记录见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)。
 - 二进制产物见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)；正式用户请从 [Chrome 应用商店](https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph)接收更新。
 
+## [0.14.2] — 2026-11-02
+
+### 手机端
+
+- 工具栏弹窗按屏幕宽度收窄：手机窄屏（390 / 320）不再被固定 420px 撑出屏幕，各页面无横向溢出；桌面弹窗和侧边栏尺寸不变。
+
 ## [0.14.1] — 2026-11-02
 
 ### 依赖安全
@@ -511,6 +517,7 @@
 - WXT + React 19 + MV3 最小权限架构；X DOM fixtures 锁定 reader→detector 契约；95 个单元测试；pre-push 本地质量门禁。
 
 [Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.13.2...HEAD
+[0.14.2]: https://github.com/realchendahuang/feedsieve/compare/v0.14.1...v0.14.2
 [0.14.1]: https://github.com/realchendahuang/feedsieve/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/realchendahuang/feedsieve/compare/v0.13.2...v0.14.0
 [0.13.2]: https://github.com/realchendahuang/feedsieve/compare/v0.13.1...v0.13.2
