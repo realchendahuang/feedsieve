@@ -37,10 +37,6 @@ export function isProfilePath(path: string, handle: string): boolean {
   return new RegExp(`^/${handle.replace(/[^a-z0-9_]/gi, '')}/?$`, 'i').test(path);
 }
 
-export function countArticles(): number {
-  return document.querySelectorAll(tweetSelectors.article).length;
-}
-
 /**
  * 当前页面上能看到的帖子 ID。
  * X 的列表会回收 DOM（滚过去之后旧 article 会被移走），所以不能用 article 数量判断
@@ -182,7 +178,6 @@ export function createProfileFill(
     stop: (): void => {
       stopRequested = true;
     },
-    isRunning: (): boolean => running,
   };
 }
 

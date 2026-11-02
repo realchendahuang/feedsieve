@@ -452,11 +452,11 @@ export default function SettingsView({
         {page === 'clean' ? (
           <>
             <section className="group">
-              <Row label={t.cleanUi} hint={t.cleanUiHint}>
+              <Row label={t.moduleClean} hint={t.moduleCleanHint}>
                 <Toggle
                   checked={ui?.cleanUi ?? false}
                   disabled={ui === null}
-                  label={t.cleanUi}
+                  label={t.moduleClean}
                   onChange={(enabled) => void updateUi('cleanUi', enabled)}
                 />
               </Row>
