@@ -28,8 +28,17 @@ import {
   UI_COPY,
   type UiLanguage,
 } from '../../src/lib/platform/i18n';
+import {
+  DEFAULT_MODULE_SETTINGS,
+  getModuleSettings,
+  setModuleSettings,
+  subscribeModuleSettings,
+  type ModuleSettings,
+} from '../../src/lib/settings/module-settings';
+import { enabledModules, moduleById, type ModuleId } from '../../src/lib/settings/modules';
 import HotView from './views/HotView';
-import type { SettingsPage } from './views/SettingsView';
+import type { GlobalPage, SettingsPage } from './views/settings/pages';
+import { isGlobalPage } from './views/settings/pages';
 // 其余视图按需加载：打开弹窗只要热帖这一屏，没理由先把五个界面全部解析一遍。
 // 首屏多出的那次 chunk 读取在扩展本地几乎察觉不到，省下的是每次打开都要付的解析时间。
 const ProfileView = lazy(() => import('./views/ProfileView'));
@@ -40,52 +49,54 @@ const WriteView = lazy(() =>
   import('./views/WriteView').then((module) => ({ default: module.WriteView })),
 );
 const CleanView = lazy(() => import('./views/CleanView'));
-const SettingsView = lazy(() => import('./views/SettingsView'));
+const GlobalView = lazy(() => import('./views/settings/GlobalView'));
+const ModuleSettingsView = lazy(() => import('./views/settings/ModuleSettingsView'));
 import { isProfileUrl } from './views/profile-model';
 import { PANEL_VIEW_REQUEST_KEY, readPanelViewRequest } from '../../src/lib/platform/panel-route';
 import { AppIcon, asPageMarkedList, getChromeSidePanel, type PageMarkedItem } from './views/shared';
 
 /**
- * 三个栏目，各回答一个问题：
- * - 热帖：这一页什么在火、回复谁划算（默认）
- * - 发帖：已排期的帖子和空档、发帖时间表、发帖框与文章编辑器助手
- * - AI 味：当前账号是不是 AI 代写回复的号，我测过的账号
- * - 清理：这一页的垃圾账号、社区黑名单还剩多少
- * - 设置：规则与记录，低频内容收进二级页
+ * 顶部栏目：每个功能模块一问，最后一栏「全局」放跨模块设置。
+ * tab 是否出现由模块总开关决定，顺序由 MODULES 注册表决定。
  */
-type PopupView = 'hot' | 'profile' | 'write' | 'ai' | 'clean' | 'settings';
-
-const SECTIONS: PopupView[] = ['hot', 'profile', 'write', 'ai', 'clean', 'settings'];
+type PopupView = ModuleId | 'global';
 
 const PAGE_MARKED_MESSAGE = { type: 'feedsieve:page-marked-list' } as const;
 
+interface InitialRoute {
+  view: PopupView;
+  page: SettingsPage;
+  moduleSettingsOpen: ModuleId | null;
+}
+
 /** 旧链接参数兼容：`?view=lists&list=blocked`、`?view=keywords` 等。 */
-function initialRoute(): { view: PopupView; page: SettingsPage } {
+function initialRoute(): InitialRoute {
   const params = new URLSearchParams(globalThis.location?.search ?? '');
   const list = params.get('list');
   switch (params.get('view')) {
     case 'clean':
-      return { view: 'clean', page: 'home' };
+    case 'filter':
+      return { view: 'filter', page: 'global', moduleSettingsOpen: null };
     case 'profile':
-      return { view: 'profile', page: 'home' };
+      return { view: 'profile', page: 'global', moduleSettingsOpen: null };
     case 'ai':
-      return { view: 'ai', page: 'home' };
+      return { view: 'ai', page: 'global', moduleSettingsOpen: null };
     case 'write':
-      return { view: 'write', page: 'home' };
+      return { view: 'write', page: 'global', moduleSettingsOpen: null };
     case 'lists':
     case 'overview':
       if (list === 'blocked' || list === 'allowlist' || list === 'following') {
-        return { view: 'settings', page: list };
+        return { view: 'filter', page: list, moduleSettingsOpen: 'filter' };
       }
-      return { view: 'clean', page: 'home' };
+      return { view: 'filter', page: 'global', moduleSettingsOpen: null };
     case 'keywords':
     case 'detection':
-      return { view: 'settings', page: 'keywords' };
+      return { view: 'filter', page: 'keywords', moduleSettingsOpen: 'filter' };
     case 'settings':
-      return { view: 'settings', page: 'home' };
+      return { view: 'global', page: 'global', moduleSettingsOpen: null };
     default:
       // 旧链接里已下线的页面（insight / hot / hunting 等）都落到热帖
-      return { view: 'hot', page: 'home' };
+      return { view: 'hot', page: 'global', moduleSettingsOpen: null };
   }
 }
 
@@ -135,6 +146,10 @@ export default function App() {
   const [route] = useState(initialRoute);
   const [view, setView] = useState<PopupView>(route.view);
   const [settingsPage, setSettingsPage] = useState<SettingsPage>(route.page);
+  const [moduleSettingsOpen, setModuleSettingsOpen] = useState<ModuleId | null>(
+    route.moduleSettingsOpen,
+  );
+  const [modules, setModules] = useState<ModuleSettings | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [pageMarked, setPageMarked] = useState<PageMarkedItem[] | null>(null);
   const [killSwitch, setKillSwitch] = useState<{
@@ -157,38 +172,77 @@ export default function App() {
 
   const notify = useCallback((message: string | null): void => setNotice(message), []);
 
-  // 在博主主页上打开弹窗 / 侧边栏：默认落到「主页」。只在打开的那一刻判断，
-  // 之后切到别的页面不自动跳走（热帖的阅读位置在切换视图时会丢）。链接里指定了视图的照旧
-  // 判断完之前不渲染热帖，热帖不会先闪一下再跳走（查询很快，失败也照常显示）
+  // 模块总开关：tab 去留、齿轮页、默认落点都读这一份
+  useEffect(() => {
+    let active = true;
+    const apply = (value: ModuleSettings): void => {
+      if (active) setModules(value);
+    };
+    void getModuleSettings()
+      .then(apply)
+      .catch(() => apply(DEFAULT_MODULE_SETTINGS));
+    const unsubscribe = subscribeModuleSettings(apply);
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
+
+  const hasExplicitView = useMemo(
+    () => new URLSearchParams(globalThis.location?.search ?? '').get('view') !== null,
+    [],
+  );
   const [viewReady, setViewReady] = useState(
     () => new URLSearchParams(globalThis.location?.search ?? '').get('view') !== null,
   );
+  const modulesReady = modules !== null;
+
+  // 默认落点：链接指定的模块 → 当前是 X 主页则「主页」→ 热帖 → 第一个启用的模块 → 全局。
+  // 只在模块开关第一次加载时判断一次；之后切 tab 或开关模块都不再重置当前视图。
   useEffect(() => {
-    if (viewReady) return;
+    if (!modules) return;
     let active = true;
-    // 兜底：个别环境里 tabs.query 迟迟不 settle 时，热帖区不能一直空着
-    const timer = setTimeout(() => {
-      if (active) setViewReady(true);
-    }, 400);
+    const enabled = enabledModules(modules);
+    const enabledIds = new Set(enabled.map((module) => module.id));
+    const apply = (profileDefault: boolean): void => {
+      if (!active) return;
+      let next = route.view;
+      if (next !== 'global' && !enabledIds.has(next)) next = 'global';
+      if (!hasExplicitView && route.view === 'hot') {
+        if (profileDefault && enabledIds.has('profile')) next = 'profile';
+        else if (enabledIds.has('hot')) next = 'hot';
+        else next = enabled[0]?.id ?? 'global';
+      }
+      setView(next);
+      if (next === 'global') {
+        setSettingsPage(isGlobalPage(route.page) ? route.page : 'global');
+        setModuleSettingsOpen(null);
+      } else if (route.moduleSettingsOpen === next && enabledIds.has(next)) {
+        setModuleSettingsOpen(next);
+        setSettingsPage(route.page);
+      }
+      setViewReady(true);
+    };
+    if (hasExplicitView) {
+      apply(false);
+      return () => {
+        active = false;
+      };
+    }
+    // 兜底：个别环境里 tabs.query 迟迟不 settle 时，不能一直空着
+    const timer = setTimeout(() => apply(false), 400);
     void Promise.resolve()
       .then(() => browser.tabs.query({ active: true, currentWindow: true }))
-      .then((tabs) => {
-        if (active && isProfileUrl(tabs[0]?.url)) {
-          setView((current) => (current === 'hot' ? 'profile' : current));
-        }
-      })
-      .catch(() => undefined)
-      .finally(() => {
-        clearTimeout(timer);
-        if (active) setViewReady(true);
-      });
+      .then((tabs) => apply(isProfileUrl(tabs[0]?.url)))
+      .catch(() => apply(false))
+      .finally(() => clearTimeout(timer));
     return () => {
       active = false;
       clearTimeout(timer);
     };
-    // 只在打开的那一刻判断一次
+    // route 是打开时固定的快照；只在模块开关第一次到达时决定落点
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [modulesReady]);
 
   // 从主页资料卡下的洞察行打开侧边栏：落到「主页」视图；侧边栏已经开着时跟着切过去
   useEffect(() => {
@@ -400,19 +454,52 @@ export default function App() {
     return communityEntries.filter((entry) => !protectedHandles.has(entry.handle.toLowerCase()));
   }, [communityEntries, allowlist, following, blocked]);
 
-  const sectionLabel: Record<PopupView, string> = {
-    hot: t.hot,
-    profile: t.profileNav,
-    write: language === 'zh' ? '发帖' : 'Post',
-    ai: language === 'zh' ? 'AI 味' : 'AI',
-    clean: t.home,
-    settings: t.settings,
-  };
+  const updateModules = useCallback(
+    async (patch: Partial<ModuleSettings>): Promise<void> => {
+      setModules((prev) => (prev ? { ...prev, ...patch } : prev));
+      const next = await setModuleSettings(patch);
+      setModules(next);
+      // 当前正在看的模块被关掉：立即落到全局，不留在已不存在的 tab 上
+      if (view !== 'global' && !moduleById(view).enabled(next)) {
+        setView('global');
+        setSettingsPage('global');
+        setModuleSettingsOpen(null);
+        return;
+      }
+      if (moduleSettingsOpen && !moduleById(moduleSettingsOpen).enabled(next)) {
+        setModuleSettingsOpen(null);
+        setSettingsPage('global');
+      }
+    },
+    [view, moduleSettingsOpen],
+  );
+
+  const tabs: Array<{ id: PopupView; label: string }> = enabledModules(modules).map((module) => ({
+    id: module.id,
+    label: t[module.labelKey],
+  }));
+  tabs.push({ id: 'global', label: t.globalNav });
+
+  // 外部窗口关掉模块时也要立刻生效：不依赖 effect 里的 setState，直接派生当前可渲染的视图
+  const effectiveView: PopupView =
+    modules && view !== 'global' && !moduleById(view).enabled(modules) ? 'global' : view;
+  const effectiveModuleSettingsOpen =
+    moduleSettingsOpen &&
+    modules &&
+    effectiveView === moduleSettingsOpen &&
+    moduleById(moduleSettingsOpen).enabled(modules)
+      ? moduleSettingsOpen
+      : null;
 
   function selectSection(section: PopupView): void {
-    // 再点一次「设置」回到设置首页
-    if (section === 'settings') setSettingsPage('home');
     setView(section);
+    setModuleSettingsOpen(null);
+    setSettingsPage('global');
+  }
+
+  function openModuleSettings(module: ModuleId): void {
+    setModuleSettingsOpen(module);
+    setSettingsPage(moduleById(module).settingsPage);
   }
 
   return (
@@ -421,16 +508,16 @@ export default function App() {
         {/* 顶部只留栏目：不放商标和名字（侧边栏顶部 Chrome 已经显示了图标和名字，
             弹窗里也不需要）。关于信息在设置最底下 */}
         <nav className="section-nav" aria-label={t.primaryNavigation}>
-          {SECTIONS.map((section) => (
+          {tabs.map((tab) => (
             <button
-              key={section}
+              key={tab.id}
               type="button"
-              className={view === section ? 'is-active' : ''}
-              aria-current={view === section ? 'page' : undefined}
-              onClick={() => selectSection(section)}
+              className={effectiveView === tab.id ? 'is-active' : ''}
+              aria-current={effectiveView === tab.id ? 'page' : undefined}
+              onClick={() => selectSection(tab.id)}
             >
-              <span>{sectionLabel[section]}</span>
-              {section === 'clean' && pageCount ? (
+              <span>{tab.label}</span>
+              {tab.id === 'filter' && pageCount ? (
                 <span className="nav-badge">{Math.min(pageCount, 99)}</span>
               ) : null}
             </button>
@@ -452,27 +539,38 @@ export default function App() {
 
       <div className="popup-content">
         <Suspense fallback={null}>
-          {viewReady && view === 'hot' ? (
-            <HotView language={language} sendToXPage={sendToXPage} />
+          {viewReady && effectiveView === 'hot' && !effectiveModuleSettingsOpen ? (
+            <HotView
+              language={language}
+              sendToXPage={sendToXPage}
+              onOpenSettings={() => openModuleSettings('hot')}
+            />
           ) : null}
-          {view === 'profile' ? (
-            <ProfileView language={language} notify={notify} sendToXPage={sendToXPage} />
+          {viewReady && effectiveView === 'profile' && !effectiveModuleSettingsOpen ? (
+            <ProfileView
+              language={language}
+              notify={notify}
+              sendToXPage={sendToXPage}
+              onOpenSettings={() => openModuleSettings('profile')}
+            />
           ) : null}
-          {view === 'write' ? (
+          {viewReady && effectiveView === 'write' && !effectiveModuleSettingsOpen ? (
             <WriteView
               language={language}
               notify={notify}
               sendToXPage={sendToXPage}
-              onOpenCadence={() => {
-                setView('settings');
-                setSettingsPage('compose');
-              }}
+              onOpenCadence={() => openModuleSettings('write')}
             />
           ) : null}
-          {view === 'ai' ? (
-            <AiView language={language} notify={notify} sendToXPage={sendToXPage} />
+          {viewReady && effectiveView === 'ai' && !effectiveModuleSettingsOpen ? (
+            <AiView
+              language={language}
+              notify={notify}
+              sendToXPage={sendToXPage}
+              onOpenSettings={() => openModuleSettings('ai')}
+            />
           ) : null}
-          {view === 'clean' ? (
+          {viewReady && effectiveView === 'filter' && !effectiveModuleSettingsOpen ? (
             <CleanView
               language={language}
               notify={notify}
@@ -484,18 +582,21 @@ export default function App() {
               killSwitchReason={killSwitch?.reason}
               communityEligible={communityEligible}
               communityLoading={communityEntriesLoading}
+              onOpenSettings={() => openModuleSettings('filter')}
             />
           ) : null}
-          {view === 'settings' ? (
-            <SettingsView
+          {viewReady && effectiveModuleSettingsOpen && effectiveView === effectiveModuleSettingsOpen ? (
+            <ModuleSettingsView
+              module={moduleById(effectiveModuleSettingsOpen)}
+              page={settingsPage}
               language={language}
               notify={notify}
-              page={settingsPage}
-              onNavigate={setSettingsPage}
               community={community}
               onUpdateCommunity={updateCommunity}
-              onLanguageChange={setLanguage}
-              onSyncCommunity={refreshCommunitySnapshot}
+              modules={modules}
+              onUpdateModule={(patch) => void updateModules(patch)}
+              onNavigate={setSettingsPage}
+              onClose={() => setModuleSettingsOpen(null)}
               sendToXPage={sendToXPage}
               refreshPageMarked={refreshPageMarked}
               pauseDestructive={pauseDestructive}
@@ -505,6 +606,20 @@ export default function App() {
                 following: following?.length ?? null,
               }}
               recommendList={recommendList}
+            />
+          ) : null}
+          {viewReady && effectiveView === 'global' ? (
+            <GlobalView
+              language={language}
+              notify={notify}
+              page={isGlobalPage(settingsPage) ? settingsPage : 'global'}
+              onNavigate={(page: GlobalPage) => setSettingsPage(page)}
+              community={community}
+              onUpdateCommunity={updateCommunity}
+              onLanguageChange={setLanguage}
+              onSyncCommunity={refreshCommunitySnapshot}
+              modules={modules}
+              onUpdateModule={(patch) => void updateModules(patch)}
             />
           ) : null}
         </Suspense>

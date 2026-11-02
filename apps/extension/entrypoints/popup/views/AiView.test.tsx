@@ -55,7 +55,14 @@ async function render(sendToXPage = vi.fn(async () => ({ ok: true }))) {
   const root = ReactDOM.createRoot(host);
   mounted.push(root);
   await act(async () => {
-    root.render(<AiView language="zh" notify={() => undefined} sendToXPage={sendToXPage} />);
+    root.render(
+      <AiView
+        language="zh"
+        notify={() => undefined}
+        sendToXPage={sendToXPage}
+        onOpenSettings={vi.fn()}
+      />,
+    );
   });
   await act(async () => {
     await new Promise((r) => setTimeout(r, 0));

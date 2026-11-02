@@ -138,6 +138,7 @@ async function render() {
         language: 'zh' as const,
         notify,
         sendToXPage,
+        onOpenSettings: vi.fn(),
       }),
     );
   });

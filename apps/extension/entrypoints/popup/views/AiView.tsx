@@ -7,7 +7,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { profileFromPath } from '@feedsieve/x-adapter';
-import type { UiLanguage } from '../../../src/lib/platform/i18n';
+import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
 import { flavorOf, type AiVerdict } from '@feedsieve/shared';
 import { formatGap, spreadLabel } from '../../../src/lib/ai-check/share-card';
 import {
@@ -226,10 +226,12 @@ export function AiView({
   language,
   notify,
   sendToXPage,
+  onOpenSettings,
 }: {
   language: UiLanguage;
   notify: (message: string | null) => void;
   sendToXPage: (message: { type: string; handle?: string; force?: boolean }) => Promise<unknown>;
+  onOpenSettings: () => void;
 }) {
   const c = COPY[language];
   const handle = useActiveAccount();
@@ -373,6 +375,15 @@ export function AiView({
             onClick={() => void checkSelf()}
           >
             {c.checkSelf}
+          </button>
+          <button
+            type="button"
+            className="icon-button"
+            aria-label={UI_COPY[language].aiSettings}
+            title={UI_COPY[language].aiSettings}
+            onClick={onOpenSettings}
+          >
+            <AppIcon name="settings" size={15} />
           </button>
         </div>
         {!handle ? (

@@ -47,6 +47,7 @@ interface CleanViewProps {
   /** 社区黑名单里还没被拉黑、也不在白名单 / 关注里的账号，按净票数排好序 */
   communityEligible: CommunityEntry[];
   communityLoading: boolean;
+  onOpenSettings: () => void;
 }
 
 function FailedList({
@@ -82,6 +83,7 @@ export default function CleanView({
   killSwitchReason,
   communityEligible,
   communityLoading,
+  onOpenSettings,
 }: CleanViewProps) {
   const t = UI_COPY[language];
   const [running, setRunning] = useState(false);
@@ -366,6 +368,15 @@ export default function CleanView({
             onClick={() => void handleRefresh()}
           >
             <AppIcon name="refresh" size={15} />
+          </button>
+          <button
+            type="button"
+            className="icon-button"
+            aria-label={t.filterSettings}
+            title={t.filterSettings}
+            onClick={onOpenSettings}
+          >
+            <AppIcon name="settings" size={15} />
           </button>
         </div>
 

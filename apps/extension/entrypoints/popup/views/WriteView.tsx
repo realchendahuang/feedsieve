@@ -1,13 +1,13 @@
 /**
  * 「发帖」视图：下一条排期、本周每小时的名额、草稿队列、文章备份、助手开关。
  *
- * 排期逻辑不在这里配：用户先在「设置 › 功能开关 › 发帖节奏」里设好集中时段和
+ * 排期逻辑不在这里配：用户先在「发帖 › 发帖设置 › 发帖节奏」里设好集中时段和
  * 每小时最多几条，这里只负责把内容排进下一个有名额的小时。
  * 已排期列表来自 X 自己的「预排期」页（同步 = 让当前 X 页面打开那一页，X 自己去拉），
  * 你在 X 里新建 / 改 / 删预排期帖子时也会顺带更新。全部只存本机。
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { UiLanguage } from '../../../src/lib/platform/i18n';
+import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
 import {
   DEFAULT_SCHEDULE_SETTINGS,
   capacitySummary,
@@ -77,7 +77,7 @@ const COPY = {
     empty: '接下来 7 天没有排期',
     capacity: '本周容量',
     capacityHint:
-      '每个小时显示「已排 / 上限」。点一个还有空位的小时，会把队列里的下一条排进这个小时（分钟内随机）；满了的小时不能再点。到「设置 › 功能开关 › 发帖节奏」里改时段和每小时条数。',
+      '每个小时显示「已排 / 上限」。点一个还有空位的小时，会把队列里的下一条排进这个小时（分钟内随机）；满了的小时不能再点。到「发帖 › 齿轮 › 发帖节奏」里改时段和每小时条数。',
     adjust: '调整节奏',
     capacityValue: (used: number, cap: number) => `${used}/${cap}`,
     noDraft: '先写一条草稿',
@@ -440,6 +440,15 @@ export function WriteView({
             {cache.syncedAt ? c.synced(formatAgo(cache.syncedAt, language)) : c.neverSynced}
           </span>
           <IconButton icon="refresh" label={c.sync} onClick={() => void sync()} />
+          <button
+            type="button"
+            className="icon-button"
+            aria-label={UI_COPY[language].writeSettings}
+            title={UI_COPY[language].writeSettings}
+            onClick={onOpenCadence}
+          >
+            <AppIcon name="settings" size={15} />
+          </button>
         </div>
         <div className="row">
           <span className="row-label">

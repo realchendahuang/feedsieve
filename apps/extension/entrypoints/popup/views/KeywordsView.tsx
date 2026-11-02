@@ -25,7 +25,7 @@ interface KeywordsViewProps {
   notify: (message: string | null) => void;
 }
 
-/** 设置 › 关键词：自己的词 + 官方词库订阅。 */
+/** 过滤 › 过滤设置 › 过滤规则 › 关键词：自己的词 + 官方词库订阅。 */
 export default function KeywordsView({ language, notify }: KeywordsViewProps) {
   const t = UI_COPY[language];
   const [rules, setRules] = useState<KeywordRuleSettings | null>(null);

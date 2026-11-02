@@ -63,7 +63,7 @@ async function renderHotView(send: (message: { type: string }) => Promise<unknow
   const root = ReactDOM.createRoot(rootEl);
   mountedRoots.push(root);
   await act(async () => {
-    root.render(React.createElement(HotView, { language: 'zh' as const, sendToXPage }));
+    root.render(React.createElement(HotView, { language: 'zh' as const, sendToXPage, onOpenSettings: vi.fn() }));
   });
   return rootEl;
 }
@@ -876,6 +876,7 @@ describe('smoother reading', () => {
         React.createElement(HotView, {
           language: 'zh' as const,
           sendToXPage: async () => null,
+          onOpenSettings: vi.fn(),
         }),
       );
     });
@@ -904,6 +905,7 @@ describe('smoother reading', () => {
           React.createElement(HotView, {
             language: 'zh' as const,
             sendToXPage: async () => null,
+            onOpenSettings: vi.fn(),
           }),
         );
       });

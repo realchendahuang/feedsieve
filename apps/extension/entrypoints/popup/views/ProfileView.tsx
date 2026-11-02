@@ -78,6 +78,7 @@ interface ProfileViewProps {
   language: UiLanguage;
   notify: (message: string | null) => void;
   sendToXPage: (message: { type: string; postId?: string; handle?: string }) => Promise<unknown>;
+  onOpenSettings: () => void;
 }
 
 /** 当前标签页的博主：切到别的页面（帖子详情、首页）时保留上一个，面板不闪。 */
@@ -421,7 +422,12 @@ function Patterns({
   );
 }
 
-export default function ProfileView({ language, notify, sendToXPage }: ProfileViewProps) {
+export default function ProfileView({
+  language,
+  notify,
+  sendToXPage,
+  onOpenSettings,
+}: ProfileViewProps) {
   const t = UI_COPY[language];
   const handle = useActiveHandle();
   // undefined = 加载中；null = 还没有帖子库
@@ -724,6 +730,17 @@ export default function ProfileView({ language, notify, sendToXPage }: ProfileVi
   if (!handle) {
     return (
       <div className="view profile-view" ref={rootRef}>
+        <div className="view-toolbar">
+          <button
+            type="button"
+            className="icon-button toolbar-end"
+            aria-label={t.profileSettings}
+            title={t.profileSettings}
+            onClick={onOpenSettings}
+          >
+            <AppIcon name="settings" size={15} />
+          </button>
+        </div>
         <div className="empty-state">
           <p>{t.profileNotOnProfile}</p>
           <HelpIcon text={t.profileNotOnProfileHint} />
@@ -831,6 +848,17 @@ export default function ProfileView({ language, notify, sendToXPage }: ProfileVi
   if (!entry || !hasPosts) {
     return (
       <div className="view profile-view" ref={rootRef}>
+        <div className="view-toolbar">
+          <button
+            type="button"
+            className="icon-button toolbar-end"
+            aria-label={t.profileSettings}
+            title={t.profileSettings}
+            onClick={onOpenSettings}
+          >
+            <AppIcon name="settings" size={15} />
+          </button>
+        </div>
         {entry ? <AccountCard entry={entry} now={now} language={language} tools={tools} /> : null}
         {googlePanel}
         <div className="empty-state">
@@ -901,6 +929,15 @@ export default function ProfileView({ language, notify, sendToXPage }: ProfileVi
           }}
         >
           {t.profileIncludeReplies}
+        </button>
+        <button
+          type="button"
+          className="icon-button toolbar-end"
+          aria-label={t.profileSettings}
+          title={t.profileSettings}
+          onClick={onOpenSettings}
+        >
+          <AppIcon name="settings" size={15} />
         </button>
       </div>
 

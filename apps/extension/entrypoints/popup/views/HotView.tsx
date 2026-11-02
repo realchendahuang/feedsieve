@@ -95,6 +95,7 @@ function sortGlobal(list: GlobalHotList, sort: HotSort): HotPostItem[] {
 interface HotViewProps {
   language: UiLanguage;
   sendToXPage: (message: { type: string; sort?: HotSort; postId?: string }) => Promise<unknown>;
+  onOpenSettings: () => void;
 }
 
 /** 本页概况：一行三个数。 */
@@ -373,7 +374,7 @@ function isTypingTarget(target: EventTarget | null): boolean {
   );
 }
 
-export default function HotView({ language, sendToXPage }: HotViewProps) {
+export default function HotView({ language, sendToXPage, onOpenSettings }: HotViewProps) {
   const t = UI_COPY[language];
   const [sort, setSort] = useState<HotSort>('heat');
   const [scope, setScope] = useState<HotScope>('mine');
@@ -1007,6 +1008,15 @@ export default function HotView({ language, sendToXPage }: HotViewProps) {
           ))}
         </select>
         <HelpIcon text={helpText} />
+        <button
+          type="button"
+          className="icon-button toolbar-end"
+          aria-label={t.hotSettings}
+          title={t.hotSettings}
+          onClick={onOpenSettings}
+        >
+          <AppIcon name="settings" size={15} />
+        </button>
       </div>
 
       <div className="filter-row">
