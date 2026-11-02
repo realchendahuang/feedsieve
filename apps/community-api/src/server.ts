@@ -6,19 +6,32 @@
  *   （名单数据端点自身带 5 分钟缓存，HTML 60s 窗口内的延迟可接受）。
  * - scheduled：整点 cron 全量编排（清理、规则静音、快照、死账号探活），半点只发快照。
  */
-import handler from '@tanstack/react-start/server-entry';
 import { handleWorkerRoutes } from './api';
 import { isAdminHost, isSiteHost } from './lib/hosts';
-import { runScheduledCron } from './scheduled';
 import { withDb } from './db/client';
 
 // Nitro 入口的 fetch 在 Cloudflare 上接收 (request, env, ctx)，
 // 其自带类型按通用平台声明为 (request, opts)，这里做一次桥接
-const ssrFetch = handler.fetch as unknown as (
-  request: Request,
-  env: Cloudflare.Env,
-  ctx: ExecutionContext,
-) => Promise<Response>;
+type SsrFetch = (request: Request, env: Cloudflare.Env, ctx: ExecutionContext) => Promise<Response>;
+
+/**
+ * TanStack Start 的 Nitro handler 是整台 Worker 最重的一块，却只有页面 HTML 用得到。
+ * 顶层 import 会让 `/v1/*`（扩展上报，占全部流量的九成以上）的每次冷启动都先求值
+ * 整个 SSR 运行时，而冷启动正是这台 Worker 的主要 CPU 开销。
+ */
+let ssrFetchPromise: Promise<SsrFetch> | null = null;
+
+function loadSsrFetch(): Promise<SsrFetch> {
+  // 失败不缓存 rejected promise：否则一次瞬时错误会把整台 isolate 永久钉死。
+  ssrFetchPromise ??= import('@tanstack/react-start/server-entry').then(
+    (mod) => mod.default.fetch as unknown as SsrFetch,
+    (error) => {
+      ssrFetchPromise = null;
+      throw error;
+    },
+  );
+  return ssrFetchPromise;
+}
 
 /** 基线安全响应头：站点有表单 POST 与大量外链，全响应统一注入 */
 const SECURITY_HEADERS: Record<string, string> = {
@@ -109,7 +122,11 @@ export default {
   },
   async scheduled(event: ScheduledController, env: Cloudflare.Env, ctx: ExecutionContext) {
     await withDb(
-      () => runScheduledCron(env, event.cron),
+      async () => {
+        // 一天只跑 48 次，没必要让它进 `/v1/*` 的启动路径。
+        const { runScheduledCron } = await import('./scheduled');
+        await runScheduledCron(env, event.cron);
+      },
       (p) => ctx.waitUntil(p),
     );
   },
@@ -135,7 +152,7 @@ async function handleFetch(
       return withSecurityHeaders(await env.ASSETS.fetch(request));
     }
     return cachedHtml(request, ctx, async () =>
-      withSecurityHeaders(await ssrFetch(request, env, ctx)),
+      withSecurityHeaders(await (await loadSsrFetch())(request, env, ctx)),
     );
   }
   if (isAdminHost(request, env) && env.ASSETS) {

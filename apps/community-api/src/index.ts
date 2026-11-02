@@ -68,9 +68,8 @@ import {
   readAgentKeywordDetectorConfig,
   writeAgentKeywordDetectorConfig,
 } from './agent-admin';
-import { runScheduledCron } from './scheduled';
-import { MAINTAINER_CATEGORIES } from './maintainer-blocklist';
 import { processRetractionBatch } from './labels';
+import { MAINTAINER_CATEGORIES } from './maintainer-blocklist';
 import { checkAiAccount } from './ai-accounts/check';
 import { judgeAiAccount } from './ai-accounts/judge';
 import { voteAiAccount } from './ai-accounts/vote';
@@ -150,7 +149,9 @@ export function createApp() {
 
   // 扩展 content script 会跨域 POST /v1/*，必须放行预检；管理（/api/admin，
   // 同源 ASSETS 服务）与 Agent（脚本直连）家族不开跨域。
-  app.use('/v1/*', cors());
+  // maxAge：不设时浏览器只缓存预检约 5 秒，扩展每 15 分钟一轮上报等于每轮都先发一次
+  // OPTIONS（实测这类端点约四成五的 invocation 是预检）。设成一天后同一客户端只预检一次。
+  app.use('/v1/*', cors({ maxAge: 86_400 }));
 
   // 管理 / Agent 接口的身份头（Cf-Access-Jwt-Assertion / X-Agent-Key）不属于标准
   // Authorization，Workers Cache 不会自动绕过——显式 no-store，防止管理/审计响应
@@ -1202,7 +1203,12 @@ export default {
     return withDb(async () => current.fetch(request as Request, env));
   },
   async scheduled(controller, env) {
-    // 与 server.ts 生产入口共用同一编排函数，探活等新增消费端不再漂移
-    await withDb(() => runScheduledCron(env, controller?.cron));
+    // 与 server.ts 生产入口共用同一编排函数，探活等新增消费端不再漂移。
+    // 动态 import：本模块被 api.ts 引去建路由表，静态引入会把整条 cron 依赖
+    // （snapshot / prober / 各清理任务）拉进每一次 /v1/* 冷启动的求值路径。
+    await withDb(async () => {
+      const { runScheduledCron } = await import('./scheduled');
+      await runScheduledCron(env, controller?.cron);
+    });
   },
 } satisfies ExportedHandler<Cloudflare.Env>;
