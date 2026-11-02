@@ -144,7 +144,22 @@ const texts = (el: HTMLElement) =>
 
 describe('ProfileView', () => {
   it('starts scrolling fill from the tool row when asked', async () => {
+    const base = typical();
+    entry = base;
     const { el, notify, sendToXPage } = await render();
+    // 模拟滚动后本地库多了 3 条（引用/转推里别人的帖子不算）
+    entry = {
+      ...base,
+      posts: {
+        ...base.posts,
+        ...Object.fromEntries(
+          Array.from({ length: 3 }, (_, i) => {
+            const extra = post(`18500000000000019${i}`, 9_000);
+            return [extra.postId, extra];
+          }),
+        ),
+      },
+    };
     const button = el.querySelector<HTMLButtonElement>('button[aria-label="补全这个博主"]');
     expect(button).toBeTruthy();
     await act(async () => {

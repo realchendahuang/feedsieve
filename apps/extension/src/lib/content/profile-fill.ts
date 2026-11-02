@@ -7,10 +7,12 @@
  */
 import { tweetSelectors } from '@feedsieve/x-adapter';
 
-export const PROFILE_FILL_MAX_STEPS = 40;
+export const PROFILE_FILL_MAX_STEPS = 200;
 /** 等新内容时每 150ms 看一次；最多等 1.2 秒。 */
 export const PROFILE_FILL_POLL_MS = 150;
 export const PROFILE_FILL_WAIT_MS = 1_200;
+/** 连续这么多批没有新帖子就当作到底。 */
+export const PROFILE_FILL_STAGNANT_LIMIT = 8;
 
 export type ProfileFillStop = 'user' | 'limit' | 'stagnant' | 'not-profile';
 
@@ -51,11 +53,8 @@ function scrollToBottom(): void {
   window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
 }
 
-export function createProfileFill(
-  options: { sleep?: (ms: number) => Promise<void>; random?: () => number } = {},
-) {
+export function createProfileFill(options: { sleep?: (ms: number) => Promise<void> } = {}) {
   const sleep = options.sleep ?? ((ms) => new Promise((resolve) => window.setTimeout(resolve, ms)));
-  const random = options.random ?? (() => Math.random());
   let running = false;
   let stopRequested = false;
 
@@ -76,7 +75,6 @@ export function createProfileFill(
           stopped = 'user';
           break;
         }
-        const beforeHeight = document.documentElement.scrollHeight;
         // 直接到底，等 X 加载完这一批再继续
         scrollToBottom();
         // 等 X 把这一批加载出来：加载快就立刻继续，最多等 1.5 秒
@@ -85,25 +83,23 @@ export function createProfileFill(
         for (let poll = 0; poll < maxPolls; poll++) {
           await sleep(PROFILE_FILL_POLL_MS);
           if (stopRequested) break;
-          // 新帖子 ID 出现（或页面变长）就算这一批有收获
+          // 只有「新出现的帖子 ID」才算这一批有收获；scrollHeight 会因渲染/推荐位变化，
+          // 拿它判断容易空跑
           for (const id of collectPostIds()) {
             if (!seen.has(id)) {
               seen.add(id);
               grew = true;
             }
           }
-          if (grew || document.documentElement.scrollHeight > beforeHeight) {
-            grew = true;
-            break;
-          }
+          if (grew) break;
         }
         if (stopRequested) {
           stopped = 'user';
           break;
         }
-        // 连续 4 批没有增长就当作到底
+        // 连续多批没有新帖子就当作到底
         stagnant = grew ? 0 : stagnant + 1;
-        if (stagnant >= 4) {
+        if (stagnant >= PROFILE_FILL_STAGNANT_LIMIT) {
           stopped = 'stagnant';
           break;
         }

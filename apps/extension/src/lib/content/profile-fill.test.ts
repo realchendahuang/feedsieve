@@ -39,7 +39,7 @@ describe('profile-fill', () => {
       // 前三步各加载一条，之后不再增长
       if (round <= 3) addArticles(1);
     });
-    const fill = createProfileFill({ sleep, random: () => 0.5 });
+    const fill = createProfileFill({ sleep });
     const result = await fill.fill('alice');
     expect(result).toEqual({ ok: true, added: 3, stopped: 'stagnant' });
     expect(scrollTo).toHaveBeenCalled();
@@ -55,7 +55,7 @@ describe('profile-fill', () => {
     const sleep = vi.fn(async () => {
       fill.stop();
     });
-    const fill = createProfileFill({ sleep, random: () => 0.5 });
+    const fill = createProfileFill({ sleep });
     const result = await fill.fill('alice');
     expect(result.stopped).toBe('user');
     expect(sleep).toHaveBeenCalledTimes(1);
@@ -64,7 +64,7 @@ describe('profile-fill', () => {
   it('不在这个博主的主页时不滚动', async () => {
     history.replaceState(null, '', '/bob');
     const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
-    const fill = createProfileFill({ sleep: async () => undefined, random: () => 0.5 });
+    const fill = createProfileFill({ sleep: async () => undefined });
     const result = await fill.fill('alice');
     expect(result).toEqual({ ok: false, added: 0, stopped: 'not-profile' });
     expect(scrollTo).not.toHaveBeenCalled();

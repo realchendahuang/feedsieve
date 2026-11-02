@@ -590,6 +590,7 @@ export default function ProfileView({ language, notify, sendToXPage }: ProfileVi
     }
     setFilling(true);
     notify(t.profileFillRunning);
+    const beforeCount = entry ? Object.keys(entry.posts).length : 0;
     try {
       const result = (await sendToXPage({
         type: 'feedsieve:profile-fill',
@@ -598,8 +599,10 @@ export default function ProfileView({ language, notify, sendToXPage }: ProfileVi
       const next = await load(handle);
       setEntry(next);
       setNow(Date.now());
+      // 用本地库的前后差值：滚动时看到的别人帖子（引用、转推）不算补全
+      const added = Math.max(0, (next ? Object.keys(next.posts).length : beforeCount) - beforeCount);
       if (result?.ok) {
-        if (result.added && result.added > 0) notify(t.profileFillDone(result.added));
+        if (added > 0) notify(t.profileFillDone(added));
         else if (result.stopped === 'stagnant') notify(t.profileFillEnd);
         else notify(t.profileFillNone);
       } else if (result?.stopped === 'not-profile') {
