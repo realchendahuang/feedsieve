@@ -957,9 +957,14 @@ export function WriteView({
           <div className="empty-state is-clean write-empty">
             <p>{c.empty}</p>
             <span className="row-meta">{c.emptyHint}</span>
-            <button type="button" className="secondary-button" onClick={onOpenCadence}>
-              {c.adjust}
-            </button>
+            <div className="write-empty-actions">
+              <button type="button" className="secondary-button" onClick={onOpenCadence}>
+                {c.adjust}
+              </button>
+              <button type="button" className="secondary-button" onClick={() => void sync()}>
+                {c.openScheduled}
+              </button>
+            </div>
           </div>
         )}
       </section>

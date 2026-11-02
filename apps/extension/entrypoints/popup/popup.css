@@ -2483,6 +2483,12 @@ input:not([type]):focus,
   font-weight: 600;
 }
 
+.write-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .write-detail {
   margin: 4px 0 8px;
   padding: 8px 10px;
