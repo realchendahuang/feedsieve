@@ -3111,15 +3111,13 @@ input:not([type]):focus,
   font-size: 11px;
 }
 
-.mute-list,
-.mute-pack-list {
+.mute-list {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.mute-item,
-.mute-pack-item {
+.mute-item {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -3127,8 +3125,7 @@ input:not([type]):focus,
   border-bottom: 1px solid var(--line);
 }
 
-.mute-item:last-child,
-.mute-pack-item:last-child {
+.mute-item:last-child {
   border-bottom: 0;
 }
 
@@ -3228,9 +3225,17 @@ input:not([type]):focus,
   margin-bottom: 10px;
 }
 
-.mute-library-bar .sort-select {
+.mute-library-search {
   flex: 1 1 auto;
   min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
 }
 
 .mute-library-count {
@@ -3239,8 +3244,82 @@ input:not([type]):focus,
   font-size: 11px;
 }
 
-.text-button.is-muted {
+.mute-pack {
+  margin-bottom: 14px;
+}
+
+.mute-pack-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 7px;
+}
+
+.mute-pack-head strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mute-pack-count {
+  margin-left: auto;
   color: var(--muted);
+  font-size: 11px;
+}
+
+.mute-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mute-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.mute-chip > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mute-chip:hover:not(:disabled) {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+.mute-chip.is-added {
+  border-color: var(--line);
+  background: var(--fill);
+  color: var(--muted);
+  cursor: default;
+}
+
+.mute-chip[data-state='pending'] {
+  color: var(--warn-fg);
+}
+
+.mute-chip[data-state='synced'] {
+  color: var(--green);
+}
+
+.mute-chip[data-state='failed'] {
+  color: var(--red);
+}
+
+.mute-chip .app-icon {
+  flex: none;
 }
 
 /* =====================================================================

@@ -90,7 +90,7 @@ describe('屏蔽页', () => {
         .find((button) => button.textContent?.trim() === '词库')!
         .click();
     });
-    const add = container.querySelector<HTMLButtonElement>('.mute-pack-item button')!;
+    const add = container.querySelector<HTMLButtonElement>('.mute-chip')!;
     await act(async () => {
       add.click();
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -199,6 +199,45 @@ describe('屏蔽页', () => {
     });
     expect(container.textContent).toContain('已同步 X');
     expect((stored.keywordMutesV1 as MuteSettings).rules[0]?.nativeId).toBe('88');
+  });
+
+  it('词库连续点多个词时，按队列逐条同步，不阻塞下一次点击', async () => {
+    stored.keywordMutesV1 = settings({ nativeSync: true });
+    const send = vi.fn(async (message: { type: string; keyword?: string }) => {
+      if (message.type === 'feedsieve:mute-list') return { ok: true, data: [] };
+      if (message.type === 'feedsieve:mute-create') {
+        return {
+          ok: true,
+          data: {
+            mute: {
+              keyword: message.keyword,
+              id: message.keyword === '同城约' ? '101' : '102',
+              surfaces: ['home_timeline'],
+              options: [],
+              validUntil: null,
+            },
+            list: [],
+          },
+        };
+      }
+      return { ok: false, code: 'unexpected' };
+    });
+    await render(send);
+    await act(async () => {
+      [...container.querySelectorAll<HTMLButtonElement>('.segmented button')]
+        .find((button) => button.textContent?.trim() === '词库')!
+        .click();
+    });
+    const chips = [...container.querySelectorAll<HTMLButtonElement>('.mute-chip')];
+    await act(async () => {
+      chips[0]!.click();
+      chips[1]!.click();
+      for (let i = 0; i < 6; i += 1) await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const saved = (stored.keywordMutesV1 as MuteSettings).rules;
+    expect(saved.map((rule) => rule.phrase)).toEqual(['上门服务', '同城约']);
+    expect(saved.every((rule) => rule.syncState === 'synced')).toBe(true);
+    expect(container.textContent).toContain('已加入 2 / 48');
   });
 
   it('删除需要点两次确认', async () => {
