@@ -85,7 +85,7 @@ describe('屏蔽页', () => {
 
   it('右上角齿轮进入屏蔽设置，返回回到列表', async () => {
     await render();
-    const gear = container.querySelector<HTMLButtonElement>('.toolbar-end')!;
+    const gear = container.querySelector<HTMLButtonElement>('.toolbar-end .icon-button')!;
     await act(async () => gear.click());
     expect(container.textContent).toContain('屏蔽设置');
     expect(container.textContent).toContain('启用屏蔽');
@@ -94,6 +94,15 @@ describe('屏蔽页', () => {
     await act(async () => back.click());
     expect(container.querySelector('.mute-add-form')).not.toBeNull();
     expect(container.querySelector('.toolbar-end')).not.toBeNull();
+  });
+
+  it('关闭屏蔽时工具栏显示已关闭，点它进入设置', async () => {
+    stored.keywordMutesV1 = settings({ enabled: false });
+    await render();
+    const off = [...container.querySelectorAll<HTMLButtonElement>('.mute-off-chip')][0]!;
+    expect(off.textContent).toBe('已关闭');
+    await act(async () => off.click());
+    expect(container.textContent).toContain('屏蔽设置');
   });
 
   it('词库是候选，点加入后才进入我的列表', async () => {

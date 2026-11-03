@@ -453,15 +453,26 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
           </button>
         </div>
         <HelpIcon text={tab === 'library' ? t.helpLibrary : t.helpMine} />
-        <button
-          type="button"
-          className="icon-button toolbar-end"
-          aria-label={t.settings}
-          title={t.settings}
-          onClick={() => setSettingsOpen(true)}
-        >
-          <AppIcon name="settings" size={15} />
-        </button>
+        <span className="toolbar-end">
+          {!settings.enabled ? (
+            <button
+              type="button"
+              className="text-button mute-off-chip"
+              onClick={() => setSettingsOpen(true)}
+            >
+              {t.disabled}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="icon-button"
+            aria-label={t.settings}
+            title={t.settings}
+            onClick={() => setSettingsOpen(true)}
+          >
+            <AppIcon name="settings" size={15} />
+          </button>
+        </span>
       </div>
 
       {errorText(errorCode) ? (
