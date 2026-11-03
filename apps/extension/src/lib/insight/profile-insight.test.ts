@@ -181,12 +181,16 @@ describe('multiple badge', () => {
       NOW,
     );
     store.recordTweet(
-      { postId: '2', handle: 'alice', createdAt: NOW - 3 * DAY, views: 9_000 },
+      { postId: '2', handle: 'alice', createdAt: NOW - 3 * DAY, views: 36_000 },
       NOW,
     );
     store.recordTweet({ postId: '3', handle: 'bob', createdAt: NOW - 3 * DAY, views: 90_000 }, NOW);
     store.recordTweet(
       { postId: '4', handle: 'alice', createdAt: NOW - 60 * 60_000, views: 30_000 },
+      NOW,
+    );
+    store.recordTweet(
+      { postId: '5', handle: 'alice', createdAt: NOW - 3 * DAY, views: 9_000 },
       NOW,
     );
     let profile: { handle: string; baseline: typeof SUMMARY.baseline; sample: number } | null = {
@@ -200,17 +204,19 @@ describe('multiple badge', () => {
       now: () => NOW,
       profileBaseline: () => profile,
     });
-    const articles = ['1', '2', '3', '4'].map((id) =>
+    const articles = ['1', '2', '3', '4', '5'].map((id) =>
       tweetArticle(id === '3' ? 'bob' : 'alice', id),
     );
     decorations.refreshAll();
     const badge = (article: HTMLElement) => article.querySelector<HTMLElement>('.fs-multiple');
     expect(badge(articles[0]!)?.textContent).toBe('4.0×');
     expect(badge(articles[0]!)?.getAttribute('data-fs-level')).toBe('outlier');
-    expect(badge(articles[1]!)?.textContent).toBe('0.5×');
+    expect(badge(articles[1]!)?.textContent).toBe('2.0×');
     expect(badge(articles[1]!)?.getAttribute('data-fs-level')).toBe('normal');
     // 别人的帖子不标
     expect(badge(articles[2]!)).toBeNull();
+    // 低于门槛（0.5×）不占地方
+    expect(badge(articles[4]!)).toBeNull();
     // 刚发的帖子：按预计 24 小时浏览估算
     expect(badge(articles[3]!)?.textContent?.startsWith('~')).toBe(true);
     const velocity = articles[3]!.querySelector('.fs-velocity');

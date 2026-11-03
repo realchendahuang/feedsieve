@@ -5,7 +5,10 @@
  * （`↗ 168/h`、`☆ 32K`）；档位名、破圈倍数和解释都放在悬停卡片里，跟随界面语言（copy.ts）。
  *
  * 落点：
- * - 量级：@handle 那一行末尾，按 X 的元数据写法接「· ☆ 12.8K」。
+ * - 量级：@handle 那一行末尾，按 X 的元数据写法接「· ☆ 12.8K」；主页上不显示，
+ *   资料卡已经写着粉丝数，帖子行再重复只会挤占元数据行。
+ * - 倍数：主页主人自己的帖子，只在明显跑赢中位数（≥ MULTIPLE_MIN）时出现；
+ *   1.2× 这种「基本正常」不占地方，具体数值在流速的悬停卡片里。
  * - 流速：时间线和详情页都在右上角按钮组的最前面；找不到时退回动作栏末尾。
  *
  * 窄屏：ResizeObserver 按 article 宽度写 `data-fs-size`（wide / mid / narrow），
@@ -25,7 +28,12 @@ import {
   type AccountTier,
   type VelocityLevel,
 } from '@feedsieve/metrics';
-import { extractTweetIdentity, menuSelectors, tweetSelectors } from '@feedsieve/x-adapter';
+import {
+  extractTweetIdentity,
+  menuSelectors,
+  profileFromPath,
+  tweetSelectors,
+} from '@feedsieve/x-adapter';
 import type { UiLanguage } from '../platform/i18n';
 import { INSIGHT_COPY, tierTitle } from './copy';
 import { compact, formatReach, formatVelocity, tierCode, velocityLabel } from './format';
@@ -37,6 +45,8 @@ export const VELOCITY_CLASS = 'fs-velocity';
 export const TIER_CLASS = 'fs-tier';
 /** 主页上主人自己的帖子：浏览是他中位数的几倍（`3.4×`）。 */
 export const MULTIPLE_CLASS = 'fs-multiple';
+/** 倍数至少高出中位数这么多才显示：再低就是「正常」，看一眼不做任何决定。 */
+export const MULTIPLE_MIN = 1.5;
 /** MutationObserver 反馈环过滤与清理共用。 */
 export const INSIGHT_DECORATION_SELECTOR = `.${VELOCITY_CLASS}, .${TIER_CLASS}, .${MULTIPLE_CLASS}`;
 const MULTIPLE_ATTR = 'data-fs-multiple';
@@ -65,8 +75,12 @@ function localeOf(language: UiLanguage): string {
   return language === 'zh' ? 'zh-CN' : 'en';
 }
 
-/** 流速胶囊的悬停内容。 */
-export function velocityHover(insight: TweetInsight, language: UiLanguage): HoverContent {
+/** 流速胶囊的悬停内容。`multiple` 是主页主人自己帖子的相对表现（页面上不显眼时也在这里给数值）。 */
+export function velocityHover(
+  insight: TweetInsight,
+  language: UiLanguage,
+  multiple?: { value: number; estimated: boolean } | null,
+): HoverContent {
   const t = INSIGHT_COPY[language];
   const locale = localeOf(language);
   const num = (value: number) => Math.round(value).toLocaleString(locale);
@@ -74,6 +88,8 @@ export function velocityHover(insight: TweetInsight, language: UiLanguage): Hove
   const rows: HoverContent['rows'] = [];
   if (insight.velocity !== null) rows.push([t.velocityNow, t.perHour(num(insight.velocity))]);
   if (insight.projected !== null) rows.push([t.projected, num(insight.projected)]);
+  if (multiple)
+    rows.push([t.multipleTitle.normal, formatMultiple(multiple.value, multiple.estimated)]);
   const counts: Array<[string, number | undefined]> = [
     [t.views, insight.views],
     [t.likes, insight.likes],
@@ -238,12 +254,31 @@ export function createInsightDecorations(deps: {
   let enabled = true;
   let refreshTimer: number | undefined;
 
+  /**
+   * 流速卡片里的相对表现：倍数低于 MULTIPLE_MIN 时页面上不显示，数值仍有地方看。
+   * 只算主页主人自己的原创/引用——转帖的作者是别人，不能拿主人的基线去比。
+   */
+  function relativeMultiple(anchor: Element, postId: string) {
+    const profile = deps.profileBaseline?.();
+    if (!profile) return null;
+    const article = anchor.closest(tweetSelectors.article);
+    const item = article ? extractTweetIdentity(article) : null;
+    if (!item || item.author.handle.toLowerCase() !== profile.handle) return null;
+    const stat = store.insight(postId, now());
+    return stat && stat.kind !== 'reply' ? outlierMultiple(stat, profile.baseline, now()) : null;
+  }
+
   const hovercard = createHovercard({
     resolve(target) {
       const pill = target.closest<HTMLElement>(`.${VELOCITY_CLASS}`);
       if (pill) {
-        const insight = store.insight(pill.getAttribute(VELOCITY_ATTR) ?? '', now());
-        return insight ? { anchor: pill, content: velocityHover(insight, getLanguage()) } : null;
+        const postId = pill.getAttribute(VELOCITY_ATTR) ?? '';
+        const insight = store.insight(postId, now());
+        if (!insight) return null;
+        return {
+          anchor: pill,
+          content: velocityHover(insight, getLanguage(), relativeMultiple(pill, postId)),
+        };
       }
       const badge = target.closest<HTMLElement>(`.${MULTIPLE_CLASS}`);
       if (badge) {
@@ -330,7 +365,7 @@ export function createInsightDecorations(deps: {
   }
 
   /**
-   * 主页上主人自己的帖子：倍数标签放在流速前面；只要有基线就显示（老帖子没有流速也显示）。
+   * 主页上主人自己的帖子：倍数放在流速前面，但只标明显跑赢的（≥ MULTIPLE_MIN）。
    * 回复不显示：基线只用原创和引用算，回复的浏览天然低，拿来比只会是一串 0.1×。
    */
   function decorateMultiple(article: Element, postId: string | undefined, handle: string) {
@@ -340,7 +375,7 @@ export function createInsightDecorations(deps: {
       profile && postId && profile.handle === handle ? store.insight(postId, now()) : null;
     const stat = found && found.kind !== 'reply' ? found : null;
     const result = profile && stat ? outlierMultiple(stat, profile.baseline, now()) : null;
-    const slot = result ? velocitySlot(article) : null;
+    const slot = result && result.value >= MULTIPLE_MIN ? velocitySlot(article) : null;
     if (!result || !slot) {
       existing?.remove();
       return;
@@ -366,7 +401,9 @@ export function createInsightDecorations(deps: {
     const author = enabled ? store.author(handle) : undefined;
     const tier = accountTier(author?.followers);
     const row = nameArea ? handleRow(nameArea) : null;
-    if (!author || tier === null || author.followers === undefined || !row) {
+    // 主页资料卡已经写着粉丝数，帖子行上再重复一遍只会挤占 X 的元数据行。
+    const onOwnerProfile = profileFromPath(location.pathname)?.handle === handle;
+    if (!author || tier === null || author.followers === undefined || !row || onOwnerProfile) {
       existing?.remove();
       return;
     }

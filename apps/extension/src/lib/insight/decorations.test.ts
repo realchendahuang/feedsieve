@@ -38,6 +38,7 @@ function setup() {
 describe('createInsightDecorations', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
+    history.replaceState(null, '', '/');
   });
 
   it('puts the velocity pill left of the top-right buttons and the tier at the end of the handle row', () => {
@@ -188,16 +189,39 @@ describe('createInsightDecorations', () => {
       { postId: '3', handle: 'alice', createdAt: old, views: 400, kind: 'quote' },
       NOW,
     );
+    store.recordTweet(
+      { postId: '4', handle: 'alice', createdAt: old, views: 16_000, kind: 'original' },
+      NOW,
+    );
     const post = tweetArticle('alice', '1');
     const reply = tweetArticle('alice', '2');
     const quiet = tweetArticle('alice', '3');
+    const slight = tweetArticle('alice', '4');
     decorations.decorate(post, { postId: '1', author: { handle: 'alice' } });
     decorations.decorate(reply, { postId: '2', author: { handle: 'alice' } });
     decorations.decorate(quiet, { postId: '3', author: { handle: 'alice' } });
+    decorations.decorate(slight, { postId: '4', author: { handle: 'alice' } });
 
     expect(post.querySelector('.fs-multiple')?.textContent).toBe('3.4×');
     expect(reply.querySelector('.fs-multiple')).toBeNull();
-    expect(quiet.querySelector('.fs-multiple')?.textContent).toBe('<0.1×');
+    // 低于门槛的倍数不占地方：正常和扑街都只留流速
+    expect(quiet.querySelector('.fs-multiple')).toBeNull();
+    expect(slight.querySelector('.fs-multiple')?.textContent).toBe('1.6×');
+  });
+
+  it('does not repeat the tier chip on the owner’s profile page', () => {
+    const { store, decorations } = setup();
+    store.recordAuthor({ handle: 'alice', followers: 32_000 });
+    store.recordTweet({ postId: '1', handle: 'alice', createdAt: NOW - HOUR, views: 5_000 }, NOW);
+    const article = tweetArticle('alice', '1');
+    history.replaceState(null, '', '/alice');
+    decorations.decorate(article, { postId: '1', author: { handle: 'alice' } });
+    // 资料卡已经写着粉丝数，帖子行不再重复
+    expect(article.querySelector('.fs-tier')).toBeNull();
+
+    history.replaceState(null, '', '/');
+    decorations.decorate(article, { postId: '1', author: { handle: 'alice' } });
+    expect(article.querySelector('.fs-tier')).not.toBeNull();
   });
 
   it('writes the multiple once in the hover text', async () => {
@@ -217,6 +241,17 @@ describe('createInsightDecorations', () => {
 });
 
 describe('hover content', () => {
+  it('keeps the relative multiple in the velocity hovercard', async () => {
+    const { velocityHover } = await import('./decorations');
+    const store = createTweetStatsStore();
+    store.recordTweet(
+      { postId: '1', handle: 'alice', createdAt: NOW - 2 * HOUR, views: 5_000 },
+      NOW,
+    );
+    const hover = velocityHover(store.insight('1', NOW)!, 'zh', { value: 1.2, estimated: true });
+    expect(hover.rows).toContainEqual(['相对表现', '~1.2×']);
+  });
+
   it('explains velocity in the UI language', async () => {
     const { velocityHover, tierHover } = await import('./decorations');
     const store = createTweetStatsStore();
