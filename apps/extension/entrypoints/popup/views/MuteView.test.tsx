@@ -83,6 +83,19 @@ describe('屏蔽页', () => {
     expect(saved.map((rule) => rule.phrase)).toEqual(['加微信']);
   });
 
+  it('右上角齿轮进入屏蔽设置，返回回到列表', async () => {
+    await render();
+    const gear = container.querySelector<HTMLButtonElement>('.toolbar-end')!;
+    await act(async () => gear.click());
+    expect(container.textContent).toContain('屏蔽设置');
+    expect(container.textContent).toContain('启用屏蔽');
+
+    const back = container.querySelector<HTMLButtonElement>('.back-button')!;
+    await act(async () => back.click());
+    expect(container.querySelector('.mute-add-form')).not.toBeNull();
+    expect(container.querySelector('.toolbar-end')).not.toBeNull();
+  });
+
   it('词库是候选，点加入后才进入我的列表', async () => {
     await render();
     await act(async () => {

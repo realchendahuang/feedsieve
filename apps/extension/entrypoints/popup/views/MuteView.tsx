@@ -53,6 +53,7 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
   const [nativeStatus, setNativeStatus] = useState<NativeStatus>({ status: 'idle' });
   const [consentOpen, setConsentOpen] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [libraryQuery, setLibraryQuery] = useState('');
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const nativeLoadedRef = useRef(false);
@@ -339,9 +340,100 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
     return <div className="loading-list"><span /><span /><span /></div>;
   }
 
+  if (settingsOpen) {
+    return (
+      <div className="view mute-view">
+        <header className="subpage-head">
+          <button
+            type="button"
+            className="back-button"
+            aria-label={`${t.back} · ${t.settings}`}
+            onClick={() => {
+              setConsentOpen(false);
+              setSettingsOpen(false);
+            }}
+          >
+            <AppIcon name="chevron" size={14} className="is-back" />
+            {t.back}
+          </button>
+          <h2>{t.settings}</h2>
+        </header>
+
+        <section className="group">
+          <Row label={t.enabled} hint={t.enabledHint}>
+            <Toggle
+              checked={settings.enabled}
+              label={t.enabled}
+              onChange={(next) => void persist({ ...settings, enabled: next })}
+            />
+          </Row>
+          <Row label={t.nativeSync} hint={t.nativeSyncHint}>
+            <Toggle
+              checked={settings.nativeSync}
+              disabled={busy !== null}
+              label={t.nativeSync}
+              onChange={toggleNative}
+            />
+          </Row>
+        </section>
+
+        {consentOpen ? (
+          <div className="mute-consent" role="group" aria-label={t.nativeConsentTitle}>
+            <strong>{t.nativeConsentTitle}</strong>
+            <p>{t.nativeConsentBody}</p>
+            <div className="mute-consent-actions">
+              <button type="button" className="secondary-button" onClick={confirmNative}>
+                {t.nativeConsentOk}
+              </button>
+              <button type="button" className="text-button" onClick={() => setConsentOpen(false)}>
+                {t.nativeConsentCancel}
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {settings.nativeSync && (nativeStatus.status !== 'ok' || nativeStatus.imported > 0) ? (
+          <div className="mute-status" role="status">
+            <span>
+              {nativeStatus.status === 'loading'
+                ? t.syncPending
+                : nativeStatus.status === 'ok'
+                  ? nativeStatus.imported > 0
+                    ? t.nativeImported(nativeStatus.imported)
+                    : null
+                  : nativeStatus.status === 'error'
+                    ? errorText(nativeStatus.code)
+                    : null}
+            </span>
+            {nativeStatus.status === 'error' ? (
+              <button
+                type="button"
+                className="text-button"
+                disabled={busy !== null}
+                onClick={() => void refreshNative(true)}
+              >
+                {t.retry}
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+
+        {!settings.nativeSync && rules.some((rule) => rule.syncState === 'synced') ? (
+          <p className="mute-note">{t.nativeOffNote}</p>
+        ) : null}
+
+        {errorText(errorCode) ? (
+          <p className="alert" role="status">
+            {errorText(errorCode)}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div className="view mute-view">
-      <div className="mute-toolbar">
+      <div className="view-toolbar">
         <div className="segmented" role="group" aria-label={t.mine}>
           <button
             type="button"
@@ -361,74 +453,25 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
           </button>
         </div>
         <HelpIcon text={tab === 'library' ? t.helpLibrary : t.helpMine} />
+        <button
+          type="button"
+          className="icon-button toolbar-end"
+          aria-label={t.settings}
+          title={t.settings}
+          onClick={() => setSettingsOpen(true)}
+        >
+          <AppIcon name="settings" size={15} />
+        </button>
       </div>
+
+      {errorText(errorCode) ? (
+        <p className="alert" role="status">
+          {errorText(errorCode)}
+        </p>
+      ) : null}
 
       {tab === 'mine' ? (
         <>
-          <section className="group">
-            <Row label={t.enabled} hint={t.enabledHint}>
-              <Toggle
-                checked={settings.enabled}
-                label={t.enabled}
-                onChange={(next) => void persist({ ...settings, enabled: next })}
-              />
-            </Row>
-            <Row label={t.nativeSync} hint={t.nativeSyncHint}>
-              <Toggle
-                checked={settings.nativeSync}
-                disabled={busy !== null}
-                label={t.nativeSync}
-                onChange={toggleNative}
-              />
-            </Row>
-          </section>
-
-          {consentOpen ? (
-            <div className="mute-consent" role="group" aria-label={t.nativeConsentTitle}>
-              <strong>{t.nativeConsentTitle}</strong>
-              <p>{t.nativeConsentBody}</p>
-              <div className="mute-consent-actions">
-                <button type="button" className="secondary-button" onClick={confirmNative}>
-                  {t.nativeConsentOk}
-                </button>
-                <button
-                  type="button"
-                  className="text-button"
-                  onClick={() => setConsentOpen(false)}
-                >
-                  {t.nativeConsentCancel}
-                </button>
-              </div>
-            </div>
-          ) : null}
-
-          {settings.nativeSync &&
-          (nativeStatus.status !== 'ok' || nativeStatus.imported > 0) ? (
-            <div className="mute-status" role="status">
-              <span>
-                {nativeStatus.status === 'loading'
-                  ? t.syncPending
-                  : nativeStatus.status === 'ok'
-                    ? nativeStatus.imported > 0
-                      ? t.nativeImported(nativeStatus.imported)
-                      : null
-                    : nativeStatus.status === 'error'
-                      ? errorText(nativeStatus.code)
-                      : null}
-              </span>
-              {nativeStatus.status === 'error' ? (
-                <button
-                  type="button"
-                  className="text-button"
-                  disabled={busy !== null}
-                  onClick={() => void refreshNative(true)}
-                >
-                  {t.retry}
-                </button>
-              ) : null}
-            </div>
-          ) : null}
-
           <form
             className="inline-form mute-add-form"
             onSubmit={(event) => {
@@ -452,15 +495,6 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
               {t.add}
             </button>
           </form>
-
-          {errorText(errorCode) ? (
-            <p className="alert" role="status">
-              {errorText(errorCode)}
-            </p>
-          ) : null}
-          {!settings.nativeSync && rules.some((rule) => rule.syncState === 'synced') ? (
-            <p className="mute-note">{t.nativeOffNote}</p>
-          ) : null}
 
           {rules.length === 0 ? (
             <div className="empty-state is-clean">

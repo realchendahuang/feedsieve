@@ -3087,14 +3087,6 @@ input:not([type]):focus,
   }
 }
 
-.mute-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
 .mute-add-form {
   margin: 10px 0 8px;
 }

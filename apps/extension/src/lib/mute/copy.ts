@@ -2,6 +2,8 @@
 const zh = {
   mine: '我的',
   library: '词库',
+  settings: '屏蔽设置',
+  back: '屏蔽',
   enabled: '启用屏蔽',
   enabledHint: '关掉后已保存的词仍保留，但不会折叠推文。',
   nativeSync: '同步到 X（手机也生效）',
@@ -63,6 +65,8 @@ const zh = {
 const en: typeof zh = {
   mine: 'Mine',
   library: 'Library',
+  settings: 'Mute settings',
+  back: 'Mute',
   enabled: 'Enable muting',
   enabledHint: 'Saved words stay, but tweets stop folding when this is off.',
   nativeSync: 'Sync to X (mobile too)',
