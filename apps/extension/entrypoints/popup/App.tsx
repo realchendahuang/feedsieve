@@ -47,6 +47,7 @@ const WriteView = lazy(() =>
   import('./views/WriteView').then((module) => ({ default: module.WriteView })),
 );
 const CleanView = lazy(() => import('./views/CleanView'));
+const WeeklyView = lazy(() => import('./views/WeeklyView'));
 const GlobalView = lazy(() => import('./views/settings/GlobalView'));
 const ModuleSettingsView = lazy(() => import('./views/settings/ModuleSettingsView'));
 import { isProfileUrl } from './views/profile-model';
@@ -54,10 +55,10 @@ import { PANEL_VIEW_REQUEST_KEY, readPanelViewRequest } from '../../src/lib/plat
 import { AppIcon, asPageMarkedList, getChromeSidePanel, type PageMarkedItem } from './views/shared';
 
 /**
- * 顶部栏目：每个功能模块一问，最后一栏「全局」放跨模块设置。
- * tab 是否出现由模块总开关决定，顺序由 MODULES 注册表决定。
+ * 顶部栏目：每个功能模块一问，外加一个常驻的「周刊」推荐位，最后一栏「全局」放跨模块设置。
+ * tab 是否出现由模块总开关决定，顺序由 MODULES 注册表决定；周刊不属于任何模块。
  */
-type PopupView = ModuleId | 'global';
+type PopupView = ModuleId | 'global' | 'weekly';
 
 const PAGE_MARKED_MESSAGE = { type: 'feedsieve:page-marked-list' } as const;
 
@@ -81,6 +82,8 @@ function initialRoute(): InitialRoute {
       return { view: 'ai', page: 'global', moduleSettingsOpen: null };
     case 'write':
       return { view: 'write', page: 'global', moduleSettingsOpen: null };
+    case 'weekly':
+      return { view: 'weekly', page: 'global', moduleSettingsOpen: null };
     case 'lists':
     case 'overview':
       if (list === 'blocked' || list === 'allowlist' || list === 'following') {
@@ -205,7 +208,7 @@ export default function App() {
     const apply = (profileDefault: boolean): void => {
       if (!active) return;
       let next = route.view;
-      if (next !== 'global' && !enabledIds.has(next)) next = 'global';
+      if (next !== 'global' && next !== 'weekly' && !enabledIds.has(next)) next = 'global';
       if (!hasExplicitView && route.view === 'hot') {
         if (profileDefault && enabledIds.has('profile')) next = 'profile';
         else if (enabledIds.has('hot')) next = 'hot';
@@ -458,7 +461,7 @@ export default function App() {
       const next = await setModuleSettings(patch);
       setModules(next);
       // 当前正在看的模块被关掉：立即落到全局，不留在已不存在的 tab 上
-      if (view !== 'global' && !moduleById(view).enabled(next)) {
+      if (view !== 'global' && view !== 'weekly' && !moduleById(view).enabled(next)) {
         setView('global');
         setSettingsPage('global');
         setModuleSettingsOpen(null);
@@ -476,11 +479,15 @@ export default function App() {
     id: module.id,
     label: t[module.labelKey],
   }));
+  // 周刊是常驻推荐位，不属于任何模块，也不受模块开关影响
+  tabs.push({ id: 'weekly', label: t.weeklyNav });
   tabs.push({ id: 'global', label: t.globalNav });
 
   // 外部窗口关掉模块时也要立刻生效：不依赖 effect 里的 setState，直接派生当前可渲染的视图
   const effectiveView: PopupView =
-    modules && view !== 'global' && !moduleById(view).enabled(modules) ? 'global' : view;
+    modules && view !== 'global' && view !== 'weekly' && !moduleById(view).enabled(modules)
+      ? 'global'
+      : view;
   const effectiveModuleSettingsOpen =
     moduleSettingsOpen &&
     modules &&
@@ -523,10 +530,13 @@ export default function App() {
               <button
                 key={tab.id}
                 type="button"
-                className={effectiveView === tab.id ? 'is-active' : ''}
+                className={`${effectiveView === tab.id ? 'is-active' : ''}${
+                  tab.id === 'weekly' ? ' nav-weekly' : ''
+                }`.trim()}
                 aria-current={effectiveView === tab.id ? 'page' : undefined}
                 onClick={() => selectSection(tab.id)}
               >
+                {tab.id === 'weekly' ? <AppIcon name="sparkles" size={13} /> : null}
                 <span>{tab.label}</span>
                 {tab.id === 'filter' && pageCount ? (
                   <span className="nav-badge">{Math.min(pageCount, 99)}</span>
@@ -597,6 +607,7 @@ export default function App() {
               onOpenSettings={() => openModuleSettings('filter')}
             />
           ) : null}
+          {viewReady && effectiveView === 'weekly' ? <WeeklyView language={language} /> : null}
           {viewReady &&
           effectiveModuleSettingsOpen &&
           effectiveView === effectiveModuleSettingsOpen ? (

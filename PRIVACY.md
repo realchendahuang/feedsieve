@@ -28,6 +28,9 @@ Firefox 版通过 `browser_specific_settings.gecko.data_collection_permissions` 
 **1. 社区名单同步（无你的任何数据）**
 扩展从官方 API `api.feedsieve.win` 下载社区名单快照（黑名单与验证正常白名单，JSON，经 SHA-256 校验与发布者签名验证），最多每 30 分钟检查一次；有新版本时优先只下载两版之间的增量，套在本机已验证的旧版上，重建出的全文必须与签名清单里的 SHA-256 一致，否则改下载全量。该请求不包含你的任何个人数据。
 
+**1.1 周刊最新一期（无你的任何数据）**
+打开扩展的「周刊」标签时，会请求 `feedsieve.win/weekly/api/public/latest-issue` 获取最新一期（期号、标题、条数、期页地址），并从 `feedsieve.win/weekly/og/` 加载这一期的封面图。这些请求不包含安装 ID、X 账号或其他个人数据；不打开该标签就不会请求。
+
 **2. 黑白名单上传（默认开启，可一键关闭）**
 开启「名单上传」时，扩展同步你明确维护的本地黑名单和白名单，包括升级前已保存在本机的历史记录。它不上传仅仅浏览过、仅仅被标注但未处理的账号（被官方规则标注的账号另按第 10 条匿名上报，不是票）；也不上传关注保护名单、你的自定义关键词或官方词库的订阅/启停状态。公开词库下载不携带安装 ID、X 账号、浏览历史或自定义词；由关键词触发的拉黑不会回灌成社区举报票，但其显式操作证据可进入下述独立待审样本池；直接执行「社区清理」产生的批量拉黑同样只记录在本机。
 
@@ -103,6 +106,9 @@ Firefox 版通过 `browser_specific_settings.gecko.data_collection_permissions` 
 
 **1. Community list sync (contains none of your data)**
 The extension downloads the community snapshot (JSON, SHA-256 and publisher-signature verified) from the official API `api.feedsieve.win`, checking at most every 30 minutes. When a new version exists it first fetches only the changes between the two versions and applies them to the verified local copy; the rebuilt file must match the SHA-256 in the signed manifest, otherwise the full file is downloaded. No personal data is included in this request.
+
+**1.1 Latest Weekly issue (contains none of your data)**
+Opening the extension's Weekly tab requests `feedsieve.win/weekly/api/public/latest-issue` for the latest issue (number, title, post count, issue URL) and loads that issue's cover from `feedsieve.win/weekly/og/`. These requests contain no installation ID, X account or other personal data, and are not made unless you open that tab.
 
 **2. Blocklist and allowlist uploads (default on, one toggle to disable)**
 When “List uploads” is enabled, the extension syncs the local blocklist and allowlist entries you explicitly maintain, including records already stored locally before an upgrade. Merely viewed or merely marked accounts are never uploaded as votes (accounts marked by official rules are reported anonymously under item 10, which are not votes). Neither is the following-protection list. Blocks performed by Community Clean are kept as local action records and do not create new community report votes.
