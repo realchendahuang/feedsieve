@@ -40,6 +40,11 @@ import { createShareMenu } from '../src/lib/insight/share-menu';
 import { createCleanUi } from '../src/lib/content/clean-ui';
 import { createPageTicker } from '../src/lib/content/page-ticker';
 import { createProfileFill } from '../src/lib/content/profile-fill';
+import { createSearchAssist } from '../src/lib/content/search-assist';
+import {
+  getSearchAssistEnabled,
+  subscribeSearchAssistEnabled,
+} from '../src/lib/settings/search-assist';
 import { createAiCheck } from '../src/lib/ai-check/ai-check';
 import { createComposeSchedule } from '../src/lib/compose/compose-schedule';
 import { createArticleHelper } from '../src/lib/compose/article-editor';
@@ -146,6 +151,14 @@ export default defineContentScript({
       },
       profileBaseline: () => profileInsight.baseline(),
     });
+    // 搜索框高级搜索：默认关闭，挂在 X 侧栏搜索框下面（设置 › 主页 › 搜索框高级搜索）
+    let searchAssistEnabled = false;
+    const searchAssist = createSearchAssist({
+      getLanguage: () => state.uiLanguage,
+      isEnabled: () => modules.profile && searchAssistEnabled,
+      getPath: () => location.pathname,
+      getSearch: () => location.search,
+    });
     // 主页洞察由页面巡检驱动（tick），模块关闭时巡检不再调用它
     // AI 味检测：详情页回复上的「AI?」按钮 + 回复页的检测卡
     const aiCheck = createAiCheck({
@@ -207,6 +220,9 @@ export default defineContentScript({
     });
     ticker.add(() => {
       if (modules.profile) profileInsight.tick();
+    });
+    ticker.add(() => {
+      if (modules.profile) searchAssist.tick();
     });
     ticker.add(() => {
       if (modules.write) articleHelper.tick();
@@ -381,6 +397,14 @@ export default defineContentScript({
     };
     void getProfileLineEnabled().then(setProfileLineEnabled);
     subscribeProfileLineEnabled(setProfileLineEnabled);
+    void getSearchAssistEnabled().then((enabled) => {
+      searchAssistEnabled = enabled;
+      searchAssist.tick();
+    });
+    subscribeSearchAssistEnabled((enabled) => {
+      searchAssistEnabled = enabled;
+      searchAssist.tick();
+    });
     // 模块总开关：关掉 = 停止采集 / 注入 / 监听，并把已注入的元素撤掉；数据保留。
     // 各模块仍读 modules 闭包做兜底；这里负责开关切换时的启动 / 停止。
     function applyModules(next: ModuleSettings): void {
@@ -392,8 +416,13 @@ export default defineContentScript({
         else insight.clearAll();
       }
       if (previous.profile !== next.profile) {
-        if (next.profile) profileInsight.tick();
-        else profileInsight.stop();
+        if (next.profile) {
+          profileInsight.tick();
+          searchAssist.tick();
+        } else {
+          profileInsight.stop();
+          searchAssist.stop();
+        }
       }
       if (previous.write !== next.write) {
         if (next.write) {

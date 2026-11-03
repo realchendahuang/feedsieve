@@ -181,6 +181,9 @@ export const UI_COPY = {
     profileLine: '主页人气行',
     profileLineHint:
       '在 X 主页资料卡下显示一行人气数据：量级、粉丝、关注比、中位浏览、爆款率和已收条数；点这一行打开主页洞察。',
+    searchAssist: '搜索框高级搜索',
+    searchAssistHint:
+      '默认开启。在 X 搜索框右侧加一个入口，点开是完整的高级搜索弹窗：搜索词、博主、时间、互动、筛选、位置都能单独填，也能直接写 X 运算符；同一个弹窗里可以转到 Google 搜这个博主的帖子。不想用时在这里关闭，页面上就不再出现。',
     insight: '洞察',
     briefTitle: '最近刷到',
     briefEmpty: '刷一会儿 x.com，正在火的帖子会出现在这里',
@@ -338,7 +341,7 @@ export const UI_COPY = {
     moduleSwitchesHint:
       '关掉后对应 tab 消失，页面上的功能和注入一起停用；本地数据保留，重新打开即恢复。',
     moduleHotHint: '页面上的流速与量级标注、热帖采集和已读记录。',
-    moduleProfileHint: '资料卡下的人气行、主页帖子库采集与补全。',
+    moduleProfileHint: '资料卡下的人气行、主页帖子库采集与补全、搜索框高级搜索。',
     moduleWriteHint: '发帖框排期、发帖节奏和文章编辑增强。',
     moduleAiModuleHint: '评论区里的 AI 标签、折叠条，以及回复旁的检测按钮。',
     moduleFilterHint: '自动标黄、界面净化、过滤规则与名单。',
@@ -601,6 +604,9 @@ export const UI_COPY = {
     profileLine: 'Profile popularity line',
     profileLineHint:
       'Shows a popularity line under the profile card on X: tier, followers, follow ratio, median views, outlier rate and posts collected. Click the line to open profile insight.',
+    searchAssist: 'Advanced search under the search box',
+    searchAssistHint:
+      'On by default. Adds an entry to the right of X\'s search box that opens a full advanced-search dialog: keywords, people, dates, engagement, filters and location each have their own field, and X operators can be typed directly. The same dialog can hand the filters to Google to search this author\'s posts. Turn it off here and it disappears from the page.',
     insight: 'Insight',
     briefTitle: 'Recently seen',
     briefEmpty: 'Scroll x.com for a while and posts that are taking off will show up here',
@@ -759,7 +765,8 @@ export const UI_COPY = {
     moduleSwitchesHint:
       'Turning a module off hides its tab and stops its page features and injection. Local data is kept and comes back when you turn it on again.',
     moduleHotHint: 'Velocity and tier labels on X, hot-post collection, and read tracking.',
-    moduleProfileHint: 'The profile popularity line, profile post collection and filling.',
+    moduleProfileHint:
+      'The profile popularity line, profile post collection and filling, and advanced search under the search box.',
     moduleWriteHint: 'Composer scheduling, posting cadence, and article editor helpers.',
     moduleAiModuleHint: 'AI pills, fold bars, and the check button next to replies.',
     moduleFilterHint: 'Auto-highlight, UI cleanup, filter rules and lists.',

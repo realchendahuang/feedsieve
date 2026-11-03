@@ -219,6 +219,161 @@ export function ensureStyles(): void {
     .fs-profile-line:hover .fs-profile-key { text-decoration: underline; }
     .fs-profile-line .fs-profile-key { color: rgb(15, 20, 25); font-weight: 700; }
     .fs-profile-line > span + span::before { content: '·'; margin-right: 6px; color: rgb(83, 100, 113); }
+    /* 高级搜索入口：塞进搜索胶囊内部（input 自然让位）。X 的搜索栏是
+       fixed + align-items:center，普通文档流元素会把整条搜索栏顶出视口。 */
+    .fs-search-trigger {
+      display: inline-flex;
+      flex: none;
+      align-self: center;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      margin-right: 6px;
+      padding: 0;
+      border: 0;
+      border-radius: 999px;
+      background: none;
+      color: rgb(83, 100, 113);
+      cursor: pointer;
+    }
+    .fs-search-trigger:hover { background: rgba(15, 20, 25, 0.08); }
+    .fs-search-trigger:focus-visible { outline: 2px solid #1d9bf0; outline-offset: 1px; }
+    .fs-search-trigger[aria-expanded='true'] { background: rgba(15, 20, 25, 0.08); color: rgb(15, 20, 25); }
+
+    /* 高级搜索弹窗：挂在 body 上居中显示，不参与 X 的侧栏布局。 */
+    .fs-adv-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 2147483600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(0, 0, 0, 0.5);
+    }
+    .fs-adv-dialog {
+      display: flex;
+      flex-direction: column;
+      width: min(620px, 100%);
+      max-height: min(86vh, 780px);
+      overflow: hidden;
+      border-radius: 20px;
+      background: #fff;
+      color: rgb(15, 20, 25);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.32);
+      color-scheme: light;
+      font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif;
+    }
+    .fs-adv-head {
+      display: flex;
+      flex: none;
+      align-items: center;
+      gap: 8px;
+      padding: 16px 18px 12px;
+      border-bottom: 1px solid rgb(239, 243, 244);
+    }
+    .fs-adv-head h2 { flex: 1 1 auto; margin: 0; font-size: 19px; font-weight: 800; }
+    .fs-adv-close {
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      border: 0;
+      border-radius: 999px;
+      background: none;
+      color: inherit;
+      font-size: 22px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .fs-adv-close:hover { background: rgba(15, 20, 25, 0.08); }
+    .fs-adv-body { overflow-y: auto; padding: 2px 18px 8px; }
+    .fs-adv-section { padding: 14px 0; border-bottom: 1px solid rgb(239, 243, 244); }
+    .fs-adv-section:last-child { border-bottom: 0; }
+    .fs-adv-section-head { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+    .fs-adv-section-head h3 { margin: 0; font-size: 14px; font-weight: 700; }
+    .fs-adv-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px 12px;
+    }
+    .fs-adv-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .fs-adv-field-wide { grid-column: 1 / -1; }
+    .fs-adv-label { color: rgb(83, 100, 113); font-size: 12px; }
+    .fs-adv-field input,
+    .fs-adv-field select {
+      width: 100%;
+      height: 32px;
+      min-width: 0;
+      padding: 0 10px;
+      border: 1px solid rgb(207, 217, 222);
+      border-radius: 8px;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      font-size: 13px;
+    }
+    .fs-adv-field input::placeholder { color: rgb(83, 100, 113); }
+    .fs-adv-field input[type='date'] { padding: 0 8px; }
+    .fs-adv-within { display: flex; gap: 6px; }
+    .fs-adv-within input { flex: 1 1 auto; }
+    .fs-adv-within select { flex: none; width: 86px; padding: 0 6px; }
+    .fs-adv-check-row { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+    .fs-adv-check {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: rgb(83, 100, 113);
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .fs-adv-check input {
+      width: auto;
+      height: auto;
+      margin: 0;
+      padding: 0;
+    }
+    .fs-adv-foot {
+      display: flex;
+      flex: none;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 18px;
+      border-top: 1px solid rgb(239, 243, 244);
+    }
+    .fs-adv-spacer { flex: 1 1 auto; }
+    .fs-adv-foot button {
+      height: 34px;
+      padding: 0 14px;
+      border-radius: 999px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .fs-adv-reset { padding-left: 0; border: 0; background: none; color: rgb(83, 100, 113); font-weight: 600; }
+    .fs-adv-google { border: 1px solid rgb(207, 217, 222); background: transparent; color: inherit; }
+    .fs-adv-go { border: 0; background: rgb(15, 20, 25); color: #fff; }
+    .fs-adv-foot button:disabled { opacity: 0.5; cursor: default; }
+    .fs-adv-help {
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border: 1px solid rgb(207, 217, 222);
+      border-radius: 50%;
+      color: rgb(83, 100, 113);
+      font-size: 11px;
+      line-height: 1;
+      cursor: help;
+      user-select: none;
+    }
+    @media (max-width: 520px) {
+      .fs-adv-grid { grid-template-columns: 1fr; }
+      .fs-adv-field-wide { grid-column: auto; }
+    }
     /* 窄推文（< 470px）：右上角只给正在火的帖子留位置，而且只留数字；
        平稳的绿色流速让位给作者名。详情页那一行空间够，不受影响。 */
     article[data-fs-size='narrow'] .fs-velocity[data-fs-place='top'][data-fs-level='none'] { display: none; }
@@ -330,6 +485,34 @@ export function ensureStyles(): void {
       color: rgb(139, 152, 165);
     }
     html[${THEME_ATTRIBUTE}='dark'] .fs-profile-line .fs-profile-key { color: rgb(231, 233, 234); }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-search-trigger,
+    html[${THEME_ATTRIBUTE}='dark'] .fs-adv-label,
+    html[${THEME_ATTRIBUTE}='dark'] .fs-adv-check,
+    html[${THEME_ATTRIBUTE}='dark'] .fs-adv-help { color: rgb(139, 152, 165); }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-search-trigger:hover,
+    html[${THEME_ATTRIBUTE}='dark'] .fs-search-trigger[aria-expanded='true'] {
+      background: rgba(255, 255, 255, 0.08);
+    }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-search-trigger[aria-expanded='true'] { color: rgb(231, 233, 234); }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-adv-backdrop { background: rgba(0, 0, 0, 0.65); }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-adv-dialog {
+      border: 1px solid rgb(51, 54, 60);
+      background: rgb(22, 24, 28);
+      color: rgb(231, 233, 234);
+      color-scheme: dark;
+    }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-adv-head,
+    html[${THEME_ATTRIBUTE}='dark'] .fs-adv-section,
+    html[${THEME_ATTRIBUTE}='dark'] .fs-adv-foot { border-color: rgb(51, 54, 60); }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-adv-close:hover { background: rgba(255, 255, 255, 0.08); }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-adv-field input,
+    html[${THEME_ATTRIBUTE}='dark'] .fs-adv-field select { border-color: rgb(51, 54, 60); color: rgb(231, 233, 234); }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-adv-help { border-color: rgb(51, 54, 60); }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-adv-go { background: rgb(239, 243, 244); color: rgb(15, 20, 25); }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-adv-google {
+      border-color: rgb(51, 54, 60);
+      color: rgb(231, 233, 234);
+    }
     html[${THEME_ATTRIBUTE}='dark'] .fs-velocity { color: #22d39b; }
     html[${THEME_ATTRIBUTE}='dark'] .fs-velocity[data-fs-level='hot'] {
       background: rgba(255, 107, 107, 0.16);

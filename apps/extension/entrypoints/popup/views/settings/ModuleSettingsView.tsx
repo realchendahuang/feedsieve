@@ -29,6 +29,11 @@ import {
   subscribeProfileLineEnabled,
 } from '../../../../src/lib/insight/insight-settings';
 import {
+  getSearchAssistEnabled,
+  setSearchAssistEnabled,
+  subscribeSearchAssistEnabled,
+} from '../../../../src/lib/settings/search-assist';
+import {
   getScheduleSettings,
   setScheduleSettings,
   subscribeScheduleSettings,
@@ -104,12 +109,14 @@ export default function ModuleSettingsView({
   const [budgetDraft, setBudgetDraft] = useState<string | null>(null);
   const [insightBadges, setInsightBadges] = useState<boolean | null>(null);
   const [profileLine, setProfileLine] = useState<boolean | null>(null);
+  const [searchAssist, setSearchAssist] = useState<boolean | null>(null);
   const [ui, setUi] = useState<UiSettings | null>(null);
   const [schedule, setSchedule] = useState<ScheduleSettings | null>(null);
 
   useEffect(() => {
     void getInsightBadgesEnabled().then(setInsightBadges);
     void getProfileLineEnabled().then(setProfileLine);
+    void getSearchAssistEnabled().then(setSearchAssist);
     void getUiSettings().then(setUi);
     void getScheduleSettings().then(setSchedule);
     void getSafetyBudgetOverride().then((value) =>
@@ -120,6 +127,7 @@ export default function ModuleSettingsView({
     const unsubs = [
       subscribeInsightBadges(setInsightBadges),
       subscribeProfileLineEnabled(setProfileLine),
+      subscribeSearchAssistEnabled(setSearchAssist),
       subscribeUiSettings(setUi),
       subscribeScheduleSettings(setSchedule),
       subscribeKeywordRules(setKeywordRules),
@@ -277,6 +285,17 @@ export default function ModuleSettingsView({
               onChange={(enabled) => {
                 setProfileLine(enabled);
                 void setProfileLineEnabled(enabled);
+              }}
+            />
+          </Row>
+          <Row label={t.searchAssist} hint={t.searchAssistHint}>
+            <Toggle
+              checked={searchAssist ?? false}
+              disabled={searchAssist === null}
+              label={t.searchAssist}
+              onChange={(enabled) => {
+                setSearchAssist(enabled);
+                void setSearchAssistEnabled(enabled);
               }}
             />
           </Row>
