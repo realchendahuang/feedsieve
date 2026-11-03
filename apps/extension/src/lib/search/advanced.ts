@@ -8,7 +8,14 @@
 import { profileFromPath } from '@feedsieve/x-adapter';
 
 export type SearchRange = 'any' | 'w' | 'm' | 'y';
-export type SearchContent = 'any' | 'images' | 'videos' | 'media' | 'links' | 'quote';
+export type SearchContent =
+  | 'any'
+  | 'images'
+  | 'videos'
+  | 'native_video'
+  | 'media'
+  | 'links'
+  | 'quote';
 export type SearchSort = 'top' | 'live';
 /** 回复筛选：全部 / 只看主帖 / 只看回复。 */
 export type RepliesMode = 'any' | 'exclude' | 'only';
@@ -19,6 +26,7 @@ export const SEARCH_CONTENTS: readonly SearchContent[] = [
   'any',
   'images',
   'videos',
+  'native_video',
   'media',
   'links',
   'quote',
@@ -36,6 +44,7 @@ const RANGE_DAYS: Record<Exclude<SearchRange, 'any'>, number> = {
 const CONTENT_FILTER: Record<Exclude<SearchContent, 'any'>, string> = {
   images: 'filter:images',
   videos: 'filter:videos',
+  native_video: 'filter:native_video',
   media: 'filter:media',
   links: 'filter:links',
   quote: 'filter:quote',
@@ -257,7 +266,7 @@ export function buildAdvancedQuery(options: AdvancedQueryOptions): string {
   return parts.join(' ');
 }
 
-/** 按引号切词，引号里的空格不拆开。 */
+/** 按引号、空格和逗号切词；引号里的空格与逗号都不拆开。 */
 function tokenize(text: string): string[] {
   const tokens: string[] = [];
   let current = '';
@@ -268,7 +277,7 @@ function tokenize(text: string): string[] {
       current += char;
       continue;
     }
-    if (!quoted && /\s/.test(char)) {
+    if (!quoted && (/[\s,]/.test(char) || char === '，')) {
       if (current) tokens.push(current);
       current = '';
       continue;

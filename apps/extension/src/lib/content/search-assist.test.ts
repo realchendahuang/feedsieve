@@ -212,6 +212,49 @@ describe('搜索框高级搜索弹窗', () => {
     expect(field('from').value).toBe('');
   });
 
+  it('没有条件时搜索按钮禁用，填了才启用；重置后重新禁用', () => {
+    mountDom();
+    const opened: string[] = [];
+    const tabs: string[] = [];
+    create({ opened, tabs, path: '/' });
+    open();
+
+    const button = (selector: string) =>
+      dialog().querySelector<HTMLButtonElement>(selector)!;
+    expect(button('.fs-adv-go').disabled).toBe(true);
+    expect(button('.fs-adv-google').disabled).toBe(true);
+
+    setInput('allWords', 'AI');
+    expect(button('.fs-adv-go').disabled).toBe(false);
+    expect(button('.fs-adv-google').disabled).toBe(false);
+
+    button('.fs-adv-reset').click();
+    expect(button('.fs-adv-go').disabled).toBe(true);
+    expect(button('.fs-adv-google').disabled).toBe(true);
+  });
+
+  it('Tab 焦点在弹窗里循环，不跑到 X 页面上', () => {
+    mountDom();
+    const opened: string[] = [];
+    const tabs: string[] = [];
+    create({ opened, tabs });
+    open();
+
+    const root = dialog().querySelector('.fs-adv-dialog')!;
+    const first = dialog().querySelector<HTMLElement>('.fs-adv-help')!;
+    const last = dialog().querySelector<HTMLButtonElement>('.fs-adv-go')!;
+
+    last.focus();
+    root.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+    expect(document.activeElement).toBe(first);
+
+    first.focus();
+    root.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true }),
+    );
+    expect(document.activeElement).toBe(last);
+  });
+
   it('点背景、关闭按钮或 Esc 都会收起', () => {
     mountDom();
     const opened: string[] = [];

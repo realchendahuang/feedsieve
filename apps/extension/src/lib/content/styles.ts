@@ -287,7 +287,21 @@ export function ensureStyles(): void {
       cursor: pointer;
     }
     .fs-adv-close:hover { background: rgba(15, 20, 25, 0.08); }
-    .fs-adv-body { overflow-y: auto; padding: 2px 18px 8px; }
+    .fs-adv-body {
+      overflow-x: hidden;
+      overflow-y: auto;
+      padding: 2px 18px 8px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(83, 100, 113, 0.35) transparent;
+    }
+    /* X 的全局滚动条样式会给轨道刷浅色底，暗色下变成一条白边；这里收掉。 */
+    .fs-adv-body::-webkit-scrollbar { width: 8px; height: 0; }
+    .fs-adv-body::-webkit-scrollbar-track { background: transparent; }
+    .fs-adv-body::-webkit-scrollbar-thumb {
+      border-radius: 999px;
+      background: rgba(83, 100, 113, 0.35);
+    }
+    .fs-adv-body::-webkit-scrollbar-thumb:hover { background: rgba(83, 100, 113, 0.55); }
     .fs-adv-section { padding: 14px 0; border-bottom: 1px solid rgb(239, 243, 244); }
     .fs-adv-section:last-child { border-bottom: 0; }
     .fs-adv-section-head { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
@@ -297,11 +311,13 @@ export function ensureStyles(): void {
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px 12px;
     }
+    .fs-adv-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .fs-adv-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
     .fs-adv-field-wide { grid-column: 1 / -1; }
     .fs-adv-label { color: rgb(83, 100, 113); font-size: 12px; }
     .fs-adv-field input,
     .fs-adv-field select {
+      box-sizing: border-box;
       width: 100%;
       height: 32px;
       min-width: 0;
@@ -371,7 +387,8 @@ export function ensureStyles(): void {
       user-select: none;
     }
     @media (max-width: 520px) {
-      .fs-adv-grid { grid-template-columns: 1fr; }
+      .fs-adv-grid,
+      .fs-adv-grid-3 { grid-template-columns: 1fr; }
       .fs-adv-field-wide { grid-column: auto; }
     }
     /* 窄推文（< 470px）：右上角只给正在火的帖子留位置，而且只留数字；
@@ -507,7 +524,20 @@ export function ensureStyles(): void {
     html[${THEME_ATTRIBUTE}='dark'] .fs-adv-close:hover { background: rgba(255, 255, 255, 0.08); }
     html[${THEME_ATTRIBUTE}='dark'] .fs-adv-field input,
     html[${THEME_ATTRIBUTE}='dark'] .fs-adv-field select { border-color: rgb(51, 54, 60); color: rgb(231, 233, 234); }
-    html[${THEME_ATTRIBUTE}='dark'] .fs-adv-help { border-color: rgb(51, 54, 60); }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-adv-label,
+    html[${THEME_ATTRIBUTE}='dark'] .fs-adv-check,
+    html[${THEME_ATTRIBUTE}='dark'] .fs-adv-reset,
+    html[${THEME_ATTRIBUTE}='dark'] .fs-adv-field input::placeholder { color: rgb(113, 118, 123); }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-adv-help { border-color: rgb(83, 100, 113); color: rgb(113, 118, 123); }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-adv-body {
+      scrollbar-color: rgba(231, 233, 234, 0.28) transparent;
+    }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-adv-body::-webkit-scrollbar-thumb {
+      background: rgba(231, 233, 234, 0.28);
+    }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-adv-body::-webkit-scrollbar-thumb:hover {
+      background: rgba(231, 233, 234, 0.44);
+    }
     html[${THEME_ATTRIBUTE}='dark'] .fs-adv-go { background: rgb(239, 243, 244); color: rgb(15, 20, 25); }
     html[${THEME_ATTRIBUTE}='dark'] .fs-adv-google {
       border-color: rgb(51, 54, 60);

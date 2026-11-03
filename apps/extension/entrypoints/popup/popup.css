@@ -2963,7 +2963,8 @@ input:not([type]):focus,
 }
 
 .weekly-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
   margin-top: 16px;
 }
@@ -2997,7 +2998,7 @@ input:not([type]):focus,
 
 .weekly-actions .primary-button,
 .weekly-actions .secondary-button {
-  flex: 1 1 0;
+  height: 32px;
 }
 
 .weekly-links {
@@ -3036,7 +3037,7 @@ input:not([type]):focus,
 }
 
 /* 侧边栏最窄 300px：7 个栏目 + 设置齿轮放不下，收紧内边距并去掉装饰图标 */
-@media (max-width: 360px) {
+@media (max-width: 400px) {
   .section-nav {
     gap: 2px;
     padding: 0 4px;
@@ -3053,6 +3054,20 @@ input:not([type]):focus,
 
   .section-nav .nav-badge {
     display: none;
+  }
+
+  /* 300px 侧栏：收紧周刊纵向间距，让底部链接不用多滚 20px。 */
+  .weekly-body {
+    padding-bottom: 14px;
+  }
+
+  .weekly-actions {
+    margin-top: 14px;
+  }
+
+  .weekly-links {
+    margin-top: 12px;
+    padding-top: 10px;
   }
 }
 

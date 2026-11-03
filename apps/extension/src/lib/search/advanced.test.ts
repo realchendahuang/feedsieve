@@ -160,6 +160,16 @@ describe('buildAdvancedQuery', () => {
     );
   });
 
+  it('任意词、排除词和标签都接受中英文逗号分隔', () => {
+    expect(
+      buildAdvancedQuery({
+        anyWords: 'claude, gemini，GPT',
+        noneWords: 'crypto, spam',
+        hashtags: '#AI, #Agents',
+      }),
+    ).toBe('(claude OR gemini OR GPT) -crypto -spam #AI #Agents');
+  });
+
   it('空表单不产生任何运算符', () => {
     expect(buildAdvancedQuery({})).toBe('');
     expect(buildAdvancedQuery({ language: '!!', from: 'bad handle!', content: 'any' })).toBe('');
@@ -169,6 +179,7 @@ describe('buildAdvancedQuery', () => {
     expect(buildAdvancedQuery({ replies: 'only', content: 'quote' })).toBe(
       'filter:quote filter:replies',
     );
+    expect(buildAdvancedQuery({ content: 'native_video' })).toBe('filter:native_video');
   });
 
   it('精确短语里的引号会被清掉，避免破坏查询', () => {

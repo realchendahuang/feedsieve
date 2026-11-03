@@ -91,7 +91,7 @@ const COPY = {
       },
       people: {
         title: '博主',
-        help: '对应 from:、to: 和 @提到。来自博主就是只看这个人发的；留空表示不限。',
+        help: '对应 from:、to: 和 @提到。来自博主就是只看这个人发的；在个人主页打开时会自动带入当前博主，留空表示不限。',
       },
       dates: {
         title: '时间',
@@ -103,7 +103,7 @@ const COPY = {
       },
       filters: {
         title: '筛选',
-        help: '对应 filter: 系列：图片、视频、媒体、链接、引用；还能排除回复、排除转推、只看认证账号。',
+        help: '对应 filter: 系列：图片、视频、原生视频、媒体、链接、引用；还能排除回复、排除转推、只看认证账号。',
       },
       location: {
         title: '位置',
@@ -156,6 +156,7 @@ const COPY = {
       any: '不限',
       images: '图片',
       videos: '视频',
+      native_video: '原生视频',
       media: '媒体（图/视频）',
       links: '含链接',
       quote: '引用帖',
@@ -183,7 +184,7 @@ const COPY = {
       },
       people: {
         title: 'People',
-        help: 'Maps to from:, to: and an @mention. "From" limits results to that author; leave it empty for anyone.',
+        help: 'Maps to from:, to: and an @mention. "From" limits results to that author; on a profile page it is filled with that handle automatically, and leaving it empty means anyone.',
       },
       dates: {
         title: 'Dates',
@@ -195,7 +196,7 @@ const COPY = {
       },
       filters: {
         title: 'Filters',
-        help: 'Maps to the filter: family: images, videos, media, links, quotes; also exclude replies, exclude reposts and verified-only.',
+        help: 'Maps to the filter: family: images, videos, native video, media, links, quotes; also exclude replies, exclude reposts and verified-only.',
       },
       location: {
         title: 'Location',
@@ -248,6 +249,7 @@ const COPY = {
       any: 'Any',
       images: 'Images',
       videos: 'Videos',
+      native_video: 'Native video',
       media: 'Media (images/videos)',
       links: 'With links',
       quote: 'Quote posts',
@@ -444,6 +446,7 @@ export function createSearchAssist(deps: SearchAssistDeps): SearchAssist {
     previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     document.body.appendChild(backdrop);
+    syncDisabled();
     trigger?.setAttribute('aria-expanded', 'true');
     backdrop.querySelector<HTMLInputElement>('.fs-adv-field input')?.focus();
   }
@@ -565,7 +568,12 @@ export function createSearchAssist(deps: SearchAssistDeps): SearchAssist {
     return field;
   }
 
-  function section(title: string, help: string, children: HTMLElement[]): HTMLElement {
+  function section(
+    title: string,
+    help: string,
+    children: HTMLElement[],
+    columns: 2 | 3 = 2,
+  ): HTMLElement {
     const block = document.createElement('section');
     block.className = 'fs-adv-section';
     const head = document.createElement('div');
@@ -574,7 +582,7 @@ export function createSearchAssist(deps: SearchAssistDeps): SearchAssist {
     heading.textContent = title;
     head.append(heading, helpIcon(help));
     const grid = document.createElement('div');
-    grid.className = 'fs-adv-grid';
+    grid.className = columns === 3 ? 'fs-adv-grid fs-adv-grid-3' : 'fs-adv-grid';
     grid.append(...children);
     block.append(head, grid);
     return block;
@@ -628,6 +636,23 @@ export function createSearchAssist(deps: SearchAssistDeps): SearchAssist {
       if (event.key === 'Escape') {
         event.stopPropagation();
         closeDialog();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const focusables = [
+        ...dialog.querySelectorAll<HTMLElement>(
+          'button, input, select, textarea, [tabindex="0"]',
+        ),
+      ].filter((el) => !(el as HTMLButtonElement).disabled);
+      if (focusables.length === 0) return;
+      const first = focusables[0]!;
+      const last = focusables[focusables.length - 1]!;
+      if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
       }
     });
 
@@ -723,7 +748,7 @@ export function createSearchAssist(deps: SearchAssistDeps): SearchAssist {
           inputMode: 'numeric',
           onInput: (value) => setPref('minLikes', value),
         }),
-      ]),
+      ], 3),
       section(c.sections.filters.title, c.sections.filters.help, [
         selectField(
           fields.content,
@@ -733,6 +758,7 @@ export function createSearchAssist(deps: SearchAssistDeps): SearchAssist {
             ['any', c.content.any],
             ['images', c.content.images],
             ['videos', c.content.videos],
+            ['native_video', c.content.native_video],
             ['media', c.content.media],
             ['links', c.content.links],
             ['quote', c.content.quote],
@@ -773,7 +799,7 @@ export function createSearchAssist(deps: SearchAssistDeps): SearchAssist {
           );
           return checks;
         })(),
-      ]),
+      ], 3),
       section(c.sections.location.title, c.sections.location.help, [
         textField(fields.near, 'near', prefs.near, {
           placeholder: c.placeholders.near,
