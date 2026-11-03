@@ -48,6 +48,7 @@ const WriteView = lazy(() =>
 );
 const CleanView = lazy(() => import('./views/CleanView'));
 const WeeklyView = lazy(() => import('./views/WeeklyView'));
+const MuteView = lazy(() => import('./views/MuteView'));
 const GlobalView = lazy(() => import('./views/settings/GlobalView'));
 const ModuleSettingsView = lazy(() => import('./views/settings/ModuleSettingsView'));
 import { isProfileUrl } from './views/profile-model';
@@ -58,7 +59,7 @@ import { AppIcon, asPageMarkedList, getChromeSidePanel, type PageMarkedItem } fr
  * 顶部栏目：每个功能模块一问，外加一个常驻的「周刊」推荐位，最后一栏「全局」放跨模块设置。
  * tab 是否出现由模块总开关决定，顺序由 MODULES 注册表决定；周刊不属于任何模块。
  */
-type PopupView = ModuleId | 'global' | 'weekly';
+type PopupView = ModuleId | 'global' | 'weekly' | 'mute';
 
 const PAGE_MARKED_MESSAGE = { type: 'feedsieve:page-marked-list' } as const;
 
@@ -84,6 +85,8 @@ function initialRoute(): InitialRoute {
       return { view: 'write', page: 'global', moduleSettingsOpen: null };
     case 'weekly':
       return { view: 'weekly', page: 'global', moduleSettingsOpen: null };
+    case 'mute':
+      return { view: 'mute', page: 'global', moduleSettingsOpen: null };
     case 'lists':
     case 'overview':
       if (list === 'blocked' || list === 'allowlist' || list === 'following') {
@@ -208,7 +211,8 @@ export default function App() {
     const apply = (profileDefault: boolean): void => {
       if (!active) return;
       let next = route.view;
-      if (next !== 'global' && next !== 'weekly' && !enabledIds.has(next)) next = 'global';
+      if (next !== 'global' && next !== 'weekly' && next !== 'mute' && !enabledIds.has(next))
+        next = 'global';
       if (!hasExplicitView && route.view === 'hot') {
         if (profileDefault && enabledIds.has('profile')) next = 'profile';
         else if (enabledIds.has('hot')) next = 'hot';
@@ -297,6 +301,8 @@ export default function App() {
       postId?: string;
       text?: string;
       at?: number;
+      keyword?: string;
+      ids?: string[];
     }): Promise<unknown> => {
       // 只发给当前激活的 x.com 标签页：发给后台标签页可能拉黑错账号。
       // 必须是弹窗 / 侧边栏所在窗口的（currentWindow），多窗口时 lastFocusedWindow 会指到别的窗口
@@ -461,7 +467,7 @@ export default function App() {
       const next = await setModuleSettings(patch);
       setModules(next);
       // 当前正在看的模块被关掉：立即落到全局，不留在已不存在的 tab 上
-      if (view !== 'global' && view !== 'weekly' && !moduleById(view).enabled(next)) {
+      if (view !== 'global' && view !== 'weekly' && view !== 'mute' && !moduleById(view).enabled(next)) {
         setView('global');
         setSettingsPage('global');
         setModuleSettingsOpen(null);
@@ -479,13 +485,14 @@ export default function App() {
     id: module.id,
     label: t[module.labelKey],
   }));
-  // 周刊是常驻推荐位，不属于任何模块，也不受模块开关影响
+  // 屏蔽词与周刊都是常驻入口，不属于模块开关
+  tabs.push({ id: 'mute', label: t.muteNav });
   tabs.push({ id: 'weekly', label: t.weeklyNav });
   tabs.push({ id: 'global', label: t.globalNav });
 
   // 外部窗口关掉模块时也要立刻生效：不依赖 effect 里的 setState，直接派生当前可渲染的视图
   const effectiveView: PopupView =
-    modules && view !== 'global' && view !== 'weekly' && !moduleById(view).enabled(modules)
+    modules && view !== 'global' && view !== 'weekly' && view !== 'mute' && !moduleById(view).enabled(modules)
       ? 'global'
       : view;
   const effectiveModuleSettingsOpen =
@@ -606,6 +613,9 @@ export default function App() {
               communityLoading={communityEntriesLoading}
               onOpenSettings={() => openModuleSettings('filter')}
             />
+          ) : null}
+          {viewReady && effectiveView === 'mute' ? (
+            <MuteView language={language} notify={notify} sendToXPage={sendToXPage} />
           ) : null}
           {viewReady && effectiveView === 'weekly' ? <WeeklyView language={language} /> : null}
           {viewReady &&

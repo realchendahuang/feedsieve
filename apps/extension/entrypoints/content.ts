@@ -1,4 +1,4 @@
-import { noteTimelineHealth } from '@feedsieve/x-adapter';
+import { noteTimelineHealth, tweetSelectors } from '@feedsieve/x-adapter';
 import { PageScanController, type ScanCallbacks } from '../src/lib/detection/page-scan-controller';
 import { createKeywordHeuristics, subscribeKeywordRules } from '../src/lib/detection/keyword-rules';
 import {
@@ -41,6 +41,9 @@ import { createCleanUi } from '../src/lib/content/clean-ui';
 import { createPageTicker } from '../src/lib/content/page-ticker';
 import { createProfileFill } from '../src/lib/content/profile-fill';
 import { createSearchAssist } from '../src/lib/content/search-assist';
+import { createKeywordFilter } from '../src/lib/mute/content-filter';
+import { getMuteSettings, subscribeMuteSettings } from '../src/lib/mute/mute-store';
+import { registerMuteMessageHandlers } from '../src/lib/content/mute-messages';
 import {
   getSearchAssistEnabled,
   subscribeSearchAssistEnabled,
@@ -121,6 +124,19 @@ export default defineContentScript({
       },
     });
     const fold = createBlockedFold(controller);
+    const muteFilter = createKeywordFilter({
+      getLanguage: () => state.uiLanguage,
+      getSelfHandle: () => state.selfHandle ?? null,
+      onUnfold: (cell) => {
+        const article = cell.matches(tweetSelectors.article)
+          ? cell
+          : cell.querySelector(tweetSelectors.article);
+        if (article) {
+          controller.markDirty(article);
+          controller.schedule();
+        }
+      },
+    });
     const { blockOne } = createBlockOne(state);
     const manual = createManualActions({ state, blockOne, fold });
     const badges = createBadges({ state, runBlockNow: manual.runBlockNow });
@@ -239,6 +255,7 @@ export default defineContentScript({
       badges,
       manual,
       insight,
+      applyMute: (article, item) => muteFilter.apply(article, item),
       authorFacts: (handle) => {
         const facts = insightStore.author(handle);
         if (!facts) return undefined;
@@ -345,6 +362,7 @@ export default defineContentScript({
     ctx.onInvalidated(() => {
       ticker.stop();
       controller.dispose();
+      muteFilter.clearAll();
       profileInsight.stop();
       aiCheck.stop();
       shareMenu.dispose();
@@ -358,6 +376,7 @@ export default defineContentScript({
     });
 
     ensureStyles();
+    muteFilter.clearAll();
     // 开发时 WXT 重新注入脚本，上一份留下的装饰可能还挂着：先清掉「死标记」再开始扫描，
     // 否则残留装饰和弹窗会各说各话（用户看到的黄框查不到、弹窗显示 0）。
     // 正常首次加载的页面此刻没有任何 FeedSieve 装饰，清理不影响什么。
@@ -378,6 +397,8 @@ export default defineContentScript({
       sync.resetPageDecorations();
       insight.refreshAll();
       profileInsight.ensureLine();
+      muteFilter.clearAll();
+      controller.fullRescan();
     });
     // 「流速与量级」开关只管推文上的标签和倍数；热帖模块关闭时整体不生效
     let badgesEnabled = true;
@@ -397,6 +418,12 @@ export default defineContentScript({
     };
     void getProfileLineEnabled().then(setProfileLineEnabled);
     subscribeProfileLineEnabled(setProfileLineEnabled);
+    void getMuteSettings().then((settings) => {
+      if (muteFilter.setSettings(settings)) controller.fullRescan();
+    });
+    subscribeMuteSettings((settings) => {
+      if (muteFilter.setSettings(settings)) controller.fullRescan();
+    });
     void getSearchAssistEnabled().then((enabled) => {
       searchAssistEnabled = enabled;
       searchAssist.tick();
@@ -491,6 +518,7 @@ export default defineContentScript({
       }
     });
     void queueSupervisor.pauseOrphaned(true);
+    registerMuteMessageHandlers();
     registerContentMessageHandlers({
       state,
       queueSupervisor,

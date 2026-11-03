@@ -133,7 +133,7 @@ ol {
 /* 文字标签：选中项加粗并带下划线 */
 .section-nav {
   display: flex;
-  gap: 4px;
+  gap: 3px;
   height: 38px;
   padding: 0 8px;
 }
@@ -143,7 +143,7 @@ ol {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 0 8px;
+  padding: 0 7px;
   border: 0;
   background: none;
   color: var(--muted);
@@ -3037,6 +3037,17 @@ input:not([type]):focus,
 }
 
 /* 侧边栏最窄 300px：7 个栏目 + 设置齿轮放不下，收紧内边距并去掉装饰图标 */
+@media (min-width: 401px) {
+  html[lang='en'] .section-nav {
+    gap: 2px;
+  }
+
+  html[lang='en'] .section-nav button {
+    padding: 0 6px;
+    font-size: 13px;
+  }
+}
+
 @media (max-width: 400px) {
   .section-nav {
     gap: 2px;
@@ -3056,6 +3067,11 @@ input:not([type]):focus,
     display: none;
   }
 
+  html[lang='en'] .section-nav button {
+    padding: 0 3px;
+    font-size: 12.5px;
+  }
+
   /* 300px 侧栏：收紧周刊纵向间距，让底部链接不用多滚 20px。 */
   .weekly-body {
     padding-bottom: 14px;
@@ -3069,6 +3085,162 @@ input:not([type]):focus,
     margin-top: 12px;
     padding-top: 10px;
   }
+}
+
+.mute-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.mute-add-form {
+  margin: 10px 0 8px;
+}
+
+.mute-add-form .secondary-button:disabled {
+  color: var(--faint);
+  border-color: var(--line);
+  font-weight: 500;
+}
+
+.mute-summary {
+  margin: 2px 0 4px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.mute-list,
+.mute-pack-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mute-item,
+.mute-pack-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.mute-item:last-child,
+.mute-pack-item:last-child {
+  border-bottom: 0;
+}
+
+.mute-phrase {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mute-state {
+  flex: none;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.mute-state[data-state='synced'] {
+  color: var(--green);
+}
+
+.mute-state[data-state='pending'] {
+  color: var(--warn-fg);
+}
+
+.mute-state[data-state='failed'] {
+  color: var(--red);
+}
+
+.mute-actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mute-actions .text-button {
+  font-size: 12px;
+}
+
+.mute-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.mute-note {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.mute-consent {
+  margin: 8px 0 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface-sunken);
+}
+
+.mute-consent strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.mute-consent p {
+  margin: 0;
+  color: var(--muted-strong);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.mute-consent-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.mute-library-meta {
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.mute-library-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.mute-library-bar .sort-select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.mute-library-count {
+  flex: none;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.text-button.is-muted {
+  color: var(--muted);
 }
 
 /* =====================================================================

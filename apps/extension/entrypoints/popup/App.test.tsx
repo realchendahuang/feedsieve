@@ -319,7 +319,7 @@ describe('popup App 渲染冒烟', () => {
     const nav = [...rootEl.querySelectorAll('.section-nav button')].map(
       (button) => button.getAttribute('aria-label') ?? button.textContent,
     );
-    expect(nav).toEqual(['热帖', '主页', '发帖', 'AI 味', '过滤', '周刊', '全局']);
+    expect(nav).toEqual(['热帖', '主页', '发帖', 'AI 味', '过滤', '屏蔽', '周刊', '全局']);
 
     await openSettingsPage(rootEl, '关键词');
     expect(rootEl.textContent).toContain('官方预置词库');

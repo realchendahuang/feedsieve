@@ -1,6 +1,6 @@
 # FeedSieve 隐私政策 / Privacy Policy
 
-生效日期：2026-09-01（2026-09-13 增补独立用户反馈样本；2026-10-30 增补本地热帖、全站热榜与本机保存的博主主页帖子；2026-10-31 增补博主主页帖子库众包、调整全站热榜上报节奏与防刷、增补 AI 味检测与规则命中上报，随 0.11.0 发布生效；2026-11-01 增补发帖排期与文章编辑（仅本机），随 0.12.0 发布生效；2026-11-01 调整 AI 味公开裁决为社区投票 + Jev，不再由维护者复核；2026-11-01 增补：你自己的主页公开帖子数字也参与主页帖子库众包，使用独立的每日会话编号；2026-11-02 取消主页帖子库的粉丝数门槛） · Contact: [GitHub Issues](https://github.com/realchendahuang/feedsieve/issues)
+生效日期：2026-09-01（2026-09-13 增补独立用户反馈样本；2026-10-30 增补本地热帖、全站热榜与本机保存的博主主页帖子；2026-10-31 增补博主主页帖子库众包、调整全站热榜上报节奏与防刷、增补 AI 味检测与规则命中上报，随 0.11.0 发布生效；2026-11-01 增补发帖排期与文章编辑（仅本机），随 0.12.0 发布生效；2026-11-01 调整 AI 味公开裁决为社区投票 + Jev，不再由维护者复核；2026-11-01 增补：你自己的主页公开帖子数字也参与主页帖子库众包，使用独立的每日会话编号；2026-11-02 取消主页帖子库的粉丝数门槛；2026-11-04 增补推文屏蔽词与可选的原生静音词同步） · Contact: [GitHub Issues](https://github.com/realchendahuang/feedsieve/issues)
 
 FeedSieve（福滤娃）是 X（Twitter）扩展：黄框标注垃圾账号、用户点击后执行拉黑；并基于页面已经加载的公开数据，显示帖子热度、热帖列表和博主主页分析。
 本政策说明它处理什么数据、什么数据出设备、什么数据绝不出设备。
@@ -15,6 +15,7 @@ Firefox 版通过 `browser_specific_settings.gecko.data_collection_permissions` 
 
 - X 页面内容：推文文本、昵称、简介、链接 —— 在本地用于识别垃圾账号；用户处理后的有限证据按下述授权上传。
 - 识别结果与动作记录：标注、拉黑、撤销、白名单、本地统计，以及你自定义的关键词规则、对官方预置词包的订阅/启停状态和最近一次校验通过的公开词库版本缓存。例外：官方规则打黄框的账号会按下文第 10 条匿名上报（可单独关闭）。
+- 推文屏蔽词：你添加的词条、开关和 X 原生静音词 id 保存在本机（`storage.local`）。只有你开启「同步到 X」后，词条才会写入你的 X 账号设置并同步到手机 App，见第 1.2 条。
 - 你的 X 关注列表：用于形成每个用户自己的「关注保护」名单，只保存在浏览器本地，绝不作为白名单或抢救票上传。
 - X 登录凭证（ct0 / bearer）：仅在你点击拉黑/撤销时，从页面 Cookie 读取 `ct0`，随该次请求发给 x.com 本身；不存储、不写日志、不发送给 FeedSieve 或任何第三方。
 - 浏览历史（访问过哪些网址）、私信、密码：不收集。开启「参与全站热榜」时会上传你刷到的公开帖子指标，见下文第 7 条；你打开过的博主主页的公开帖子数字按第 8 条共享。
@@ -30,6 +31,9 @@ Firefox 版通过 `browser_specific_settings.gecko.data_collection_permissions` 
 
 **1.1 周刊最新一期（无你的任何数据）**
 打开扩展的「周刊」标签时，会请求 `feedsieve.win/weekly/api/public/latest-issue` 获取最新一期（期号、标题、条数、期页地址），并从 `feedsieve.win/weekly/og/` 加载这一期的封面图。这些请求不包含安装 ID、X 账号或其他个人数据；不打开该标签就不会请求。
+
+**1.2 原生静音词同步（可选，默认关闭）**
+开启「屏蔽 › 同步到 X」后，扩展会通过 x.com 网页端自己使用的接口读取、添加、删除你确认过的静音词。请求直接发往 x.com，携带该次操作需要的登录态（`ct0`、web bearer、`x-client-transaction-id`）和词条本身；不经过 FeedSieve 服务器。写入后词条保存在你的 X 账号设置里，X 可见，并同步到手机 App。关闭同步后不再读取列表或新增；手动删除已同步的词时仍会发一次删除请求，避免手机端继续屏蔽。每次只写一条，遇到限流会停，不做批量写入。
 
 **2. 黑白名单上传（默认开启，可一键关闭）**
 开启「名单上传」时，扩展同步你明确维护的本地黑名单和白名单，包括升级前已保存在本机的历史记录。它不上传仅仅浏览过、仅仅被标注但未处理的账号（被官方规则标注的账号另按第 10 条匿名上报，不是票）；也不上传关注保护名单、你的自定义关键词或官方词库的订阅/启停状态。公开词库下载不携带安装 ID、X 账号、浏览历史或自定义词；由关键词触发的拉黑不会回灌成社区举报票，但其显式操作证据可进入下述独立待审样本池；直接执行「社区清理」产生的批量拉黑同样只记录在本机。
@@ -94,6 +98,7 @@ Firefox 版通过 `browser_specific_settings.gecko.data_collection_permissions` 
 
 - X page content: tweet text, display names, bios, links — detection runs locally; bounded evidence from explicit actions may be uploaded as described below.
 - Detection results and actions: marks, blocks, unblocks, allowlist, local stats.
+- Tweet mute words: the words you add, their toggles and any native X muted-word ids are stored locally (`storage.local`). Only when you turn on “Sync to X” are they written into your X account settings and synced to the mobile app; see section 1.2.
 - Your X following list: used as a per-user protection list and stored locally only. It is never uploaded as an allow or rescue vote.
 - Your X session credentials (ct0 / bearer): read from the page cookie only at the moment you click block/unblock, and sent only to x.com itself. Never stored, logged, or sent to FeedSieve or any third party.
 - Browsing history (which URLs you visit), direct messages, passwords: not collected. With "Join the global hot list" on, metrics of public posts you scroll past are uploaded as described in item 7 below; public post numbers of creator profiles you open are shared as described in item 8.
@@ -109,6 +114,9 @@ The extension downloads the community snapshot (JSON, SHA-256 and publisher-sign
 
 **1.1 Latest Weekly issue (contains none of your data)**
 Opening the extension's Weekly tab requests `feedsieve.win/weekly/api/public/latest-issue` for the latest issue (number, title, post count, issue URL) and loads that issue's cover from `feedsieve.win/weekly/og/`. These requests contain no installation ID, X account or other personal data, and are not made unless you open that tab.
+
+**1.2 Native muted-word sync (optional, off by default)**
+When “Sync to X” is on, FeedSieve reads, adds and removes the muted words you confirmed through the same endpoints X's own web settings page uses. Requests go directly to x.com and carry the session material needed for that action (`ct0`, web bearer, `x-client-transaction-id`) plus the word itself; they never pass through a FeedSieve server. Written words are stored in your X account settings, visible to X and synced to the mobile app. Turning sync off stops list reads and new writes; deleting a word that was already synced still sends one delete request so the mobile app stops muting it. One word per action; it stops on rate limits and never writes in batches.
 
 **2. Blocklist and allowlist uploads (default on, one toggle to disable)**
 When “List uploads” is enabled, the extension syncs the local blocklist and allowlist entries you explicitly maintain, including records already stored locally before an upgrade. Merely viewed or merely marked accounts are never uploaded as votes (accounts marked by official rules are reported anonymously under item 10, which are not votes). Neither is the following-protection list. Blocks performed by Community Clean are kept as local action records and do not create new community report votes.

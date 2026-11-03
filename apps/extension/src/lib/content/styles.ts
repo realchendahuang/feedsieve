@@ -616,6 +616,63 @@ export function ensureStyles(): void {
     html[${THEME_ATTRIBUTE}='dark'] .fs-reason-menu-divider {
       background: rgba(255, 255, 255, 0.12);
     }
+    /* 推文屏蔽词：整条 cell 折叠成一行说明，不删除 X 的节点。 */
+    [data-fs-mute-fold='1'] > :not(.fs-mute-foldbar) {
+      display: none !important;
+    }
+    .fs-mute-foldbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      padding: 10px 16px;
+      border-bottom: 1px solid rgb(239, 243, 244);
+      color: rgb(83, 100, 113);
+      font: inherit;
+      font-size: 13px;
+      line-height: 1.3;
+    }
+    .fs-mute-fold-text {
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .fs-mute-fold-show {
+      flex: none;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: rgb(29, 155, 240);
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .fs-mute-fold-show:hover { text-decoration: underline; }
+    .fs-mute-help {
+      flex: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border: 1px solid rgb(207, 217, 222);
+      border-radius: 50%;
+      color: rgb(83, 100, 113);
+      font-size: 11px;
+      line-height: 1;
+      cursor: help;
+    }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-mute-foldbar {
+      border-color: rgb(51, 54, 60);
+      color: rgb(113, 118, 123);
+    }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-mute-fold-show { color: rgb(74, 168, 240); }
+    html[${THEME_ATTRIBUTE}='dark'] .fs-mute-help {
+      border-color: rgb(83, 100, 113);
+      color: rgb(113, 118, 123);
+    }
   `;
   document.documentElement.appendChild(style);
   syncPageTheme();
