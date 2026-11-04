@@ -35,7 +35,7 @@ export interface ModuleDef {
   enabled: (settings: ModuleSettings) => boolean;
 }
 
-/** 固定顺序：淘金 → 阅人 → 落笔 → 水军 → 伪人。校秤永远排最后，不在这里。
+/** 固定顺序：淘金 → 阅人 → 落笔 → 水军 → 伪人。调校永远排最后，不在这里。
  *  水军与伪人同属「降噪」，顶栏合并成一格；这里的先后要和 MODULE_GROUPS 的组内顺序
  *  一致，否则「设置 › 模块开关」的排列会和二级 tab 对不上。 */
 export const MODULES: readonly ModuleDef[] = [

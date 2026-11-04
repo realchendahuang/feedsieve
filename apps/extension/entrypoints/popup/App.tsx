@@ -86,7 +86,7 @@ function inNoiseGroup(view: PopupView): boolean {
   return isModuleId(view) && groupOf(view) !== undefined;
 }
 
-/** 模块被关掉后的落点：同组还有开着的就留在组里，其余回校秤。 */
+/** 模块被关掉后的落点：同组还有开着的就留在组里，其余回调校。 */
 function fallbackViewFor(module: ModuleId, settings: ModuleSettings | null): PopupView {
   if (!groupOf(module)) return 'global';
   const sibling = enabledModules(settings).find((item) => groupOf(item.id));
@@ -246,7 +246,7 @@ export default function App() {
   );
   const modulesReady = modules !== null;
 
-  // 默认落点：链接指定的模块 → 当前是 X 主页则「主页」→ 热帖 → 第一个启用的模块 → 校秤。
+  // 默认落点：链接指定的模块 → 当前是 X 主页则「主页」→ 热帖 → 第一个启用的模块 → 调校。
   // 只在模块开关第一次加载时判断一次；之后切 tab 或开关模块都不再重置当前视图。
   useEffect(() => {
     if (!modules) return;
@@ -539,7 +539,7 @@ export default function App() {
       title: module.titleKey ? t[module.titleKey] : t[module.labelKey],
     });
   }
-  // 拾穗与校秤都是常驻入口，不属于模块开关
+  // 拾穗与调校都是常驻入口，不属于模块开关
   tabs.push({ id: 'weekly', label: t.weeklyNav, title: t.weeklyTabTitle });
   tabs.push({ id: 'global', label: t.globalNav, title: t.globalTabTitle });
 

@@ -352,7 +352,7 @@ export const UI_COPY = {
     undo: '撤销',
     undoAll: '全部撤销',
     settings: '设置',
-    globalNav: '校秤',
+    globalNav: '调校',
     goBack: '返回',
     groupModules: '功能',
     moduleSwitches: '模块开关',
