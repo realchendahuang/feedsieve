@@ -81,7 +81,7 @@ export async function getBundledEntries(): Promise<unknown> {
 export interface CommunitySettings {
   /** 社区名单总开关（关掉后只跑启发式 + 内置名单） */
   enabled: boolean;
-  /** 标注强度：清爽 / 标准 / 大扫除 */
+  /** 识别灵敏度：清爽 / 标准 / 大扫除 */
   strength: MarkStrength;
   /**
    * 同步用户明确维护的本地黑名单/白名单（默认开，全局开关，绝无逐条弹窗）。

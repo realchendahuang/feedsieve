@@ -408,7 +408,8 @@ export const UI_COPY = {
     about: '关于',
     weekly: '小筛子周刊',
     versionLabel: '版本',
-    strength: '检测强度',
+    /* 和官网页同一句话：识别灵敏度三档（清爽 / 标准 / 大扫除） */
+    strength: '识别灵敏度',
     autoContribute: '名单上传',
     localOnly: '仅本地运行',
     localOnlyHint:

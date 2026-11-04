@@ -1,7 +1,10 @@
 import type { BlockEvidence } from '../../../src/lib/detection/detection-evidence';
 import { useCallback, useEffect, useId, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import type { MarkStrength } from '@feedsieve/community-lists';
+import {
+  STRENGTH_LABELS as canonicalStrengthLabels,
+  type MarkStrength,
+} from '@feedsieve/community-lists';
 import type { AllowlistItem } from '../../../src/lib/community/allowlist';
 import { normalizeStrictHandle } from '../../../src/lib/platform/xhr-bridge-guard';
 import { openOfficialPage, SITE_URLS, type SiteList } from '../../../src/lib/platform/site-links';
@@ -384,8 +387,10 @@ export const FAILURE_LABELS: Record<UiLanguage, Record<string, string>> = {
   },
 };
 
+/* 档位名只有一份：community-lists 的 STRENGTH_LABELS，官网页、CHANGELOG、测试都用它。
+   弹窗早先自己写过「彻底」，和全站的「大扫除」对不上，现在直接引用。 */
 export const STRENGTH_LABELS: Record<UiLanguage, Record<MarkStrength, string>> = {
-  zh: { refresh: '清爽', standard: '标准', deep_clean: '彻底' },
+  zh: canonicalStrengthLabels,
   en: { refresh: 'Light', standard: 'Standard', deep_clean: 'Deep' },
 };
 
