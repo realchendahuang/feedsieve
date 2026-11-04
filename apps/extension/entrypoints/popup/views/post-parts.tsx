@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import type { UiLanguage } from '../../../src/lib/platform/i18n';
 import { UI_COPY } from '../../../src/lib/platform/i18n';
-import { compact, formatCount, tierCode } from '../../../src/lib/insight/format';
+import { compact, formatCount } from '../../../src/lib/insight/format';
 import { iconParts, TIER_ICONS, type IconName } from '../../../src/lib/insight/icons';
 
 type Tier = 1 | 2 | 3 | 4 | 5 | 6;
@@ -45,14 +45,16 @@ export function LineIcon({ name, size = 11 }: { name: IconName; size?: number })
   );
 }
 
-/** 与推文上一致的量级：灰色的 [档位图标 粉丝数]，档位名放进无障碍标签。 */
+/** 与推文上一致的量级：灰色的 [档位图标 粉丝数]，数字的含义放进无障碍标签。 */
 export function TierPill({
   tier,
   followers,
+  language,
   highlight = false,
 }: {
   tier: number;
   followers: number;
+  language: UiLanguage;
   highlight?: boolean;
 }) {
   return (
@@ -60,7 +62,7 @@ export function TierPill({
       className={`tier-pill${highlight ? ' is-key' : ''}`}
       data-fs-tier-level={tier}
       role="img"
-      aria-label={`${tierCode(tier)} ${compact(followers)}`}
+      aria-label={`${compact(followers)} ${language === 'zh' ? '粉丝' : 'followers'}`}
     >
       <LineIcon name={TIER_ICONS[tier as Tier] ?? 'sprout'} size={12} />
       <span>{compact(followers)}</span>

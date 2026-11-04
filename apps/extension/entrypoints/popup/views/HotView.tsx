@@ -1152,6 +1152,7 @@ export default function HotView({ language, sendToXPage, onOpenSettings }: HotVi
                           <TierPill
                             tier={item.tier}
                             followers={item.followers}
+                            language={language}
                             highlight={activeSort === 'followers'}
                           />
                         ) : null}

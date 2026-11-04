@@ -292,7 +292,7 @@ describe('ProfileView', () => {
       badge.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
     });
     const tip = document.querySelector('.help-tooltip')!;
-    expect(tip.textContent).toBe('浏览 8.2万，是他中位浏览 1万 的 7.7×\n3 倍以上算爆款');
+    expect(tip.textContent).toBe('浏览 8.2万，是中位浏览 1万 的 7.7 倍\n3 倍以上算爆款');
   });
 
   it('searches their posts on Google with keywords and a date range', async () => {

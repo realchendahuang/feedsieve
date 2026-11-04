@@ -761,7 +761,7 @@ describe('popup App 渲染冒烟', () => {
     const rootEl = renderApp();
     // Wait for observable async state, not machine-dependent fixed rendering latency.
     await vi.waitFor(() => {
-      expect(rootEl.textContent).toContain('官方暂停了拉黑操作：接口排查中');
+      expect(rootEl.textContent).toContain('维护者已暂停拉黑：接口排查中');
     });
     // 社区批量入口本来可用（有合格条目），降级后必须禁用
     expect(buttonWithText(rootEl, '全部拉黑').disabled).toBe(true);
@@ -1007,9 +1007,9 @@ describe('popup App 渲染冒烟', () => {
 
     const rootEl = renderApp();
     // 等可观察的状态，不靠固定延迟：全量校验并发高时 150ms 不一定够
-    await vi.waitFor(() => expect(rootEl.textContent).toContain('今日安全额度已到'));
+    await vi.waitFor(() => expect(rootEl.textContent).toContain('今日额度已用完'));
     // 友情提醒：额度到顶 + 风险提示；不再是「只能明天继续」的硬规定
-    expect(rootEl.textContent).toContain('今日安全额度已到（400/24h）');
+    expect(rootEl.textContent).toContain('今日额度已用完（400/24 小时）');
     expect(rootEl.textContent).toContain('仍要继续可以，但被 X 临时限制的风险会变高');
     await act(async () => buttonWithText(rootEl, '仍要继续').click());
     expect(tabSendMessage).toHaveBeenCalledWith(

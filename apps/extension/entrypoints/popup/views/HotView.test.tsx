@@ -127,7 +127,7 @@ describe('HotView', () => {
     expect(post.querySelector('.post-handle')?.textContent).toBe('@alice');
     const tier = post.querySelector('.tier-pill')!;
     expect(tier.textContent).toBe('925');
-    expect(tier.getAttribute('aria-label')).toBe('GLOW 925');
+    expect(tier.getAttribute('aria-label')).toBe('925 粉丝');
     // 流速在右上角
     expect(post.querySelector('.post-head .velocity-tag')?.textContent).toBe('52.3K/h');
     expect(post.querySelector('.velocity-tag')?.getAttribute('data-fs-level')).toBe('rocket');
@@ -660,7 +660,7 @@ describe('page brief', () => {
     const values = [...root.querySelectorAll('.brief-line dd')].map((node) => node.textContent);
     expect(values).toEqual(['86', '7', '312/h']);
     const labels = [...root.querySelectorAll('.brief-line dt')].map((node) => node.textContent);
-    expect(labels).toEqual(['帖子', '在火', '中位流速']);
+    expect(labels).toEqual(['帖子', '正在升温', '中位流速']);
   });
 });
 

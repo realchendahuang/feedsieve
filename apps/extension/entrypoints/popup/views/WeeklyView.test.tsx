@@ -54,7 +54,6 @@ describe('周刊推荐位', () => {
     mockFetch(LATEST);
     await render('zh');
 
-    expect(container.textContent).toContain('福滤娃出品');
     expect(container.textContent).toContain('小筛子周刊');
     expect(container.textContent).toContain('第 2 期');
     expect(container.textContent).toContain('这一期的标题');

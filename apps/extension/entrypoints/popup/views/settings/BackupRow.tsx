@@ -163,7 +163,7 @@ export default function BackupRow({
           ? `${t.languageSetting} → ${merge.languageChange.to === 'zh' ? '中文' : 'EN'}`
           : null,
         merge.communityEnabledChange
-          ? `${t.enabled} → ${
+          ? `${t.manualSync} → ${
               merge.communityEnabledChange.to ? t.personalConfigOn : t.personalConfigOff
             }`
           : null,

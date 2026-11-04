@@ -64,30 +64,18 @@ export default function WeeklyView({ language }: { language: UiLanguage }) {
       </a>
 
       <section className="weekly-body">
-        <div className="weekly-kicker">{t.weeklyKicker}</div>
         <h1>{t.weeklyTitle}</h1>
 
         {issue?.title ? (
-          <a className="weekly-issue" href={issue.url} target="_blank" rel="noreferrer">
+          <div className="weekly-issue">
             <span className="weekly-issue-no">{t.weeklyIssue(issue.number)}</span>
             <span className="weekly-issue-title">{issue.title}</span>
             <span className="weekly-issue-count">{t.weeklyPostCount(issue.postCount)}</span>
-          </a>
+          </div>
         ) : null}
 
-        <p className="weekly-desc">{t.weeklyDesc}</p>
-
-        <ul className="weekly-points">
-          <li>{t.weeklyPoint1}</li>
-          <li>{t.weeklyPoint2}</li>
-          <li>{t.weeklyPoint3}</li>
-        </ul>
-
         <div className="weekly-actions">
-          <a className="primary-button" href={WEEKLY_URL} target="_blank" rel="noreferrer">
-            {t.weeklyOpen}
-          </a>
-          <a className="secondary-button" href={latestUrl} target="_blank" rel="noreferrer">
+          <a className="primary-button" href={latestUrl} target="_blank" rel="noreferrer">
             {t.weeklyLatest(latestNumber)}
           </a>
         </div>

@@ -51,15 +51,9 @@ export const UI_COPY = {
     filterNav: '过滤',
     muteNav: '屏蔽',
     weeklyNav: '周刊',
-    weeklyKicker: '福滤娃出品',
     weeklyTitle: '小筛子周刊',
     weeklyTagline: '去噪精选社区',
-    weeklyDesc:
-      '福滤娃在 X 上替你筛掉垃圾账号；小筛子周刊每周五把筛下来的好内容交给更多人。',
     weeklyEveryFriday: '每周五出刊',
-    weeklyPoint1: '每周五出刊，只收最值得读的几条',
-    weeklyPoint2: '内容来自 X、公众号、GitHub 和博客',
-    weeklyPoint3: '投稿被收录一次，自动成为会员',
     weeklyOpen: '打开周刊',
     weeklyLatest: (n: number) => `读第 ${n} 期`,
     weeklyIssue: (n: number) => `第 ${n} 期`,
@@ -135,7 +129,7 @@ export const UI_COPY = {
       '把倍数最高的 20 条（不含回复）整理成 Markdown，附上分析要求，直接粘贴给 ChatGPT、Claude。',
     profileExportHint: '导出当前筛选下的全部帖子，含各项数字和倍数。',
     profileMultipleTip: (views: string, median: string, multiple: string) =>
-      `浏览 ${views}，是他中位浏览 ${median} 的 ${multiple}`,
+      `浏览 ${views}，是中位浏览 ${median} 的 ${multiple.replace(/×$/u, '')} 倍`,
     profileMultipleOutlier: '3 倍以上算爆款',
     profileSearchHint: (query: string) =>
       `新开一个 X 搜索页：${query}。和你自己搜一样，搜到的帖子会自动收进来；扩展不会替你翻页。`,
@@ -164,7 +158,7 @@ export const UI_COPY = {
     profileClearConfirm: '再点一次确认',
     home: '清理',
     briefSeen: '帖子',
-    briefHot: '在火',
+    briefHot: '正在升温',
     briefMedian: '中位流速',
     viewsCount: (n: string) => `${n} 浏览`,
     opportunityRemaining: (views: string) => `+${views} 浏览`,
@@ -189,13 +183,13 @@ export const UI_COPY = {
     followingProtected: '已保护的关注',
     followingProtectHint: '你关注的账号永远不会被标黄或拉黑。关注了新的人以后，重新同步一次。',
     followingLastSync: '上次同步',
-    dailyBudget: '每日拉黑上限',
+    dailyBudget: '每日拉黑额度',
     manualSync: '社区数据',
     manualSyncAction: '立即同步',
     manageBlocked: '拉黑记录',
     falsePositiveList: '白名单',
     insightBadgesHint:
-      '推文右上角显示当前流速（每小时浏览；绿色平稳，红色正在火）；作者名旁显示量级图标和粉丝数。悬停看档位、破圈倍数和详细解释。只用当前页面已加载的数据，不上传。',
+      '推文右上角显示当前流速（每小时浏览；绿色平稳，红色正在火）；作者名旁显示量级图标和粉丝数。悬停看量级、破圈倍数和详细解释。只用当前页面已加载的数据，不上传。',
     profileLine: '主页人气行',
     profileLineHint:
       '在 X 主页资料卡下显示一行人气数据：量级、粉丝、关注比、中位浏览、爆款率和已收条数；点这一行打开主页洞察。',
@@ -244,7 +238,7 @@ export const UI_COPY = {
     hotRisingHint:
       '全站福滤娃用户最近刷到、正在火的帖子，按最近半小时到一小时的涨速、破圈倍数和发布时间排；发布超过 24 小时的不收。在榜满 6 小时开始降权，满 12 小时下榜；同一作者最多占 2 个名次。数字前的「↑」是比半小时前上升的名次。黄推话术、X 标记的敏感内容和社区黑名单作者不上榜。',
     hotDayHint:
-      '24 小时内发布、最近 3 小时还有人刷到的帖子，按浏览数排；同一作者最多占 2 个名次。适合回看今天错过的大帖。',
+      '24 小时内发布、最近 3 小时还有人刷到的帖子，按浏览数排；同一作者最多占 2 个名次。适合回看今天错过的热帖。',
     insightBadges: '流速与量级',
     keywords: '关键词',
     primaryNavigation: '主要导航',
@@ -282,9 +276,9 @@ export const UI_COPY = {
     queuePaused: '已暂停',
     queueCompleted: '已完成',
     queueCancelled: '已取消',
-    safetyQuota: (used: number, limit: number) => `今日安全额度 ${used}/${limit}`,
+    safetyQuota: (used: number, limit: number) => `今日已用 ${used}/${limit}`,
     queuePausedQuota: (limit: number) =>
-      `今日安全额度已到（${limit}/24h）。仍要继续可以，但被 X 临时限制的风险会变高。`,
+      `今日额度已用完（${limit}/24 小时）。仍要继续可以，但被 X 临时限制的风险会变高。`,
     queuePausedRateLimit: '短时间请求过多，已暂停。等 15 分钟后再继续。',
     pause: '暂停',
     resume: '继续',
@@ -310,7 +304,7 @@ export const UI_COPY = {
     keywordInvalid: '关键词不能为空且不能超过 80 个字符',
     keywordLimit: '最多可添加 80 个自定义关键词',
     contributeKeyword: '贡献给官方词库',
-    keywordContributed: '已匿名提交，官方审阅后会纳入词库',
+    keywordContributed: '已匿名提交，维护者审阅后会纳入词库',
     personalConfig: '备份与迁移',
     personalConfigHint:
       '只备份个人关键词和显示偏好；不会上传，不包含账号、黑白名单、关注列表或 X 登录信息。',
@@ -352,8 +346,6 @@ export const UI_COPY = {
     settings: '设置',
     globalNav: '全局',
     goBack: '返回',
-    enabled: '页面标黄',
-    enabledHint: '在评论区、时间线和通知里给可疑账号标黄框，写清命中原因。',
     groupModules: '功能',
     moduleSwitches: '模块开关',
     moduleSwitchesHint:
@@ -425,16 +417,16 @@ export const UI_COPY = {
     openXNotice: '请先打开或刷新 x.com',
     blockUnavailable: '拉黑接口暂不可用（X 变更或会话失效）；检测与标注不受影响',
     killSwitchActive: (reason?: string) =>
-      reason ? `官方暂停了拉黑操作：${reason}` : '官方暂停了社区拉黑操作',
+      reason ? `维护者已暂停拉黑：${reason}` : '维护者已暂停拉黑',
     synced: (version?: string) => (version ? `已更新至 v${version}` : '已更新'),
     upToDate: '已是最新',
     dailyBudgetHint:
-      '批量拉黑是自动化行为，预算越高风控风险越高——被 X 临时锁定、要求验证甚至封号的后果由你自行承担。清空则恢复自适应，干净账号预算会自动逐日爬升。',
-    budgetUpdated: (value: number) => `日预算已设为 ${value}`,
+      '批量拉黑是自动化行为，额度越高风控风险越高。被 X 临时锁定、要求验证甚至封号的后果由你自行承担。清空则恢复自适应，干净账号的额度会自动逐日爬升。',
+    budgetUpdated: (value: number) => `每日拉黑额度已设为 ${value}`,
     budgetHighRisk: (value: number) =>
-      `日预算已设为 ${value}。这个量级被 X 临时锁定、强制验证甚至封号的风险显著更高，由此造成的账号后果完全由你自己承担。`,
-    budgetAdaptive: '已恢复自适应预算：预算随干净日逐日自动爬升，不再封顶',
-    budgetInvalid: '日预算需为不小于 1 的数字',
+      `每日拉黑额度已设为 ${value}。这个额度被 X 临时锁定、强制验证甚至封号的风险显著更高，由此造成的账号后果完全由你自己承担。`,
+    budgetAdaptive: '已恢复自适应额度：额度随干净日逐日自动爬升，不再封顶',
+    budgetInvalid: '每日拉黑额度需为不小于 1 的数字',
     manualSyncHint: '立即重新拉取社区名单等远端数据；平时自动同步无需手动跑。',
     syncFailed: '同步失败',
     unavailable: '暂不可用',
@@ -457,8 +449,8 @@ export const UI_COPY = {
     allFiltered: 'You have seen all of these, or none match the language filter',
     replyNow: 'Reply',
     scopeLabel: 'Scope',
-    scopeMine: 'Mine',
-    scopeGlobal: 'Global',
+    scopeMine: 'My feed',
+    scopeGlobal: 'All X',
     globalUpdated: (ago: string) => `Global list · updated ${ago} ago`,
     globalUpdatedNow: 'Global list · updated just now',
     globalEmpty: 'No global hot posts yet',
@@ -489,15 +481,9 @@ export const UI_COPY = {
     filterNav: 'Filter',
     muteNav: 'Mute',
     weeklyNav: 'Weekly',
-    weeklyKicker: 'By FeedSieve',
     weeklyTitle: 'FeedSieve Weekly',
     weeklyTagline: 'A curated, noise-free community',
-    weeklyDesc:
-      'FeedSieve filters out spam accounts on X; every Friday the Weekly hands the good stuff to more people.',
     weeklyEveryFriday: 'Every Friday',
-    weeklyPoint1: 'Published every Friday, only the few worth reading',
-    weeklyPoint2: 'From X, WeChat, GitHub and blogs',
-    weeklyPoint3: 'Get a free membership once a submission is featured',
     weeklyOpen: 'Open the Weekly',
     weeklyLatest: (n: number) => `Read issue ${n}`,
     weeklyIssue: (n: number) => `Issue ${n}`,
@@ -532,7 +518,7 @@ export const UI_COPY = {
     profileOutlierRate: 'Outlier rate',
     profileCoverage: 'Collected',
     profileCoverageValue: (n: number) => `${n}`,
-    profileCoverageUnit: '',
+    profileCoverageUnit: 'posts',
     profileBaselineHint: (sample: number, since: string) =>
       `The baseline uses originals and quotes at least 24 hours old (${sample} posts); replies, reposts and promoted posts are excluded. Posts with 3× the median views count as outliers. Collecting since ${since}.`,
     profileSampleLow: (n: number) => `${n} more original posts needed for multiples`,
@@ -573,7 +559,7 @@ export const UI_COPY = {
       'Copies the 20 posts with the highest multiples (no replies) as Markdown with an analysis prompt, ready for ChatGPT or Claude.',
     profileExportHint: 'Exports every post in the current filter, with all counts and multiples.',
     profileMultipleTip: (views: string, median: string, multiple: string) =>
-      `${views} views, ${multiple} their median of ${median}`,
+      `${views} views · ${multiple} their median of ${median}`,
     profileMultipleOutlier: '3× or more counts as an outlier',
     profileSearchHint: (query: string) =>
       `Opens an X search: ${query}. Same as searching yourself; results are collected automatically, and the extension never pages through them for you.`,
@@ -593,7 +579,7 @@ export const UI_COPY = {
     profileAiMeta: (median: string, sample: number, date: string) =>
       `Median views ${median}, baseline of ${sample} posts. Collected locally by FeedSieve, as of ${date}.`,
     profileAiAsk:
-      'Analyse these posts: how the opening hooks are written, structure and pacing, and what the topics have in common. Finish with 3–5 templates I can reuse.',
+      'Analyze these posts: how the opening hooks are written, structure and pacing, and what the topics have in common. Finish with 3–5 templates I can reuse.',
     profileAiItem: (rank: number, multiple: string, views: string, likes: string, saves: string) =>
       `## ${rank}. ${multiple} · ${views} views · ${likes} likes · ${saves} bookmarks`,
     profileClear: 'Clear profile data',
@@ -630,7 +616,7 @@ export const UI_COPY = {
     followingProtectHint:
       'Accounts you follow are never marked or blocked. Sync again after you follow new people.',
     followingLastSync: 'Last synced',
-    dailyBudget: 'Daily block limit',
+    dailyBudget: 'Daily block allowance',
     manualSync: 'Community data',
     manualSyncAction: 'Sync now',
     manageBlocked: 'Block history',
@@ -720,9 +706,9 @@ export const UI_COPY = {
     queuePaused: 'Paused',
     queueCompleted: 'Completed',
     queueCancelled: 'Cancelled',
-    safetyQuota: (used: number, limit: number) => `Daily safety quota ${used}/${limit}`,
+    safetyQuota: (used: number, limit: number) => `${used}/${limit} used today`,
     queuePausedQuota: (limit: number) =>
-      `Daily safety quota reached (${limit}/24h). You can continue, but X may temporarily restrict the account.`,
+      `Today's allowance is used up (${limit} per 24 hours). You can continue, but X may temporarily restrict the account.`,
     queuePausedRateLimit:
       'Too many requests in a short window. Paused — try again in about 15 minutes.',
     pause: 'Pause',
@@ -788,14 +774,11 @@ export const UI_COPY = {
       `Merge would create ${count} keywords, above the 80-keyword limit. Use replace import instead.`,
     personalConfigImported: 'Personal config imported; only local settings changed',
     personalConfigApplyFailed: 'Import did not finish; check local settings before trying again',
-    undo: 'Restore',
-    undoAll: 'Restore all',
+    undo: 'Unblock',
+    undoAll: 'Unblock all',
     settings: 'Settings',
     globalNav: 'Global',
     goBack: 'Back',
-    enabled: 'Highlight on page',
-    enabledHint:
-      'Put a yellow box with the reason on suspicious accounts in replies, timelines and notifications.',
     groupModules: 'Features',
     moduleSwitches: 'Modules',
     moduleSwitchesHint:
@@ -876,19 +859,19 @@ export const UI_COPY = {
     synced: (version?: string) => (version ? `Updated to v${version}` : 'Updated'),
     upToDate: 'Up to date',
     dailyBudgetHint:
-      'Bulk blocking is an automated behavior — a higher budget means higher risk of temporary lock, verification walls or suspension by X, on you. Clear the field to restore adaptive budget that grows daily without a cap.',
-    budgetUpdated: (value: number) => `Daily budget set to ${value}`,
+      'Bulk blocking is automated. A higher allowance means a higher risk of a temporary lock, verification wall or suspension by X, at your own risk. Clear the field to restore an adaptive allowance that grows with every clean day, with no cap.',
+    budgetUpdated: (value: number) => `Daily block allowance set to ${value}`,
     budgetHighRisk: (value: number) =>
-      `Daily budget set to ${value}. At this level the risk of temporary lock, forced verification or suspension by X rises significantly — any account consequences are entirely yours.`,
-    budgetAdaptive: 'Adaptive budget restored: budget now grows daily via clean days with no cap',
-    budgetInvalid: 'Daily budget must be a number of at least 1',
+      `Daily block allowance set to ${value}. At this level the risk of a temporary lock, forced verification or suspension by X rises significantly, and any account consequences are entirely yours.`,
+    budgetAdaptive: 'Adaptive allowance restored: it now grows with each clean day, with no cap',
+    budgetInvalid: 'Daily block allowance must be at least 1',
     manualSyncHint:
       'Re-fetch the community lists and other remote data now; auto-sync normally needs no manual run.',
     syncFailed: 'Sync failed',
     unavailable: 'Unavailable',
     backgroundUnavailable: 'Background service is not ready',
     blockedResult: (value: number) => `${value} blocked`,
-    restoredResult: (value: number) => `${value} restored`,
+    restoredResult: (value: number) => `${value} unblocked`,
     failedResult: (value: number) => `${value} failed`,
     falsePositive: 'Not spam',
     falsePositiveHint: 'Add to your local allowlist and stop marking this account',

@@ -85,12 +85,12 @@ const COPY = {
     noAccount: 'Open an X profile or post',
     notChecked: 'Not checked yet',
     pendingOther: 'Checked once, waiting for a second check',
-    underReview: 'Community vote is tied',
+    underReview: 'Community is split',
     communityHuman: (ai: number, human: number) =>
       `Community verdict: human (AI ${ai} · human ${human})`,
     communityAi: (ai: number, human: number) => `Community verdict: AI (AI ${ai} · human ${human})`,
     communityContested: (ai: number, human: number) =>
-      `Community vote is tied: AI ${ai} · human ${human}`,
+      `Community is split: AI ${ai} · human ${human}`,
     start: 'Check',
     retest: 'Check again',
     expired: 'Result expired',
@@ -108,7 +108,7 @@ const COPY = {
     started: 'Check started on the X page',
     needXTab: 'Open X in this window first',
     voteFailed: 'Vote failed. Try later',
-    history: 'Checked',
+    history: 'My checks',
     historyEmpty: 'No accounts checked yet',
     myVote: { ai: 'My vote: AI', human: 'My vote: human' },
     checkSelf: 'Check myself',
