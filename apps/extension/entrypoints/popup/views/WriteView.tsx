@@ -14,17 +14,22 @@ import {
   capacitySummary,
   dayLabel,
   formatClock,
+  isDefaultWindows,
   localDayKey,
   nextFreeSlots,
   slotLabel,
   weekdayLabel,
   type HourCapacity,
   type ScheduleSettings,
+  type ScheduleWindow,
 } from '../../../src/lib/compose/schedule-slots';
 import {
   EMPTY_SCHEDULED_CACHE,
   getScheduledCache,
   getScheduleSettings,
+  getScheduleSetupDone,
+  setScheduleSettings,
+  setScheduleSetupDone,
   subscribeScheduledCache,
   subscribeScheduleSettings,
   upcomingTimes,
@@ -32,6 +37,7 @@ import {
 } from '../../../src/lib/compose/schedule-store';
 import { OPEN_SCHEDULED_MESSAGE } from '../../../src/lib/compose/compose-schedule';
 import { AppIcon, EmptyState, formatAgo, HelpIcon, IconButton, TipText } from './shared';
+import ScheduleSetup from './ScheduleSetup';
 import { useListPosition } from './use-list-position';
 
 const DAYS_SHOWN = 7;
@@ -56,7 +62,10 @@ const COPY = {
     noText: '（只有图片）',
     scheduled: '已排期',
     empty: '这一周没有排期',
-    emptyHint: '先设好发帖时段，或者打开 X 的预排期页同步一次。',
+    emptyHint: '在 X 发帖框点时钟图标，选「排下一条」，它就会出现在这里。',
+    emptyHintNone: '先定个节奏，X 发帖框里的「排下一条」才有空档可排。',
+    setup: '定个节奏',
+    setupDone: (n: number) => `已定好每天 ${n} 条`,
     adjust: '调整节奏',
     openScheduled: '打开 X 预排期',
     week: '一周',
@@ -88,7 +97,11 @@ const COPY = {
     noText: '(media only)',
     scheduled: 'Scheduled',
     empty: 'Nothing scheduled this week',
-    emptyHint: 'Set posting windows first, or sync X’s scheduled page once.',
+    emptyHint: 'In X’s composer, tap the clock and pick “Schedule next” — it shows up here.',
+    emptyHintNone:
+      'Set a rhythm first — then “Schedule next” in X’s composer has a slot to fill.',
+    setup: 'Set rhythm',
+    setupDone: (n: number) => `${n} a day — done`,
     adjust: 'Edit cadence',
     openScheduled: 'Open X scheduled page',
     week: 'Week',
@@ -229,6 +242,7 @@ export function WriteView({
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [weekOffset, setWeekOffset] = useState(0);
+  const [setupOpen, setSetupOpen] = useState(false);
   const rootRef = useRef<HTMLElement | null>(null);
 
   // 切走再回来：回到上次看的位置
@@ -240,15 +254,36 @@ export function WriteView({
   });
 
   useEffect(() => {
-    void getScheduleSettings().then(setSettings);
+    let cancelled = false;
+    void getScheduleSettings().then(async (next) => {
+      if (cancelled) return;
+      setSettings(next);
+      // 还没定过节奏、设置也还是出厂的：先把两个问题问完，别让人对着空日历发呆
+      if (isDefaultWindows(next.windows) && !(await getScheduleSetupDone())) {
+        if (!cancelled) setSetupOpen(true);
+      }
+    });
     void getScheduledCache().then(setCache);
     const unsubs = [subscribeScheduleSettings(setSettings), subscribeScheduledCache(setCache)];
     const timer = window.setInterval(() => setNow(Date.now()), 60_000);
     return () => {
+      cancelled = true;
       unsubs.forEach((fn) => fn());
       window.clearInterval(timer);
     };
   }, []);
+
+  async function applySetup(windows: ScheduleWindow[]): Promise<void> {
+    setSetupOpen(false);
+    setSettings(await setScheduleSettings({ windows, randomize: false }));
+    await setScheduleSetupDone();
+    notify(c.setupDone(windows.length));
+  }
+
+  function dismissSetup(): void {
+    setSetupOpen(false);
+    void setScheduleSetupDone();
+  }
 
   const occupied = useMemo(() => upcomingTimes(cache, now), [cache, now]);
   const next = useMemo(
@@ -353,6 +388,8 @@ export function WriteView({
   const selectedItem = activeItems.find((item) => item.id === selectedItemId) ?? null;
   const totalUpcoming = cache.posts.filter((post) => post.executeAt > now).length;
   const hasAnySchedule = weekDays.some((day) => day.hasItems || day.hasCapacity);
+  // 还没定过节奏，或者把时段删光了：这时候「定个节奏」才有意义
+  const noCadence = settings.windows.length === 0 || isDefaultWindows(settings.windows);
 
   async function sync(): Promise<void> {
     try {
@@ -575,8 +612,17 @@ export function WriteView({
             className="is-clean write-empty"
             extra={
               <>
-                <span className="row-meta">{c.emptyHint}</span>
+                <span className="row-meta">{noCadence ? c.emptyHintNone : c.emptyHint}</span>
                 <div className="write-empty-actions">
+                  {noCadence ? (
+                    <button
+                      type="button"
+                      className="primary-button"
+                      onClick={() => setSetupOpen(true)}
+                    >
+                      {c.setup}
+                    </button>
+                  ) : null}
                   <button type="button" className="secondary-button" onClick={onOpenSettings}>
                     {c.adjust}
                   </button>
@@ -591,6 +637,14 @@ export function WriteView({
           </EmptyState>
         )}
       </section>
+
+      {setupOpen ? (
+        <ScheduleSetup
+          language={language}
+          onApply={(windows) => void applySetup(windows)}
+          onDismiss={dismissSetup}
+        />
+      ) : null}
     </section>
   );
 }

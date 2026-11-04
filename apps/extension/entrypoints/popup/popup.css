@@ -2632,6 +2632,88 @@ input:not([type]):focus,
   gap: 8px;
 }
 
+/* ---------- 定个发帖节奏（排期页第一次打开时的引导） ---------- */
+.setup-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--pad-x);
+  background: var(--overlay-bg-strong);
+}
+
+.setup-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  width: 100%;
+  max-width: 340px;
+  padding: var(--space-6);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+  outline: none;
+  animation: setup-in 140ms ease-out;
+}
+
+@keyframes setup-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.setup-dialog h2 {
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+
+.setup-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.setup-label {
+  flex: none;
+  color: var(--muted);
+  font-size: var(--fs-base);
+}
+
+.setup-range {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.setup-range-sep {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
+.setup-preview {
+  font-size: var(--fs-base);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.setup-note {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+}
+
+.setup-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-4);
+}
+
 .write-detail {
   margin: 4px 0 8px;
   padding: 8px 10px;

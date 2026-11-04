@@ -45,7 +45,10 @@ beforeEach(() => {
         set: vi.fn(async (items: Record<string, unknown>) => Object.assign(sessionStored, items)),
       },
       local: {
-        get: vi.fn().mockResolvedValue({}),
+        // 默认当成「引导已经走完」：其它用例测的是排期台，不是这个弹窗
+        get: vi.fn(async (key: string) =>
+          key === 'scheduleSetupV1' ? { scheduleSetupV1: true } : {},
+        ),
         set: vi.fn().mockResolvedValue(undefined),
       },
       onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
@@ -80,10 +83,53 @@ async function renderWriteView(): Promise<HTMLElement> {
 }
 
 describe('发帖页只读排期台', () => {
+  it('第一次进来先问一天几条和时段，按均匀间隔铺开', async () => {
+    // 全新安装：没有设置、也没走完引导
+    (browser.storage.local.get as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      async () => ({}),
+    );
+
+    const rootEl = await renderWriteView();
+    expect(rootEl.querySelector('.setup-dialog')).not.toBeNull();
+    // 默认一天 3 条、9:00–22:00：首末贴着两头
+    expect(rootEl.querySelector('.setup-preview')?.textContent).toBe(
+      '每天 3 条 · 09:00 15:00 21:00',
+    );
+
+    const two = [...rootEl.querySelectorAll<HTMLButtonElement>('.setup-dialog .segmented button')].find(
+      (button) => button.textContent === '2',
+    );
+    if (!two) throw new Error('per-day option not found');
+    await act(async () => two.click());
+    expect(rootEl.querySelector('.setup-preview')?.textContent).toBe('每天 2 条 · 09:00 21:00');
+
+    const apply = [...rootEl.querySelectorAll<HTMLButtonElement>('.setup-dialog button')].find(
+      (button) => button.textContent === '就这样定',
+    );
+    if (!apply) throw new Error('apply button not found');
+    await act(async () => {
+      apply.click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(browser.storage.local.set).toHaveBeenCalledWith({
+      composeScheduleV1: expect.objectContaining({
+        randomize: false,
+        windows: [
+          expect.objectContaining({ start: '09:00', end: '10:00', perHour: 1 }),
+          expect.objectContaining({ start: '21:00', end: '22:00', perHour: 1 }),
+        ],
+      }),
+    });
+    expect(browser.storage.local.set).toHaveBeenCalledWith({ scheduleSetupV1: true });
+    expect(rootEl.querySelector('.setup-dialog')).toBeNull();
+  });
+
   it('显示排期数量、条目和详情，不出现写帖/排队列按钮', async () => {
     (browser.storage.local.get as unknown as ReturnType<typeof vi.fn>).mockImplementation(
       async (key: string) => {
         if (key === 'scheduledPostsV1') return { scheduledPostsV1: scheduledPosts(3) };
+        if (key === 'scheduleSetupV1') return { scheduleSetupV1: true };
         return {};
       },
     );

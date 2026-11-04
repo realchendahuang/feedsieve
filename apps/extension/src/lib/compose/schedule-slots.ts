@@ -90,6 +90,51 @@ export const DEFAULT_SCHEDULE_SETTINGS: ScheduleSettings = {
   horizonDays: 14,
 };
 
+/**
+ * 一天里均匀分布的时段：首条贴着开始、末条贴着结束前一小时。
+ * 排期页的「定个发帖节奏」用它把「一天几条 + 哪个时间段」变成能直接排的时段。
+ * 时段只有 N 小时却要 N+1 条时，最多排 N 条（一小时只放一条）。
+ */
+export function evenWindows(perDay: number, startHour: number, endHour: number): ScheduleWindow[] {
+  const start = Math.max(0, Math.min(23, Math.round(startHour)));
+  const end = Math.max(start + 1, Math.min(24, Math.round(endHour)));
+  const span = end - start;
+  const count = Math.max(1, Math.min(Math.round(perDay) || 1, span));
+  const hours: number[] = [];
+  if (count === 1) {
+    hours.push(start + Math.floor((span - 1) / 2));
+  } else {
+    for (let i = 0; i < count; i += 1) {
+      hours.push(start + Math.round((i * (span - 1)) / (count - 1)));
+    }
+  }
+  return [...new Set(hours)]
+    .sort((a, b) => a - b)
+    .map((hour, index) => ({
+      id: `w${index + 1}`,
+      days: [...ALL_DAYS],
+      start: formatClock(hour * 60),
+      end: formatClock((hour + 1) * 60),
+      perHour: 1,
+    }));
+}
+
+/** 还是出厂那几段（用户没动过发帖节奏）——只有这种时候才值得弹「定个节奏」。 */
+export function isDefaultWindows(windows: readonly ScheduleWindow[]): boolean {
+  const defaults = DEFAULT_SCHEDULE_SETTINGS.windows;
+  if (windows.length !== defaults.length) return false;
+  return windows.every((window, index) => {
+    const preset = defaults[index];
+    return (
+      !!preset &&
+      window.start === preset.start &&
+      window.end === preset.end &&
+      window.perHour === preset.perHour &&
+      window.days.join(',') === preset.days.join(',')
+    );
+  });
+}
+
 /** `9:5` / `09:05` → 545；不合法返回 null。 */
 export function parseClock(value: unknown): number | null {
   if (typeof value !== 'string') return null;

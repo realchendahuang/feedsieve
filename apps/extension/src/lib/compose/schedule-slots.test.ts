@@ -5,7 +5,9 @@ import {
   capacityDays,
   capacitySummary,
   dayLabel,
+  evenWindows,
   formatClock,
+  isDefaultWindows,
   nextFreeSlots,
   normalizeScheduleSettings,
   parseClock,
@@ -197,6 +199,37 @@ describe('排下一条', () => {
     // 周一排满，下一个周一在 7 天后，正好超出窗口
     const taken = [at(2026, 11, 2, 9, 30)];
     expect(nextFreeSlots(s, taken, at(2026, 11, 2, 4), 1)).toEqual([]);
+  });
+});
+
+describe('定个发帖节奏', () => {
+  it('一天 3 条：首条贴着开始，末条贴着结束前一小时', () => {
+    const windows = evenWindows(3, 9, 22);
+    expect(windows.map((w) => w.start)).toEqual(['09:00', '15:00', '21:00']);
+    expect(windows.map((w) => w.end)).toEqual(['10:00', '16:00', '22:00']);
+    expect(windows.every((w) => w.perHour === 1 && w.days.join('') === '0123456')).toBe(true);
+  });
+
+  it('一天 1 条：放在时间段的中间', () => {
+    expect(evenWindows(1, 9, 22).map((w) => w.start)).toEqual(['15:00']);
+    expect(evenWindows(1, 9, 10).map((w) => w.start)).toEqual(['09:00']);
+  });
+
+  it('时段装不下这么多条：一个小时一条，装几条算几条', () => {
+    expect(evenWindows(5, 9, 12)).toHaveLength(3);
+    expect(evenWindows(5, 9, 12).map((w) => w.start)).toEqual(['09:00', '10:00', '11:00']);
+  });
+
+  it('排到午夜：最后一段收在 24:00，不会冒出 25:00', () => {
+    const windows = evenWindows(4, 20, 24);
+    expect(windows.map((w) => w.start)).toEqual(['20:00', '21:00', '22:00', '23:00']);
+    expect(windows[windows.length - 1]!.end).toBe('24:00');
+  });
+
+  it('认出出厂默认，改过的就不算', () => {
+    expect(isDefaultWindows(DEFAULT_SCHEDULE_SETTINGS.windows)).toBe(true);
+    expect(isDefaultWindows(evenWindows(3, 9, 22))).toBe(false);
+    expect(isDefaultWindows([])).toBe(false);
   });
 });
 

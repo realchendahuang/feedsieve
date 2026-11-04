@@ -14,6 +14,8 @@ import { isMediaUrl, type ScheduledEvent, type ScheduledPost } from './scheduled
 export const SCHEDULE_SETTINGS_KEY = 'composeScheduleV1';
 export const SCHEDULED_CACHE_KEY = 'scheduledPostsV1';
 export const SCHEDULE_LAST_PICK_KEY = 'scheduleLastPickV1';
+/** 「定个发帖节奏」的引导走完没有（跳过也算，别反复弹） */
+export const SCHEDULE_SETUP_KEY = 'scheduleSetupV1';
 export const SCHEDULE_ASSIGNMENTS_KEY = 'scheduleAssignmentsV1';
 
 export interface ScheduledCache {
@@ -245,6 +247,16 @@ export async function setScheduleSettings(
 
 export function subscribeScheduleSettings(onChange: (settings: ScheduleSettings) => void) {
   return subscribeKey(SCHEDULE_SETTINGS_KEY, normalizeScheduleSettings, onChange);
+}
+
+/** 排期页的「定个发帖节奏」引导走完没有（用户主动跳过也算，别反复弹）。 */
+export async function getScheduleSetupDone(): Promise<boolean> {
+  const stored = await browser.storage.local.get(SCHEDULE_SETUP_KEY);
+  return stored[SCHEDULE_SETUP_KEY] === true;
+}
+
+export async function setScheduleSetupDone(): Promise<void> {
+  await browser.storage.local.set({ [SCHEDULE_SETUP_KEY]: true });
 }
 
 export async function getScheduledCache(): Promise<ScheduledCache> {
