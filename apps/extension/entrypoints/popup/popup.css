@@ -1217,17 +1217,14 @@ input:not([type]):focus,
 }
 
 /* 侧边栏拖得很窄时，名字比量级重要：先收起量级 */
-@container (max-width: 260px) {
-  .post-head .tier-pill {
-    display: none;
-  }
-}
-
-/* 作者行分两段：左边作者信息可以截断，右边流速永远完整显示 */
+/* 作者行两行：第一行身份（名次 / 名字 / 蓝标 / @handle）+ 右上角流速，
+   第二行时间 · 量级。420px 里一行塞五样只能互相截断（handle 变成「@de…」），
+   拆成两行后身份完整，量级也不必再按容器宽度隐藏。 */
 .post-head {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 6px;
+  column-gap: 6px;
   min-width: 0;
   color: var(--muted);
   font-size: var(--fs-md);
@@ -1236,7 +1233,6 @@ input:not([type]):focus,
 }
 
 .post-who {
-  flex: 1 1 auto;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -1244,9 +1240,30 @@ input:not([type]):focus,
   overflow: hidden;
 }
 
-/* 窄宽度下的收缩顺序：先截 handle，再截名字；时间、量级、流速不截。
-   （420px 下这一行是五样挤在一起，见 AGENTS 记录的密度问题；先按既有优先级，
-   改名要看 2026-11 的评审结论。） */
+.post-sub {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  line-height: 18px;
+}
+
+/* 第二行第一项不带分隔点 */
+.post-sub .post-meta::before {
+  content: none;
+}
+
+/* 第二行的量级比第一行小一档（原 .post-head .tier-pill 是 15px，这里要压住） */
+.post-head .post-sub .tier-pill {
+  font-size: var(--fs-sm);
+}
+
+/* 第一行只剩身份三件：先截名字，handle 保持完整——「@de…」谁也认不出是谁；
+   时间、量级、流速在第二行，不参与收缩。 */
 .post-name {
   flex: 0 1 auto;
   min-width: 2em;
@@ -1268,7 +1285,7 @@ input:not([type]):focus,
 }
 
 .post-handle {
-  flex: 0 1000 auto;
+  flex: none;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2946,6 +2963,28 @@ input:not([type]):focus,
 }
 
 @media (max-width: 400px) {
+  /* 300px 侧栏：作者行第一行只放身份，流速挪到第二行右端——
+     否则流速吃掉 76px，handle 还是会被截成「@demo_c」。 */
+  .post-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    row-gap: 1px;
+  }
+
+  .post-who {
+    flex: 1 1 100%;
+  }
+
+  .post-sub {
+    order: 2;
+    flex: 1 1 auto;
+  }
+
+  .post-head .velocity-tag {
+    order: 3;
+  }
+
   .section-nav {
     gap: 2px;
     padding: 0 4px;

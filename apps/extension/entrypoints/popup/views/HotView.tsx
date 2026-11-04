@@ -1112,7 +1112,9 @@ export default function HotView({ language, sendToXPage, onOpenSettings }: HotVi
                 >
                   <Avatar item={item} />
                   <div className="post-main">
-                    {/* 和 X 一样的作者行：名字 蓝标 @handle · 时间，后面接量级；流速在右上角 */}
+                    {/* 作者行分两行：第一行名次 + 名字 + 蓝标 + @handle，流速在右上角；
+                        第二行时间 · 量级。420px 里一行塞五样只会互相截断（handle 变成
+                        「@de…」），拆开后名字和 handle 都能读全。 */}
                     <div className="post-head">
                       <div className="post-who">
                         {rank !== null ? (
@@ -1121,22 +1123,6 @@ export default function HotView({ language, sendToXPage, onOpenSettings }: HotVi
                         <span className="post-name">{item.displayName ?? item.handle}</span>
                         {item.verified ? <VerifiedMark label={t.verified} /> : null}
                         <span className="post-handle">@{item.handle}</span>
-                        {timeText !== null ? (
-                          <span
-                            className={`post-meta${seenMode ? ' is-key' : ''}`}
-                            title={timeTitle}
-                          >
-                            {timeText}
-                          </span>
-                        ) : null}
-                        {item.tier !== null && item.followers !== undefined ? (
-                          <TierPill
-                            tier={item.tier}
-                            followers={item.followers}
-                            language={language}
-                            highlight={activeSort === 'followers'}
-                          />
-                        ) : null}
                         {ranked && isGlobal ? (
                           <RankTrend item={item} hasReference={hasReference} language={language} />
                         ) : null}
@@ -1149,6 +1135,26 @@ export default function HotView({ language, sendToXPage, onOpenSettings }: HotVi
                           />
                           {velocity.text}
                         </span>
+                      ) : null}
+                      {timeText !== null || (item.tier !== null && item.followers !== undefined) ? (
+                        <div className="post-sub">
+                          {timeText !== null ? (
+                            <span
+                              className={`post-meta${seenMode ? ' is-key' : ''}`}
+                              title={timeTitle}
+                            >
+                              {timeText}
+                            </span>
+                          ) : null}
+                          {item.tier !== null && item.followers !== undefined ? (
+                            <TierPill
+                              tier={item.tier}
+                              followers={item.followers}
+                              language={language}
+                              highlight={activeSort === 'followers'}
+                            />
+                          ) : null}
+                        </div>
                       ) : null}
                     </div>
                     {text ? <p className="post-text">{text}</p> : null}
