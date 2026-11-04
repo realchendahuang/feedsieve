@@ -64,14 +64,19 @@ export default function WeeklyView({ language }: { language: UiLanguage }) {
       </a>
 
       <section className="weekly-body">
-        <h1>{t.weeklyTitle}</h1>
-
-        {issue?.title ? (
-          <div className="weekly-issue">
-            <span className="weekly-issue-no">{t.weeklyIssue(issue.number)}</span>
-            <span className="weekly-issue-title">{issue.title}</span>
-            <span className="weekly-issue-count">{t.weeklyPostCount(issue.postCount)}</span>
-          </div>
+        {/* 封面图里已经写着刊名、期号、本期标题和条数；只有封面挂了才在这里补文字，
+            否则同一页把同一件事说两遍。 */}
+        {coverFailed ? (
+          <>
+            <h1>{t.weeklyTitle}</h1>
+            {issue?.title ? (
+              <div className="weekly-issue">
+                <span className="weekly-issue-no">{t.weeklyIssue(issue.number)}</span>
+                <span className="weekly-issue-title">{issue.title}</span>
+                <span className="weekly-issue-count">{t.weeklyPostCount(issue.postCount)}</span>
+              </div>
+            ) : null}
+          </>
         ) : null}
 
         <div className="weekly-actions">

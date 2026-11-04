@@ -49,21 +49,38 @@ function hrefs(): Array<string | null> {
   return [...container.querySelectorAll('a')].map((anchor) => anchor.getAttribute('href'));
 }
 
+/** 把封面图打到失败：专属于这一期的封面先退站点封面，再失败才落到品牌兜底。 */
+async function failCover(): Promise<void> {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const image = container.querySelector('img');
+    if (!image) return;
+    await act(async () => {
+      image.dispatchEvent(new Event('error'));
+    });
+  }
+}
+
 describe('周刊推荐位', () => {
   it('展示最新一期：期号、标题、条数、期页和这一期的封面', async () => {
     mockFetch(LATEST);
     await render('zh');
 
-    expect(container.textContent).toContain('小筛子周刊');
-    expect(container.textContent).toContain('第 2 期');
-    expect(container.textContent).toContain('这一期的标题');
-    expect(container.textContent).toContain('7 条');
+    // 封面在的时候，期号和本期标题由封面承载，正文不再重复一遍
+    expect(container.querySelector('.weekly-issue')).toBeNull();
+    expect(container.textContent).toContain('读第 2 期');
 
     const image = container.querySelector<HTMLImageElement>('img');
     expect(image?.getAttribute('src')).toBe('https://feedsieve.win/weekly/og/issue/2.png?v=2');
     expect(hrefs()).toContain('https://feedsieve.win/weekly/issues/2');
     expect(hrefs()).toContain('https://feedsieve.win/weekly');
     expect(hrefs()).toContain('https://feedsieve.win/weekly/feed.xml');
+
+    // 封面挂了才用文字把期号、标题、条数补回来
+    await failCover();
+    expect(container.textContent).toContain('小筛子周刊');
+    expect(container.textContent).toContain('第 2 期');
+    expect(container.textContent).toContain('这一期的标题');
+    expect(container.textContent).toContain('7 条');
   });
 
   it('接口不可用时退回站点封面和第 1 期，不显示错误', async () => {
@@ -108,7 +125,8 @@ describe('周刊推荐位', () => {
     mockFetch(LATEST);
     await render('en');
     expect(container.textContent).toContain('FeedSieve Weekly');
-    expect(container.textContent).toContain('Issue 2');
     expect(container.textContent).toContain('Read issue 2');
+    await failCover();
+    expect(container.textContent).toContain('Issue 2');
   });
 });
