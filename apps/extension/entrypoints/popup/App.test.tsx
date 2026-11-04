@@ -392,6 +392,22 @@ describe('popup App 渲染冒烟', () => {
     expect(rootEl.textContent).toContain('Detection level');
   });
 
+  it('二级页标题已经含父级名时，返回按钮不再重复一遍', async () => {
+    const rootEl = renderApp();
+    await openModuleSettings(rootEl, '落笔');
+    const head = rootEl.querySelector('.subpage-head')!;
+    expect(head.querySelector('h2')?.textContent).toBe('落笔设置');
+    // 标题里已经有「落笔」，返回按钮只留箭头，读屏名不变
+    expect(head.querySelector('.back-button')?.textContent).toBe('');
+    expect(head.querySelector('.back-button')?.getAttribute('aria-label')).toBe('返回 · 落笔');
+
+    // 父级名和标题不是一个词的二级页，返回按钮照旧写父级名
+    await openGlobal(rootEl);
+    await act(async () => navRow(rootEl, '数据与隐私').click());
+    await waitForLazy(() => rootEl.querySelector('.subpage-head h2')?.textContent === '数据与隐私');
+    expect(rootEl.querySelector('.subpage-head .back-button')?.textContent).toBe('调校');
+  });
+
   it('降噪二级 tab：水军 / 伪人 / 禁语，切走再切回停在原处', async () => {
     const rootEl = renderApp();
     await waitForLazy(() => rootEl.querySelector('.section-subnav button') !== null);

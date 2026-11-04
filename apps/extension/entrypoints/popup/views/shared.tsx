@@ -436,6 +436,9 @@ export function IconButton({
 /**
  * 二级页顶部：‹ 父级名 + 页面标题。
  * 调校、模块设置、静音三处二级页共用；返回按钮的 aria-label 固定为「返回 · 父级名」。
+ *
+ * 标题本身已经带着父级名时（淘金设置 ← 淘金）返回按钮只留箭头：
+ * 顶上那格 tab 也写着「淘金」，一行里连出三次就成了废话。
  */
 export function SubpageHeader({
   language,
@@ -444,20 +447,21 @@ export function SubpageHeader({
   onBack,
 }: {
   language: UiLanguage;
-  title: ReactNode;
+  title: string;
   backLabel: string;
   onBack: () => void;
 }) {
+  const showBackLabel = !title.startsWith(backLabel);
   return (
     <header className="subpage-head">
       <button
         type="button"
-        className="back-button"
+        className={`back-button${showBackLabel ? '' : ' is-icon'}`}
         aria-label={`${UI_COPY[language].goBack} · ${backLabel}`}
         onClick={onBack}
       >
         <AppIcon name="chevron" size={14} className="is-back" />
-        {backLabel}
+        {showBackLabel ? backLabel : null}
       </button>
       <h2>{title}</h2>
     </header>

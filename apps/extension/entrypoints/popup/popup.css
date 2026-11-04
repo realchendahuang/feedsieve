@@ -1771,6 +1771,12 @@ input:not([type]):focus,
   color: var(--ink);
 }
 
+/* 只剩箭头时收窄，但宽度不低于 24px 的点击目标，也别把标题顶得离箭头老远 */
+.back-button.is-icon {
+  min-width: var(--control-24);
+  padding: 0 6px;
+}
+
 .subpage-head h2 {
   font-size: var(--fs-md);
   font-weight: 600;
