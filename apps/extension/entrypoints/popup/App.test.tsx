@@ -1152,7 +1152,7 @@ describe('popup App 渲染冒烟', () => {
     );
   });
 
-  it('支持在当前页面卡片浏览推文帖子正文，并可移除误伤项后再一键拉黑', async () => {
+  it('支持在当前页面卡片浏览帖子正文，并可移除误伤项后再一键拉黑', async () => {
     vi.stubGlobal('browser', {
       storage: {
         local: {

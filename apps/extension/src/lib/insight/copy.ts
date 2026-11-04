@@ -9,9 +9,9 @@ import type { UiLanguage } from '../platform/i18n';
 
 export const INSIGHT_COPY = {
   zh: {
-    velocityTitle: { none: '当前流速', hot: '正在火', rocket: '正在爆' },
+    velocityTitle: { none: '当前流速', hot: '正在升温', rocket: '正在爆' },
     velocityNow: '当前流速',
-    projected: '预计 24h 浏览',
+    projected: '预计 24 小时浏览',
     views: '浏览',
     likes: '点赞',
     replies: '回复',
@@ -19,11 +19,11 @@ export const INSIGHT_COPY = {
     quotes: '引用',
     bookmarks: '收藏',
     breakout: '破圈',
-    breakoutValue: (x: string) => `浏览是作者粉丝的 ${x} 倍`,
-    viral: '爆帖指数',
+    breakoutValue: (x: string) => `浏览是博主粉丝的 ${x} 倍`,
+    viral: '传播指数',
     coldStart: '发出不到 2 小时、曝光不足 200：X 正在给它试水推荐',
     velocityFoot: '按 X 推荐算法的浏览衰减模型估算',
-    tierTitle: (name: string, range: string) => `${name}创作者 · ${range}`,
+    tierTitle: (name: string, range: string) => `${name}博主 · ${range}`,
     followers: '粉丝',
     following: '关注',
     ratio: '关注比',

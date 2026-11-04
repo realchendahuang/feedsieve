@@ -153,7 +153,7 @@ export function createShareMenu(deps: {
     ];
     if (isFocalTweet(article)) {
       items.push(
-        buildItem(template, zh ? '复制推文与评论' : 'Copy post and replies', THREAD_ICON, () => {
+        buildItem(template, zh ? '复制帖子与评论' : 'Copy post and replies', THREAD_ICON, () => {
           const tweet = readTweet(article);
           if (tweet) {
             void copy(threadToMarkdown(tweet, collectReplies(article), deps.getLanguage()));

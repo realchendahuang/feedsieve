@@ -263,14 +263,14 @@ describe('hover content', () => {
     const zh = velocityHover(store.insight('1', NOW)!, 'zh');
     expect(zh.title).toBe('📈 当前流速');
     expect(zh.rows.map(([label]) => label)).toEqual(
-      expect.arrayContaining(['当前流速', '预计 24h 浏览', '浏览', '回复']),
+      expect.arrayContaining(['当前流速', '预计 24 小时浏览', '浏览', '回复']),
     );
     expect(zh.notes?.[0]).toContain('试水');
     const en = velocityHover(store.insight('1', NOW)!, 'en');
     expect(en.rows[0]?.[0]).toBe('Velocity');
 
     const tier = tierHover({ followers: 3_000, followingCount: 3_100 }, 2, 'zh', NOW);
-    expect(tier.title).toBe('SPROUT · 新芽创作者 · 100–1 千粉');
+    expect(tier.title).toBe('SPROUT · 新芽博主 · 100–1 千粉');
     expect(tier.notes).toEqual(expect.arrayContaining([expect.stringContaining('互关号')]));
   });
 });

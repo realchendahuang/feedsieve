@@ -195,7 +195,7 @@ export const UI_COPY = {
     manageBlocked: '拉黑记录',
     falsePositiveList: '白名单',
     insightBadgesHint:
-      '推文右上角显示当前流速（每小时浏览；绿色平稳，红色正在火）；作者名旁显示量级图标和粉丝数。悬停看量级、破圈倍数和详细解释。只用当前页面已加载的数据，不上传。',
+      '帖子右上角显示当前流速（每小时浏览；绿色平稳，红色正在火）；作者名旁显示量级图标和粉丝数。悬停看量级、破圈倍数和详细解释。只用当前页面已加载的数据，不上传。',
     profileLine: '主页人气行',
     profileLineHint:
       '在 X 主页资料卡下显示一行人气数据：量级、粉丝、关注比、中位浏览、爆款率和已收条数；点这一行打开主页洞察。',
@@ -269,7 +269,7 @@ export const UI_COPY = {
     noPostContent: '未抓取到正文',
     refreshPage: '刷新当前页面清单',
     noBlocked: '还没有拉黑记录',
-    blockedTweet: '看推文',
+    blockedTweet: '看帖子',
     missedAccount: '漏网账号',
     missedAccountHint: '输入 @用户名或粘贴 X 个人主页链接',
     markSpamAndBlock: '拉黑',
@@ -395,7 +395,7 @@ export const UI_COPY = {
     articleHelperHint:
       '在 X 文章编辑器里粘贴 Markdown 自动排版（标题、列表、引用、加粗、链接、代码块），开头的 # 标题自动填进文章标题；右下角显示字数、阅读时长和大纲，可导入 .md 文件。⌘⇧V 粘贴原文。',
     moduleShare: '分享菜单',
-    moduleShareHint: '在 X 的分享菜单里加「复制为 Markdown」「复制推文与评论」。',
+    moduleShareHint: '在 X 的分享菜单里加「复制为 Markdown」「复制帖子与评论」。',
     hotSettings: '淘金设置',
     profileSettings: '阅人设置',
     writeSettings: '落笔设置',
@@ -412,7 +412,7 @@ export const UI_COPY = {
     autoContribute: '名单上传',
     localOnly: '仅本地运行',
     localOnlyHint:
-      '开启后只在本机识别和拉黑。关闭时，你确认拉黑的账号会上传账号名、判断依据与其公开发布的推文/简介，用于防垃圾与纠错。',
+      '开启后只在本机识别和拉黑。关闭时，你确认拉黑的账号会上传账号名、判断依据与其公开发布的帖子/简介，用于防垃圾与纠错。',
     allowlistEmpty: '还没有白名单账号',
     recommendListTitle: '推荐白名单',
     recommendListEmpty: '暂无',
@@ -706,7 +706,7 @@ export const UI_COPY = {
     noPostContent: 'No post content captured',
     refreshPage: 'Refresh accounts on this page',
     noBlocked: 'No blocked accounts yet',
-    blockedTweet: 'View tweet',
+    blockedTweet: 'View post',
     missedAccount: 'Missed account',
     missedAccountHint: 'Enter an @handle or paste an X profile URL',
     markSpamAndBlock: 'Block',
@@ -856,7 +856,7 @@ export const UI_COPY = {
     autoContribute: 'List uploads',
     localOnly: 'Local-only mode',
     localOnlyHint:
-      'Keep detection and blocking on this device without community uploads. When uploads are on, accounts you block send their handle, the evidence behind the call, and their publicly posted tweet/bio for spam analysis and correction.',
+      'Keep detection and blocking on this device without community uploads. When uploads are on, accounts you block send their handle, the evidence behind the call, and their publicly visible posts and bio for spam analysis and correction.',
     allowlistEmpty: 'No allowlisted accounts yet',
     recommendListTitle: 'Recommended',
     recommendListEmpty: 'None yet',
