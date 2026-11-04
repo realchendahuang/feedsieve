@@ -51,7 +51,7 @@ export const UI_COPY = {
     filterNav: '黄推水军',
     noiseNav: '降噪',
     muteNav: '关键词',
-    weeklyNav: '拾遗',
+    weeklyNav: '拾穗',
     hotTabTitle: '正在火的帖子',
     profileTabTitle: '博主的数据画像',
     writeTabTitle: '发帖时间与辅助',
