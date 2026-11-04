@@ -85,6 +85,8 @@
   --control-btn: 32px;
   --control-btn-sm: 30px;
   --control-text: 26px;
+  /* 输入框、下拉：和次按钮同高，一行里放得下 */
+  --control-input: 30px;
 
   /* 徽章：数字只有这一套（顶栏 16px 高度是 38px 导航条的例外，单独写） */
   --badge-height: 18px;
@@ -252,8 +254,8 @@ ol {
 
 .section-nav .nav-settings {
   align-self: center;
-  width: 28px;
-  height: 28px;
+  width: var(--control-28);
+  height: var(--control-28);
   margin-left: auto;
   padding: 0;
   border-radius: 6px;
@@ -488,7 +490,7 @@ a.secondary-button {
 /* 热帖排序：选项多，用下拉；外观和 segmented 一致 */
 .sort-select {
   flex: none;
-  height: 28px;
+  height: var(--control-input);
   padding: 0 24px 0 10px;
   border: 0;
   border-radius: 7px;
@@ -529,6 +531,7 @@ a.secondary-button {
 
 .switch span {
   position: relative;
+  /* 轨道是图形尺寸，不进控件阶梯；命中区由 .switch 的 24px 兜底 */
   width: 28px;
   height: 16px;
   border-radius: 999px;
@@ -614,7 +617,7 @@ a.secondary-button {
 input[type='text'],
 input:not([type]),
 .number-input {
-  height: 32px;
+  height: var(--control-input);
   padding: 0 10px;
   border: 1px solid var(--line-strong);
   border-radius: 6px;
@@ -674,7 +677,7 @@ input:not([type]):focus,
 .manual-reason-select {
   flex: 0 0 auto;
   max-width: 140px;
-  height: 32px;
+  height: var(--control-input);
   padding: 0 26px 0 10px;
   border: 1px solid var(--line-strong);
   border-radius: 6px;
@@ -1043,7 +1046,7 @@ input:not([type]):focus,
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  height: 28px;
+  height: var(--control-28);
   padding: 0 12px;
   border: 0;
   border-radius: 999px;
@@ -1075,8 +1078,8 @@ input:not([type]):focus,
   left: 6px;
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: var(--control-28);
+  height: var(--control-28);
   border: 0;
   border-radius: 50%;
   background: none;
@@ -2262,7 +2265,7 @@ input:not([type]):focus,
 .google-search input {
   flex: 1 1 auto;
   min-width: 0;
-  height: 28px;
+  height: var(--control-input);
 }
 
 .google-search .primary-button {
@@ -2758,7 +2761,7 @@ input:not([type]):focus,
 
 .write-time-input {
   width: 92px;
-  height: 28px;
+  height: var(--control-input);
   padding: 0 6px;
   font-variant-numeric: tabular-nums;
 }
@@ -3036,7 +3039,7 @@ input:not([type]):focus,
 .mute-edit-input {
   flex: 1 1 auto;
   min-width: 0;
-  height: 32px;
+  height: var(--control-input);
 }
 
 .mute-item.is-editing {
@@ -3132,7 +3135,7 @@ input:not([type]):focus,
 .mute-library-search {
   flex: 1 1 auto;
   min-width: 0;
-  height: 32px;
+  height: var(--control-input);
   padding: 0 10px;
   border: 1px solid var(--line-strong);
   border-radius: 6px;
