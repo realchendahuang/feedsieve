@@ -18,7 +18,7 @@ import {
 import { getCommunitySettings } from '../../../src/lib/community/community-store';
 import { contributeKeywordPhrases } from '../../../src/lib/community/contribute';
 import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
-import { AppIcon, HelpIcon, OfficialLinkIcon, SkeletonList, Toggle } from './shared';
+import { AppIcon, EmptyState, HelpIcon, OfficialLinkIcon, SkeletonList, Toggle } from './shared';
 
 interface KeywordsViewProps {
   language: UiLanguage;
@@ -148,7 +148,7 @@ export default function KeywordsView({ language, notify }: KeywordsViewProps) {
           ))}
         </ul>
       ) : (
-        <p className="account-meta">{t.noCustomKeywords}</p>
+        <EmptyState>{t.noCustomKeywords}</EmptyState>
       )}
 
       <section className="group">

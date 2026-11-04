@@ -16,7 +16,7 @@ import {
 import { setScheduleSettings } from '../../../../src/lib/compose/schedule-store';
 import { getSelfHandle } from '../../../../src/lib/community/following-allowlist';
 import type { UiLanguage } from '../../../../src/lib/platform/i18n';
-import { AppIcon, HelpIcon, IconButton, Row, Toggle } from '../shared';
+import { AppIcon, EmptyState, HelpIcon, IconButton, Row, Toggle } from '../shared';
 import { asCatalogEntry } from '../profile-model';
 
 const COPY = {
@@ -204,7 +204,7 @@ export default function CadencePage({
         </button>
       </Row>
       {schedule.windows.length === 0 ? (
-        <p className="row-meta write-warn">{t.previewEmpty}</p>
+        <EmptyState>{t.previewEmpty}</EmptyState>
       ) : null}
       {schedule.windows.map((window) => (
         <div className="cadence-window" key={window.id}>

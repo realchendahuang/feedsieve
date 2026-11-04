@@ -158,7 +158,7 @@ export default function AllowlistPage({ language, notify, recommendList }: Allow
               ))}
             </ul>
           ) : (
-            <p className="account-meta">{t.recommendListEmpty}</p>
+            <EmptyState>{t.recommendListEmpty}</EmptyState>
           )
         ) : null}
       </div>
