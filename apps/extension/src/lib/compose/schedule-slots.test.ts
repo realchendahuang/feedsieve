@@ -8,6 +8,7 @@ import {
   evenWindows,
   formatClock,
   isDefaultWindows,
+  maxPerDay,
   nextFreeSlots,
   normalizeScheduleSettings,
   parseClock,
@@ -57,7 +58,7 @@ describe('parseClock / normalize', () => {
     expect(s.windows).toHaveLength(2);
     expect(s.windows.map((w) => w.id)).toEqual(['a', 'a-2']);
     expect(s.windows[0]!.days).toEqual([1, 6]);
-    expect(s.windows[1]!.perHour).toBe(3);
+    expect(s.windows[1]!.perHour).toBe(4);
     expect(s.minGapMinutes).toBe(60);
     expect(s.leadMinutes).toBe(30);
     expect(s.randomize).toBe(false);
@@ -146,9 +147,10 @@ describe('排下一条', () => {
       randomize: false,
     });
     expect(nextFreeSlots(s, [], at(2026, 11, 2, 8, 55), 1)).toEqual([at(2026, 11, 2, 9, 5)]);
+    // 第二条按小时等分（perHour 2 → :00 / :30），不会贴着第一条排
     expect(nextFreeSlots(s, [], at(2026, 11, 2, 8, 55), 2)).toEqual([
       at(2026, 11, 2, 9, 5),
-      at(2026, 11, 2, 9, 20),
+      at(2026, 11, 2, 9, 30),
     ]);
   });
 
@@ -215,9 +217,30 @@ describe('定个发帖节奏', () => {
     expect(evenWindows(1, 9, 10).map((w) => w.start)).toEqual(['09:00']);
   });
 
-  it('时段装不下这么多条：一个小时一条，装几条算几条', () => {
-    expect(evenWindows(5, 9, 12)).toHaveLength(3);
-    expect(evenWindows(5, 9, 12).map((w) => w.start)).toEqual(['09:00', '10:00', '11:00']);
+  it('时段只有 3 小时也要 5 条：每小时多放一条，凑够 5 条', () => {
+    const windows = evenWindows(5, 9, 12);
+    expect(windows.map((w) => w.start)).toEqual(['09:00', '10:00', '11:00']);
+    expect(windows.map((w) => w.perHour)).toEqual([2, 1, 2]);
+    expect(windows.reduce((sum, w) => sum + w.perHour, 0)).toBe(5);
+  });
+
+  it('一天 20 条 / 13 小时：每小时 1–2 条，凑够 20 条', () => {
+    const windows = evenWindows(20, 9, 22);
+    expect(windows.reduce((sum, w) => sum + w.perHour, 0)).toBe(20);
+    expect(Math.max(...windows.map((w) => w.perHour))).toBe(2);
+    expect(windows[0]!.start).toBe('09:00');
+    expect(windows[windows.length - 1]!.start).toBe('21:00');
+  });
+
+  it('一天 40 条 / 13 小时：每小时 3–4 条，凑够 40 条', () => {
+    const windows = evenWindows(40, 9, 22);
+    expect(windows.reduce((sum, w) => sum + w.perHour, 0)).toBe(40);
+    expect(Math.max(...windows.map((w) => w.perHour))).toBe(4);
+  });
+
+  it('一天最多多少条：时长 × 每小时上限', () => {
+    expect(maxPerDay(9, 22)).toBe(52);
+    expect(evenWindows(200, 9, 22).reduce((sum, w) => sum + w.perHour, 0)).toBe(52);
   });
 
   it('排到午夜：最后一段收在 24:00，不会冒出 25:00', () => {

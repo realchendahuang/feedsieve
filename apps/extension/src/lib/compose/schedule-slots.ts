@@ -61,7 +61,7 @@ export interface CapacityDay {
   free: number;
 }
 
-export const PER_HOUR_OPTIONS = [1, 2, 3] as const;
+export const PER_HOUR_OPTIONS = [1, 2, 3, 4] as const;
 export const GAP_OPTIONS = [0, 10, 15, 30, 60, 120] as const;
 export const LEAD_OPTIONS = [0, 5, 10, 30, 60] as const;
 export const HORIZON_OPTIONS = [7, 14, 30] as const;
@@ -69,7 +69,8 @@ export const HORIZON_OPTIONS = [7, 14, 30] as const;
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
 const MINUTE_MS = 60_000;
 const DAY_MS = 24 * 60 * MINUTE_MS;
-const MAX_PER_HOUR = 3;
+/** 一个小时的排期上限：再密就只能靠用户自己改时段了 */
+const MAX_PER_HOUR = 4;
 
 function cloneWindows(windows: readonly ScheduleWindow[]): ScheduleWindow[] {
   return windows.map((window) => ({ ...window, days: [...window.days] }));
@@ -90,33 +91,56 @@ export const DEFAULT_SCHEDULE_SETTINGS: ScheduleSettings = {
   horizonDays: 14,
 };
 
+/** 这段时长里一天最多能排几条（一小时最多 MAX_PER_HOUR 条）。 */
+export function maxPerDay(startHour: number, endHour: number): number {
+  const start = Math.max(0, Math.min(23, Math.round(startHour)));
+  const end = Math.max(start + 1, Math.min(24, Math.round(endHour)));
+  return (end - start) * MAX_PER_HOUR;
+}
+
 /**
  * 一天里均匀分布的时段：首条贴着开始、末条贴着结束前一小时。
  * 排期页的「定个发帖节奏」用它把「一天几条 + 哪个时间段」变成能直接排的时段。
- * 时段只有 N 小时却要 N+1 条时，最多排 N 条（一小时只放一条）。
+ *
+ * 条数比小时数多时（一天 20 条、时段只有 13 小时），按中心对齐把条数摊到各小时，
+ * 有的小时 1 条、有的 2 条，隔开放；一小时最多 MAX_PER_HOUR 条，再多就装不下了。
  */
 export function evenWindows(perDay: number, startHour: number, endHour: number): ScheduleWindow[] {
   const start = Math.max(0, Math.min(23, Math.round(startHour)));
   const end = Math.max(start + 1, Math.min(24, Math.round(endHour)));
   const span = end - start;
-  const count = Math.max(1, Math.min(Math.round(perDay) || 1, span));
-  const hours: number[] = [];
-  if (count === 1) {
-    hours.push(start + Math.floor((span - 1) / 2));
+  const wanted = Math.max(1, Math.round(perDay) || 1);
+  const counts = Array.from({ length: span }, () => 0);
+  if (wanted <= span) {
+    // 够分：每小时最多一条，尽量摊开
+    for (let i = 0; i < wanted; i += 1) {
+      const index =
+        wanted === 1
+          ? Math.floor((span - 1) / 2)
+          : Math.round((i * (span - 1)) / (wanted - 1));
+      if (index >= 0 && index < span) counts[index] = 1;
+    }
   } else {
-    for (let i = 0; i < count; i += 1) {
-      hours.push(start + Math.round((i * (span - 1)) / (count - 1)));
+    // 不够分：每小时先铺一条，多出来的按中心对齐均匀落到各小时
+    for (let i = 0; i < wanted; i += 1) {
+      const index = Math.min(span - 1, Math.floor(((i + 0.5) * span) / wanted));
+      counts[index] = (counts[index] ?? 0) + 1;
     }
   }
-  return [...new Set(hours)]
-    .sort((a, b) => a - b)
-    .map((hour, index) => ({
-      id: `w${index + 1}`,
-      days: [...ALL_DAYS],
-      start: formatClock(hour * 60),
-      end: formatClock((hour + 1) * 60),
-      perHour: 1,
-    }));
+  return counts.flatMap((count, index) => {
+    const perHour = Math.min(count, MAX_PER_HOUR);
+    if (perHour === 0) return [];
+    const hour = start + index;
+    return [
+      {
+        id: `w${index + 1}`,
+        days: [...ALL_DAYS],
+        start: formatClock(hour * 60),
+        end: formatClock((hour + 1) * 60),
+        perHour,
+      },
+    ];
+  });
 }
 
 /** 还是出厂那几段（用户没动过发帖节奏）——只有这种时候才值得弹「定个节奏」。 */
@@ -403,7 +427,20 @@ export function pickSlotInHour(
     }
   }
   if (candidates.length === 0) return null;
-  if (!settings.randomize) return candidates[0] ?? null;
+  if (!settings.randomize) {
+    // 第一条取最早的分钟；同一小时要继续排时，按 capacity 把小时等分，取下一个还空着的落点，
+    // 这样一小时两条就是 :00 / :30，而不是挤在整点前后。（randomize 开时才随机抽）
+    if (usedInHour(plan, occupied) === 0) return candidates[0] ?? null;
+    const total = plan.ranges.reduce((sum, range) => sum + (range.end - range.start), 0);
+    const first = plan.ranges[0]?.start ?? 0;
+    const free = new Set(candidates.map((at) => (at - plan.at) / MINUTE_MS));
+    const capacity = Math.max(1, plan.capacity);
+    for (let k = 0; k < capacity; k += 1) {
+      const target = first + Math.floor((k * total) / capacity);
+      if (free.has(target)) return plan.at + target * MINUTE_MS;
+    }
+    return candidates[0] ?? null;
+  }
   const index = Math.min(candidates.length - 1, Math.floor(random() * candidates.length));
   return candidates[index] ?? null;
 }

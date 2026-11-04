@@ -2670,17 +2670,48 @@ input:not([type]):focus,
   font-weight: 600;
 }
 
-.setup-row {
+.setup-field {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 .setup-label {
-  flex: none;
   color: var(--muted);
   font-size: var(--fs-base);
+}
+
+.setup-count {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* 自定义 + 输入框绑成一个整体，换行时也挨在一起 */
+.setup-count-custom {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.setup-count .chip:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* 这一段是弹窗里唯一要选的东西，选中态要比别处的浅底 chip 更明确 */
+.setup-count .chip.is-on {
+  background: var(--ink);
+  color: var(--surface);
+}
+
+/* 自定义条数：和 chip 一样高，别把这一行撑歪 */
+.setup-count-input {
+  width: 62px;
+  height: 24px;
+  padding: 0 8px;
+  font-size: var(--fs-sm);
 }
 
 .setup-range {

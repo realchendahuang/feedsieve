@@ -274,10 +274,12 @@ export function WriteView({
   }, []);
 
   async function applySetup(windows: ScheduleWindow[]): Promise<void> {
+    // 条数 = 各时段每小时上限之和，不是时段个数
+    const perDay = windows.reduce((sum, window) => sum + window.perHour, 0);
     setSetupOpen(false);
     setSettings(await setScheduleSettings({ windows, randomize: false }));
     await setScheduleSetupDone();
-    notify(c.setupDone(windows.length));
+    notify(c.setupDone(perDay));
   }
 
   function dismissSetup(): void {

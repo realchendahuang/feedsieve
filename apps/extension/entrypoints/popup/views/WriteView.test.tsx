@@ -91,17 +91,18 @@ describe('发帖页只读排期台', () => {
 
     const rootEl = await renderWriteView();
     expect(rootEl.querySelector('.setup-dialog')).not.toBeNull();
-    // 默认一天 3 条、9:00–22:00：首末贴着两头
-    expect(rootEl.querySelector('.setup-preview')?.textContent).toBe(
-      '每天 3 条 · 09:00 15:00 21:00',
-    );
+    // 默认一天 10 条、9:00–22:00
+    const preview = (): string | undefined =>
+      rootEl.querySelector('.setup-preview')?.textContent ?? undefined;
+    expect(preview()).toBe('每天 10 条 · 09:00–22:00 · 每小时 1 条');
 
-    const two = [...rootEl.querySelectorAll<HTMLButtonElement>('.setup-dialog .segmented button')].find(
-      (button) => button.textContent === '2',
+    // 20 条：13 个小时装 20 条，就有的小时 1 条、有的 2 条
+    const twenty = [...rootEl.querySelectorAll<HTMLButtonElement>('.setup-dialog .chip')].find(
+      (button) => button.textContent === '20',
     );
-    if (!two) throw new Error('per-day option not found');
-    await act(async () => two.click());
-    expect(rootEl.querySelector('.setup-preview')?.textContent).toBe('每天 2 条 · 09:00 21:00');
+    if (!twenty) throw new Error('per-day option not found');
+    await act(async () => twenty.click());
+    expect(preview()).toBe('每天 20 条 · 09:00–22:00 · 每小时 1–2 条');
 
     const apply = [...rootEl.querySelectorAll<HTMLButtonElement>('.setup-dialog button')].find(
       (button) => button.textContent === '就这样定',
@@ -112,15 +113,14 @@ describe('发帖页只读排期台', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
-    expect(browser.storage.local.set).toHaveBeenCalledWith({
-      composeScheduleV1: expect.objectContaining({
-        randomize: false,
-        windows: [
-          expect.objectContaining({ start: '09:00', end: '10:00', perHour: 1 }),
-          expect.objectContaining({ start: '21:00', end: '22:00', perHour: 1 }),
-        ],
-      }),
-    });
+    const saved = (
+      browser.storage.local.set as unknown as ReturnType<typeof vi.fn>
+    ).mock.calls.find(([payload]) => payload && 'composeScheduleV1' in (payload as object));
+    const windows = (
+      saved?.[0] as unknown as { composeScheduleV1: { windows: Array<{ perHour: number }> } }
+    ).composeScheduleV1.windows;
+    expect(windows.reduce((sum, window) => sum + window.perHour, 0)).toBe(20);
+    expect(Math.max(...windows.map((window) => window.perHour))).toBe(2);
     expect(browser.storage.local.set).toHaveBeenCalledWith({ scheduleSetupV1: true });
     expect(rootEl.querySelector('.setup-dialog')).toBeNull();
   });
