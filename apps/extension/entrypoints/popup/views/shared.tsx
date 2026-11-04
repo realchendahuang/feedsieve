@@ -331,7 +331,7 @@ export function IconButton({
 
 /**
  * 二级页顶部：‹ 父级名 + 页面标题。
- * 全局、模块设置、静音三处二级页共用；返回按钮的 aria-label 固定为「返回 · 父级名」。
+ * 校秤、模块设置、静音三处二级页共用；返回按钮的 aria-label 固定为「返回 · 父级名」。
  */
 export function SubpageHeader({
   language,

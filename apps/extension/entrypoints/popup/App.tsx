@@ -86,7 +86,7 @@ function inNoiseGroup(view: PopupView): boolean {
   return isModuleId(view) && groupOf(view) !== undefined;
 }
 
-/** 模块被关掉后的落点：同组还有开着的就留在组里，其余回全局。 */
+/** 模块被关掉后的落点：同组还有开着的就留在组里，其余回校秤。 */
 function fallbackViewFor(module: ModuleId, settings: ModuleSettings | null): PopupView {
   if (!groupOf(module)) return 'global';
   const sibling = enabledModules(settings).find((item) => groupOf(item.id));
@@ -246,7 +246,7 @@ export default function App() {
   );
   const modulesReady = modules !== null;
 
-  // 默认落点：链接指定的模块 → 当前是 X 主页则「主页」→ 热帖 → 第一个启用的模块 → 全局。
+  // 默认落点：链接指定的模块 → 当前是 X 主页则「主页」→ 热帖 → 第一个启用的模块 → 校秤。
   // 只在模块开关第一次加载时判断一次；之后切 tab 或开关模块都不再重置当前视图。
   useEffect(() => {
     if (!modules) return;
@@ -539,9 +539,9 @@ export default function App() {
       title: module.titleKey ? t[module.titleKey] : t[module.labelKey],
     });
   }
-  // 拾遗与全局都是常驻入口，不属于模块开关
+  // 拾穗与校秤都是常驻入口，不属于模块开关
   tabs.push({ id: 'weekly', label: t.weeklyNav, title: t.weeklyTabTitle });
-  tabs.push({ id: 'global', label: t.globalNav, title: t.globalNav });
+  tabs.push({ id: 'global', label: t.globalNav, title: t.globalTabTitle });
 
   // 降噪下的二级 tab：组内模块按 MODULE_GROUPS 的顺序，关键词永远最后
   const noiseTabs: Array<{ id: PopupView; label: string }> = [];
@@ -594,37 +594,26 @@ export default function App() {
         {/* 顶部只留栏目：不放商标和名字（侧边栏顶部 Chrome 已经显示了图标和名字，
             弹窗里也不需要）。关于信息在设置最底下 */}
         <nav className="section-nav" aria-label={t.primaryNavigation}>
-          {tabs.map((tab) =>
-            tab.id === 'global' ? (
-              <button
-                key={tab.id}
-                type="button"
-                className={`icon-button nav-settings${activeTab === tab.id ? ' is-active' : ''}`}
-                aria-label={t.settings}
-                aria-current={activeTab === tab.id ? 'page' : undefined}
-                title={t.settings}
-                onClick={() => selectSection(tab.id)}
-              >
-                <AppIcon name="settings" size={16} />
-              </button>
-            ) : (
-              <button
-                key={tab.id}
-                type="button"
-                className={`${activeTab === tab.id ? 'is-active' : ''}${
-                  tab.id === 'weekly' ? ' nav-weekly' : ''
-                }`.trim()}
-                aria-current={activeTab === tab.id ? 'page' : undefined}
-                title={tab.title}
-                onClick={() => selectSection(tab.id)}
-              >
-                <span>{tab.label}</span>
-                {tab.id === 'noise' && activeTab !== 'noise' && pageCount ? (
-                  <span className="nav-badge">{Math.min(pageCount, 99)}</span>
-                ) : null}
-              </button>
-            ),
-          )}
+          {tabs.map((tab) => (
+            /* 设置也是普通一格（原来是个齿轮）：文字 tab 才和其余五格一致，
+               名字取得诗意，所以读屏名补上「设置」，title 给出里面有什么。 */
+            <button
+              key={tab.id}
+              type="button"
+              className={`${activeTab === tab.id ? 'is-active' : ''}${
+                tab.id === 'weekly' ? ' nav-weekly' : ''
+              }${tab.id === 'global' ? ' nav-settings' : ''}`.trim()}
+              aria-label={tab.id === 'global' ? `${tab.label}，${t.settings}` : undefined}
+              aria-current={activeTab === tab.id ? 'page' : undefined}
+              title={tab.title}
+              onClick={() => selectSection(tab.id)}
+            >
+              <span>{tab.label}</span>
+              {tab.id === 'noise' && activeTab !== 'noise' && pageCount ? (
+                <span className="nav-badge">{Math.min(pageCount, 99)}</span>
+              ) : null}
+            </button>
+          ))}
           {canOpenSidePanel && !isSidePanel ? (
             // 侧边栏模式不提供切回弹窗的按钮：关闭面板会连带杀掉刚打开的 action popup
             <button

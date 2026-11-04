@@ -252,27 +252,6 @@ ol {
   margin-left: auto;
 }
 
-.section-nav .nav-settings {
-  align-self: center;
-  width: var(--control-28);
-  height: var(--control-28);
-  margin-left: auto;
-  padding: 0;
-  border-radius: 6px;
-}
-
-.section-nav .nav-settings.is-active {
-  background: var(--hover);
-}
-
-.section-nav .nav-settings.is-active::after {
-  display: none;
-}
-
-.section-nav .nav-settings + .masthead-tool {
-  margin-left: 0;
-}
-
 /* 二级导航：分组 tab（屏蔽）下的子栏目，比一级更轻 */
 .section-subnav {
   display: flex;

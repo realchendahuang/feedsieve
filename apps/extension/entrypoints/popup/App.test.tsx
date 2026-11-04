@@ -328,7 +328,7 @@ describe('popup App 渲染冒烟', () => {
     const nav = [...rootEl.querySelectorAll('.section-nav button')].map(
       (button) => button.getAttribute('aria-label') ?? button.textContent,
     );
-    expect(nav).toEqual(['淘金', '阅人', '落笔', '降噪', '拾穗', '设置']);
+    expect(nav).toEqual(['淘金', '阅人', '落笔', '降噪', '拾穗', '校秤，设置']);
     expect(
       [...rootEl.querySelectorAll('.section-subnav button')].map((button) => button.textContent),
     ).toEqual(['水军', '伪人', '禁语']);
@@ -431,9 +431,9 @@ describe('popup App 渲染冒烟', () => {
       (button) => button.getAttribute('aria-label') ?? button.textContent,
     );
     expect(nav).not.toContain('淘金');
-    expect(nav).toContain('设置');
+    expect(nav).toContain('校秤，设置');
     expect(rootEl.querySelector('.section-nav .is-active')?.getAttribute('aria-label')).toBe(
-      '设置',
+      '校秤，设置',
     );
   });
 
