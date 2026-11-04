@@ -31,7 +31,7 @@ import {
   type ScheduledCache,
 } from '../../../src/lib/compose/schedule-store';
 import { OPEN_SCHEDULED_MESSAGE } from '../../../src/lib/compose/compose-schedule';
-import { AppIcon, EmptyState, formatAgo, HelpIcon, IconButton } from './shared';
+import { AppIcon, EmptyState, formatAgo, HelpIcon, IconButton, TipText } from './shared';
 import { useListPosition } from './use-list-position';
 
 const DAYS_SHOWN = 7;
@@ -383,15 +383,15 @@ export function WriteView({
           <h2>{c.upcoming}</h2>
           {totalUpcoming ? <span className="count">{totalUpcoming}</span> : null}
           <HelpIcon text={c.upcomingHint} />
-          <span
+          <TipText
             className="row-meta write-synced"
-            title={`${cache.account ? `@${cache.account} · ` : ''}${
+            text={`${cache.account ? `@${cache.account} · ` : ''}${
               cache.syncedAt ? c.synced(formatAgo(cache.syncedAt, language)) : c.neverSynced
             }`}
           >
             {cache.account ? `@${cache.account} · ` : ''}
             {cache.syncedAt ? c.synced(formatAgo(cache.syncedAt, language)) : c.neverSynced}
-          </span>
+          </TipText>
           <IconButton icon="refresh" label={c.sync} onClick={() => void sync()} />
           <button
             type="button"

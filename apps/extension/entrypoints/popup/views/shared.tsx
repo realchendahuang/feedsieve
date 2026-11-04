@@ -258,6 +258,30 @@ export function useTip(text: string) {
   return { handlers, node };
 }
 
+/**
+ * 会被 CSS 截断的一行字：鼠标悬浮和键盘聚焦都能看到全文。
+ * 只挂 title 的话键盘用户永远读不到——focus 不触发原生 title。
+ */
+export function TipText({
+  text,
+  children,
+  className,
+}: {
+  text: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  const tip = useTip(text);
+  return (
+    <>
+      <span className={className} tabIndex={0} {...tip.handlers}>
+        {children}
+      </span>
+      {tip.node}
+    </>
+  );
+}
+
 export function HelpIcon({ text }: { text: string }) {
   const tip = useTip(text);
   return (

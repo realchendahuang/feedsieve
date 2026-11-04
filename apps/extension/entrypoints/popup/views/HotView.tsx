@@ -28,6 +28,7 @@ import {
   EmptyState,
   HelpIcon,
   SkeletonList,
+  TipText,
   type GlobalHotList,
   type HotPostItem,
   type PageBriefItem,
@@ -202,16 +203,16 @@ function RankTrend({
   const t = UI_COPY[language];
   if (item.rankDelta === null && hasReference) {
     return (
-      <span className="rank-trend is-new" title={t.hotRankNew}>
+      <TipText className="rank-trend is-new" text={t.hotRankNew}>
         {t.hotRankNewShort}
-      </span>
+      </TipText>
     );
   }
   if (typeof item.rankDelta === 'number' && item.rankDelta >= RANK_UP_MIN) {
     return (
-      <span className="rank-trend is-up" title={t.hotRankUp(item.rankDelta)}>
+      <TipText className="rank-trend is-up" text={t.hotRankUp(item.rankDelta)}>
         ↑{item.rankDelta}
-      </span>
+      </TipText>
     );
   }
   return null;

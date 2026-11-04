@@ -25,6 +25,7 @@ import {
   HelpIcon,
   OfficialLinkIcon,
   SkeletonList,
+  TipText,
   useArmedConfirm,
   type PageMarkedItem,
 } from './shared';
@@ -460,9 +461,9 @@ export default function CleanView({
                           {category}
                         </span>
                         {reason ? (
-                          <span className="reason-text" title={item.reason}>
+                          <TipText className="reason-text" text={item.reason}>
                             {reason}
-                          </span>
+                          </TipText>
                         ) : null}
                       </div>
                       <p className="marked-snippet">{item.snippet || t.noPostContent}</p>
