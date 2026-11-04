@@ -361,10 +361,10 @@ export const UI_COPY = {
     moduleProfileHint: '资料卡下的人气行、主页帖子库采集与补全、搜索框高级搜索。',
     moduleWriteHint: '发帖框排期、发帖节奏和文章编辑增强。',
     moduleAiModuleHint: '评论区里的 AI 标签、折叠条，以及回复旁的检测按钮。',
-    moduleFilterHint: '自动标黄、界面净化、过滤规则与名单。',
-    moduleAi: 'AI 味标注',
+    moduleFilterHint: '自动标黄、界面净化、水军规则与名单。',
+    moduleAi: '伪人标注',
     moduleAiHint:
-      '评论区里的 AI 标签、折叠条，以及回复旁的检测按钮。关闭后 X 页面上不再出现；弹窗「AI 味」页仍可手动检测。',
+      '评论区里的 AI 标签、折叠条，以及回复旁的检测按钮。关闭后 X 页面上不再出现；弹窗「伪人」页仍可手动检测。',
     moduleClean: '界面净化',
     moduleCleanHint:
       '隐藏「为你推荐」、趋势、推荐关注、付费推广和 Grok，并把字体换成中文更清楚的系统字体。默认关闭，打开后下面的净化项才生效；只改外观，不动内容。',
@@ -401,7 +401,7 @@ export const UI_COPY = {
     writeSettings: '落笔设置',
     aiSettings: '伪人设置',
     filterSettings: '水军设置',
-    filterRules: '过滤规则',
+    filterRules: '水军规则',
     autoMark: '自动标黄',
     autoMarkHint: '在评论区、时间线和通知里给可疑账号标黄框，写清命中原因。',
     general: '通用',
@@ -802,7 +802,7 @@ export const UI_COPY = {
       'The profile popularity line, profile post collection and filling, and advanced search under the search box.',
     moduleWriteHint: 'Composer scheduling, posting cadence, and article editor helpers.',
     moduleAiModuleHint: 'AI pills, fold bars, and the check button next to replies.',
-    moduleFilterHint: 'Auto-highlight, UI cleanup, filter rules and lists.',
+    moduleFilterHint: 'Auto-highlight, UI cleanup, spam rules and lists.',
     moduleAi: 'AI labels',
     moduleAiHint:
       'AI pills, fold bars, and the check button next to replies on X. Turning this off removes them from the page; the AI tab in the popup still runs manual checks.',
@@ -844,7 +844,7 @@ export const UI_COPY = {
     writeSettings: 'Compose settings',
     aiSettings: 'AI settings',
     filterSettings: 'Spam settings',
-    filterRules: 'Filter rules',
+    filterRules: 'Spam rules',
     autoMark: 'Auto-highlight',
     autoMarkHint:
       'Put a yellow box with the reason on suspicious accounts in replies, timelines and notifications.',

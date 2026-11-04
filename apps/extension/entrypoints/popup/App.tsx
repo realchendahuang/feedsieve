@@ -72,8 +72,8 @@ import {
 } from './views/shared';
 
 /**
- * 顶部栏目：功能模块各占一格，同组的模块（黄推水军 / AI 味）合并成「降噪」一格，
- * 组内用二级 tab 切换；「关键词」也挂在「降噪」下。最后是常驻的「拾遗」和「全局」。
+ * 顶部栏目：功能模块各占一格，同组的模块（水军 / 伪人）合并成「降噪」一格，
+ * 组内用二级 tab 切换；「禁语」也挂在「降噪」下。最后是常驻的「拾穗」和「设置」。
  * tab 是否出现由模块总开关决定，顺序由 MODULES / MODULE_GROUPS 注册表决定。
  */
 type PopupView = ModuleId | 'global' | 'weekly' | 'mute';
@@ -181,8 +181,8 @@ export default function App() {
   const [language, setLanguage] = useState<UiLanguage>(defaultUiLanguage);
   const [route] = useState(initialRoute);
   const [view, setView] = useState<PopupView>(route.view);
-  // 从「屏蔽」切到别的栏目再切回来，停在刚才那个二级 tab。
-  // 记在 ref 里：它只是下次点「屏蔽」时的落点，不需要为它再渲染一次。
+  // 从「降噪」切到别的栏目再切回来，停在刚才那个二级 tab。
+  // 记在 ref 里：它只是下次点「降噪」时的落点，不需要为它再渲染一次。
   const lastNoiseView = useRef<PopupView>(inNoiseGroup(route.view) ? route.view : 'filter');
 
   /** 切视图；落在「屏蔽」里时顺手记住是哪个二级 tab。 */
@@ -600,9 +600,9 @@ export default function App() {
                 key={tab.id}
                 type="button"
                 className={`icon-button nav-settings${activeTab === tab.id ? ' is-active' : ''}`}
-                aria-label={tab.label}
+                aria-label={t.settings}
                 aria-current={activeTab === tab.id ? 'page' : undefined}
-                title={tab.label}
+                title={t.settings}
                 onClick={() => selectSection(tab.id)}
               >
                 <AppIcon name="settings" size={16} />
@@ -638,7 +638,7 @@ export default function App() {
             </button>
           ) : null}
         </nav>
-        {/* 「降噪」的二级 tab：黄推水军 / AI 味 / 关键词 */}
+        {/* 「降噪」的二级 tab：水军 / 伪人 / 禁语 */}
         {activeTab === 'noise' ? (
           <nav className="section-subnav" aria-label={t.secondaryNavigation}>
             {noiseTabs.map((tab) => (
@@ -647,11 +647,19 @@ export default function App() {
                 type="button"
                 className={effectiveView === tab.id ? 'is-active' : ''}
                 aria-current={effectiveView === tab.id ? 'page' : undefined}
+                /* 徽章里的数字不进可读名称：读屏念「水军，本页 5 条」而不是「水军5」 */
+                aria-label={
+                  tab.id === 'filter' && pageCount
+                    ? `${tab.label}，本页 ${Math.min(pageCount, 99)} 条`
+                    : undefined
+                }
                 onClick={() => selectSection(tab.id)}
               >
                 <span>{tab.label}</span>
                 {tab.id === 'filter' && pageCount ? (
-                  <span className="nav-badge">{Math.min(pageCount, 99)}</span>
+                  <span className="nav-badge" aria-hidden="true">
+                    {Math.min(pageCount, 99)}
+                  </span>
                 ) : null}
               </button>
             ))}

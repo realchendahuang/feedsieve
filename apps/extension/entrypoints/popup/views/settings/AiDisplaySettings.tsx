@@ -1,7 +1,7 @@
 /**
- * AI 味的显示设置：遇到 AI 号怎么处理、识别范围、要不要标已关注账号。
+ * 伪人的显示设置：遇到伪人怎么处理、识别范围、要不要标已关注账号。
  *
- * 和「黄推水军」的设置一样收在齿轮页里——弹窗的 AI 味页只留结论和「我测过的」。
+ * 和「水军」的设置一样收在齿轮页里——弹窗的伪人页只留结论和「我测过的」。
  */
 import { useEffect, useState } from 'react';
 import type { UiLanguage } from '../../../../src/lib/platform/i18n';
@@ -14,13 +14,13 @@ import { Row, Toggle } from '../shared';
 
 const COPY = {
   zh: {
-    mode: '遇到 AI 号',
+    mode: '遇到伪人',
     modeHint:
-      '已进社区 AI 号名单、或你测出 AI 味偏重的账号，在评论区和时间线上怎么显示。个人白名单里的账号不处理。',
+      '已进社区伪人名单、或你自己测出像 AI 代写的账号，在评论区和时间线上怎么显示。个人白名单里的账号不处理。',
     modes: { off: '不处理', mark: '标记', fold: '折叠' },
     scope: '识别范围',
-    scopeHint: '「仅蓝V」按页面上的认证标记判断，不影响黄推识别。',
-    scopes: { all: '全部', blue: '仅蓝V', skipBlue: '跳过蓝V' },
+    scopeHint: '「仅蓝标」按页面上的认证标记判断，不影响水军识别。',
+    scopes: { all: '全部', blue: '仅蓝标', skipBlue: '跳过蓝标' },
     markFollowing: '标记已关注账号',
     markFollowingHint:
       '默认关：不把检测结论贴到你关注的人身上。打开后已关注账号也照常标记 / 折叠；个人白名单仍然不处理。',
@@ -42,6 +42,7 @@ const COPY = {
 export function AiDisplaySettings({ language }: { language: UiLanguage }) {
   const c = COPY[language];
   const [settings, setSettings] = useState<AiCheckSettings | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -57,20 +58,26 @@ export function AiDisplaySettings({ language }: { language: UiLanguage }) {
 
   if (!settings) return null;
 
+  // 连点两个选项会各发一次写；串行化并在写入期间禁用，落盘的永远是最后一次点选。
   async function update(patch: Partial<AiCheckSettings>): Promise<void> {
-    setSettings(await setAiSettings(patch));
+    setSaving(true);
+    try {
+      setSettings(await setAiSettings(patch));
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
     <section className="group">
       <Row label={c.mode} hint={c.modeHint}>
-        <div className="segmented" role="radiogroup" aria-label={c.mode}>
+        <div className="segmented" role="group" aria-label={c.mode}>
           {(['off', 'mark', 'fold'] as const).map((mode) => (
             <button
               key={mode}
               type="button"
-              role="radio"
-              aria-checked={settings.mode === mode}
+              aria-pressed={settings.mode === mode}
+              disabled={saving}
               className={settings.mode === mode ? 'is-selected' : ''}
               onClick={() => void update({ mode })}
             >
@@ -80,13 +87,13 @@ export function AiDisplaySettings({ language }: { language: UiLanguage }) {
         </div>
       </Row>
       <Row label={c.scope} hint={c.scopeHint}>
-        <div className="segmented" role="radiogroup" aria-label={c.scope}>
+        <div className="segmented" role="group" aria-label={c.scope}>
           {(['all', 'blue', 'skipBlue'] as const).map((scope) => (
             <button
               key={scope}
               type="button"
-              role="radio"
-              aria-checked={settings.scope === scope}
+              aria-pressed={settings.scope === scope}
+              disabled={saving}
               className={settings.scope === scope ? 'is-selected' : ''}
               onClick={() => void update({ scope })}
             >
@@ -99,6 +106,7 @@ export function AiDisplaySettings({ language }: { language: UiLanguage }) {
         <Toggle
           checked={settings.markFollowing}
           label={c.markFollowing}
+          disabled={saving}
           onChange={(next) => void update({ markFollowing: next })}
         />
       </Row>

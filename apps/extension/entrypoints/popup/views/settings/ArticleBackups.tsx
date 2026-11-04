@@ -6,7 +6,7 @@ import {
   subscribeBackups,
   type ArticleBackup,
 } from '../../../../src/lib/compose/schedule-store';
-import { EmptyState, formatAgo, HelpIcon, IconButton } from '../shared';
+import { EmptyState, formatAgo, HelpIcon, IconButton, useArmedConfirm } from '../shared';
 
 const COPY = {
   zh: {
@@ -18,6 +18,8 @@ const COPY = {
     copy: '复制 Markdown',
     open: '在 X 打开',
     delete: '删除备份',
+    deleteConfirm: '再点一次删除',
+    deleted: '已删除备份',
     version: '版本',
     copied: '已复制',
   },
@@ -30,6 +32,8 @@ const COPY = {
     copy: 'Copy Markdown',
     open: 'Open on X',
     delete: 'Delete backup',
+    deleteConfirm: 'Click again to delete',
+    deleted: 'Backup deleted',
     version: 'Version',
     copied: 'Copied',
   },
@@ -45,6 +49,8 @@ export default function ArticleBackups({
   const c = COPY[language];
   const [backups, setBackups] = useState<ArticleBackup[]>([]);
   const [versionPick, setVersionPick] = useState<Record<string, number>>({});
+  // 备份是本机唯一一份，删了不可恢复：按行「再点一次确认」，和水军、禁语一个规矩
+  const armedDelete = useArmedConfirm<string>();
 
   useEffect(() => {
     void getBackups().then(setBackups);
@@ -117,8 +123,15 @@ export default function ArticleBackups({
                 />
                 <IconButton
                   icon="x"
-                  label={c.delete}
-                  onClick={() => void removeBackup(backup.id).then(setBackups)}
+                  label={armedDelete.isArmed(backup.id) ? c.deleteConfirm : c.delete}
+                  onClick={() => {
+                    if (!armedDelete.arm(backup.id)) return;
+                    armedDelete.reset();
+                    void removeBackup(backup.id).then((next) => {
+                      setBackups(next);
+                      notify(c.deleted);
+                    });
+                  }}
                 />
               </span>
             </div>

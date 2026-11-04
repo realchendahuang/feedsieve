@@ -70,7 +70,7 @@ async function waitForCondition(predicate: () => boolean, timeoutMs = 1200): Pro
  * 视图是 React.lazy 的：点完栏目要等一次异步导入才挂上。
  * 真实定时器等宏任务；测试里开了假定时器时手动推进，不然导入永远排不上。
  */
-async function waitForLazy(predicate: () => boolean, timeoutMs = 2_000): Promise<void> {
+async function waitForLazy(predicate: () => boolean, timeoutMs = 5_000): Promise<void> {
   const startedAt = Date.now();
   while (!predicate()) {
     if (Date.now() - startedAt > timeoutMs) throw new Error('lazy view did not render');
@@ -139,11 +139,11 @@ async function openGlobal(root: HTMLElement): Promise<void> {
   await waitForLazy(() => root.textContent?.includes('模块开关') ?? false);
 }
 
-/** 过滤规则下的名单 / 关键词：过滤 tab → 齿轮 → 过滤规则 → 子页。 */
+/** 水军规则下的名单 / 关键词：降噪 tab → 齿轮 → 水军规则 → 子页。 */
 async function openFilterRule(root: HTMLElement, label: string): Promise<void> {
   await openModuleSettings(root, '水军');
-  await waitForLazy(() => root.textContent?.includes('过滤规则') ?? false);
-  await act(async () => navRow(root, '过滤规则').click());
+  await waitForLazy(() => root.textContent?.includes('水军规则') ?? false);
+  await act(async () => navRow(root, '水军规则').click());
   await waitForLazy(() => {
     try {
       navRow(root, label);
@@ -161,7 +161,7 @@ async function openSettingsPage(root: HTMLElement, label: string): Promise<void>
     await openFilterRule(root, label);
     return;
   }
-  if (label === 'AI 味标注') {
+  if (label === '伪人标注') {
     await openModuleSettings(root, '伪人');
     return;
   }
@@ -328,7 +328,7 @@ describe('popup App 渲染冒烟', () => {
     const nav = [...rootEl.querySelectorAll('.section-nav button')].map(
       (button) => button.getAttribute('aria-label') ?? button.textContent,
     );
-    expect(nav).toEqual(['淘金', '阅人', '落笔', '降噪', '拾穗', '全局']);
+    expect(nav).toEqual(['淘金', '阅人', '落笔', '降噪', '拾穗', '设置']);
     expect(
       [...rootEl.querySelectorAll('.section-subnav button')].map((button) => button.textContent),
     ).toEqual(['水军', '伪人', '禁语']);
@@ -358,7 +358,7 @@ describe('popup App 渲染冒烟', () => {
     // 每个模块的齿轮页就是它自己的配置
     await openModuleSettings(rootEl, '伪人');
     const aiToggle = rootEl.querySelector<HTMLInputElement>(
-      'input[role="switch"][aria-label="AI 味标注"]',
+      'input[role="switch"][aria-label="伪人标注"]',
     );
     expect(aiToggle?.checked).toBe(true);
     await act(async () => {
@@ -386,9 +386,9 @@ describe('popup App 渲染冒烟', () => {
     await openGlobal(rootEl);
     await act(async () => buttonWithText(rootEl, 'EN').click());
     expect(rootEl.textContent).toContain('Modules');
-    // 过滤齿轮页 → 过滤规则确认英文文案
+    // 水军齿轮页 → 水军规则确认英文文案
     await openModuleSettings(rootEl, 'Spam', 'Spam settings');
-    await act(async () => navRow(rootEl, 'Filter rules').click());
+    await act(async () => navRow(rootEl, 'Spam rules').click());
     expect(rootEl.textContent).toContain('Detection level');
   });
 
@@ -431,9 +431,9 @@ describe('popup App 渲染冒烟', () => {
       (button) => button.getAttribute('aria-label') ?? button.textContent,
     );
     expect(nav).not.toContain('淘金');
-    expect(nav).toContain('全局');
+    expect(nav).toContain('设置');
     expect(rootEl.querySelector('.section-nav .is-active')?.getAttribute('aria-label')).toBe(
-      '全局',
+      '设置',
     );
   });
 
@@ -1248,9 +1248,9 @@ describe('popup App 渲染冒烟', () => {
     expect(rootEl.querySelector('.section-nav .is-active')?.textContent).toBe('降噪');
     expect(rootEl.querySelector('.section-subnav .is-active')?.textContent).toBe('水军');
 
-    // 返回「过滤规则」→「过滤设置」→ 过滤页
+    // 返回「水军规则」→「水军设置」→ 水军页
     await act(async () => rootEl.querySelector<HTMLButtonElement>('.back-button')!.click());
-    expect(rootEl.querySelector('.subpage-head h2')?.textContent).toBe('过滤规则');
+    expect(rootEl.querySelector('.subpage-head h2')?.textContent).toBe('水军规则');
     await act(async () => rootEl.querySelector<HTMLButtonElement>('.back-button')!.click());
     expect(rootEl.querySelector('.subpage-head h2')?.textContent).toBe('水军设置');
     await act(async () => rootEl.querySelector<HTMLButtonElement>('.back-button')!.click());

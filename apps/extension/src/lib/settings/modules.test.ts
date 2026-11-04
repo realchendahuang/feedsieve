@@ -3,13 +3,13 @@ import { DEFAULT_MODULE_SETTINGS } from './module-settings';
 import { enabledModules, isModuleId, MODULES, moduleById } from './modules';
 
 describe('模块注册表', () => {
-  it('固定顺序：热帖 → 主页 → 发帖 → AI 味 → 过滤', () => {
+  it('固定顺序：热帖 → 主页 → 发帖 → 水军 → 伪人（与降噪组内顺序一致）', () => {
     expect(MODULES.map((module) => module.id)).toEqual([
       'hot',
       'profile',
       'write',
-      'ai',
       'filter',
+      'ai',
     ]);
   });
 
@@ -18,14 +18,14 @@ describe('模块注册表', () => {
       'hot',
       'profile',
       'write',
-      'ai',
       'filter',
+      'ai',
     ]);
     expect(
       enabledModules({ ...DEFAULT_MODULE_SETTINGS, hot: false, write: false }).map(
         (module) => module.id,
       ),
-    ).toEqual(['profile', 'ai', 'filter']);
+    ).toEqual(['profile', 'filter', 'ai']);
     expect(
       enabledModules({
         ...DEFAULT_MODULE_SETTINGS,
@@ -43,8 +43,8 @@ describe('模块注册表', () => {
       'hotSettings',
       'profileSettings',
       'writeSettings',
-      'aiSettings',
       'filterSettings',
+      'aiSettings',
     ]);
     expect(moduleById('ai').enabled({ ...DEFAULT_MODULE_SETTINGS, aiCheck: false })).toBe(false);
     expect(moduleById('filter').enabled({ ...DEFAULT_MODULE_SETTINGS, filter: false })).toBe(

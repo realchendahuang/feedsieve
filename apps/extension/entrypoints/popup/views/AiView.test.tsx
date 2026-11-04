@@ -98,7 +98,7 @@ describe('AiView', () => {
     const { host } = await render();
     expect(host.querySelector('.ai-pct')?.textContent).toBe('90%');
     expect(host.querySelector('.ai-level')?.textContent).toBe('AI 感爆棚');
-    expect(host.textContent).toContain('3 人认为是 AI · 1 人认为是真人 · 已进社区 AI 号名单');
+    expect(host.textContent).toContain('3 人认为是 AI · 1 人认为是真人 · 已进社区伪人名单');
     expect(host.querySelector('.ai-votes .is-selected')?.textContent).toBe('是 AI');
     expect(host.querySelector('.ai-row')?.textContent).toContain('@alice');
   });

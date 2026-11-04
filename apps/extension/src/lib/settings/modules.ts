@@ -35,8 +35,9 @@ export interface ModuleDef {
   enabled: (settings: ModuleSettings) => boolean;
 }
 
-/** 固定顺序：淘金 → 阅人 → 落笔 → AI 味 → 黄推水军。全局永远排最后，不在这里。
- *  AI 味与黄推水军同属「降噪」，顶栏合并成一格，组内顺序见 MODULE_GROUPS。 */
+/** 固定顺序：淘金 → 阅人 → 落笔 → 水军 → 伪人。全局永远排最后，不在这里。
+ *  水军与伪人同属「降噪」，顶栏合并成一格；这里的先后要和 MODULE_GROUPS 的组内顺序
+ *  一致，否则「设置 › 模块开关」的排列会和二级 tab 对不上。 */
 export const MODULES: readonly ModuleDef[] = [
   {
     id: 'hot',
@@ -66,14 +67,6 @@ export const MODULES: readonly ModuleDef[] = [
     enabled: (settings) => settings.write,
   },
   {
-    id: 'ai',
-    settingKey: 'aiCheck',
-    labelKey: 'aiNav',
-    settingsKey: 'aiSettings',
-    settingsPage: 'aiSettings',
-    enabled: (settings) => settings.aiCheck,
-  },
-  {
     id: 'filter',
     settingKey: 'filter',
     labelKey: 'filterNav',
@@ -81,11 +74,19 @@ export const MODULES: readonly ModuleDef[] = [
     settingsPage: 'filterSettings',
     enabled: (settings) => settings.filter,
   },
+  {
+    id: 'ai',
+    settingKey: 'aiCheck',
+    labelKey: 'aiNav',
+    settingsKey: 'aiSettings',
+    settingsPage: 'aiSettings',
+    enabled: (settings) => settings.aiCheck,
+  },
 ];
 
 /**
  * 二级导航分组：同组模块共用顶栏一个 tab，组内再分二级 tab。
- * `moduleIds` 的顺序就是二级 tab 的顺序（过滤在前，AI 味在后）。
+ * `moduleIds` 的顺序就是二级 tab 的顺序（水军在前，伪人在后）。
  */
 export interface ModuleGroupDef {
   id: 'noise';

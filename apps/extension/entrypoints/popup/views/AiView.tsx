@@ -53,7 +53,7 @@ const COPY = {
     voteHuman: '是真人',
     tally: (ai: number, human: number) =>
       ai + human === 0 ? '还没人投票' : `${ai} 人认为是 AI · ${human} 人认为是真人`,
-    listed: '已进社区 AI 号名单',
+    listed: '已进社区伪人名单',
     started: '已在 X 页面开始检测',
     needXTab: '先在当前窗口打开 X',
     voteFailed: '投票没成功，稍后再试',
@@ -214,6 +214,8 @@ export function AiView({
   const [records, setRecords] = useState<AiCheckRecord[]>([]);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [voting, setVoting] = useState(false);
+  // 检测是在 X 页面上跑的异步任务：按钮在飞行中禁用，避免连点排一队重复检测
+  const [checking, setChecking] = useState(false);
 
   // 切走再回来：回到上次看的位置
   useListPosition({
@@ -261,12 +263,15 @@ export function AiView({
   }, [handle, loadLookup, loadRecords]);
 
   async function start(target: string | null, force = false): Promise<void> {
-    if (!target) return;
+    if (!target || checking) return;
+    setChecking(true);
     try {
       await sendToXPage({ type: 'feedsieve:ai-start', handle: target, force });
       notify(c.started);
     } catch {
       notify(c.needXTab);
+    } finally {
+      setChecking(false);
     }
   }
 
@@ -331,6 +336,7 @@ export function AiView({
           <button
             type="button"
             className="text-button toolbar-end"
+            disabled={checking}
             onClick={() => void checkSelf()}
           >
             {c.checkSelf}
@@ -390,7 +396,12 @@ export function AiView({
         ) : (
           <div className="ai-empty">
             <span className="row-meta">{remote?.pending ? c.pendingOther : c.notChecked}</span>
-            <button type="button" className="primary-button" onClick={() => void start(handle)}>
+            <button
+              type="button"
+              className="primary-button"
+              disabled={checking}
+              onClick={() => void start(handle)}
+            >
               {c.start}
             </button>
           </div>
