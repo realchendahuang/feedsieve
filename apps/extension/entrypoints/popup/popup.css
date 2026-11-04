@@ -663,7 +663,32 @@ input:not([type]):focus,
   box-shadow: 0 6px 20px rgba(15, 15, 15, 0.2);
   /* 只做淡入：view-in 会写 transform，和这里的水平居中打架 */
   animation: toast-in 160ms ease-out;
+  /* 提示本身不挡点击，只有「撤销」这类按钮可点 */
   pointer-events: none;
+}
+
+/* 带操作的提示（撤销 / 不看作者）：唯一一条吐司，按钮排在文字后面 */
+.toast-notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toast-notice span {
+  min-width: 0;
+}
+
+.toast-notice button {
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--overlay-link);
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
 }
 
 @keyframes toast-in {
@@ -999,25 +1024,6 @@ input:not([type]):focus,
   white-space: nowrap;
 }
 
-/* 带操作的提示（撤销 / 不看作者）：吐司本身不挡点击，只有按钮可点 */
-.hot-toast {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  pointer-events: auto;
-}
-
-.hot-toast button {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--overlay-link);
-  font: inherit;
-  font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
 /* 列表底部的加载哨兵：进入视口时多显示一页 */
 .hot-list .list-sentinel {
   height: 1px;
@@ -1061,7 +1067,7 @@ input:not([type]):focus,
 @media (prefers-reduced-motion: reduce) {
   .post.is-new,
   .new-posts-bar,
-  .hot-toast {
+  .toast-notice {
     animation: none;
   }
 }

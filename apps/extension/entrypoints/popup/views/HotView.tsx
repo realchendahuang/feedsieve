@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
+import { showToast as pushToast, type ToastAction } from '../../../src/lib/platform/toast';
 import { formatCount, formatVelocity, velocityLabel } from '../../../src/lib/insight/format';
 import { INSIGHT_UPDATED_MESSAGE } from '../../../src/lib/insight/shared-insight';
 import { INSIGHT_READ_MESSAGE } from '../../../src/lib/insight/read-tracker';
@@ -361,12 +362,6 @@ function ToggleChip({
   );
 }
 
-interface Toast {
-  id: number;
-  text: string;
-  actions?: Array<{ label: string; run: () => void }>;
-}
-
 function isTypingTarget(target: EventTarget | null): boolean {
   return (
     target instanceof HTMLElement &&
@@ -414,7 +409,7 @@ export default function HotView({ language, sendToXPage, onOpenSettings }: HotVi
   const [scrolling, setScrolling] = useState(false);
   const [pointerInside, setPointerInside] = useState(false);
   const [focusInside, setFocusInside] = useState(false);
-  const [toast, setToast] = useState<Toast | null>(null);
+
   const [liveText, setLiveText] = useState('');
   // 每种「范围 + 排序」各自的滚动位置和已加载条数
   const positions = useRef(new Map<string, { top: number; count: number }>());
@@ -423,7 +418,6 @@ export default function HotView({ language, sendToXPage, onOpenSettings }: HotVi
   const lastScrollTop = useRef(0);
   // 没动过列表就不写：StrictMode 会在挂载后先跑一次清理，别拿初始的 0 覆盖上次的位置
   const dirty = useRef(false);
-  const toastSeq = useRef(0);
 
   // 偏好跨次打开保留
   useEffect(() => {
@@ -544,19 +538,12 @@ export default function HotView({ language, sendToXPage, onOpenSettings }: HotVi
     };
   }, [scope, globalReload]);
 
-  // 瞬时提示自动消失；带「撤销」的多留一会儿
-  useEffect(() => {
-    if (!toast) return;
-    const timer = window.setTimeout(
-      () => setToast((currentToast) => (currentToast?.id === toast.id ? null : currentToast)),
-      toast.actions ? UNDO_TOAST_MS : TOAST_MS,
-    );
-    return () => window.clearTimeout(timer);
-  }, [toast]);
-
-  function showToast(text: string, actions?: Toast['actions']): void {
-    toastSeq.current += 1;
-    setToast({ id: toastSeq.current, text, ...(actions ? { actions } : {}) });
+  /** 热帖的瞬时提示：纯提示 1.5 秒；带「撤销 / 不看」的留 4 秒。走 App 的统一吐司通道。 */
+  function showToast(text: string, actions?: ToastAction[]): void {
+    pushToast(text, {
+      duration: actions?.length ? UNDO_TOAST_MS : TOAST_MS,
+      ...(actions?.length ? { actions } : {}),
+    });
   }
 
   function markRead(postId: string): void {
@@ -1230,23 +1217,6 @@ export default function HotView({ language, sendToXPage, onOpenSettings }: HotVi
         </ol>
       )}
 
-      {toast ? (
-        <div className="toast-notice hot-toast" role="status">
-          <span>{toast.text}</span>
-          {toast.actions?.map((action) => (
-            <button
-              key={action.label}
-              type="button"
-              onClick={() => {
-                setToast(null);
-                action.run();
-              }}
-            >
-              {action.label}
-            </button>
-          ))}
-        </div>
-      ) : null}
     </div>
   );
 }

@@ -4,7 +4,9 @@ import React, { act } from 'react';
 import ReactDOM from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import HotView, { groupByAuthor } from './HotView';
+import ToastHost from './ToastHost';
 import { asHotPostList } from './shared';
+import { resetToastForTest } from '../../../src/lib/platform/toast';
 
 const mountedRoots: Array<{ unmount: () => void }> = [];
 
@@ -17,6 +19,7 @@ let sessionStored: Record<string, unknown>;
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   document.body.replaceChildren();
+  resetToastForTest();
   tabsCreate = vi.fn().mockResolvedValue({ id: 9 });
   runtimeSend = vi.fn().mockResolvedValue([]);
   runtimeListeners = [];
@@ -63,7 +66,19 @@ async function renderHotView(send: (message: { type: string }) => Promise<unknow
   const root = ReactDOM.createRoot(rootEl);
   mountedRoots.push(root);
   await act(async () => {
-    root.render(React.createElement(HotView, { language: 'zh' as const, sendToXPage, onOpenSettings: vi.fn() }));
+    // 吐司已收敛到 App 级的 ToastHost：测试里和视图一起挂，选择器保持不变
+    root.render(
+      React.createElement(
+        React.Fragment,
+        null,
+        React.createElement(HotView, {
+          language: 'zh' as const,
+          sendToXPage,
+          onOpenSettings: vi.fn(),
+        }),
+        React.createElement(ToastHost),
+      ),
+    );
   });
   return rootEl;
 }
@@ -747,7 +762,7 @@ describe('smoother reading', () => {
     await act(async () => root.querySelector<HTMLButtonElement>('.post-dismiss')!.click());
     expect(handles(root)).toEqual(['@noisy', '@user_423']); // 组里下一条顶上
     expect(stored.hotDismissedV1).toEqual(['1850000000000000421']);
-    const toastButtons = () => [...root.querySelectorAll<HTMLButtonElement>('.hot-toast button')];
+    const toastButtons = () => [...root.querySelectorAll<HTMLButtonElement>('.toast-notice button')];
     expect(toastButtons().map((b) => b.textContent)).toEqual(['撤销', '不看 @noisy']);
     // 顺手不看这个作者
     await act(async () => toastButtons()[1]!.click());

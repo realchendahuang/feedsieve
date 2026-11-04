@@ -51,8 +51,10 @@ const WeeklyView = lazy(() => import('./views/WeeklyView'));
 const MuteView = lazy(() => import('./views/MuteView'));
 const GlobalView = lazy(() => import('./views/settings/GlobalView'));
 const ModuleSettingsView = lazy(() => import('./views/settings/ModuleSettingsView'));
+import ToastHost from './views/ToastHost';
 import { isProfileUrl } from './views/profile-model';
 import { PANEL_VIEW_REQUEST_KEY, readPanelViewRequest } from '../../src/lib/platform/panel-route';
+import { dismissToast, showToast } from '../../src/lib/platform/toast';
 import { AppIcon, asPageMarkedList, getChromeSidePanel, type PageMarkedItem } from './views/shared';
 
 /**
@@ -154,7 +156,7 @@ export default function App() {
     route.moduleSettingsOpen,
   );
   const [modules, setModules] = useState<ModuleSettings | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+
   const [pageMarked, setPageMarked] = useState<PageMarkedItem[] | null>(null);
   const [killSwitch, setKillSwitch] = useState<{
     destructive_actions_disabled: true;
@@ -174,7 +176,11 @@ export default function App() {
 
   const t = UI_COPY[language];
 
-  const notify = useCallback((message: string | null): void => setNotice(message), []);
+  // 所有瞬时提示都走同一个通道，App 只渲染一条吐司（见 ToastHost）
+  const notify = useCallback((message: string | null): void => {
+    if (message) showToast(message);
+    else dismissToast();
+  }, []);
 
   // 模块总开关：tab 去留、齿轮页、默认落点都读这一份
   useEffect(() => {
@@ -412,12 +418,6 @@ export default function App() {
     document.documentElement.lang = language === 'zh' ? 'zh-CN' : 'en';
   }, [language]);
 
-  useEffect(() => {
-    if (!notice) return;
-    const timeout = window.setTimeout(() => setNotice(null), 4_000);
-    return () => window.clearTimeout(timeout);
-  }, [notice]);
-
   const [isSidePanel] = useState(detectSidePanel);
 
   useEffect(() => {
@@ -485,7 +485,7 @@ export default function App() {
     id: module.id,
     label: t[module.labelKey],
   }));
-  // 屏蔽词与周刊都是常驻入口，不属于模块开关
+  // 静音词与周刊都是常驻入口，不属于模块开关
   tabs.push({ id: 'mute', label: t.muteNav });
   tabs.push({ id: 'weekly', label: t.weeklyNav });
   tabs.push({ id: 'global', label: t.globalNav });
@@ -669,11 +669,7 @@ export default function App() {
         </Suspense>
       </div>
 
-      {notice ? (
-        <p className="toast-notice" role="status">
-          {notice}
-        </p>
-      ) : null}
+      <ToastHost />
     </main>
   );
 }
