@@ -2868,7 +2868,7 @@ input:not([type]):focus,
   background: var(--gold);
 }
 
-/* 侧边栏最窄 300px：7 个栏目 + 设置齿轮放不下，收紧内边距并去掉装饰图标 */
+/* 侧边栏最窄 300px：栏目 + 设置齿轮放不下，收紧内边距、藏掉角标 */
 @media (min-width: 401px) {
   html[lang='en'] .section-nav {
     gap: 2px;
@@ -2889,10 +2889,6 @@ input:not([type]):focus,
   .section-nav button {
     padding: 0 4px;
     font-size: 13px;
-  }
-
-  .section-nav button.nav-weekly svg {
-    display: none;
   }
 
   .section-nav .nav-badge {

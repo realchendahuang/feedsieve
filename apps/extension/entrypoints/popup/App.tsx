@@ -618,7 +618,6 @@ export default function App() {
                 title={tab.title}
                 onClick={() => selectSection(tab.id)}
               >
-                {tab.id === 'weekly' ? <AppIcon name="sparkles" size={13} /> : null}
                 <span>{tab.label}</span>
                 {tab.id === 'noise' && activeTab !== 'noise' && pageCount ? (
                   <span className="nav-badge">{Math.min(pageCount, 99)}</span>
