@@ -2102,14 +2102,6 @@ input:not([type]):focus,
   font-size: 11px;
 }
 
-.profile-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-
 /* 账号卡右上角的图标按钮：功能名在悬浮提示里 */
 .profile-tools {
   grid-column: 2;
@@ -2281,29 +2273,6 @@ input:not([type]):focus,
   white-space: nowrap;
 }
 
-.write-next {
-  color: var(--ink);
-  font-weight: 600;
-}
-
-.write-next-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 2px 0 10px;
-  border-bottom: 1px solid var(--line);
-}
-
-.write-next-actions .secondary-button {
-  gap: 6px;
-}
-
-.write-next-actions .secondary-button:disabled {
-  color: var(--faint);
-  border-color: var(--line);
-  font-weight: 500;
-}
-
 /* 排期台：下一条、一周、当天时间线 */
 .write-hero {
   display: flex;
@@ -2337,18 +2306,6 @@ input:not([type]):focus,
 .write-hero-until {
   color: var(--muted);
   font-size: 12px;
-}
-
-.write-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 0 10px;
-}
-
-.write-actions .primary-button,
-.write-actions .secondary-button {
-  gap: 6px;
 }
 
 .write-week-head {
@@ -2605,47 +2562,6 @@ input:not([type]):focus,
   cursor: pointer;
 }
 
-.write-hours {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 2px 0 6px;
-}
-
-.write-hour {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 28px;
-  padding: 0 8px;
-  border: 1px solid var(--line-strong);
-  border-radius: 6px;
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  cursor: pointer;
-}
-
-.write-hour:hover {
-  background: var(--hover);
-}
-
-.write-hour.is-full {
-  color: var(--faint);
-  background: var(--fill);
-  cursor: default;
-}
-
-.write-hour.is-full .row-meta {
-  color: var(--faint);
-}
-
-.write-assigned {
-  margin-left: auto;
-}
-
 .cadence-window {
   padding: 8px 0;
   border-bottom: 1px solid var(--line);
@@ -2673,11 +2589,6 @@ input:not([type]):focus,
 
 .cadence-foot {
   padding-top: 10px;
-}
-
-.write-day {
-  padding: 6px 0 2px;
-  border-bottom: 1px solid var(--line);
 }
 
 .write-day-title {
@@ -2738,42 +2649,6 @@ input:not([type]):focus,
   text-overflow: ellipsis;
 }
 
-.write-times {
-  align-items: flex-start;
-}
-
-.write-chips {
-  flex: 1 1 100%;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-.write-chip {
-  cursor: default;
-  font-variant-numeric: tabular-nums;
-}
-
-.write-chip button {
-  display: inline-flex;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--muted);
-  cursor: pointer;
-}
-
-.write-chip button:hover {
-  color: var(--ink);
-}
-
-.write-add {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-}
-
 .write-time-input {
   width: 92px;
   height: 28px;
@@ -2781,89 +2656,9 @@ input:not([type]):focus,
   font-variant-numeric: tabular-nums;
 }
 
-.write-interval,
-.write-days {
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.write-days .chip {
-  min-width: 28px;
-  justify-content: center;
-  padding: 0 6px;
-}
-
 .write-warn {
   padding: 6px 0;
   color: var(--warn-fg-strong);
-}
-
-.write-slots {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 10px;
-  font-variant-numeric: tabular-nums;
-}
-
-.write-compose {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 6px 0 8px;
-  border-bottom: 1px solid var(--line);
-}
-
-.write-textarea {
-  width: 100%;
-  min-height: 64px;
-  padding: 8px 10px;
-  border: 1px solid var(--line-strong);
-  border-radius: 6px;
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-  font-size: 13px;
-  line-height: 1.5;
-  resize: vertical;
-}
-
-.write-textarea:focus {
-  border-color: var(--blue);
-  outline: none;
-}
-
-.write-compose-foot,
-.write-draft-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.write-over {
-  color: var(--warn-fg-strong);
-}
-
-.write-draft {
-  padding: 8px 0 4px;
-  border-bottom: 1px solid var(--line);
-}
-
-.write-draft-text {
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.write-draft-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
 }
 
 .write-backup .row-label > span:first-child {
