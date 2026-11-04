@@ -20,6 +20,8 @@ export interface ModuleDef {
   id: ModuleId;
   /** 顶部 tab 与齿轮页标题的 i18n key */
   labelKey: 'hot' | 'profileNav' | 'writeNav' | 'aiNav' | 'filterNav';
+  /** 顶栏悬浮提示：名字取得诗意，hover 时给出它到底是干什么的 */
+  titleKey?: 'hotTabTitle' | 'profileTabTitle' | 'writeTabTitle';
   /** 齿轮页标题的 i18n key（比 tab 名多「设置」） */
   settingsKey:
     | 'hotSettings'
@@ -33,13 +35,14 @@ export interface ModuleDef {
   enabled: (settings: ModuleSettings) => boolean;
 }
 
-/** 固定顺序：热帖 → 主页 → 发帖 → AI 味 → 过滤。全局永远排最后，不在这里。
- *  AI 味与过滤同属「屏蔽」，顶栏合并成一格，组内顺序见 MODULE_GROUPS。 */
+/** 固定顺序：淘金 → 阅人 → 落笔 → AI 味 → 黄推水军。全局永远排最后，不在这里。
+ *  AI 味与黄推水军同属「降噪」，顶栏合并成一格，组内顺序见 MODULE_GROUPS。 */
 export const MODULES: readonly ModuleDef[] = [
   {
     id: 'hot',
     settingKey: 'hot',
     labelKey: 'hot',
+    titleKey: 'hotTabTitle',
     settingsKey: 'hotSettings',
     settingsPage: 'hotSettings',
     enabled: (settings) => settings.hot,
@@ -48,6 +51,7 @@ export const MODULES: readonly ModuleDef[] = [
     id: 'profile',
     settingKey: 'profile',
     labelKey: 'profileNav',
+    titleKey: 'profileTabTitle',
     settingsKey: 'profileSettings',
     settingsPage: 'profileSettings',
     enabled: (settings) => settings.profile,
@@ -56,6 +60,7 @@ export const MODULES: readonly ModuleDef[] = [
     id: 'write',
     settingKey: 'write',
     labelKey: 'writeNav',
+    titleKey: 'writeTabTitle',
     settingsKey: 'writeSettings',
     settingsPage: 'writeSettings',
     enabled: (settings) => settings.write,
@@ -83,14 +88,15 @@ export const MODULES: readonly ModuleDef[] = [
  * `moduleIds` 的顺序就是二级 tab 的顺序（过滤在前，AI 味在后）。
  */
 export interface ModuleGroupDef {
-  id: 'block';
+  id: 'noise';
   /** 顶栏 tab 名的 i18n key */
-  labelKey: 'blockNav';
+  labelKey: 'noiseNav';
   moduleIds: readonly ModuleId[];
 }
 
+/** 「降噪」= 把刷到的噪音降下去：黄推水军、AI 味、关键词都在这一格下面。 */
 export const MODULE_GROUPS: readonly ModuleGroupDef[] = [
-  { id: 'block', labelKey: 'blockNav', moduleIds: ['filter', 'ai'] },
+  { id: 'noise', labelKey: 'noiseNav', moduleIds: ['filter', 'ai'] },
 ];
 
 /** 模块属于哪个分组；不在分组里的模块自己占一个顶栏 tab。 */

@@ -72,16 +72,16 @@ import {
 } from './views/shared';
 
 /**
- * 顶部栏目：功能模块各占一格，同组的模块（过滤 / AI 味）合并成「屏蔽」一格，
- * 组内用二级 tab 切换；「静音」也挂在「屏蔽」下。最后是常驻的「周刊」和「全局」。
+ * 顶部栏目：功能模块各占一格，同组的模块（黄推水军 / AI 味）合并成「降噪」一格，
+ * 组内用二级 tab 切换；「关键词」也挂在「降噪」下。最后是常驻的「拾遗」和「全局」。
  * tab 是否出现由模块总开关决定，顺序由 MODULES / MODULE_GROUPS 注册表决定。
  */
 type PopupView = ModuleId | 'global' | 'weekly' | 'mute';
-/** 顶栏 tab 的 id：分组 tab（屏蔽）不对应单个模块。 */
-type TopTabId = PopupView | 'block';
+/** 顶栏 tab 的 id：分组 tab（降噪）不对应单个模块。 */
+type TopTabId = PopupView | 'noise';
 
-/** 这个视图是否属于「屏蔽」分组（静音也算）。 */
-function inBlockGroup(view: PopupView): boolean {
+/** 这个视图是否属于「降噪」分组（关键词也算）。 */
+function inNoiseGroup(view: PopupView): boolean {
   if (view === 'mute') return true;
   return isModuleId(view) && groupOf(view) !== undefined;
 }
@@ -183,11 +183,11 @@ export default function App() {
   const [view, setView] = useState<PopupView>(route.view);
   // 从「屏蔽」切到别的栏目再切回来，停在刚才那个二级 tab。
   // 记在 ref 里：它只是下次点「屏蔽」时的落点，不需要为它再渲染一次。
-  const lastBlockView = useRef<PopupView>(inBlockGroup(route.view) ? route.view : 'filter');
+  const lastNoiseView = useRef<PopupView>(inNoiseGroup(route.view) ? route.view : 'filter');
 
   /** 切视图；落在「屏蔽」里时顺手记住是哪个二级 tab。 */
   const showView = useCallback((next: PopupView): void => {
-    if (inBlockGroup(next)) lastBlockView.current = next;
+    if (inNoiseGroup(next)) lastNoiseView.current = next;
     setView(next);
   }, []);
   const [settingsPage, setSettingsPage] = useState<SettingsPage>(route.page);
@@ -519,42 +519,47 @@ export default function App() {
     [view, moduleSettingsOpen, showView],
   );
 
-  // 顶栏：未分组的模块各占一格；分组的模块共用一格「屏蔽」。
-  // 即使组内模块全关掉，「屏蔽」也还在——静音是常驻入口，不属于任何模块开关。
-  const tabs: Array<{ id: TopTabId; label: string }> = [];
+  // 顶栏：未分组的模块各占一格；分组的模块共用一格「降噪」。
+  // 即使组内模块全关掉，「降噪」也还在——关键词是常驻入口，不属于任何模块开关。
+  // 名字取得偏诗意，所以每一格都带一句 title：hover 时能落到具体功能上。
+  const tabs: Array<{ id: TopTabId; label: string; title: string }> = [];
   const seenGroups = new Set<string>();
   for (const module of MODULES) {
     const group = groupOf(module.id);
     if (group) {
       if (seenGroups.has(group.id)) continue;
       seenGroups.add(group.id);
-      tabs.push({ id: group.id, label: t[group.labelKey] });
+      tabs.push({ id: group.id, label: t[group.labelKey], title: t.noiseTabTitle });
       continue;
     }
     if (modules && !module.enabled(modules)) continue;
-    tabs.push({ id: module.id, label: t[module.labelKey] });
+    tabs.push({
+      id: module.id,
+      label: t[module.labelKey],
+      title: module.titleKey ? t[module.titleKey] : t[module.labelKey],
+    });
   }
-  // 周刊与全局都是常驻入口，不属于模块开关
-  tabs.push({ id: 'weekly', label: t.weeklyNav });
-  tabs.push({ id: 'global', label: t.globalNav });
+  // 拾遗与全局都是常驻入口，不属于模块开关
+  tabs.push({ id: 'weekly', label: t.weeklyNav, title: t.weeklyTabTitle });
+  tabs.push({ id: 'global', label: t.globalNav, title: t.globalNav });
 
-  // 屏蔽下的二级 tab：组内模块按 MODULE_GROUPS 的顺序，静音永远最后
-  const blockTabs: Array<{ id: PopupView; label: string }> = [];
+  // 降噪下的二级 tab：组内模块按 MODULE_GROUPS 的顺序，关键词永远最后
+  const noiseTabs: Array<{ id: PopupView; label: string }> = [];
   for (const group of MODULE_GROUPS) {
     for (const id of group.moduleIds) {
       const module = moduleById(id);
       if (modules && !module.enabled(modules)) continue;
-      blockTabs.push({ id, label: t[module.labelKey] });
+      noiseTabs.push({ id, label: t[module.labelKey] });
     }
   }
-  blockTabs.push({ id: 'mute', label: t.muteNav });
+  noiseTabs.push({ id: 'mute', label: t.muteNav });
 
   // 外部窗口关掉模块时也要立刻生效：不依赖 effect 里的 setState，直接派生当前可渲染的视图
   const effectiveView: PopupView =
     modules && isModuleId(view) && !moduleById(view).enabled(modules)
       ? fallbackViewFor(view, modules)
       : view;
-  const activeTab: TopTabId = inBlockGroup(effectiveView) ? 'block' : (effectiveView as TopTabId);
+  const activeTab: TopTabId = inNoiseGroup(effectiveView) ? 'noise' : (effectiveView as TopTabId);
 
   const effectiveModuleSettingsOpen =
     moduleSettingsOpen &&
@@ -565,10 +570,10 @@ export default function App() {
       : null;
 
   function selectSection(section: TopTabId): void {
-    if (section === 'block') {
+    if (section === 'noise') {
       // 回到上次停留的二级 tab；那个模块被关掉了就退到组里第一个
-      const remembered = lastBlockView.current;
-      const target = blockTabs.some((tab) => tab.id === remembered) ? remembered : blockTabs[0]?.id;
+      const remembered = lastNoiseView.current;
+      const target = noiseTabs.some((tab) => tab.id === remembered) ? remembered : noiseTabs[0]?.id;
       if (!target) return;
       showView(target);
     } else {
@@ -610,11 +615,12 @@ export default function App() {
                   tab.id === 'weekly' ? ' nav-weekly' : ''
                 }`.trim()}
                 aria-current={activeTab === tab.id ? 'page' : undefined}
+                title={tab.title}
                 onClick={() => selectSection(tab.id)}
               >
                 {tab.id === 'weekly' ? <AppIcon name="sparkles" size={13} /> : null}
                 <span>{tab.label}</span>
-                {tab.id === 'block' && activeTab !== 'block' && pageCount ? (
+                {tab.id === 'noise' && activeTab !== 'noise' && pageCount ? (
                   <span className="nav-badge">{Math.min(pageCount, 99)}</span>
                 ) : null}
               </button>
@@ -633,10 +639,10 @@ export default function App() {
             </button>
           ) : null}
         </nav>
-        {/* 「屏蔽」的二级 tab：过滤 / AI 味 / 静音 */}
-        {activeTab === 'block' ? (
+        {/* 「降噪」的二级 tab：黄推水军 / AI 味 / 关键词 */}
+        {activeTab === 'noise' ? (
           <nav className="section-subnav" aria-label={t.secondaryNavigation}>
-            {blockTabs.map((tab) => (
+            {noiseTabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"

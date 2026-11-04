@@ -113,10 +113,10 @@ async function openModuleSettings(
   gearLabel = `${navLabel}设置`,
 ): Promise<void> {
   await waitForLazy(() => root.querySelector('.section-nav button') !== null, 400);
-  // 过滤 / AI 味 合并进了「屏蔽」：先点顶栏那一格，再点它的二级 tab
+  // 黄推水军 / AI 味 合并进了「降噪」：先点顶栏那一格，再点它的二级 tab
   if (['黄推水军', 'Spam', 'AI 味', 'AI'].includes(navLabel) && !root.querySelector('.section-subnav')) {
     const groupTab = [...root.querySelectorAll<HTMLButtonElement>('.section-nav button')].find(
-      (button) => ['屏蔽', 'Block'].includes(button.textContent?.trim() ?? ''),
+      (button) => ['降噪', 'Denoise'].includes(button.textContent?.trim() ?? ''),
     );
     if (!groupTab) throw new Error('block tab not found');
     await act(async () => groupTab.click());
@@ -166,7 +166,7 @@ async function openSettingsPage(root: HTMLElement, label: string): Promise<void>
     return;
   }
   if (label === '发帖辅助') {
-    await openModuleSettings(root, '发帖');
+    await openModuleSettings(root, '落笔');
     return;
   }
   if (label === '数据与隐私') {
@@ -307,10 +307,10 @@ describe('popup App 渲染冒烟', () => {
       root.render(React.createElement(App));
     });
     await waitForCondition(
-      () => rootEl.querySelector('.section-nav .is-active')?.textContent === '主页',
+      () => rootEl.querySelector('.section-nav .is-active')?.textContent === '阅人',
     );
-    expect(rootEl.querySelector('.section-nav .is-active')?.textContent).toBe('主页');
-    // 判断完之前不渲染热帖：热帖页的工具栏一次都没出现过
+    expect(rootEl.querySelector('.section-nav .is-active')?.textContent).toBe('阅人');
+    // 判断完之前不渲染淘金：淘金页的工具栏一次都没出现过
     expect(rootEl.querySelector('.hot-view')).toBeNull();
   });
 
@@ -328,7 +328,7 @@ describe('popup App 渲染冒烟', () => {
     const nav = [...rootEl.querySelectorAll('.section-nav button')].map(
       (button) => button.getAttribute('aria-label') ?? button.textContent,
     );
-    expect(nav).toEqual(['热帖', '主页', '发帖', '屏蔽', '周刊', '全局']);
+    expect(nav).toEqual(['淘金', '阅人', '落笔', '降噪', '拾遗', '全局']);
     expect(
       [...rootEl.querySelectorAll('.section-subnav button')].map((button) => button.textContent),
     ).toEqual(['黄推水军', 'AI 味', '关键词']);
@@ -369,7 +369,7 @@ describe('popup App 渲染冒烟', () => {
       moduleSettingsV1: expect.objectContaining({ aiCheck: false }),
     });
 
-    await openModuleSettings(rootEl, '发帖');
+    await openModuleSettings(rootEl, '落笔');
     const composeToggle = rootEl.querySelector<HTMLInputElement>(
       'input[role="switch"][aria-label="发帖辅助"]',
     );
@@ -392,7 +392,7 @@ describe('popup App 渲染冒烟', () => {
     expect(rootEl.textContent).toContain('Detection level');
   });
 
-  it('屏蔽二级 tab：过滤 / AI 味 / 静音，切走再切回停在原处', async () => {
+  it('降噪二级 tab：黄推水军 / AI 味 / 关键词，切走再切回停在原处', async () => {
     const rootEl = renderApp();
     await waitForLazy(() => rootEl.querySelector('.section-subnav button') !== null);
 
@@ -404,15 +404,15 @@ describe('popup App 渲染冒烟', () => {
     expect(subnavLabels()).toEqual(['黄推水军', 'AI 味', '关键词']);
     expect(activeSubtab()).toBe('黄推水军');
 
-    // 切到关键词：顶栏仍停在「屏蔽」
+    // 切到关键词：顶栏仍停在「降噪」
     await act(async () => buttonWithText(rootEl, '关键词').click());
     await waitForLazy(() => activeSubtab() === '关键词');
-    expect(rootEl.querySelector('.section-nav .is-active')?.textContent).toBe('屏蔽');
+    expect(rootEl.querySelector('.section-nav .is-active')?.textContent).toBe('降噪');
 
-    // 切到别的栏目再回「屏蔽」：停在刚才的关键词
-    await act(async () => buttonWithText(rootEl, '热帖').click());
+    // 切到别的栏目再回「降噪」：停在刚才的关键词
+    await act(async () => buttonWithText(rootEl, '淘金').click());
     await waitForLazy(() => rootEl.querySelector('.section-subnav') === null);
-    await act(async () => buttonWithText(rootEl, '屏蔽').click());
+    await act(async () => buttonWithText(rootEl, '降噪').click());
     await waitForLazy(() => activeSubtab() === '关键词');
     expect(activeSubtab()).toBe('关键词');
   });
@@ -421,7 +421,7 @@ describe('popup App 渲染冒烟', () => {
     const rootEl = renderApp();
     await openGlobal(rootEl);
     const hotSwitch = rootEl.querySelector<HTMLInputElement>(
-      'input[role="switch"][aria-label="热帖"]',
+      'input[role="switch"][aria-label="淘金"]',
     )!;
     await act(async () => {
       hotSwitch.click();
@@ -430,7 +430,7 @@ describe('popup App 渲染冒烟', () => {
     const nav = [...rootEl.querySelectorAll('.section-nav button')].map(
       (button) => button.getAttribute('aria-label') ?? button.textContent,
     );
-    expect(nav).not.toContain('热帖');
+    expect(nav).not.toContain('淘金');
     expect(nav).toContain('全局');
     expect(rootEl.querySelector('.section-nav .is-active')?.getAttribute('aria-label')).toBe(
       '全局',
@@ -1235,7 +1235,7 @@ describe('popup App 渲染冒烟', () => {
       'spam_queen',
     ]);
   });
-  it('旧链接参数落到新位置：名单 › 拉黑记录进设置二级页，默认打开热帖', async () => {
+  it('旧链接参数落到新位置：名单 › 拉黑记录进设置二级页，默认打开淘金', async () => {
     Object.defineProperty(window, 'innerHeight', { value: 600, configurable: true });
     history.replaceState(null, '', '/?view=lists&list=blocked');
     const rootEl = document.createElement('div');
@@ -1245,7 +1245,7 @@ describe('popup App 渲染冒烟', () => {
     await act(async () => root.render(React.createElement(App)));
     await waitForCondition(() => rootEl.querySelector('.subpage-head') !== null);
     expect(rootEl.querySelector('.subpage-head h2')?.textContent).toBe('拉黑记录');
-    expect(rootEl.querySelector('.section-nav .is-active')?.textContent).toBe('屏蔽');
+    expect(rootEl.querySelector('.section-nav .is-active')?.textContent).toBe('降噪');
     expect(rootEl.querySelector('.section-subnav .is-active')?.textContent).toBe('黄推水军');
 
     // 返回「过滤规则」→「过滤设置」→ 过滤页
@@ -1264,8 +1264,8 @@ describe('popup App 渲染冒烟', () => {
     mountedRoots.push(root2);
     await act(async () => root2.render(React.createElement(App)));
     await waitForCondition(
-      () => second.querySelector('.section-nav .is-active')?.textContent === '热帖',
+      () => second.querySelector('.section-nav .is-active')?.textContent === '淘金',
     );
-    expect(second.querySelector('.section-nav .is-active')?.textContent).toBe('热帖');
+    expect(second.querySelector('.section-nav .is-active')?.textContent).toBe('淘金');
   });
 });

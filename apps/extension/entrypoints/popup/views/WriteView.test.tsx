@@ -119,7 +119,7 @@ describe('发帖页只读排期台', () => {
 
   it('齿轮打开发帖模块设置', async () => {
     const rootEl = await renderWriteView();
-    const button = rootEl.querySelector<HTMLButtonElement>('[aria-label="发帖设置"]');
+    const button = rootEl.querySelector<HTMLButtonElement>('[aria-label="落笔设置"]');
     if (!button) throw new Error('settings button not found');
     await act(async () => button.click());
     expect(onOpenSettings).toHaveBeenCalled();

@@ -335,7 +335,7 @@ describe('ProfileView', () => {
       '补全这个博主',
       '在 X 搜高赞帖',
       '用 Google 搜他的帖子',
-      '主页设置',
+      '阅人设置',
     ]);
     // 没有赤裸裸的大按钮
     expect(el.querySelector('.secondary-button')).toBeNull();
@@ -343,8 +343,8 @@ describe('ProfileView', () => {
 
   it('keeps the settings gear in the tool row when posts are collected', async () => {
     const { el } = await render();
-    expect(el.querySelector('.profile-tools button[aria-label="主页设置"]')).not.toBeNull();
-    expect(el.querySelector('.view-toolbar button[aria-label="主页设置"]')).toBeNull();
+    expect(el.querySelector('.profile-tools button[aria-label="阅人设置"]')).not.toBeNull();
+    expect(el.querySelector('.view-toolbar button[aria-label="阅人设置"]')).toBeNull();
   });
 
   it('asks to open a profile when the tab is not one', async () => {
