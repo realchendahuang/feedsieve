@@ -5,15 +5,19 @@ import { MUTE_COPY } from '../../../src/lib/mute/copy';
 import {
   addMuteRule,
   getMuteSettings,
+  MAX_MUTE_PHRASE_LENGTH,
   MAX_MUTE_RULES,
   mergeNativeMutes,
   mutePhraseKey,
+  normalizeMutePhrase,
   patchMuteRule,
   removeMuteRule,
+  renameMuteRule,
   setMuteSettings,
   subscribeMuteSettings,
   type MuteRule,
   type MuteSettings,
+  type MuteSyncState,
   type NativeMute,
 } from '../../../src/lib/mute/mute-store';
 import { AppIcon, HelpIcon, Toggle } from './shared';
@@ -53,8 +57,11 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
   const [nativeStatus, setNativeStatus] = useState<NativeStatus>({ status: 'idle' });
   const [consentOpen, setConsentOpen] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [libraryQuery, setLibraryQuery] = useState('');
+  const [mineQuery, setMineQuery] = useState('');
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const nativeLoadedRef = useRef(false);
   const processingRef = useRef(false);
@@ -200,7 +207,19 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
     () => new Set((settings?.rules ?? []).map((rule) => mutePhraseKey(rule.phrase))),
     [settings],
   );
-  const rules = settings?.rules ?? [];
+  const rules = useMemo(() => settings?.rules ?? [], [settings]);
+  const mineQueryKey = mutePhraseKey(mineQuery);
+  const visibleRules = useMemo(
+    () =>
+      !mineQueryKey
+        ? rules
+        : rules.filter((rule) => mutePhraseKey(rule.phrase).includes(mineQueryKey)),
+    [rules, mineQueryKey],
+  );
+  const syncedTotal = useMemo(
+    () => rules.filter((rule) => rule.syncState === 'synced').length,
+    [rules],
+  );
   const libraryWords = useMemo(
     () => [...new Set(OFFICIAL_MUTE_PACKS.flatMap((entry) => entry.words))],
     [],
@@ -300,6 +319,81 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
     setBusy(null);
   }
 
+  function beginEdit(rule: MuteRule): void {
+    if (busy || rule.id === syncingId) return;
+    setConfirmId(null);
+    setErrorCode(null);
+    setEditingId(rule.id);
+    setEditingValue(rule.phrase);
+  }
+
+  function cancelEdit(): void {
+    setEditingId(null);
+    setEditingValue('');
+    setErrorCode(null);
+  }
+
+  async function saveEdit(rule: MuteRule): Promise<void> {
+    if (busy || rule.id === syncingId) return;
+    const normalized = normalizeMutePhrase(editingValue);
+    if (!normalized) {
+      setErrorCode('invalid');
+      return;
+    }
+    if (mutePhraseKey(normalized) === mutePhraseKey(rule.phrase)) {
+      cancelEdit();
+      return;
+    }
+    const current = settingsRef.current;
+    if (!current) return;
+    const renamed = renameMuteRule(current, rule.id, normalized);
+    if (!renamed.ok) {
+      setErrorCode(renamed.code);
+      return;
+    }
+    setErrorCode(null);
+    setBusy(`edit:${rule.id}`);
+    const hadNative = Boolean(rule.nativeId);
+    // 已写入 X 的词改名 = 删旧词 + 写新词；删失败就不改本地，避免两边名字不一致。
+    if (hadNative && current.nativeSync) {
+      const reply = await callTab({ type: 'feedsieve:mute-destroy', ids: [rule.nativeId!] });
+      if (!reply.ok) {
+        setErrorCode(reply.code ?? 'native_unavailable');
+        setBusy(null);
+        return;
+      }
+    }
+    // 等 X 返回期间队列可能改过别的规则，改名要落到最新状态上。
+    const latest = settingsRef.current ?? current;
+    const latestRename = renameMuteRule(latest, rule.id, normalized);
+    if (!latestRename.ok) {
+      setErrorCode(latestRename.code);
+      setBusy(null);
+      return;
+    }
+    const wantsNative =
+      latest.nativeSync &&
+      (hadNative || rule.syncState === 'pending' || rule.syncState === 'failed');
+    await persist(
+      patchMuteRule(latestRename.settings, rule.id, {
+        ...(hadNative
+          ? {
+              nativeId: undefined,
+              nativeSurfaces: undefined,
+              nativeOptions: undefined,
+              validUntil: undefined,
+            }
+          : {}),
+        syncState: wantsNative ? 'pending' : 'local',
+      }),
+    );
+    setEditingId(null);
+    setEditingValue('');
+    setBusy(null);
+    notify(t.saved);
+    if (wantsNative) void processQueue();
+  }
+
   function toggleNative(next: boolean): void {
     const current = settingsRef.current;
     if (!current || busy) return;
@@ -310,7 +404,8 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
         ...current,
         nativeSync: false,
         rules: current.rules.map((rule) =>
-          rule.syncState === 'pending' && rule.id !== syncingId
+          (rule.syncState === 'pending' || rule.syncState === 'failed') &&
+          rule.id !== syncingId
             ? { ...rule, syncState: 'local' as const }
             : rule,
         ),
@@ -329,7 +424,13 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
     void persist({ ...current, nativeSync: true }).then(() => processQueue());
   }
 
+  /** 同步关闭时，排队/失败都只是本机状态，不再显示成等待或报错。 */
+  function displayState(rule: MuteRule): MuteSyncState {
+    return !settings?.nativeSync && rule.syncState !== 'synced' ? 'local' : rule.syncState;
+  }
+
   function stateLabel(rule: MuteRule): string {
+    if (!settings?.nativeSync && rule.syncState !== 'synced') return t.syncLocal;
     if (rule.syncState === 'synced') return t.syncSynced;
     if (rule.syncState === 'pending') return syncingId === rule.id ? t.syncPending : t.syncQueued;
     if (rule.syncState === 'failed') return t.syncFailed;
@@ -492,7 +593,7 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
           >
             <input
               value={phrase}
-              maxLength={80}
+              maxLength={MAX_MUTE_PHRASE_LENGTH}
               disabled={busy !== null}
               placeholder={t.addPlaceholder}
               aria-label={t.addPlaceholder}
@@ -507,6 +608,19 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
             </button>
           </form>
 
+          {rules.length > 5 || mineQueryKey ? (
+            <div className="mute-search-field">
+              <AppIcon name="search" size={14} />
+              <input
+                className="mute-library-search"
+                value={mineQuery}
+                placeholder={t.searchMine}
+                aria-label={t.searchMine}
+                onChange={(event) => setMineQuery(event.target.value)}
+              />
+            </div>
+          ) : null}
+
           {rules.length === 0 ? (
             <div className="empty-state is-clean">
               <AppIcon name="clean" size={18} />
@@ -515,49 +629,112 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
             </div>
           ) : (
             <>
-              <div className="mute-summary">{t.count(rules.length)}</div>
-              <ul className="mute-list" aria-label={t.count(rules.length)}>
-                {rules.map((rule) => {
-                  const deleting = busy === `del:${rule.id}`;
-                  return (
-                    <li key={rule.id} className="mute-item">
-                      <span className="mute-phrase" title={rule.phrase}>
-                        {rule.phrase}
-                      </span>
-                      <span className="mute-state" data-state={rule.syncState}>
-                        {stateLabel(rule)}
-                      </span>
-                      <div className="mute-actions">
-                        {settings.nativeSync &&
-                        (rule.syncState === 'failed' || rule.syncState === 'local') ? (
-                          <button
-                            type="button"
-                            className="text-button"
-                            disabled={busy !== null}
-                            onClick={() => retrySync(rule)}
-                          >
-                            {rule.syncState === 'failed' ? t.retry : t.syncNow}
-                          </button>
-                        ) : null}
-                        <button
-                          type="button"
-                          className={`text-button${confirmId === rule.id ? ' is-danger' : ''}`}
-                          disabled={busy !== null || syncingId === rule.id}
-                          onClick={() => void deleteRule(rule)}
-                        >
-                          {deleting
-                            ? '…'
-                            : confirmId === rule.id
-                              ? rule.nativeId
-                                ? t.confirmRemoveNative
-                                : t.confirmRemove
-                              : t.remove}
-                        </button>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+              <div className="mute-summary">
+                {t.count(visibleRules.length)}
+                {mineQueryKey ? ` / ${t.count(rules.length)}` : ''}
+                {!mineQueryKey && syncedTotal ? ` · ${t.countSynced(syncedTotal)}` : ''}
+              </div>
+              {visibleRules.length === 0 ? (
+                <div className="empty-state">{t.libraryNoMatch}</div>
+              ) : (
+                <ul className="mute-list" aria-label={t.count(rules.length)}>
+                  {visibleRules.map((rule) => {
+                    const deleting = busy === `del:${rule.id}`;
+                    const editing = editingId === rule.id;
+                    return (
+                      <li key={rule.id} className={`mute-item${editing ? ' is-editing' : ''}`}>
+                        {editing ? (
+                          <>
+                            <input
+                              className="mute-edit-input"
+                              value={editingValue}
+                              maxLength={MAX_MUTE_PHRASE_LENGTH}
+                              disabled={busy !== null}
+                              aria-label={`${t.edit}: ${rule.phrase}`}
+                              autoFocus
+                              onChange={(event) => setEditingValue(event.target.value)}
+                              onKeyDown={(event) => {
+                                if (event.key === 'Escape') cancelEdit();
+                                if (event.key === 'Enter') {
+                                  event.preventDefault();
+                                  void saveEdit(rule);
+                                }
+                              }}
+                            />
+                            <div className="mute-actions">
+                              <button
+                                type="button"
+                                className="text-button"
+                                disabled={busy !== null || !editingValue.trim()}
+                                title={
+                                  rule.nativeId && settings.nativeSync
+                                    ? t.editSyncedHint
+                                    : undefined
+                                }
+                                onClick={() => void saveEdit(rule)}
+                              >
+                                {t.save}
+                              </button>
+                              <button
+                                type="button"
+                                className="text-button"
+                                disabled={busy !== null}
+                                onClick={cancelEdit}
+                              >
+                                {t.cancel}
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <span className="mute-phrase" title={rule.phrase}>
+                              {rule.phrase}
+                            </span>
+                            <span className="mute-state" data-state={displayState(rule)}>
+                              {stateLabel(rule)}
+                            </span>
+                            <div className="mute-actions">
+                              {settings.nativeSync &&
+                              (rule.syncState === 'failed' || rule.syncState === 'local') ? (
+                                <button
+                                  type="button"
+                                  className="text-button"
+                                  disabled={busy !== null}
+                                  onClick={() => retrySync(rule)}
+                                >
+                                  {rule.syncState === 'failed' ? t.retry : t.syncNow}
+                                </button>
+                              ) : null}
+                              <button
+                                type="button"
+                                className="text-button"
+                                disabled={busy !== null || syncingId === rule.id}
+                                onClick={() => beginEdit(rule)}
+                              >
+                                {t.edit}
+                              </button>
+                              <button
+                                type="button"
+                                className={`text-button${confirmId === rule.id ? ' is-danger' : ''}`}
+                                disabled={busy !== null || syncingId === rule.id}
+                                onClick={() => void deleteRule(rule)}
+                              >
+                                {deleting
+                                  ? '…'
+                                  : confirmId === rule.id
+                                    ? rule.nativeId
+                                      ? t.confirmRemoveNative
+                                      : t.confirmRemove
+                                    : t.remove}
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
               {rules.length >= MAX_MUTE_RULES ? <p className="mute-note">{t.limit}</p> : null}
             </>
           )}
@@ -599,7 +776,7 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
                         key={word}
                         type="button"
                         className={`mute-chip${added ? ' is-added' : ''}`}
-                        data-state={rule?.syncState ?? 'none'}
+                        data-state={rule ? displayState(rule) : 'none'}
                         disabled={added || busy !== null}
                         title={rule ? stateLabel(rule) : word}
                         aria-label={`${added ? t.libraryAdded : t.addFromLibrary}: ${word}`}

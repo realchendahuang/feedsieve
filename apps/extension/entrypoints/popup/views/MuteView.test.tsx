@@ -53,10 +53,20 @@ async function render(
 }
 
 function setInput(value: string): void {
-  const input = container.querySelector<HTMLInputElement>('.mute-add-form input')!;
+  setValue(container.querySelector<HTMLInputElement>('.mute-add-form input')!, value);
+}
+
+function setValue(input: HTMLInputElement, value: string): void {
   const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
   setter?.call(input, value);
   input.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function actionButton(text: string): HTMLButtonElement {
+  const button = [...container.querySelectorAll<HTMLButtonElement>('.mute-actions .text-button')]
+    .find((item) => item.textContent?.trim() === text);
+  if (!button) throw new Error(`找不到按钮：${text}`);
+  return button;
 }
 
 async function submitAdd(): Promise<void> {
@@ -276,7 +286,7 @@ describe('屏蔽页', () => {
       ],
     });
     await render();
-    const remove = container.querySelector<HTMLButtonElement>('.mute-actions .text-button')!;
+    const remove = actionButton('删除');
     await act(async () => remove.click());
     expect(remove.textContent).toBe('确认删除');
     expect((stored.keywordMutesV1 as MuteSettings).rules).toHaveLength(1);
@@ -284,5 +294,168 @@ describe('屏蔽页', () => {
     await act(async () => remove.click());
     expect(container.querySelector('.mute-item')).toBeNull();
     expect((stored.keywordMutesV1 as MuteSettings).rules).toHaveLength(0);
+  });
+
+  it('编辑本机词：改完写回 storage，列表显示新词', async () => {
+    stored.keywordMutesV1 = settings({
+      rules: [
+        {
+          id: 'r1',
+          phrase: '加微信',
+          enabled: true,
+          origin: 'local',
+          syncState: 'local',
+          createdAt: 1,
+        },
+      ],
+    });
+    await render();
+    await act(async () => actionButton('编辑').click());
+
+    const input = container.querySelector<HTMLInputElement>('.mute-edit-input')!;
+    expect(input.value).toBe('加微信');
+    await act(async () => setValue(input, '领福利'));
+    await act(async () => {
+      actionButton('保存').click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(container.textContent).toContain('领福利');
+    expect(container.textContent).not.toContain('加微信');
+    expect((stored.keywordMutesV1 as MuteSettings).rules[0]?.phrase).toBe('领福利');
+  });
+
+  it('编辑成重复词时提示，不改动列表', async () => {
+    stored.keywordMutesV1 = settings({
+      rules: [
+        {
+          id: 'r1',
+          phrase: '加微信',
+          enabled: true,
+          origin: 'local',
+          syncState: 'local',
+          createdAt: 1,
+        },
+        {
+          id: 'r2',
+          phrase: '加V',
+          enabled: true,
+          origin: 'local',
+          syncState: 'local',
+          createdAt: 2,
+        },
+      ],
+    });
+    await render();
+    const edit = [...container.querySelectorAll<HTMLButtonElement>('.mute-actions .text-button')]
+      .filter((button) => button.textContent?.trim() === '编辑')[0]!;
+    await act(async () => edit.click());
+    const input = container.querySelector<HTMLInputElement>('.mute-edit-input')!;
+    await act(async () => setValue(input, '加V'));
+    await act(async () => {
+      actionButton('保存').click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(container.textContent).toContain('这个词已经在列表里了');
+    expect(container.querySelector('.mute-edit-input')).not.toBeNull();
+    expect((stored.keywordMutesV1 as MuteSettings).rules.map((rule) => rule.phrase)).toEqual([
+      '加微信',
+      '加V',
+    ]);
+  });
+
+  it('编辑已同步词：先删 X 旧词，再排队写入新词', async () => {
+    stored.keywordMutesV1 = settings({
+      nativeSync: true,
+      rules: [
+        {
+          id: 'r1',
+          phrase: '加微信',
+          enabled: true,
+          origin: 'local',
+          nativeId: '11',
+          syncState: 'synced',
+          createdAt: 1,
+        },
+      ],
+    });
+    const calls: Array<{ type: string; keyword?: string; ids?: string[] }> = [];
+    const send = vi.fn(async (message: { type: string; keyword?: string; ids?: string[] }) => {
+      calls.push(message);
+      if (message.type === 'feedsieve:mute-list') {
+        return {
+          ok: true,
+          data: [
+            {
+              keyword: '加微信',
+              id: '11',
+              surfaces: ['home_timeline'],
+              options: [],
+              validUntil: null,
+            },
+          ],
+        };
+      }
+      if (message.type === 'feedsieve:mute-destroy') return { ok: true, data: [] };
+      if (message.type === 'feedsieve:mute-create') {
+        return {
+          ok: true,
+          data: {
+            mute: {
+              keyword: message.keyword,
+              id: '99',
+              surfaces: ['home_timeline'],
+              options: [],
+              validUntil: null,
+            },
+            list: [],
+          },
+        };
+      }
+      return { ok: false, code: 'unexpected' };
+    });
+    await render(send);
+    await act(async () => actionButton('编辑').click());
+    const input = container.querySelector<HTMLInputElement>('.mute-edit-input')!;
+    await act(async () => setValue(input, '领福利'));
+    await act(async () => {
+      actionButton('保存').click();
+      for (let i = 0; i < 6; i += 1) await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(calls.some((call) => call.type === 'feedsieve:mute-destroy' && call.ids?.[0] === '11')).toBe(
+      true,
+    );
+    expect(
+      calls.some(
+        (call) => call.type === 'feedsieve:mute-create' && call.keyword === '领福利',
+      ),
+    ).toBe(true);
+    const saved = (stored.keywordMutesV1 as MuteSettings).rules[0];
+    expect(saved?.phrase).toBe('领福利');
+    expect(saved?.nativeId).toBe('99');
+    expect(saved?.syncState).toBe('synced');
+  });
+
+  it('超过 5 个词时出现搜索框，可以按词过滤', async () => {
+    stored.keywordMutesV1 = settings({
+      rules: Array.from({ length: 6 }, (_, index) => ({
+        id: `r${index}`,
+        phrase: `屏蔽词${index}`,
+        enabled: true,
+        origin: 'local' as const,
+        syncState: 'local' as const,
+        createdAt: index,
+      })),
+    });
+    await render();
+    const search = container.querySelector<HTMLInputElement>('.mute-search-field input');
+    expect(search).not.toBeNull();
+    await act(async () => setValue(search!, '屏蔽词3'));
+
+    expect(container.querySelectorAll('.mute-item')).toHaveLength(1);
+    expect(container.textContent).toContain('屏蔽词3');
+    expect(container.textContent).toContain('1 个词 / 6 个词');
   });
 });

@@ -26,6 +26,12 @@ const zh = {
   syncQueued: '排队中',
   syncSynced: '已同步 X',
   syncFailed: '同步失败',
+  edit: '编辑',
+  save: '保存',
+  saved: '已保存',
+  editSyncedHint: '保存后会先删除 X 上的旧词，再写入新词。',
+  searchMine: '搜索已添加的词',
+  countSynced: (n: number) => `${n} 个已同步 X`,
   remove: '删除',
   confirmRemove: '确认删除',
   confirmRemoveNative: '确认删除（X 也会取消）',
@@ -52,7 +58,7 @@ const zh = {
   packProgress: (added: number, total: number) => `已加入 ${added} / ${total}`,
   helpToggle: '福滤娃功能 · 可在「屏蔽」页关闭',
   helpMine:
-    '福滤娃的推文屏蔽词：命中正文后折叠推文，不拉黑账号，也不上传正文。搜索页同样生效；开启原生同步后，手机 App 的首页和通知也会生效。',
+    '福滤娃的推文屏蔽词：命中正文后折叠推文，不拉黑账号，也不上传正文。搜索页同样生效；开启原生同步后，手机 App 的首页和通知也会生效。词条可以编辑，已同步到 X 的词会先删旧词再写新词。',
   helpNative:
     '写入的是 X 原生静音词，和你在 X 设置里手动添加是同一条链路；只在点击添加/同步时逐条写入，不批量、不后台重试。',
   helpLibrary:
@@ -91,6 +97,12 @@ const en: typeof zh = {
   syncQueued: 'Queued',
   syncSynced: 'Synced to X',
   syncFailed: 'Sync failed',
+  edit: 'Edit',
+  save: 'Save',
+  saved: 'Saved',
+  editSyncedHint: 'Saving removes the old word from X first, then writes the new one.',
+  searchMine: 'Search added words',
+  countSynced: (n: number) => `${n} synced to X`,
   remove: 'Remove',
   confirmRemove: 'Confirm remove',
   confirmRemoveNative: 'Confirm remove (also from X)',
@@ -117,7 +129,7 @@ const en: typeof zh = {
   packProgress: (added: number, total: number) => `${added} / ${total} added`,
   helpToggle: 'FeedSieve feature · turn it off in the Mute tab',
   helpMine:
-    'FeedSieve keyword mute: folds matching posts without blocking accounts and without uploading post text. It works in search too; with native sync on, it also applies to Home and notifications in the mobile app.',
+    'FeedSieve keyword mute: folds matching posts without blocking accounts and without uploading post text. It works in search too; with native sync on, it also applies to Home and notifications in the mobile app. Words can be edited; a synced word is removed from X before the new one is written.',
   helpNative:
     'This writes X native muted words through the same web-client path as adding them in X settings. One request per confirmed word, no batches, no background retries.',
   helpLibrary:

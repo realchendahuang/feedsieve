@@ -1114,6 +1114,7 @@ input:not([type]):focus,
   color: var(--ink);
   font-weight: 700;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .post.is-visited .post-name,
@@ -1194,6 +1195,7 @@ input:not([type]):focus,
   align-items: center;
   gap: 4px;
   min-width: 0;
+  white-space: nowrap;
 }
 
 .hot-insight {
@@ -1753,12 +1755,13 @@ input:not([type]):focus,
 
 .profile-who {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: center;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 4px 10px;
+  align-items: start;
 }
 
 .profile-names {
+  grid-column: 2;
   min-width: 0;
 }
 
@@ -2076,8 +2079,9 @@ input:not([type]):focus,
 
 /* 账号卡右上角的图标按钮：功能名在悬浮提示里 */
 .profile-tools {
+  grid-column: 2;
   display: flex;
-  align-self: start;
+  justify-content: flex-end;
   gap: 2px;
 }
 
@@ -3072,6 +3076,21 @@ input:not([type]):focus,
     font-size: 12.5px;
   }
 
+  /* 300px 侧栏：五个动作放不下一行 13px，收小图标和字号，别让「18.2万」竖着折行。 */
+  .post-actions {
+    gap: 2px;
+    font-size: 11.5px;
+  }
+
+  .post-actions span {
+    gap: 3px;
+  }
+
+  .post-actions svg {
+    width: 14px;
+    height: 14px;
+  }
+
   /* 300px 侧栏：收紧周刊纵向间距，让底部链接不用多滚 20px。 */
   .weekly-body {
     padding-bottom: 14px;
@@ -3093,13 +3112,42 @@ input:not([type]):focus,
 }
 
 .mute-add-form {
-  margin: 10px 0 8px;
+  margin: 0 0 8px;
 }
 
 .mute-add-form .secondary-button:disabled {
   color: var(--faint);
   border-color: var(--line);
   font-weight: 500;
+}
+
+.mute-search-field {
+  position: relative;
+  margin-bottom: 8px;
+}
+
+.mute-search-field .app-icon {
+  position: absolute;
+  top: 50%;
+  left: 9px;
+  color: var(--muted);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.mute-search-field input {
+  width: 100%;
+  padding-left: 29px;
+}
+
+.mute-edit-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 32px;
+}
+
+.mute-item.is-editing {
+  padding: 6px 0;
 }
 
 .mute-summary {

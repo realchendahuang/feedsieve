@@ -167,6 +167,31 @@ export function addMuteRule(
   return { ok: true, settings: { ...settings, rules: [rule, ...settings.rules] }, rule };
 }
 
+/** 改词只动 phrase；重复校验要排除自己，否则原词无法重存。 */
+export function renameMuteRule(
+  settings: MuteSettings,
+  id: string,
+  phrase: string,
+): { ok: true; settings: MuteSettings; rule: MuteRule } | { ok: false; code: MuteRuleError } {
+  const normalized = normalizeMutePhrase(phrase);
+  if (!normalized) return { ok: false, code: 'invalid' };
+  const target = settings.rules.find((rule) => rule.id === id);
+  if (!target) return { ok: false, code: 'invalid' };
+  const key = mutePhraseKey(normalized);
+  if (settings.rules.some((rule) => rule.id !== id && mutePhraseKey(rule.phrase) === key)) {
+    return { ok: false, code: 'duplicate' };
+  }
+  const rule = { ...target, phrase: normalized };
+  return {
+    ok: true,
+    rule,
+    settings: {
+      ...settings,
+      rules: settings.rules.map((entry) => (entry.id === id ? rule : entry)),
+    },
+  };
+}
+
 export function removeMuteRule(settings: MuteSettings, id: string): MuteSettings {
   return { ...settings, rules: settings.rules.filter((rule) => rule.id !== id) };
 }

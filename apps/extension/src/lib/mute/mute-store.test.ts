@@ -8,6 +8,7 @@ import {
   normalizeMuteSettings,
   normalizeNativeMute,
   removeMuteRule,
+  renameMuteRule,
   type MuteSettings,
 } from './mute-store';
 
@@ -70,6 +71,34 @@ describe('屏蔽词规则存储', () => {
     expect(removeMuteRule(next.settings, current.rule.id).rules.map((rule) => rule.phrase)).toEqual([
       '加V',
     ]);
+  });
+
+  it('改名校验长度和重复，但允许把词改回原文', () => {
+    const first = addMuteRule(settings(), '加微信', { now: 1 });
+    if (!first.ok) return;
+    const second = addMuteRule(first.settings, '加V', { now: 2 });
+    if (!second.ok) return;
+
+    expect(renameMuteRule(second.settings, first.rule.id, 'a')).toEqual({
+      ok: false,
+      code: 'invalid',
+    });
+    expect(renameMuteRule(second.settings, first.rule.id, '加V')).toEqual({
+      ok: false,
+      code: 'duplicate',
+    });
+    expect(renameMuteRule(second.settings, 'missing', '新词')).toEqual({
+      ok: false,
+      code: 'invalid',
+    });
+
+    const renamed = renameMuteRule(second.settings, first.rule.id, '领福利');
+    expect(renamed.ok).toBe(true);
+    if (!renamed.ok) return;
+    expect(renamed.rule.phrase).toBe('领福利');
+    expect(renamed.settings.rules.map((rule) => rule.phrase)).toEqual(['加V', '领福利']);
+    // 同一个词存回自己不算重复
+    expect(renameMuteRule(renamed.settings, first.rule.id, '领福利').ok).toBe(true);
   });
 
   it('合并原生静音词：导入、关联、缺失回退本地、过期跳过', () => {
