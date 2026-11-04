@@ -223,7 +223,14 @@ export default function CleanView({
         // 全部被过滤（已拉黑/白名单/关注）时立即刷新，主按钮即刻回到禁用态
         if ((result.count ?? 0) === 0) await refreshPageMarked();
       } else if (Array.isArray((result as unknown as PageBlockResult)?.blocked)) {
-        setBlockResult(result as unknown as PageBlockResult);
+        const done = result as unknown as PageBlockResult;
+        setBlockResult(done);
+        // 和「误标」「词库」等操作一致：结果走弹窗顶层的瞬时吐司，列表底部不再留一行常驻文字
+        notify(
+          done.failed.length > 0
+            ? `${t.blockedResult(done.blocked.length)} · ${t.failedResult(done.failed.length)}`
+            : t.blockedResult(done.blocked.length),
+        );
         await refreshPageMarked();
       } else {
         throw new Error('page_queue_not_started');
@@ -476,14 +483,6 @@ export default function CleanView({
           </>
         )}
 
-        {blockResult ? (
-          <p className="result" role="status">
-            {t.blockedResult(blockResult.blocked.length)}
-            {blockResult.failed.length > 0
-              ? ` · ${t.failedResult(blockResult.failed.length)}`
-              : null}
-          </p>
-        ) : null}
         <FailedList items={blockResult?.failed ?? failedTasks('page-batch')} language={language} />
         {queuePanel('page-batch')}
       </section>

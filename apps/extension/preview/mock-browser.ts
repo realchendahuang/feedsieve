@@ -1,6 +1,10 @@
 // 预览页的 browser.* 模拟层。必须作为 main.tsx 的第一个 import：
 // 扩展里部分模块（keyword-packs / keyword-rules）在模块顶层就检查 browser.runtime，
 // 模拟层若写在 main.tsx 正文里，会晚于这些模块执行，预览页因此白屏。
+//
+// 版本号直接读 package.json（WXT 也用它写 manifest.version），
+// 免得预览里的「关于 › 版本」比真实扩展落后好几版。
+import extensionPackage from '../package.json';
 const now = Date.now();
 const today = new Date().toISOString().slice(0, 10);
 
@@ -419,7 +423,7 @@ const previewBrowser = {
   },
   runtime: {
     id: 'preview',
-    getManifest: () => ({ version: '0.7.2' }),
+    getManifest: () => ({ version: extensionPackage.version }),
     getURL: (path: string) => path,
     sendMessage: async (message: { type?: string; path?: string }) => {
       // 随包数据（词库 / 变体表 / 内置名单）：预览由 vite 从 public/ 直接提供

@@ -7,7 +7,6 @@
 :root {
   color-scheme: light dark;
   /* 语义色：浅色为默认，深色在文件末尾的 prefers-color-scheme 块里整组覆盖 */
-  --bg: #fff;
   --surface: #fff;
   --surface-sunken: #f7f7f5;
   --on-accent: #fff;
@@ -38,6 +37,19 @@
   --danger-bg: #fdebec;
   --danger-fg: #9f2f2d;
   --success: #0f7b6c;
+  /* 主操作按钮：浅色墨黑底白字，深色整组反过来（否则黑底黑按钮看不见） */
+  --primary-bg: #191919;
+  --primary-bg-hover: #000;
+  --primary-fg: #fff;
+  /* 浮层（工具提示 / 吐司）：两种外观都用深底浅字 */
+  --overlay-bg: #2f2f2f;
+  --overlay-bg-strong: rgba(15, 20, 25, 0.72);
+  --overlay-fg: #fff;
+  --overlay-link: #8ecdf8;
+  /* 键盘焦点环：全站一种蓝 */
+  --focus-ring: rgba(35, 131, 226, 0.45);
+  /* 热度条：与警告色同族的橙 */
+  --heat-bar: #ffad1f;
   /* 系统默认字体：和 X 网页版一样用各平台的界面字体，久看不累 */
   --sans:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC',
@@ -91,7 +103,7 @@ button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 input:focus-visible + span {
-  outline: 2px solid rgba(35, 131, 226, 0.45);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 1px;
 }
 
@@ -304,14 +316,14 @@ ol {
   height: 32px;
   padding: 0 14px;
   border: 0;
-  background: #191919;
-  color: var(--on-accent);
+  background: var(--primary-bg);
+  color: var(--primary-fg);
   font-size: 13px;
   font-weight: 600;
 }
 
 .primary-button:hover:not(:disabled) {
-  background: #000;
+  background: var(--primary-bg-hover);
 }
 
 .secondary-button {
@@ -320,6 +332,11 @@ ol {
   border: 1px solid var(--line-strong);
   background: var(--surface);
   font-size: 13px;
+}
+
+/* 链接做成次按钮时别落到浏览器默认的链接蓝（深色下还会变成访问过的紫） */
+a.secondary-button {
+  color: var(--blue);
 }
 
 .secondary-button:hover:not(:disabled) {
@@ -474,8 +491,8 @@ ol {
   max-width: min(260px, calc(100vw - 24px));
   padding: 6px 9px;
   border-radius: 6px;
-  background: #2f2f2f;
-  color: var(--on-accent);
+  background: var(--overlay-bg);
+  color: var(--overlay-fg);
   font-size: 12px;
   line-height: 1.5;
   white-space: pre-line;
@@ -631,19 +648,28 @@ input:not([type]):focus,
 
 .toast-notice {
   position: fixed;
+  right: 0;
   bottom: 14px;
-  left: 50%;
+  left: 0;
   z-index: 900;
   width: max-content;
   max-width: calc(100% - 32px);
+  margin: 0 auto;
   padding: 8px 12px;
   border-radius: 8px;
-  background: #2f2f2f;
-  color: var(--on-accent);
+  background: var(--overlay-bg);
+  color: var(--overlay-fg);
   font-size: 13px;
   box-shadow: 0 6px 20px rgba(15, 15, 15, 0.2);
-  transform: translateX(-50%);
-  animation: view-in 160ms ease-out;
+  /* 只做淡入：view-in 会写 transform，和这里的水平居中打架 */
+  animation: toast-in 160ms ease-out;
+  pointer-events: none;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+  }
 }
 
 .action-bar {
@@ -891,15 +917,15 @@ input:not([type]):focus,
   padding: 0 12px;
   border: 0;
   border-radius: 999px;
-  background: #0f1419;
-  color: var(--on-accent);
+  background: var(--primary-bg);
+  color: var(--primary-fg);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
 }
 
 .reply-button:hover {
-  background: #272c30;
+  background: var(--primary-bg-hover);
 }
 
 .hot-list li {
@@ -973,18 +999,19 @@ input:not([type]):focus,
   white-space: nowrap;
 }
 
-/* 带操作的提示（撤销 / 不看作者） */
+/* 带操作的提示（撤销 / 不看作者）：吐司本身不挡点击，只有按钮可点 */
 .hot-toast {
   display: flex;
   align-items: center;
   gap: 12px;
+  pointer-events: auto;
 }
 
 .hot-toast button {
   padding: 0;
   border: 0;
   background: none;
-  color: #8ecdf8;
+  color: var(--overlay-link);
   font: inherit;
   font-weight: 600;
   white-space: nowrap;
@@ -1041,7 +1068,7 @@ input:not([type]):focus,
 
 /* j / k 切换时的焦点 */
 .post:focus-visible {
-  outline: 2px solid #1d9bf0;
+  outline: 2px solid var(--focus-ring);
   outline-offset: -2px;
   background: var(--blue-tint);
 }
@@ -1975,7 +2002,7 @@ input:not([type]):focus,
   display: block;
   height: 100%;
   border-radius: 3px;
-  background: #ffad1f;
+  background: var(--heat-bar);
 }
 
 .format-value {
@@ -2040,7 +2067,7 @@ input:not([type]):focus,
 }
 
 .patterns-summary:focus-visible {
-  outline: 2px solid #1d9bf0;
+  outline: 2px solid var(--focus-ring);
   outline-offset: 1px;
 }
 
@@ -2109,7 +2136,7 @@ input:not([type]):focus,
 }
 
 .multiple-tag:focus-visible {
-  outline: 2px solid #1d9bf0;
+  outline: 2px solid var(--focus-ring);
   outline-offset: 1px;
 }
 
@@ -2152,7 +2179,7 @@ input:not([type]):focus,
   height: 6px;
   margin: 12px 0 10px;
   border-radius: 3px;
-  background: linear-gradient(90deg, #00a36c, #d97706, #e5484d);
+  background: linear-gradient(90deg, var(--tone-human), var(--tone-mixed), var(--tone-ai));
 }
 .ai-meter span {
   position: absolute;
@@ -2238,6 +2265,9 @@ input:not([type]):focus,
 
 /* ---------- 发帖 ---------- */
 .write-view .write-synced {
+  /* 300px 侧边栏下让这一行先缩，别把右边的同步/设置按钮挤出屏幕 */
+  flex: 0 1 auto;
+  min-width: 0;
   max-width: 180px;
   margin-left: auto;
   overflow: hidden;
@@ -2895,8 +2925,8 @@ input:not([type]):focus,
   z-index: 2;
   padding: 4px 9px;
   border-radius: 999px;
-  background: rgba(15, 20, 25, 0.72);
-  color: #fff;
+  background: var(--overlay-bg-strong);
+  color: var(--overlay-fg);
   font-size: 11px;
   font-weight: 600;
 }
@@ -2905,26 +2935,12 @@ input:not([type]):focus,
   padding: 16px 16px 28px;
 }
 
-.weekly-kicker {
-  color: var(--gold);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-
 .weekly-body h1 {
   margin: 2px 0 0;
   font-size: 24px;
   font-weight: 800;
   line-height: 1.2;
   letter-spacing: -0.02em;
-}
-
-.weekly-desc {
-  margin: 8px 0 0;
-  color: var(--muted-strong);
-  font-size: 13px;
-  line-height: 1.65;
 }
 
 .weekly-issue {
@@ -2936,11 +2952,6 @@ input:not([type]):focus,
   border-left: 2px solid var(--gold);
   color: var(--ink);
   text-decoration: none;
-}
-
-.weekly-issue:hover .weekly-issue-title {
-  color: var(--gold);
-  text-decoration: underline;
 }
 
 .weekly-issue-no {
@@ -2968,36 +2979,9 @@ input:not([type]):focus,
 
 .weekly-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 8px;
   margin-top: 16px;
-}
-
-.weekly-points {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  margin: 14px 0 0;
-  padding: 0;
-  list-style: none;
-  color: var(--ink-soft);
-  font-size: 13px;
-}
-
-.weekly-points li {
-  position: relative;
-  padding-left: 16px;
-}
-
-.weekly-points li::before {
-  content: '';
-  position: absolute;
-  top: 0.55em;
-  left: 0;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--gold);
 }
 
 .weekly-actions .primary-button,
@@ -3392,7 +3376,6 @@ input:not([type]):focus,
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --bg: #000;
     --surface: #000;
     --surface-sunken: #0a0a0a;
     --on-accent: #fff;
@@ -3423,5 +3406,9 @@ input:not([type]):focus,
     --tone-human: #22d39b;
     --gold: #d4a017;
     --gold-surface: #24211a;
+    --primary-bg: #e7e9ea;
+    --primary-bg-hover: #fff;
+    --primary-fg: #000;
+    --focus-ring: rgba(74, 168, 240, 0.55);
   }
 }
