@@ -991,6 +991,7 @@ input:not([type]):focus,
 
 .chip-count {
   color: var(--muted);
+  font-size: var(--badge-font);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
@@ -2557,23 +2558,6 @@ input:not([type]):focus,
   padding: 2px 0 4px;
 }
 
-.write-item.is-selected {
-  background: var(--hover);
-}
-
-.write-item.is-next {
-  background: var(--blue-tint);
-}
-
-.write-item.is-next .write-time {
-  color: var(--blue);
-}
-
-.write-item.is-slot:hover {
-  background: var(--hover);
-  color: var(--ink);
-}
-
 .write-status {
   flex: none;
   padding: 1px 5px;
@@ -2582,15 +2566,6 @@ input:not([type]):focus,
   color: var(--muted);
   font-size: var(--fs-2xs);
   line-height: 1.4;
-}
-
-.write-status.is-pending {
-  color: var(--warn-fg-strong);
-}
-
-.write-status.is-next {
-  background: var(--blue-tint);
-  color: var(--blue);
 }
 
 .write-thumbs {
@@ -2702,11 +2677,6 @@ input:not([type]):focus,
   gap: 6px;
 }
 
-.write-item.is-pending {
-  color: var(--muted);
-  cursor: pointer;
-}
-
 .cadence-window {
   padding: 8px 0;
   border-bottom: 1px solid var(--line);
@@ -2771,19 +2741,11 @@ input:not([type]):focus,
   background: var(--hover);
 }
 
-.write-item.is-slot {
-  color: var(--faint);
-}
-
 .write-time {
   flex: none;
   width: 42px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-}
-
-.write-item.is-slot .write-time {
-  font-weight: 500;
 }
 
 .write-text {
