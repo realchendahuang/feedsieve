@@ -118,6 +118,8 @@ export default function KeywordsView({ language, notify }: KeywordsViewProps) {
       {rules === null ? (
         <div className="loading-list" aria-hidden="true">
           <span />
+          <span />
+          <span />
         </div>
       ) : rules.customRules.length > 0 ? (
         <ul className="keyword-chips" aria-label={t.myKeywords}>
@@ -243,6 +245,7 @@ export default function KeywordsView({ language, notify }: KeywordsViewProps) {
           })
         ) : (
           <div className="loading-list" aria-hidden="true">
+            <span />
             <span />
             <span />
           </div>

@@ -47,7 +47,7 @@ import {
   subscribeUiSettings,
   type UiSettings,
 } from '../../../../src/lib/settings/ui-settings';
-import { AppIcon, STRENGTH_HINTS, STRENGTH_LABELS, Toggle } from '../shared';
+import { STRENGTH_HINTS, STRENGTH_LABELS, SubpageHeader, Toggle } from '../shared';
 import KeywordsView from '../KeywordsView';
 import CadencePage from './CadencePage';
 import BlockedPage from './BlockedPage';
@@ -246,18 +246,12 @@ export default function ModuleSettingsView({
 
   return (
     <div className="view settings-view">
-      <header className="subpage-head">
-        <button
-          type="button"
-          className="back-button"
-          aria-label={`${t.goBack} · ${backLabel}`}
-          onClick={onBack}
-        >
-          <AppIcon name="chevron" size={14} className="is-back" />
-          {backLabel}
-        </button>
-        <h2>{title}</h2>
-      </header>
+      <SubpageHeader
+        language={language}
+        title={title}
+        backLabel={backLabel}
+        onBack={onBack}
+      />
 
       {page === 'hotSettings' ? (
         <section className="group">

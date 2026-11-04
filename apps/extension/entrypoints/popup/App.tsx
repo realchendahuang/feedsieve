@@ -567,7 +567,16 @@ export default function App() {
       </header>
 
       <div className="popup-content">
-        <Suspense fallback={null}>
+        {/* 懒加载的视图读回来之前先占住位置，切换栏目时不闪空白 */}
+        <Suspense
+          fallback={
+            <div className="loading-list" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </div>
+          }
+        >
           {viewReady && effectiveView === 'hot' && !effectiveModuleSettingsOpen ? (
             <HotView
               language={language}

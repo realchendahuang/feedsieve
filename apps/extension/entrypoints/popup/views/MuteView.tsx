@@ -20,7 +20,7 @@ import {
   type MuteSyncState,
   type NativeMute,
 } from '../../../src/lib/mute/mute-store';
-import { AppIcon, HelpIcon, Toggle } from './shared';
+import { AppIcon, HelpIcon, SubpageHeader, Toggle } from './shared';
 import { Row } from './settings/shared';
 
 interface MuteViewProps {
@@ -438,27 +438,29 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
   }
 
   if (!settings) {
-    return <div className="loading-list"><span /><span /><span /></div>;
+    return (
+      <div className="view mute-view">
+        <div className="loading-list" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
+      </div>
+    );
   }
 
   if (settingsOpen) {
     return (
       <div className="view mute-view">
-        <header className="subpage-head">
-          <button
-            type="button"
-            className="back-button"
-            aria-label={`${t.back} · ${t.settings}`}
-            onClick={() => {
-              setConsentOpen(false);
-              setSettingsOpen(false);
-            }}
-          >
-            <AppIcon name="chevron" size={14} className="is-back" />
-            {t.back}
-          </button>
-          <h2>{t.settings}</h2>
-        </header>
+        <SubpageHeader
+          language={language}
+          title={t.settings}
+          backLabel={t.back}
+          onBack={() => {
+            setConsentOpen(false);
+            setSettingsOpen(false);
+          }}
+        />
 
         <section className="group">
           <Row label={t.enabled} hint={t.enabledHint}>

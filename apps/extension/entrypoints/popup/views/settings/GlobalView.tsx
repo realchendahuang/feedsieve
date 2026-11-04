@@ -11,7 +11,7 @@ import {
 import { MODULES, type ModuleDef } from '../../../../src/lib/settings/modules';
 import type { ModuleSettings } from '../../../../src/lib/settings/module-settings';
 import { setUiLanguage, UI_COPY, type UiLanguage } from '../../../../src/lib/platform/i18n';
-import { AppIcon, Toggle } from '../shared';
+import { SubpageHeader, Toggle } from '../shared';
 import ArticleBackups from './ArticleBackups';
 import BackupRow from './BackupRow';
 import type { GlobalPage } from './pages';
@@ -126,18 +126,12 @@ export default function GlobalView({
   if (page === 'data' || page === 'about') {
     return (
       <div className="view settings-view">
-        <header className="subpage-head">
-          <button
-            type="button"
-            className="back-button"
-            aria-label={`${t.goBack} · ${t.globalNav}`}
-            onClick={() => onNavigate('global')}
-          >
-            <AppIcon name="chevron" size={14} className="is-back" />
-            {t.globalNav}
-          </button>
-          <h2>{page === 'data' ? t.groupData : t.about}</h2>
-        </header>
+        <SubpageHeader
+          language={language}
+          title={page === 'data' ? t.groupData : t.about}
+          backLabel={t.globalNav}
+          onBack={() => onNavigate('global')}
+        />
 
         {page === 'data' ? (
           <>

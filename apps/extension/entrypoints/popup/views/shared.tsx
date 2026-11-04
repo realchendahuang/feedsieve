@@ -5,7 +5,7 @@ import type { MarkStrength } from '@feedsieve/community-lists';
 import type { AllowlistItem } from '../../../src/lib/community/allowlist';
 import { normalizeStrictHandle } from '../../../src/lib/platform/xhr-bridge-guard';
 import { openOfficialPage, SITE_URLS, type SiteList } from '../../../src/lib/platform/site-links';
-import { localizedDetectionReason, type UiLanguage } from '../../../src/lib/platform/i18n';
+import { localizedDetectionReason, UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
 import { formatAgo as sharedFormatAgo } from '@feedsieve/shared';
 import { accountTier, ageHours, replyOpportunity, TIER_LEVELS, TIER_MAX } from '@feedsieve/metrics';
 
@@ -299,6 +299,37 @@ export function IconButton({
       </button>
       {tip.node}
     </>
+  );
+}
+
+/**
+ * 二级页顶部：‹ 父级名 + 页面标题。
+ * 全局、模块设置、屏蔽三处二级页共用；返回按钮的 aria-label 固定为「返回 · 父级名」。
+ */
+export function SubpageHeader({
+  language,
+  title,
+  backLabel,
+  onBack,
+}: {
+  language: UiLanguage;
+  title: ReactNode;
+  backLabel: string;
+  onBack: () => void;
+}) {
+  return (
+    <header className="subpage-head">
+      <button
+        type="button"
+        className="back-button"
+        aria-label={`${UI_COPY[language].goBack} · ${backLabel}`}
+        onClick={onBack}
+      >
+        <AppIcon name="chevron" size={14} className="is-back" />
+        {backLabel}
+      </button>
+      <h2>{title}</h2>
+    </header>
   );
 }
 
