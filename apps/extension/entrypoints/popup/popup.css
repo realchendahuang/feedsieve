@@ -400,8 +400,14 @@ a.secondary-button {
   color: var(--ink);
 }
 
+/* 不可用是「灰」，不是「红」：红色只留给 .is-danger（再点一次确认这类） */
 .primary-button:disabled,
-.secondary-button:disabled,
+.secondary-button:disabled {
+  color: var(--faint);
+  font-weight: 500;
+  cursor: default;
+}
+
 .text-button.is-danger {
   color: var(--danger-fg);
   font-weight: 600;
@@ -489,7 +495,8 @@ a.secondary-button {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: var(--surface);
+  /* 滑块始终是白的：深色模式里 --surface 是纯黑，压在深色轨道上看不见 */
+  background: var(--on-accent);
   box-shadow: 0 1px 2px rgba(15, 15, 15, 0.2);
   transition: transform 140ms ease;
 }
@@ -708,10 +715,7 @@ input:not([type]):focus,
   animation: toast-in 160ms ease-out;
   /* 提示本身不挡点击，只有「撤销」这类按钮可点 */
   pointer-events: none;
-}
-
-/* 带操作的提示（撤销 / 不看作者）：唯一一条吐司，按钮排在文字后面 */
-.toast-notice {
+  /* 带操作的提示（撤销 / 不看作者）：唯一一条吐司，按钮排在文字后面 */
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1090,13 +1094,10 @@ input:not([type]):focus,
   background: var(--fill);
 }
 
-/* 新进来的帖子：头像左侧一个蓝点，鼠标离开列表后清掉 */
+/* 新进来的帖子：头像左侧一个蓝点，鼠标离开列表后清掉；
+   插进来时从上方滑入，下面的内容不会突然一跳 */
 .post.is-new {
   position: relative;
-}
-
-/* 新帖子插进来时从上方滑入，下面的内容不会突然一跳 */
-.post.is-new {
   animation: post-in 180ms ease-out;
 }
 
@@ -1182,7 +1183,9 @@ input:not([type]):focus,
   overflow: hidden;
 }
 
-/* 窄宽度下的收缩顺序：先截 handle，再截名字；时间、量级、流速不截 */
+/* 窄宽度下的收缩顺序：先截 handle，再截名字；时间、量级、流速不截。
+   （420px 下这一行是五样挤在一起，见 AGENTS 记录的密度问题；先按既有优先级，
+   改名要看 2026-11 的评审结论。） */
 .post-name {
   flex: 0 1 auto;
   min-width: 2em;
@@ -1284,8 +1287,7 @@ input:not([type]):focus,
   font-variant-numeric: tabular-nums;
 }
 
-.metric-lead,
-.metric-reach {
+.metric-lead {
   color: var(--ink);
   font-weight: 600;
 }
@@ -1308,8 +1310,11 @@ input:not([type]):focus,
 }
 
 .block-head h2 {
+  min-width: 0;
+  overflow: hidden;
   font-size: 14px;
   font-weight: 600;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -1330,6 +1335,10 @@ input:not([type]):focus,
   font-size: 12px;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.marked-list li:last-child {
+  border-bottom: 0;
 }
 
 .marked-list li {
@@ -1366,9 +1375,11 @@ input:not([type]):focus,
   color: var(--on-accent);
 }
 
+/* 勾选后的对勾用底色：深色模式下 --ink 是浅灰，白勾会融进背景 */
 .check input:checked + span {
   border-color: var(--ink);
   background: var(--ink);
+  color: var(--surface);
 }
 
 .marked-body {
@@ -1405,12 +1416,12 @@ input:not([type]):focus,
 }
 
 .marked-handle {
-  flex: 0 1 auto;
+  flex: none;
   font-weight: 600;
 }
 
 .marked-name {
-  flex: 0 10 auto;
+  flex: 0 1 auto;
   color: var(--muted);
   font-size: 12px;
 }
@@ -1897,8 +1908,7 @@ input:not([type]):focus,
   white-space: nowrap;
 }
 
-.flag-tag,
-.kind-tag.is-warn {
+.flag-tag {
   background: var(--danger-bg);
   color: var(--danger-fg);
 }
@@ -2325,10 +2335,12 @@ input:not([type]):focus,
   padding: 2px 0 8px;
 }
 
+/* 绝对时间是大字，相对时间跟在后面同一行：单独一行会被读成无关的状态行。 */
 .write-hero-main {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
   min-width: 0;
 }
 
@@ -2349,6 +2361,11 @@ input:not([type]):focus,
 .write-hero-until {
   color: var(--muted);
   font-size: 12px;
+}
+
+.write-hero-until::before {
+  content: '·';
+  margin-right: 6px;
 }
 
 .write-week-head {
@@ -2844,6 +2861,7 @@ input:not([type]):focus,
 }
 
 .weekly-links a {
+  padding: 3px 0;
   color: var(--muted);
   text-decoration: none;
 }
@@ -2913,6 +2931,18 @@ input:not([type]):focus,
   .post-actions svg {
     width: 14px;
     height: 14px;
+  }
+
+  /* 300px 侧栏：标题行塞不下「@账号 · 2 分钟前」，整块让位给刷新和齿轮。 */
+  .write-synced {
+    display: none;
+  }
+
+  /* 300px 侧栏：四组数字折成 2×2，别让「8200 发帖」孤零零掉到第二行。 */
+  .profile-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px 14px;
   }
 
   /* 300px 侧栏：收紧周刊纵向间距，让底部链接不用多滚 20px。 */
