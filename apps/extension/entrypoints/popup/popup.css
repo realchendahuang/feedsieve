@@ -573,6 +573,8 @@ a.secondary-button {
   color: var(--ink);
 }
 
+/* 位置由 useTip 量完尺寸算好后写进 left/top，这里只负责长相：
+   不再用 transform 居中，免得算好的边缘被自身宽度顶出弹窗。 */
 .help-tooltip {
   position: fixed;
   z-index: 1000;
@@ -586,11 +588,7 @@ a.secondary-button {
   line-height: 1.5;
   white-space: pre-line;
   pointer-events: none;
-  transform: translateX(-50%);
-}
-
-.help-tooltip[data-placement='top'] {
-  transform: translate(-50%, -100%);
+  box-shadow: var(--shadow-float);
 }
 
 input[type='text'],

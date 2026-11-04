@@ -1,5 +1,5 @@
 import type { BlockEvidence } from '../../../src/lib/detection/detection-evidence';
-import { useCallback, useEffect, useId, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {
   STRENGTH_LABELS as canonicalStrengthLabels,
@@ -217,47 +217,151 @@ export function AppIcon({
   );
 }
 
+/** 提示框和锚点、提示框和弹窗边缘之间的空隙。 */
+const TIP_GAP = 8;
+const TIP_EDGE = 8;
+
+interface TipAnchor {
+  top: number;
+  bottom: number;
+  left: number;
+  width: number;
+}
+
+/** 量出来的提示框尺寸；首帧还没量时是 null。 */
+interface TipBox {
+  width: number;
+  height: number;
+}
+
+/** 只取定位要用的四个数：DOMRect 在滚动后会变成快照，留着元素每次重算更可靠。 */
+function anchorRect(el: HTMLElement): TipAnchor {
+  const rect = el.getBoundingClientRect();
+  return { top: rect.top, bottom: rect.bottom, left: rect.left, width: rect.width };
+}
+
+export interface TipPlacement {
+  left: number;
+  top: number;
+  placement: 'top' | 'bottom';
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(value, max));
+}
+
+/**
+ * 提示框落点：默认放在锚点下方——上方是导航和页面标题，盖住就什么都看不见了；
+ * 下方放不下（贴近弹窗底部）才翻上去。左右和上下都夹在弹窗里，不越界。
+ *
+ * 尺寸必须量过再算：文案行数不固定，用固定阈值猜的话，稍长一点就顶出弹窗被裁掉。
+ */
+export function placeTip(anchor: TipAnchor, box: TipBox | null): TipPlacement {
+  const width = box?.width ?? 0;
+  const height = box?.height ?? 0;
+  const roomBelow = window.innerHeight - anchor.bottom - TIP_GAP - TIP_EDGE;
+  const roomAbove = anchor.top - TIP_GAP - TIP_EDGE;
+  const placement: 'top' | 'bottom' = height <= roomBelow || height > roomAbove ? 'bottom' : 'top';
+  const top =
+    placement === 'bottom'
+      ? clamp(anchor.bottom + TIP_GAP, TIP_EDGE, Math.max(TIP_EDGE, window.innerHeight - height - TIP_EDGE))
+      : clamp(anchor.top - TIP_GAP - height, TIP_EDGE, Math.max(TIP_EDGE, window.innerHeight - height - TIP_EDGE));
+  const left = clamp(
+    anchor.left + anchor.width / 2 - width / 2,
+    TIP_EDGE,
+    Math.max(TIP_EDGE, window.innerWidth - width - TIP_EDGE),
+  );
+  return { left, top, placement };
+}
+
 /**
  * 悬浮提示（`!` 图标、倍数标签、图标按钮共用）：鼠标移上去或键盘聚焦时显示，
  * 挂到 body 上，弹窗边缘也不会被裁掉。
  */
 export function useTip(text: string) {
-  const [tooltip, setTooltip] = useState<{
-    left: number;
-    top: number;
-    placement: 'top' | 'bottom';
-  } | null>(null);
+  const [tip, setTip] = useState<{ anchor: TipAnchor; box: TipBox | null } | null>(null);
+  const anchorRef = useRef<HTMLElement | null>(null);
+  const nodeRef = useRef<HTMLSpanElement | null>(null);
   const tooltipId = useId();
+
   const show = (target: HTMLElement) => {
-    const rect = target.getBoundingClientRect();
-    const placement = rect.top > 84 ? 'top' : 'bottom';
-    const left = Math.min(Math.max(rect.left + rect.width / 2, 120), window.innerWidth - 120);
-    setTooltip({ left, top: placement === 'top' ? rect.top - 8 : rect.bottom + 8, placement });
+    anchorRef.current = target;
+    setTip({ anchor: anchorRect(target), box: null });
   };
+  const hide = () => {
+    anchorRef.current = null;
+    setTip(null);
+  };
+
+  // 先挂上去量出真实尺寸再定位：useLayoutEffect 在绘制前跑，看不到中间态
+  useLayoutEffect(() => {
+    if (!tip || tip.box) return;
+    const el = nodeRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const box = { width: rect.width, height: rect.height };
+    setTip((prev) => (prev && !prev.box ? { anchor: prev.anchor, box } : prev));
+  }, [tip]);
+
+  // 锚点一挪（滚列表、改窗口大小、键盘焦点把元素滚进视野）固定定位的框就会挂在半空，
+  // 所以跟着重算；锚点整体滚出视野才收起来。
+  const open = tip !== null;
+  useEffect(() => {
+    if (!open) return;
+    const follow = (remeasure: boolean) => () => {
+      const el = anchorRef.current;
+      if (!el || !el.isConnected) {
+        setTip(null);
+        return;
+      }
+      const rect = anchorRect(el);
+      if (rect.bottom < 0 || rect.top > window.innerHeight) {
+        setTip(null);
+        return;
+      }
+      setTip((prev) => (prev ? { anchor: rect, box: remeasure ? null : prev.box } : prev));
+    };
+    const onScroll = follow(false);
+    const onResize = follow(true);
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [open]);
+
   const handlers = {
-    'aria-describedby': tooltip ? tooltipId : undefined,
+    'aria-describedby': tip ? tooltipId : undefined,
     onMouseEnter: (event: { currentTarget: HTMLElement }) => show(event.currentTarget),
-    onMouseLeave: () => setTooltip(null),
+    onMouseLeave: hide,
     onFocus: (event: { currentTarget: HTMLElement }) => show(event.currentTarget),
-    onBlur: () => setTooltip(null),
+    onBlur: hide,
     onKeyDown: (event: { key: string }) => {
-      if (event.key === 'Escape') setTooltip(null);
+      if (event.key === 'Escape') hide();
     },
   };
-  const node = tooltip
-    ? createPortal(
-        <span
-          id={tooltipId}
-          role="tooltip"
-          className="help-tooltip"
-          data-placement={tooltip.placement}
-          style={{ left: tooltip.left, top: tooltip.top }}
-        >
-          {text}
-        </span>,
-        document.body,
-      )
-    : null;
+  const position = tip ? placeTip(tip.anchor, tip.box) : null;
+  const node =
+    tip && position
+      ? createPortal(
+          <span
+            ref={nodeRef}
+            id={tooltipId}
+            role="tooltip"
+            className="help-tooltip"
+            data-placement={position.placement}
+            style={{
+              left: position.left,
+              top: position.top,
+              visibility: tip.box ? undefined : 'hidden',
+            }}
+          >
+            {text}
+          </span>,
+          document.body,
+        )
+      : null;
   return { handlers, node };
 }
 
