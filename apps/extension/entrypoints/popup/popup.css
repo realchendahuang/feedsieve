@@ -2973,12 +2973,6 @@ input:not([type]):focus,
   padding: 6px 0;
 }
 
-.mute-summary {
-  margin: 2px 0 4px;
-  color: var(--muted);
-  font-size: 11px;
-}
-
 .mute-list {
   margin: 0;
   padding: 0;

@@ -1,12 +1,13 @@
 /**
- * 「静音」页的中英文案。
+ * 「关键词」页的中英文案。
  *
  * 语义（别再退回旧模型）：模块只管理 X 账号里的原生静音词——没有本机折叠、没有启用/同步开关，
  * 本机只是 X 静音词的镜像缓存。首次写入账号前请用户确认一次，之后每次添加直接写入。
  * 不在 x.com 页面打开弹窗时不读不写（noTab）。
  */
 const zh = {
-  mine: '我的',
+  title: '我的关键词',
+  backTo: '关键词',
   mineHint:
     '这里就是 X 账号里的『静音的字词』：在别的设备和手机 App 里同样生效；添加、编辑、删除都会直接改 X 账号。',
   library: '词库',
@@ -52,7 +53,8 @@ const zh = {
 };
 
 const en: typeof zh = {
-  mine: 'Mine',
+  title: 'My keywords',
+  backTo: 'Keywords',
   mineHint:
     'These are the muted words in your X account: they apply on your other devices and in the mobile app, and adding, editing or deleting here changes your X account directly.',
   library: 'Library',

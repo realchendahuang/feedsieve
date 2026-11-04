@@ -118,7 +118,7 @@ async function submitAdd(value: string): Promise<void> {
   });
 }
 
-describe('静音页（只管理 X 原生静音词）', () => {
+describe('关键词页（只管理 X 原生静音词）', () => {
   it('打开时从 X 拉取列表并显示镜像', async () => {
     const x = fakeX([mute('11', '免费空投')]);
     await render(x);
@@ -273,7 +273,7 @@ describe('静音页（只管理 X 原生静音词）', () => {
     await render(x);
 
     await act(async () => {
-      buttonByText('.segmented button', '词库').click();
+      buttonByText('.block-head .text-button', '词库').click();
       await flush();
     });
     const chip = container.querySelector<HTMLButtonElement>('.mute-chip')!;

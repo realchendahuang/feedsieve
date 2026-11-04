@@ -114,7 +114,7 @@ async function openModuleSettings(
 ): Promise<void> {
   await waitForLazy(() => root.querySelector('.section-nav button') !== null, 400);
   // 过滤 / AI 味 合并进了「屏蔽」：先点顶栏那一格，再点它的二级 tab
-  if (['过滤', 'Filter', 'AI 味', 'AI'].includes(navLabel) && !root.querySelector('.section-subnav')) {
+  if (['黄推水军', 'Spam', 'AI 味', 'AI'].includes(navLabel) && !root.querySelector('.section-subnav')) {
     const groupTab = [...root.querySelectorAll<HTMLButtonElement>('.section-nav button')].find(
       (button) => ['屏蔽', 'Block'].includes(button.textContent?.trim() ?? ''),
     );
@@ -141,7 +141,7 @@ async function openGlobal(root: HTMLElement): Promise<void> {
 
 /** 过滤规则下的名单 / 关键词：过滤 tab → 齿轮 → 过滤规则 → 子页。 */
 async function openFilterRule(root: HTMLElement, label: string): Promise<void> {
-  await openModuleSettings(root, '过滤');
+  await openModuleSettings(root, '黄推水军');
   await waitForLazy(() => root.textContent?.includes('过滤规则') ?? false);
   await act(async () => navRow(root, '过滤规则').click());
   await waitForLazy(() => {
@@ -331,7 +331,7 @@ describe('popup App 渲染冒烟', () => {
     expect(nav).toEqual(['热帖', '主页', '发帖', '屏蔽', '周刊', '全局']);
     expect(
       [...rootEl.querySelectorAll('.section-subnav button')].map((button) => button.textContent),
-    ).toEqual(['过滤', 'AI 味', '静音']);
+    ).toEqual(['黄推水军', 'AI 味', '关键词']);
 
     await openSettingsPage(rootEl, '关键词');
     expect(rootEl.textContent).toContain('官方预置词库');
@@ -387,7 +387,7 @@ describe('popup App 渲染冒烟', () => {
     await act(async () => buttonWithText(rootEl, 'EN').click());
     expect(rootEl.textContent).toContain('Modules');
     // 过滤齿轮页 → 过滤规则确认英文文案
-    await openModuleSettings(rootEl, 'Filter', 'Filter settings');
+    await openModuleSettings(rootEl, 'Spam', 'Spam settings');
     await act(async () => navRow(rootEl, 'Filter rules').click());
     expect(rootEl.textContent).toContain('Detection level');
   });
@@ -401,20 +401,20 @@ describe('popup App 渲染冒烟', () => {
     const activeSubtab = (): string | null | undefined =>
       rootEl.querySelector('.section-subnav .is-active')?.textContent;
 
-    expect(subnavLabels()).toEqual(['过滤', 'AI 味', '静音']);
-    expect(activeSubtab()).toBe('过滤');
+    expect(subnavLabels()).toEqual(['黄推水军', 'AI 味', '关键词']);
+    expect(activeSubtab()).toBe('黄推水军');
 
-    // 切到静音：顶栏仍停在「屏蔽」
-    await act(async () => buttonWithText(rootEl, '静音').click());
-    await waitForLazy(() => activeSubtab() === '静音');
+    // 切到关键词：顶栏仍停在「屏蔽」
+    await act(async () => buttonWithText(rootEl, '关键词').click());
+    await waitForLazy(() => activeSubtab() === '关键词');
     expect(rootEl.querySelector('.section-nav .is-active')?.textContent).toBe('屏蔽');
 
-    // 切到别的栏目再回「屏蔽」：停在刚才的静音
+    // 切到别的栏目再回「屏蔽」：停在刚才的关键词
     await act(async () => buttonWithText(rootEl, '热帖').click());
     await waitForLazy(() => rootEl.querySelector('.section-subnav') === null);
     await act(async () => buttonWithText(rootEl, '屏蔽').click());
-    await waitForLazy(() => activeSubtab() === '静音');
-    expect(activeSubtab()).toBe('静音');
+    await waitForLazy(() => activeSubtab() === '关键词');
+    expect(activeSubtab()).toBe('关键词');
   });
 
   it('关闭模块后 tab 立即消失', async () => {
@@ -1246,13 +1246,13 @@ describe('popup App 渲染冒烟', () => {
     await waitForCondition(() => rootEl.querySelector('.subpage-head') !== null);
     expect(rootEl.querySelector('.subpage-head h2')?.textContent).toBe('拉黑记录');
     expect(rootEl.querySelector('.section-nav .is-active')?.textContent).toBe('屏蔽');
-    expect(rootEl.querySelector('.section-subnav .is-active')?.textContent).toBe('过滤');
+    expect(rootEl.querySelector('.section-subnav .is-active')?.textContent).toBe('黄推水军');
 
     // 返回「过滤规则」→「过滤设置」→ 过滤页
     await act(async () => rootEl.querySelector<HTMLButtonElement>('.back-button')!.click());
     expect(rootEl.querySelector('.subpage-head h2')?.textContent).toBe('过滤规则');
     await act(async () => rootEl.querySelector<HTMLButtonElement>('.back-button')!.click());
-    expect(rootEl.querySelector('.subpage-head h2')?.textContent).toBe('过滤设置');
+    expect(rootEl.querySelector('.subpage-head h2')?.textContent).toBe('黄推水军设置');
     await act(async () => rootEl.querySelector<HTMLButtonElement>('.back-button')!.click());
     expect(rootEl.querySelector('.subpage-head')).toBeNull();
     expect(rootEl.textContent).toContain('本页标黄');

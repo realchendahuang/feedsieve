@@ -19,7 +19,14 @@ import {
   type MuteSettings,
   type NativeMute,
 } from '../../../src/lib/mute/mute-store';
-import { AppIcon, EmptyState, HelpIcon, SkeletonList, useArmedConfirm } from './shared';
+import {
+  AppIcon,
+  EmptyState,
+  HelpIcon,
+  SkeletonList,
+  SubpageHeader,
+  useArmedConfirm,
+} from './shared';
 
 /**
  * 「静音」页 = X 原生静音词的管理界面。
@@ -336,29 +343,82 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
     );
   }
 
+  // 词库是二级页：和「过滤」里的二级页一样，点进去、顶部一条返回，不再多占一行 tab
+  if (tab === 'library') {
+    return (
+      <div className="view mute-view">
+        <SubpageHeader
+          language={language}
+          title={t.library}
+          backLabel={t.backTo}
+          onBack={() => setTab('mine')}
+        />
+        <div className="mute-library-meta">
+          {t.officialLibrary} · v{OFFICIAL_MUTE_PACKS[0]?.version ?? '—'}
+        </div>
+        <div className="mute-library-bar">
+          <input
+            className="mute-library-search"
+            value={libraryQuery}
+            placeholder={t.librarySearch}
+            aria-label={t.librarySearch}
+            onChange={(event) => setLibraryQuery(event.target.value)}
+          />
+          <span className="mute-library-count">
+            {t.packProgress(addedTotal, libraryWords.length)}
+          </span>
+        </div>
+        {filteredPacks.length === 0 ? (
+          <EmptyState>{t.libraryNoMatch}</EmptyState>
+        ) : (
+          filteredPacks.map((entry) => (
+            <section className="mute-pack" key={entry.id}>
+              <div className="mute-pack-head">
+                <strong>{entry.name[language]}</strong>
+                <HelpIcon text={entry.description[language]} />
+                <span className="mute-pack-count">{entry.words.length}</span>
+              </div>
+              <div className="mute-chips">
+                {entry.words.map((word) => {
+                  const added = addedKeys.has(mutePhraseKey(word));
+                  return (
+                    <button
+                      key={word}
+                      type="button"
+                      className={`mute-chip${added ? ' is-added' : ''}`}
+                      disabled={added || busy !== null}
+                      title={word}
+                      aria-label={`${added ? t.libraryAdded : t.addFromLibrary}: ${word}`}
+                      onClick={() => void addPhrase(word, 'library')}
+                    >
+                      <AppIcon name={added ? 'check' : 'plus'} size={12} />
+                      <span>{word}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          ))
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="view mute-view">
-      <div className="view-toolbar">
-        <div className="segmented" role="group" aria-label={t.mine}>
+      <section className="block" aria-label={t.title}>
+        <div className="block-head">
+          <h2>{t.title}</h2>
+          {rules.length ? <span className="count">{rules.length}</span> : null}
+          <HelpIcon text={t.mineHint} />
           <button
             type="button"
-            className={tab === 'mine' ? 'is-selected' : ''}
-            aria-pressed={tab === 'mine'}
-            onClick={() => setTab('mine')}
-          >
-            {t.mine}
-          </button>
-          <button
-            type="button"
-            className={tab === 'library' ? 'is-selected' : ''}
-            aria-pressed={tab === 'library'}
+            className="text-button toolbar-end"
+            title={t.libraryHint}
             onClick={() => setTab('library')}
           >
             {t.library}
           </button>
-        </div>
-        <HelpIcon text={tab === 'library' ? t.libraryHint : t.mineHint} />
-        <span className="toolbar-end">
           <button
             type="button"
             className={`icon-button${loadState.status === 'loading' ? ' is-spinning' : ''}`}
@@ -369,218 +429,155 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
           >
             <AppIcon name="refresh" size={15} />
           </button>
-        </span>
-      </div>
-
-      {loadState.status === 'error' ? (
-        <p className="alert" role="status">
-          {loadState.code === 'no_tab' ? t.noTab : t.loadFailed}
-          <button type="button" className="text-button" onClick={() => void refresh(true)}>
-            {t.retry}
-          </button>
-        </p>
-      ) : null}
-
-      {pendingWrite ? (
-        <div className="mute-consent" role="group" aria-label={t.consentTitle}>
-          <strong>{t.consentTitle}</strong>
-          <p>{t.consentBody}</p>
-          <div className="mute-consent-actions">
-            <button type="button" className="secondary-button" onClick={() => void confirmConsent()}>
-              {t.consentOk}
-            </button>
-            <button type="button" className="text-button" onClick={() => setPendingWrite(null)}>
-              {t.consentCancel}
-            </button>
-          </div>
         </div>
-      ) : null}
 
-      {tab === 'mine' ? (
-        <>
-          <form
-            className="inline-form mute-add-form"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void addPhrase(phrase, 'form');
-            }}
-          >
-            <input
-              value={phrase}
-              maxLength={MAX_MUTE_PHRASE_LENGTH}
-              disabled={busy !== null}
-              placeholder={t.addPlaceholder}
-              aria-label={t.addPlaceholder}
-              onChange={(event) => setPhrase(event.target.value)}
-            />
-            <button
-              type="submit"
-              className="secondary-button"
-              disabled={busy !== null || !phrase.trim()}
-            >
-              {t.add}
+        {loadState.status === 'error' ? (
+          <p className="alert" role="status">
+            {loadState.code === 'no_tab' ? t.noTab : t.loadFailed}
+            <button type="button" className="text-button" onClick={() => void refresh(true)}>
+              {t.retry}
             </button>
-          </form>
+          </p>
+        ) : null}
 
-          {rules.length > 5 || mineQueryKey ? (
-            <div className="mute-search-field">
-              <AppIcon name="search" size={14} />
-              <input
-                className="mute-library-search"
-                value={mineQuery}
-                placeholder={t.searchMine}
-                aria-label={t.searchMine}
-                onChange={(event) => setMineQuery(event.target.value)}
-              />
+        {pendingWrite ? (
+          <div className="mute-consent" role="group" aria-label={t.consentTitle}>
+            <strong>{t.consentTitle}</strong>
+            <p>{t.consentBody}</p>
+            <div className="mute-consent-actions">
+              <button type="button" className="secondary-button" onClick={() => void confirmConsent()}>
+                {t.consentOk}
+              </button>
+              <button type="button" className="text-button" onClick={() => setPendingWrite(null)}>
+                {t.consentCancel}
+              </button>
             </div>
-          ) : null}
-
-          {loadState.status === 'loading' && rules.length === 0 ? (
-            <SkeletonList />
-          ) : rules.length === 0 ? (
-            <EmptyState icon="clean" className="is-clean" hint={t.emptyHint}>
-              {t.empty}
-            </EmptyState>
-          ) : (
-            <>
-              <div className="mute-summary">{t.count(visibleRules.length)}</div>
-              {visibleRules.length === 0 ? (
-                <EmptyState>{t.libraryNoMatch}</EmptyState>
-              ) : (
-                <ul className="mute-list" aria-label={t.count(rules.length)}>
-                  {visibleRules.map((rule) => {
-                    const deleting = busy === `del:${rule.id}`;
-                    const saving = busy === `save:${rule.id}`;
-                    const editing = editingId === rule.id;
-                    return (
-                      <li key={rule.id} className={`mute-item${editing ? ' is-editing' : ''}`}>
-                        {editing ? (
-                          <>
-                            <input
-                              className="mute-edit-input"
-                              value={editingValue}
-                              maxLength={MAX_MUTE_PHRASE_LENGTH}
-                              disabled={busy !== null}
-                              aria-label={`${t.edit}: ${rule.phrase}`}
-                              autoFocus
-                              onChange={(event) => setEditingValue(event.target.value)}
-                              onKeyDown={(event) => {
-                                if (event.key === 'Escape') cancelEdit();
-                                if (event.key === 'Enter') {
-                                  event.preventDefault();
-                                  void saveEdit(rule);
-                                }
-                              }}
-                            />
-                            <div className="mute-actions">
-                              <button
-                                type="button"
-                                className="text-button"
-                                disabled={busy !== null || !editingValue.trim()}
-                                title={t.editHint}
-                                onClick={() => void saveEdit(rule)}
-                              >
-                                {saving ? '…' : t.save}
-                              </button>
-                              <button
-                                type="button"
-                                className="text-button"
-                                disabled={busy !== null}
-                                onClick={cancelEdit}
-                              >
-                                {t.cancel}
-                              </button>
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <span className="mute-phrase" title={rule.phrase}>
-                              {rule.phrase}
-                            </span>
-                            <div className="mute-actions">
-                              <button
-                                type="button"
-                                className="text-button"
-                                disabled={busy !== null}
-                                onClick={() => beginEdit(rule)}
-                              >
-                                {t.edit}
-                              </button>
-                              <button
-                                type="button"
-                                className={`text-button${isArmed(rule.id) ? ' is-danger' : ''}`}
-                                disabled={busy !== null}
-                                onClick={() => void deleteRule(rule)}
-                              >
-                                {deleting
-                                  ? '…'
-                                  : isArmed(rule.id)
-                                    ? t.confirmRemove
-                                    : t.remove}
-                              </button>
-                            </div>
-                          </>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-              {rules.length >= MAX_MUTE_RULES ? <p className="mute-note">{t.limit}</p> : null}
-            </>
-          )}
-        </>
-      ) : (
-        <>
-          <div className="mute-library-meta">
-            {t.officialLibrary} · v{OFFICIAL_MUTE_PACKS[0]?.version ?? '—'}
           </div>
-          <div className="mute-library-bar">
+        ) : null}
+
+        <form
+          className="inline-form mute-add-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void addPhrase(phrase, 'form');
+          }}
+        >
+          <input
+            value={phrase}
+            maxLength={MAX_MUTE_PHRASE_LENGTH}
+            disabled={busy !== null}
+            placeholder={t.addPlaceholder}
+            aria-label={t.addPlaceholder}
+            onChange={(event) => setPhrase(event.target.value)}
+          />
+          <button
+            type="submit"
+            className="secondary-button"
+            disabled={busy !== null || !phrase.trim()}
+          >
+            {t.add}
+          </button>
+        </form>
+
+        {rules.length > 5 || mineQueryKey ? (
+          <div className="mute-search-field">
+            <AppIcon name="search" size={14} />
             <input
               className="mute-library-search"
-              value={libraryQuery}
-              placeholder={t.librarySearch}
-              aria-label={t.librarySearch}
-              onChange={(event) => setLibraryQuery(event.target.value)}
+              value={mineQuery}
+              placeholder={t.searchMine}
+              aria-label={t.searchMine}
+              onChange={(event) => setMineQuery(event.target.value)}
             />
-            <span className="mute-library-count">
-              {t.packProgress(addedTotal, libraryWords.length)}
-            </span>
           </div>
-          {filteredPacks.length === 0 ? (
-            <EmptyState>{t.libraryNoMatch}</EmptyState>
-          ) : (
-            filteredPacks.map((entry) => (
-              <section className="mute-pack" key={entry.id}>
-                <div className="mute-pack-head">
-                  <strong>{entry.name[language]}</strong>
-                  <HelpIcon text={entry.description[language]} />
-                  <span className="mute-pack-count">{entry.words.length}</span>
-                </div>
-                <div className="mute-chips">
-                  {entry.words.map((word) => {
-                    const added = addedKeys.has(mutePhraseKey(word));
-                    return (
-                      <button
-                        key={word}
-                        type="button"
-                        className={`mute-chip${added ? ' is-added' : ''}`}
-                        disabled={added || busy !== null}
-                        title={word}
-                        aria-label={`${added ? t.libraryAdded : t.addFromLibrary}: ${word}`}
-                        onClick={() => void addPhrase(word, 'library')}
-                      >
-                        <AppIcon name={added ? 'check' : 'plus'} size={12} />
-                        <span>{word}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-            ))
-          )}
-        </>
-      )}
+        ) : null}
+
+        {loadState.status === 'loading' && rules.length === 0 ? (
+          <SkeletonList />
+        ) : rules.length === 0 ? (
+          <EmptyState icon="clean" className="is-clean" hint={t.emptyHint}>
+            {t.empty}
+          </EmptyState>
+        ) : visibleRules.length === 0 ? (
+          <EmptyState>{t.libraryNoMatch}</EmptyState>
+        ) : (
+          <ul className="mute-list" aria-label={t.count(rules.length)}>
+            {visibleRules.map((rule) => {
+              const deleting = busy === `del:${rule.id}`;
+              const saving = busy === `save:${rule.id}`;
+              const editing = editingId === rule.id;
+              return (
+                <li key={rule.id} className={`mute-item${editing ? ' is-editing' : ''}`}>
+                  {editing ? (
+                    <>
+                      <input
+                        className="mute-edit-input"
+                        value={editingValue}
+                        maxLength={MAX_MUTE_PHRASE_LENGTH}
+                        disabled={busy !== null}
+                        aria-label={`${t.edit}: ${rule.phrase}`}
+                        autoFocus
+                        onChange={(event) => setEditingValue(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Escape') cancelEdit();
+                          if (event.key === 'Enter') {
+                            event.preventDefault();
+                            void saveEdit(rule);
+                          }
+                        }}
+                      />
+                      <div className="mute-actions">
+                        <button
+                          type="button"
+                          className="text-button"
+                          disabled={busy !== null || !editingValue.trim()}
+                          title={t.editHint}
+                          onClick={() => void saveEdit(rule)}
+                        >
+                          {saving ? '…' : t.save}
+                        </button>
+                        <button
+                          type="button"
+                          className="text-button"
+                          disabled={busy !== null}
+                          onClick={cancelEdit}
+                        >
+                          {t.cancel}
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <span className="mute-phrase" title={rule.phrase}>
+                        {rule.phrase}
+                      </span>
+                      <div className="mute-actions">
+                        <button
+                          type="button"
+                          className="text-button"
+                          disabled={busy !== null}
+                          onClick={() => beginEdit(rule)}
+                        >
+                          {t.edit}
+                        </button>
+                        <button
+                          type="button"
+                          className={`text-button${isArmed(rule.id) ? ' is-danger' : ''}`}
+                          disabled={busy !== null}
+                          onClick={() => void deleteRule(rule)}
+                        >
+                          {deleting ? '…' : isArmed(rule.id) ? t.confirmRemove : t.remove}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {rules.length >= MAX_MUTE_RULES ? <p className="mute-note">{t.limit}</p> : null}
+      </section>
     </div>
   );
 }
