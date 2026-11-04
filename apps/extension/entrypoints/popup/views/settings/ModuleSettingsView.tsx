@@ -55,6 +55,7 @@ import {
   Toggle,
 } from '../shared';
 import KeywordsView from '../KeywordsView';
+import { AiDisplaySettings } from './AiDisplaySettings';
 import CadencePage from './CadencePage';
 import BlockedPage from './BlockedPage';
 import AllowlistPage from './AllowlistPage';
@@ -337,16 +338,19 @@ export default function ModuleSettingsView({
       ) : null}
 
       {page === 'aiSettings' ? (
-        <section className="group">
-          <Row label={t.moduleAi} hint={t.moduleAiHint}>
-            <Toggle
-              checked={modules?.aiCheck ?? true}
-              disabled={modules === null}
-              label={t.moduleAi}
-              onChange={(enabled) => onUpdateModule({ aiCheck: enabled })}
-            />
-          </Row>
-        </section>
+        <>
+          <section className="group">
+            <Row label={t.moduleAi} hint={t.moduleAiHint}>
+              <Toggle
+                checked={modules?.aiCheck ?? true}
+                disabled={modules === null}
+                label={t.moduleAi}
+                onChange={(enabled) => onUpdateModule({ aiCheck: enabled })}
+              />
+            </Row>
+          </section>
+          <AiDisplaySettings language={language} />
+        </>
       ) : null}
 
       {page === 'filterSettings' ? (

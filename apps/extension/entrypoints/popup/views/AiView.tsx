@@ -1,5 +1,6 @@
 /**
- * 「AI 味」视图：当前标签页这个账号的 AI 味结论、我测过的账号、评论区处理设置。
+ * 「AI 味」视图：当前标签页这个账号的 AI 味结论、我测过的账号。
+ * 评论区怎么显示这类账号属于设置，收在齿轮页里（见 settings/AiDisplaySettings）。
  *
  * 结论来自服务端（可公开的）或本机记录（自己测过、还没被第二个人印证的，只有本人能看到）。
  * 「开始检测 / 重新检测 / 测测我自己」让 X 页面去那个人的回复页开测（页面端见 ai-check.ts），
@@ -12,18 +13,13 @@ import { flavorOf, type AiVerdict } from '@feedsieve/shared';
 import { formatGap, spreadLabel } from '../../../src/lib/ai-check/share-card';
 import {
   AI_RECORDS_KEY,
-  AI_SETTINGS_KEY,
-  DEFAULT_AI_SETTINGS,
-  getAiSettings,
-  setAiSettings,
   type AiCheckRecord,
-  type AiCheckSettings,
   type AiLookupOutcome,
   type AiRhythm,
   type AiVoteOutcome,
 } from '../../../src/lib/ai-check/client';
 import { getSelfHandle } from '../../../src/lib/community/following-allowlist';
-import { AppIcon, EmptyState, HelpIcon, SkeletonList, Toggle } from './shared';
+import { AppIcon, EmptyState, HelpIcon, SkeletonList } from './shared';
 import { useListPosition } from './use-list-position';
 
 const TONE_COLOR = {
@@ -66,17 +62,6 @@ const COPY = {
     myVote: { ai: '我投：AI', human: '我投：真人' },
     checkSelf: '测测我自己',
     noSelf: '先在 X 上登录并打开任意页面',
-    settings: '评论区',
-    settingsHint:
-      '已进社区 AI 号名单、或你测出 AI 味偏重的账号，在评论区和时间线上怎么显示。已关注和个人白名单里的账号默认不处理。',
-    mode: '遇到 AI 号',
-    modes: { off: '不处理', mark: '标记', fold: '折叠' },
-    scope: '识别范围',
-    scopeHint: '「仅蓝V」按页面上的认证标记判断，不影响黄推识别。',
-    scopes: { all: '全部', blue: '仅蓝V', skipBlue: '跳过蓝V' },
-    markFollowing: '标记已关注账号',
-    markFollowingHint:
-      '默认关：不把检测结论贴到你关注的人身上。打开后已关注账号也照常标记 / 折叠；个人白名单仍然不处理。',
   },
   en: {
     current: 'This account',
@@ -113,17 +98,6 @@ const COPY = {
     myVote: { ai: 'My vote: AI', human: 'My vote: human' },
     checkSelf: 'Check myself',
     noSelf: 'Sign in to X and open any page first',
-    settings: 'Replies',
-    settingsHint:
-      'How accounts on the community AI list, or ones you found AI-heavy, show up in replies and timelines. Followed and allowlisted accounts are left alone by default.',
-    mode: 'AI accounts',
-    modes: { off: 'Ignore', mark: 'Mark', fold: 'Fold' },
-    scope: 'Scope',
-    scopeHint: '“Blue only” uses the verified badge on the page. Spam detection is unaffected.',
-    scopes: { all: 'All', blue: 'Blue only', skipBlue: 'Skip blue' },
-    markFollowing: 'Mark followed accounts',
-    markFollowingHint:
-      'Off by default: keeps results off people you follow. Turn it on to mark / fold followed accounts too; your allowlist is still left alone.',
   },
 } as const;
 
@@ -239,7 +213,6 @@ export function AiView({
   const [result, setResult] = useState<{ handle: string; value: AiLookupOutcome } | null>(null);
   const [records, setRecords] = useState<AiCheckRecord[]>([]);
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const [settings, setSettings] = useState<AiCheckSettings>(DEFAULT_AI_SETTINGS);
   const [voting, setVoting] = useState(false);
 
   // 切走再回来：回到上次看的位置
@@ -274,11 +247,6 @@ export function AiView({
 
   useEffect(() => loadLookup(handle), [handle, loadLookup]);
   useEffect(loadRecords, [loadRecords]);
-  useEffect(() => {
-    void getAiSettings()
-      .then(setSettings)
-      .catch(() => undefined);
-  }, []);
   // 页面上测完 / 投完票会写本机记录：这里跟着刷新
   useEffect(() => {
     const onChanged = (changes: Record<string, { newValue?: unknown }>, area: string): void => {
@@ -286,11 +254,6 @@ export function AiView({
       if (changes[AI_RECORDS_KEY]) {
         loadRecords();
         loadLookup(handle);
-      }
-      if (changes[AI_SETTINGS_KEY]) {
-        void getAiSettings()
-          .then(setSettings)
-          .catch(() => undefined);
       }
     };
     browser.storage.onChanged.addListener(onChanged);
@@ -348,10 +311,6 @@ export function AiView({
           }
         : prev,
     );
-  }
-
-  async function updateSettings(patch: Partial<AiCheckSettings>): Promise<void> {
-    setSettings(await setAiSettings(patch));
   }
 
   const lookup: AiLookupOutcome | 'loading' | null = !handle
@@ -481,62 +440,6 @@ export function AiView({
         )}
       </section>
 
-      <section className="block" aria-label={c.settings}>
-        <div className="block-head">
-          <h2>{c.settings}</h2>
-          <HelpIcon text={c.settingsHint} />
-        </div>
-        <div className="row">
-          <span className="row-label">
-            <span>{c.mode}</span>
-          </span>
-          <div className="row-control segmented" role="radiogroup" aria-label={c.mode}>
-            {(['off', 'mark', 'fold'] as const).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                role="radio"
-                aria-checked={settings.mode === mode}
-                className={settings.mode === mode ? 'is-selected' : ''}
-                onClick={() => void updateSettings({ mode })}
-              >
-                {c.modes[mode]}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="row">
-          <span className="row-label">
-            <span>{c.scope}</span>
-            <HelpIcon text={c.scopeHint} />
-          </span>
-          <div className="row-control segmented" role="radiogroup" aria-label={c.scope}>
-            {(['all', 'blue', 'skipBlue'] as const).map((scope) => (
-              <button
-                key={scope}
-                type="button"
-                role="radio"
-                aria-checked={settings.scope === scope}
-                className={settings.scope === scope ? 'is-selected' : ''}
-                onClick={() => void updateSettings({ scope })}
-              >
-                {c.scopes[scope]}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="row">
-          <span className="row-label">
-            <span>{c.markFollowing}</span>
-            <HelpIcon text={c.markFollowingHint} />
-          </span>
-          <Toggle
-            checked={settings.markFollowing}
-            label={c.markFollowing}
-            onChange={(next) => void updateSettings({ markFollowing: next })}
-          />
-        </div>
-      </section>
     </div>
   );
 }

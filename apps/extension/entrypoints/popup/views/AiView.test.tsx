@@ -3,6 +3,7 @@ import React, { act } from 'react';
 import ReactDOM from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { accountFromUrl, AiView } from './AiView';
+import { AiDisplaySettings } from './settings/AiDisplaySettings';
 
 const tabUrl = 'https://x.com/Alice';
 let lookup: unknown;
@@ -190,9 +191,21 @@ describe('AiView', () => {
     });
   });
 
-  it('已关注账号打标是独立开关，默认关', async () => {
+  it('显示设置收进齿轮页：AI 味页不再有识别范围，开关改完写本机', async () => {
     const { host } = await render();
-    const input = host.querySelector<HTMLInputElement>(
+    expect(host.textContent).not.toContain('识别范围');
+
+    const settingsHost = document.createElement('div');
+    settingsHost.className = 'popup-content';
+    document.body.appendChild(settingsHost);
+    const settingsRoot = ReactDOM.createRoot(settingsHost);
+    mounted.push(settingsRoot);
+    await act(async () => {
+      settingsRoot.render(<AiDisplaySettings language="zh" />);
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    const input = settingsHost.querySelector<HTMLInputElement>(
       'input[role="switch"][aria-label="标记已关注账号"]',
     )!;
     expect(input.checked).toBe(false);
