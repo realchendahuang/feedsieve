@@ -3367,6 +3367,23 @@ input:not([type]):focus,
   flex: none;
 }
 
+/* 300px 侧栏：词、状态和操作挤在一行会把词截成一个字，改成词独占一行。 */
+@media (max-width: 400px) {
+  .mute-item {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  .mute-phrase,
+  .mute-edit-input {
+    flex: 1 1 100%;
+  }
+
+  .mute-actions {
+    margin-left: auto;
+  }
+}
+
 /* =====================================================================
    深色模式：跟随系统 / 浏览器外观（prefers-color-scheme）
    X 自己的三档主题（Default / Dim / Lights out）与系统无关，注入到页面的
