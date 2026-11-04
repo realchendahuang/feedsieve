@@ -6,8 +6,8 @@
  * 不在 x.com 页面打开弹窗时不读不写（noTab）。
  */
 const zh = {
-  title: '我的关键词',
-  backTo: '关键词',
+  title: '我的禁语',
+  backTo: '禁语',
   mineHint:
     '这里就是 X 账号里的『静音的字词』：在别的设备和手机 App 里同样生效；添加、编辑、删除都会直接改 X 账号。',
   library: '词库',
