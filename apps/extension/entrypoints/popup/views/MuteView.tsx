@@ -99,7 +99,13 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
   const callTab = useCallback(
     async (message: { type: string; keyword?: string; ids?: string[]; force?: boolean }): Promise<NativeReply> => {
       try {
-        return (await sendToXPage(message)) as NativeReply;
+        const reply = (await sendToXPage(message)) as NativeReply | undefined | null;
+        // 内容脚本不存在、页面没登录、或别的扩展抢答时可能拿回空值：
+        // 统一降级成「原生不可用」，不要让队列卡在「同步中」
+        if (!reply || typeof reply.ok !== 'boolean') {
+          return { ok: false, code: 'native_unavailable' };
+        }
+        return reply;
       } catch {
         return { ok: false, code: 'no_tab' };
       }

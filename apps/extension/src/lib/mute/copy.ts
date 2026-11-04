@@ -6,11 +6,12 @@ const zh = {
   back: '静音',
   disabled: '已关闭',
   enabled: '启用静音',
-  enabledHint: '已保存的静音词仍保留，但不会再生效。',
+  enabledHint:
+    '关掉后本机不再折叠推文；已经写入 X 的原生静音词不会随之删除，仍会在 X 里生效，需要的话到 X 设置或逐条删除。',
   nativeSync: '同步到 X（手机也生效）',
   nativeSyncHint:
-    '开启后，新添加的词会写入 X 原生静音词，手机 App 的首页、通知和回复也会生效；X 会保存这些词。每次只写一条，遇到限流会停。',
-  nativeConsentTitle: '开启 X 原生同步？',
+    '默认开启：新添加的词会通过 X 网页端同一套接口写入 X 原生静音词，手机 App 的首页、通知和回复也会生效；X 会保存这些词。每次只写一条，遇到限流会停。关掉后只在本机折叠。',
+  nativeConsentTitle: '重新开启 X 原生同步？',
   nativeConsentBody:
     '这些词会保存到你的 X 账号设置，X 服务器可见，并同步到手机 App。不开启则只在本浏览器生效，搜索页仍然会折叠。',
   nativeConsentOk: '开启同步',
@@ -19,7 +20,8 @@ const zh = {
   addPlaceholder: '输入词或短语，例如：加微信',
   add: '添加',
   empty: '还没有静音词',
-  emptyHint: '添加后，命中正文的推文会在搜索、主页和列表里折叠；可以随时点「显示」展开。',
+  emptyHint:
+    '添加后默认写入 X 原生静音词（手机也生效）；X 原生静音不覆盖搜索页，搜索页由本机折叠兜底，可以随时点「显示」展开。',
   count: (n: number) => `${n} 个词`,
   syncLocal: '仅本机',
   syncPending: '同步中',
@@ -58,7 +60,7 @@ const zh = {
   packProgress: (added: number, total: number) => `已加入 ${added} / ${total}`,
   helpToggle: '福滤娃功能 · 可在「静音」页关闭',
   helpMine:
-    '福滤娃的静音词：命中正文后折叠推文，不拉黑账号，也不上传正文。搜索页同样生效；开启原生同步后，手机 App 的首页和通知也会生效。词条可以编辑，已同步到 X 的词会先删旧词再写新词。',
+    '福滤娃的静音词：默认通过 X 网页端同一套接口写入 X 原生静音词，手机 App 的首页和通知也会生效；X 原生静音不覆盖搜索页，搜索页由本机规则兜底折叠。不拉黑账号，也不上传正文。词条可以编辑，已同步到 X 的词会先删旧词再写新词。',
   helpNative:
     '写入的是 X 原生静音词，和你在 X 设置里手动添加是同一条链路；只在点击添加/同步时逐条写入，不批量、不后台重试。',
   helpLibrary:
@@ -76,11 +78,12 @@ const en: typeof zh = {
   back: 'Mute',
   disabled: 'Off',
   enabled: 'Enable muting',
-  enabledHint: 'Saved words stay, but they no longer take effect.',
+  enabledHint:
+    'Stops local folding. Words already written to X are not removed and keep muting on X; delete them in X settings or one by one here.',
   nativeSync: 'Sync to X (mobile too)',
   nativeSyncHint:
-    'New muted words are also written to X native muted words, so they apply to Home, notifications and replies in the mobile app. X stores these words. One word per request, and it stops on rate limits.',
-  nativeConsentTitle: 'Turn on native X sync?',
+    'On by default: new words are written to X native muted words through the same endpoints the X web app uses, so they apply to Home, notifications and replies in the mobile app. X stores these words. One word per request, and it stops on rate limits. Turn it off to keep words in this browser only.',
+  nativeConsentTitle: 'Turn native X sync back on?',
   nativeConsentBody:
     'Muted words are saved in your X account settings, visible to X and synced to mobile. If you skip this, words stay in this browser only, and posts in search still fold.',
   nativeConsentOk: 'Turn on sync',
@@ -90,7 +93,7 @@ const en: typeof zh = {
   add: 'Add',
   empty: 'No muted words yet',
   emptyHint:
-    'Once added, posts containing the word fold in search, profiles and timelines. You can always unfold a post.',
+    'New words are written to X native muted words by default (mobile included). X does not mute search, so the local rule folds there; you can always unfold a post.',
   count: (n: number) => `${n} word${n === 1 ? '' : 's'}`,
   syncLocal: 'This browser',
   syncPending: 'Syncing',
@@ -129,7 +132,7 @@ const en: typeof zh = {
   packProgress: (added: number, total: number) => `${added} / ${total} added`,
   helpToggle: 'FeedSieve feature · turn it off in the Mute tab',
   helpMine:
-    'FeedSieve keyword mute: folds matching posts without blocking accounts and without uploading post text. It works in search too; with native sync on, it also applies to Home and notifications in the mobile app. Words can be edited; a synced word is removed from X before the new one is written.',
+    'FeedSieve muted words are written to X native muted words by default (the same endpoints the X web app uses), so they also apply to Home and notifications in the mobile app. X native muting does not cover search, so the local rule folds posts there. No account is blocked and no post text is uploaded. Editing a synced word removes the old X word first.',
   helpNative:
     'This writes X native muted words through the same web-client path as adding them in X settings. One request per confirmed word, no batches, no background retries.',
   helpLibrary:

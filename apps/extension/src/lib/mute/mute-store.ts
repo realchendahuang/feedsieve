@@ -2,11 +2,11 @@
  * 静音词的本地设置与规则存储。
  *
  * 两件事分开：
- * - rules 是用户确认过的静音词，本地立即生效（搜索、主页、列表、详情回复）；
- * - nativeSync 只控制「新词是否写入 X 原生静音词」，不控制本地匹配。
+ * - rules 是用户确认过的静音词，默认写入 X 原生静音词（走 x.com 网页端同一套接口）；
+ * - nativeSync 只控制「新词是否写入 X 原生静音词」，用户可以关掉、退回只在本机折叠。
  *
  * X 原生静音词是账号级设置，能覆盖手机 App 的首页/通知/回复，但不覆盖搜索；
- * 本地规则负责搜索页和原生不生效的地方。两者用 nativeId 关联。
+ * 本地匹配只作为兜底：搜索页、写入失败或没打开 x.com 标签页时。两者用 nativeId 关联。
  */
 import { normalizeMuteText } from './matcher';
 
@@ -37,14 +37,14 @@ export interface MuteRule {
 export interface MuteSettings {
   /** 本地折叠总开关；关掉后不隐藏任何推文，规则保留。 */
   enabled: boolean;
-  /** 新增词时是否同时写入 X 原生静音词（手机也生效）。 */
+  /** 是否把新词写入 X 原生静音词（手机也生效）；默认开启，用户可关掉退回只在本机。 */
   nativeSync: boolean;
   rules: MuteRule[];
 }
 
 export const DEFAULT_MUTE_SETTINGS: MuteSettings = {
   enabled: true,
-  nativeSync: false,
+  nativeSync: true,
   rules: [],
 };
 
@@ -137,7 +137,8 @@ export function normalizeMuteSettings(raw: unknown, now = Date.now()): MuteSetti
   }
   return {
     enabled: value.enabled !== false,
-    nativeSync: value.nativeSync === true,
+    // 默认走 X 原生静音词；只有用户显式关掉过（存了 false）才留在本机
+    nativeSync: value.nativeSync !== false,
     rules,
   };
 }

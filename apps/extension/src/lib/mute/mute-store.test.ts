@@ -63,6 +63,13 @@ describe('静音词规则存储', () => {
     expect(normalized.rules[1]?.syncState).toBe('synced');
   });
 
+  it('默认走 X 原生静音词，显式关闭才退回只在本机', () => {
+    expect(normalizeMuteSettings(undefined).nativeSync).toBe(true);
+    expect(normalizeMuteSettings({ nativeSync: true }).nativeSync).toBe(true);
+    expect(normalizeMuteSettings({ nativeSync: false }).nativeSync).toBe(false);
+    expect(DEFAULT_MUTE_SETTINGS.nativeSync).toBe(true);
+  });
+
   it('删除只移除指定规则', () => {
     const current = addMuteRule(settings(), '加微信', { now: 1 });
     if (!current.ok) return;

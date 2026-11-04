@@ -418,6 +418,41 @@ const previewBrowser = {
       if (message.type === 'feedsieve:community-block-start') {
         return { status: 'started', count: 12 };
       }
+      // 静音词的原生同步（真实实现见 src/lib/content/mute-messages.ts）：
+      // 预览里当作「X 端已经有一批静音词」，create 立即成功，方便看同步后的界面状态。
+      if (message.type === 'feedsieve:mute-list') {
+        return {
+          ok: true,
+          data: [
+            {
+              keyword: '免费空投',
+              id: 'native-1',
+              surfaces: ['home_timeline', 'notifications', 'tweet_replies'],
+              options: [],
+              validUntil: null,
+            },
+          ],
+        };
+      }
+      if (message.type === 'feedsieve:mute-create') {
+        const keyword = (message as { keyword?: string }).keyword ?? '';
+        return {
+          ok: true,
+          data: {
+            mute: {
+              keyword,
+              id: 'native-' + keyword,
+              surfaces: ['home_timeline', 'notifications', 'tweet_replies'],
+              options: [],
+              validUntil: null,
+            },
+            list: [],
+          },
+        };
+      }
+      if (message.type === 'feedsieve:mute-destroy') {
+        return { ok: true, data: { list: [] } };
+      }
       return null;
     },
   },
