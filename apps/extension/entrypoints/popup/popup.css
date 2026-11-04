@@ -2891,11 +2891,6 @@ input:not([type]):focus,
   }
 }
 
-.mute-off-chip {
-  color: var(--muted);
-  font-size: 12px;
-}
-
 .mute-add-form {
   margin: 0 0 8px;
 }
@@ -2968,24 +2963,6 @@ input:not([type]):focus,
   white-space: nowrap;
 }
 
-.mute-state {
-  flex: none;
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.mute-state[data-state='synced'] {
-  color: var(--green);
-}
-
-.mute-state[data-state='pending'] {
-  color: var(--warn-fg);
-}
-
-.mute-state[data-state='failed'] {
-  color: var(--red);
-}
-
 .mute-actions {
   flex: none;
   display: flex;
@@ -2994,16 +2971,6 @@ input:not([type]):focus,
 }
 
 .mute-actions .text-button {
-  font-size: 12px;
-}
-
-.mute-status {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 8px;
-  color: var(--muted);
   font-size: 12px;
 }
 

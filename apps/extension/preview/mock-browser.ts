@@ -426,7 +426,7 @@ const previewBrowser = {
           data: [
             {
               keyword: '免费空投',
-              id: 'native-1',
+              id: '101',
               surfaces: ['home_timeline', 'notifications', 'tweet_replies'],
               options: [],
               validUntil: null,
@@ -441,7 +441,8 @@ const previewBrowser = {
           data: {
             mute: {
               keyword,
-              id: 'native-' + keyword,
+              // X 的静音词 id 是数字串（删除时按这个 id 提交）
+              id: String(102 + keyword.length * 7),
               surfaces: ['home_timeline', 'notifications', 'tweet_replies'],
               options: [],
               validUntil: null,

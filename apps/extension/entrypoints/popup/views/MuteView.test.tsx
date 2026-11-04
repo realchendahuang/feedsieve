@@ -3,21 +3,60 @@ import React, { act } from 'react';
 import ReactDOM from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import MuteView from './MuteView';
-import type { MuteSettings } from '../../../src/lib/mute/mute-store';
+import type { MuteSettings, NativeMute } from '../../../src/lib/mute/mute-store';
 
 let root: ReactDOM.Root;
 let container: HTMLElement;
 let stored: Record<string, unknown>;
 let listeners: Array<(changes: Record<string, unknown>, area: string) => void>;
+let notified: Array<string | null>;
 
-function settings(patch: Partial<MuteSettings> = {}): MuteSettings {
-  return { enabled: true, nativeSync: false, rules: [], ...patch };
+interface FakeX {
+  words: NativeMute[];
+  nextId: number;
+  calls: string[];
+  fail: boolean;
+}
+
+function fakeX(words: NativeMute[] = []): FakeX {
+  return { words, nextId: 100, calls: [], fail: false };
+}
+
+function mute(id: string, keyword: string): NativeMute {
+  return { keyword, id, surfaces: ['home_timeline'], options: [], validUntil: null };
+}
+
+function sendFor(x: FakeX) {
+  return vi.fn(async (message: { type: string; keyword?: string; ids?: string[] }) => {
+    const call = message.type.replace('feedsieve:mute-', '');
+    x.calls.push(
+      message.keyword ? `${call}:${message.keyword}` : message.ids ? `${call}:${message.ids.join(',')}` : call,
+    );
+    if (x.fail) throw new Error('no x.com receiver');
+    if (message.type === 'feedsieve:mute-list') return { ok: true, data: x.words };
+    if (message.type === 'feedsieve:mute-create') {
+      const created = mute(String(x.nextId++), message.keyword ?? '');
+      x.words = [created, ...x.words];
+      return { ok: true, data: { mute: created, list: x.words } };
+    }
+    if (message.type === 'feedsieve:mute-destroy') {
+      const ids = new Set(message.ids ?? []);
+      x.words = x.words.filter((entry) => !ids.has(entry.id));
+      return { ok: true, data: x.words };
+    }
+    return null;
+  });
+}
+
+function saved(): MuteSettings {
+  return stored.keywordMutesV1 as MuteSettings;
 }
 
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-  stored = { keywordMutesV1: settings() };
+  stored = { keywordMutesV1: { consented: false, rules: [] } };
   listeners = [];
+  notified = [];
   vi.stubGlobal('browser', {
     storage: {
       local: {
@@ -40,422 +79,212 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
-async function render(
-  sendToXPage: (message: { type: string; keyword?: string; ids?: string[] }) => Promise<unknown> = vi.fn(
-    async () => ({ ok: true, data: [] }),
-  ),
-): Promise<void> {
+async function flush(times = 8): Promise<void> {
+  for (let i = 0; i < times; i += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+}
+
+async function render(x: FakeX, language: 'zh' | 'en' = 'zh'): Promise<void> {
+  const sendToXPage = sendFor(x);
   await act(async () => {
-    root.render(<MuteView language="zh" notify={() => {}} sendToXPage={sendToXPage} />);
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    root.render(<MuteView language={language} notify={(message) => notified.push(message)} sendToXPage={sendToXPage} />);
+    await flush();
   });
 }
 
-function setInput(value: string): void {
-  setValue(container.querySelector<HTMLInputElement>('.mute-add-form input')!, value);
-}
-
-function setValue(input: HTMLInputElement, value: string): void {
+function setInput(selector: string, value: string): void {
+  const input = container.querySelector<HTMLInputElement>(selector)!;
   const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
   setter?.call(input, value);
   input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
-function actionButton(text: string): HTMLButtonElement {
-  const button = [...container.querySelectorAll<HTMLButtonElement>('.mute-actions .text-button')]
-    .find((item) => item.textContent?.trim() === text);
+function buttonByText(selector: string, text: string): HTMLButtonElement {
+  const button = [...container.querySelectorAll<HTMLButtonElement>(selector)].find(
+    (item) => item.textContent?.trim() === text,
+  );
   if (!button) throw new Error(`找不到按钮：${text}`);
   return button;
 }
 
-async function submitAdd(): Promise<void> {
+async function submitAdd(value: string): Promise<void> {
   await act(async () => {
+    setInput('.mute-add-form input', value);
     container
       .querySelector<HTMLFormElement>('.mute-add-form')!
       .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await flush();
   });
 }
 
-describe('静音页', () => {
-  it('本地添加一个词，立即出现在列表里并写入 storage', async () => {
-    await render();
-    expect(container.textContent).toContain('还没有静音词');
+describe('静音页（只管理 X 原生静音词）', () => {
+  it('打开时从 X 拉取列表并显示镜像', async () => {
+    const x = fakeX([mute('11', '免费空投')]);
+    await render(x);
 
-    await act(async () => setInput('加微信'));
-    await submitAdd();
+    expect(container.textContent).toContain('免费空投');
+    expect(x.calls).toContain('list');
+    expect(saved().rules.map((entry) => entry.phrase)).toEqual(['免费空投']);
+    expect(saved().rules[0]?.nativeId).toBe('11');
+  });
 
+  it('不在 x.com 页面时给出提示，不落库', async () => {
+    const x = fakeX();
+    x.fail = true;
+    await render(x);
+
+    const alert = container.querySelector('.alert');
+    expect(alert?.textContent).toContain('先在 x.com 页面打开弹窗');
+
+    await submitAdd('加微信');
+    expect(notified.some((message) => message?.includes('先在 x.com 页面打开弹窗'))).toBe(true);
+    expect(saved().rules).toEqual([]);
+  });
+
+  it('首次添加先弹确认，确认后才写入 X', async () => {
+    const x = fakeX();
+    await render(x);
+
+    await submitAdd('加微信');
+    // 还没确认：不写 X，规则也没落库
+    expect(container.querySelector('.mute-consent')?.textContent).toContain('把静音词写进 X 账号？');
+    expect(x.calls.filter((call) => call.startsWith('create'))).toEqual([]);
+    expect(saved().rules).toEqual([]);
+
+    await act(async () => {
+      buttonByText('.mute-consent .secondary-button', '开启写入').click();
+      await flush();
+    });
+
+    expect(x.calls).toContain('create:加微信');
     expect(container.textContent).toContain('加微信');
-    expect(container.textContent).toContain('仅本机');
-    const saved = (stored.keywordMutesV1 as MuteSettings).rules;
-    expect(saved.map((rule) => rule.phrase)).toEqual(['加微信']);
+    expect(saved().consented).toBe(true);
+    expect(saved().rules.map((entry) => entry.phrase)).toEqual(['加微信']);
   });
 
-  it('右上角齿轮进入静音设置，返回回到列表', async () => {
-    await render();
-    const gear = container.querySelector<HTMLButtonElement>('.toolbar-end .icon-button')!;
-    await act(async () => gear.click());
-    expect(container.textContent).toContain('静音设置');
-    expect(container.textContent).toContain('启用静音');
+  it('取消确认后不写入', async () => {
+    const x = fakeX();
+    await render(x);
 
-    const back = container.querySelector<HTMLButtonElement>('.back-button')!;
-    await act(async () => back.click());
-    expect(container.querySelector('.mute-add-form')).not.toBeNull();
-    expect(container.querySelector('.toolbar-end')).not.toBeNull();
-  });
-
-  it('关闭静音时工具栏显示已关闭，点它进入设置', async () => {
-    stored.keywordMutesV1 = settings({ enabled: false });
-    await render();
-    const off = [...container.querySelectorAll<HTMLButtonElement>('.mute-off-chip')][0]!;
-    expect(off.textContent).toBe('已关闭');
-    await act(async () => off.click());
-    expect(container.textContent).toContain('静音设置');
-  });
-
-  it('词库是候选，点加入后才进入我的列表', async () => {
-    await render();
+    await submitAdd('加微信');
     await act(async () => {
-      [...container.querySelectorAll<HTMLButtonElement>('.segmented button')]
-        .find((button) => button.textContent?.trim() === '词库')!
-        .click();
+      buttonByText('.mute-consent .text-button', '先不用').click();
+      await flush();
     });
-    const add = container.querySelector<HTMLButtonElement>('.mute-chip')!;
+
+    expect(container.querySelector('.mute-consent')).toBeNull();
+    expect(x.calls.filter((call) => call.startsWith('create'))).toEqual([]);
+    expect(saved().rules).toEqual([]);
+  });
+
+  it('已确认过时直接写入，不再弹确认', async () => {
+    stored.keywordMutesV1 = { consented: true, rules: [] };
+    const x = fakeX();
+    await render(x);
+
+    await submitAdd('刷单');
+    expect(container.querySelector('.mute-consent')).toBeNull();
+    expect(x.calls).toContain('create:刷单');
+    expect(notified).toContain('已添加');
+    expect(saved().rules.map((entry) => entry.phrase)).toEqual(['刷单']);
+  });
+
+  it('编辑：先删 X 旧词再写新词，镜像同步更新', async () => {
+    stored.keywordMutesV1 = {
+      consented: true,
+      rules: [{ id: 'a', phrase: '加微信', nativeId: '11', createdAt: 1 }],
+    };
+    const x = fakeX([mute('11', '加微信')]);
+    await render(x);
+
     await act(async () => {
-      add.click();
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      buttonByText('.mute-actions .text-button', '编辑').click();
+      await flush();
     });
     await act(async () => {
-      [...container.querySelectorAll<HTMLButtonElement>('.segmented button')]
-        .find((button) => button.textContent?.trim() === '我的')!
-        .click();
+      setInput('.mute-edit-input', '加 V');
+      buttonByText('.mute-actions .text-button', '保存').click();
+      await flush();
     });
-    expect(container.querySelector('.mute-item')?.textContent).toContain('同城约');
+
+    expect(x.calls).toContain('destroy:11');
+    expect(x.calls).toContain('create:加 V');
+    expect(container.textContent).toContain('加 V');
+    expect(saved().rules[0]).toMatchObject({ id: 'a', phrase: '加 V' });
   });
 
-  it('开启原生同步后导入 X 已有静音词', async () => {
-    stored.keywordMutesV1 = settings({ nativeSync: true });
-    const send = vi.fn(async () => ({
-      ok: true,
-      data: [
-        {
-          keyword: '加V',
-          id: '9',
-          surfaces: ['home_timeline', 'notifications'],
-          options: [],
-          validUntil: null,
-        },
-      ],
-    }));
-    await render(send);
+  it('还没确认写入账号时，编辑也要先确认', async () => {
+    stored.keywordMutesV1 = {
+      consented: false,
+      rules: [{ id: 'a', phrase: '加微信', nativeId: '11', createdAt: 1 }],
+    };
+    const x = fakeX([mute('11', '加微信')]);
+    await render(x);
 
-    expect(send).toHaveBeenCalledWith({ type: 'feedsieve:mute-list' });
-    expect(container.textContent).toContain('加V');
-    expect(container.textContent).toContain('已同步 X');
-    expect((stored.keywordMutesV1 as MuteSettings).rules[0]?.nativeId).toBe('9');
-  });
-
-  it('开启原生同步后添加词，会写一条到 X 并显示已同步', async () => {
-    stored.keywordMutesV1 = settings({ nativeSync: true });
-    const send = vi.fn(async (message: { type: string; keyword?: string }) => {
-      if (message.type === 'feedsieve:mute-list') return { ok: true, data: [] };
-      if (message.type === 'feedsieve:mute-create') {
-        return {
-          ok: true,
-          data: {
-            mute: {
-              keyword: message.keyword,
-              id: '77',
-              surfaces: ['home_timeline', 'notifications', 'tweet_replies'],
-              options: [],
-              validUntil: null,
-            },
-            list: [],
-          },
-        };
-      }
-      return { ok: false, code: 'unexpected' };
-    });
-    await render(send);
-    await act(async () => setInput('加微信'));
-    await submitAdd();
-
-    expect(container.textContent).toContain('已同步 X');
-    const saved = (stored.keywordMutesV1 as MuteSettings).rules[0];
-    expect(saved?.nativeId).toBe('77');
-    expect(saved?.syncState).toBe('synced');
-  });
-
-  it('开启原生同步后，本地词可以逐条同步到 X', async () => {
-    stored.keywordMutesV1 = settings({
-      nativeSync: true,
-      rules: [
-        {
-          id: 'r1',
-          phrase: '加微信',
-          enabled: true,
-          origin: 'local',
-          syncState: 'local',
-          createdAt: 1,
-        },
-      ],
-    });
-    const send = vi.fn(async (message: { type: string; keyword?: string }) => {
-      if (message.type === 'feedsieve:mute-list') return { ok: true, data: [] };
-      if (message.type === 'feedsieve:mute-create') {
-        return {
-          ok: true,
-          data: {
-            mute: {
-              keyword: message.keyword,
-              id: '88',
-              surfaces: ['home_timeline'],
-              options: [],
-              validUntil: null,
-            },
-            list: [],
-          },
-        };
-      }
-      return { ok: false, code: 'unexpected' };
-    });
-    await render(send);
-    const sync = container.querySelector<HTMLButtonElement>('.mute-actions .text-button')!;
-    expect(sync.textContent).toBe('同步到 X');
     await act(async () => {
-      sync.click();
-      await new Promise((resolve) => setTimeout(resolve, 0));
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      buttonByText('.mute-actions .text-button', '编辑').click();
+      await flush();
     });
-    expect(container.textContent).toContain('已同步 X');
-    expect((stored.keywordMutesV1 as MuteSettings).rules[0]?.nativeId).toBe('88');
-  });
-
-  it('词库连续点多个词时，按队列逐条同步，不阻塞下一次点击', async () => {
-    stored.keywordMutesV1 = settings({ nativeSync: true });
-    const send = vi.fn(async (message: { type: string; keyword?: string }) => {
-      if (message.type === 'feedsieve:mute-list') return { ok: true, data: [] };
-      if (message.type === 'feedsieve:mute-create') {
-        return {
-          ok: true,
-          data: {
-            mute: {
-              keyword: message.keyword,
-              id: message.keyword === '同城约' ? '101' : '102',
-              surfaces: ['home_timeline'],
-              options: [],
-              validUntil: null,
-            },
-            list: [],
-          },
-        };
-      }
-      return { ok: false, code: 'unexpected' };
-    });
-    await render(send);
     await act(async () => {
-      [...container.querySelectorAll<HTMLButtonElement>('.segmented button')]
-        .find((button) => button.textContent?.trim() === '词库')!
-        .click();
+      setInput('.mute-edit-input', '加 V');
+      buttonByText('.mute-actions .text-button', '保存').click();
+      await flush();
     });
-    const chips = [...container.querySelectorAll<HTMLButtonElement>('.mute-chip')];
+
+    expect(container.querySelector('.mute-consent')).not.toBeNull();
+    expect(x.calls).not.toContain('destroy:11');
+
     await act(async () => {
-      chips[0]!.click();
-      chips[1]!.click();
-      for (let i = 0; i < 6; i += 1) await new Promise((resolve) => setTimeout(resolve, 0));
+      buttonByText('.mute-consent .secondary-button', '开启写入').click();
+      await flush();
     });
-    const saved = (stored.keywordMutesV1 as MuteSettings).rules;
-    expect(saved.map((rule) => rule.phrase)).toEqual(['上门服务', '同城约']);
-    expect(saved.every((rule) => rule.syncState === 'synced')).toBe(true);
-    expect(container.textContent).toContain('已加入 2 / 48');
+    expect(x.calls).toContain('destroy:11');
+    expect(x.calls).toContain('create:加 V');
+    expect(saved().consented).toBe(true);
   });
 
-  it('删除需要点两次确认', async () => {
-    stored.keywordMutesV1 = settings({
-      rules: [
-        {
-          id: 'r1',
-          phrase: '加微信',
-          enabled: true,
-          origin: 'local',
-          syncState: 'local',
-          createdAt: 1,
-        },
-      ],
-    });
-    await render();
-    const remove = actionButton('删除');
-    await act(async () => remove.click());
-    expect(remove.textContent).toBe('确认删除');
-    expect((stored.keywordMutesV1 as MuteSettings).rules).toHaveLength(1);
+  it('删除需要二次确认，完成后从 X 与镜像移除', async () => {
+    stored.keywordMutesV1 = {
+      consented: true,
+      rules: [{ id: 'a', phrase: '加微信', nativeId: '11', createdAt: 1 }],
+    };
+    const x = fakeX([mute('11', '加微信')]);
+    await render(x);
 
-    await act(async () => remove.click());
-    expect(container.querySelector('.mute-item')).toBeNull();
-    expect((stored.keywordMutesV1 as MuteSettings).rules).toHaveLength(0);
-  });
-
-  it('编辑本机词：改完写回 storage，列表显示新词', async () => {
-    stored.keywordMutesV1 = settings({
-      rules: [
-        {
-          id: 'r1',
-          phrase: '加微信',
-          enabled: true,
-          origin: 'local',
-          syncState: 'local',
-          createdAt: 1,
-        },
-      ],
-    });
-    await render();
-    await act(async () => actionButton('编辑').click());
-
-    const input = container.querySelector<HTMLInputElement>('.mute-edit-input')!;
-    expect(input.value).toBe('加微信');
-    await act(async () => setValue(input, '领福利'));
     await act(async () => {
-      actionButton('保存').click();
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      buttonByText('.mute-actions .text-button', '删除').click();
+      await flush();
     });
+    expect(x.calls).not.toContain('destroy:11');
 
-    expect(container.textContent).toContain('领福利');
-    expect(container.textContent).not.toContain('加微信');
-    expect((stored.keywordMutesV1 as MuteSettings).rules[0]?.phrase).toBe('领福利');
-  });
-
-  it('编辑成重复词时提示，不改动列表', async () => {
-    stored.keywordMutesV1 = settings({
-      rules: [
-        {
-          id: 'r1',
-          phrase: '加微信',
-          enabled: true,
-          origin: 'local',
-          syncState: 'local',
-          createdAt: 1,
-        },
-        {
-          id: 'r2',
-          phrase: '加V',
-          enabled: true,
-          origin: 'local',
-          syncState: 'local',
-          createdAt: 2,
-        },
-      ],
-    });
-    await render();
-    const edit = [...container.querySelectorAll<HTMLButtonElement>('.mute-actions .text-button')]
-      .filter((button) => button.textContent?.trim() === '编辑')[0]!;
-    await act(async () => edit.click());
-    const input = container.querySelector<HTMLInputElement>('.mute-edit-input')!;
-    await act(async () => setValue(input, '加V'));
     await act(async () => {
-      actionButton('保存').click();
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      buttonByText('.mute-actions .text-button', '确认删除').click();
+      await flush();
     });
-
-    expect(container.textContent).toContain('这个词已经在列表里了');
-    expect(container.querySelector('.mute-edit-input')).not.toBeNull();
-    expect((stored.keywordMutesV1 as MuteSettings).rules.map((rule) => rule.phrase)).toEqual([
-      '加微信',
-      '加V',
-    ]);
+    expect(x.calls).toContain('destroy:11');
+    expect(saved().rules).toEqual([]);
+    expect(container.textContent).toContain('X 账号里还没有静音词');
   });
 
-  it('编辑已同步词：先删 X 旧词，再排队写入新词', async () => {
-    stored.keywordMutesV1 = settings({
-      nativeSync: true,
-      rules: [
-        {
-          id: 'r1',
-          phrase: '加微信',
-          enabled: true,
-          origin: 'local',
-          nativeId: '11',
-          syncState: 'synced',
-          createdAt: 1,
-        },
-      ],
-    });
-    const calls: Array<{ type: string; keyword?: string; ids?: string[] }> = [];
-    const send = vi.fn(async (message: { type: string; keyword?: string; ids?: string[] }) => {
-      calls.push(message);
-      if (message.type === 'feedsieve:mute-list') {
-        return {
-          ok: true,
-          data: [
-            {
-              keyword: '加微信',
-              id: '11',
-              surfaces: ['home_timeline'],
-              options: [],
-              validUntil: null,
-            },
-          ],
-        };
-      }
-      if (message.type === 'feedsieve:mute-destroy') return { ok: true, data: [] };
-      if (message.type === 'feedsieve:mute-create') {
-        return {
-          ok: true,
-          data: {
-            mute: {
-              keyword: message.keyword,
-              id: '99',
-              surfaces: ['home_timeline'],
-              options: [],
-              validUntil: null,
-            },
-            list: [],
-          },
-        };
-      }
-      return { ok: false, code: 'unexpected' };
-    });
-    await render(send);
-    await act(async () => actionButton('编辑').click());
-    const input = container.querySelector<HTMLInputElement>('.mute-edit-input')!;
-    await act(async () => setValue(input, '领福利'));
+  it('词库点词直接写入 X（已确认时），加入后标记为已加入', async () => {
+    stored.keywordMutesV1 = { consented: true, rules: [] };
+    const x = fakeX();
+    await render(x);
+
     await act(async () => {
-      actionButton('保存').click();
-      for (let i = 0; i < 6; i += 1) await new Promise((resolve) => setTimeout(resolve, 0));
+      buttonByText('.segmented button', '词库').click();
+      await flush();
+    });
+    const chip = container.querySelector<HTMLButtonElement>('.mute-chip')!;
+    const word = chip.textContent ?? '';
+    await act(async () => {
+      chip.click();
+      await flush();
     });
 
-    expect(calls.some((call) => call.type === 'feedsieve:mute-destroy' && call.ids?.[0] === '11')).toBe(
-      true,
-    );
-    expect(
-      calls.some(
-        (call) => call.type === 'feedsieve:mute-create' && call.keyword === '领福利',
-      ),
-    ).toBe(true);
-    const saved = (stored.keywordMutesV1 as MuteSettings).rules[0];
-    expect(saved?.phrase).toBe('领福利');
-    expect(saved?.nativeId).toBe('99');
-    expect(saved?.syncState).toBe('synced');
-  });
-
-  it('超过 5 个词时出现搜索框，可以按词过滤', async () => {
-    stored.keywordMutesV1 = settings({
-      rules: Array.from({ length: 6 }, (_, index) => ({
-        id: `r${index}`,
-        phrase: `静音词${index}`,
-        enabled: true,
-        origin: 'local' as const,
-        syncState: 'local' as const,
-        createdAt: index,
-      })),
-    });
-    await render();
-    const search = container.querySelector<HTMLInputElement>('.mute-search-field input');
-    expect(search).not.toBeNull();
-    await act(async () => setValue(search!, '静音词3'));
-
-    expect(container.querySelectorAll('.mute-item')).toHaveLength(1);
-    expect(container.textContent).toContain('静音词3');
-    expect(container.textContent).toContain('1 个词 / 6 个词');
+    expect(x.calls.some((call) => call.startsWith('create:'))).toBe(true);
+    expect(saved().rules).toHaveLength(1);
+    expect(word.length).toBeGreaterThan(0);
   });
 });

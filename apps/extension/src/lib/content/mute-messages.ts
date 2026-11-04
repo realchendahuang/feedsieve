@@ -1,12 +1,11 @@
 /**
  * 原生静音词的 content script 消息处理。
  *
- * 写请求只由 popup 里用户的一次确认触发；这里再做一层硬护栏：
- * - create 必须开启 nativeSync；
+ * 写请求只由 popup 里用户的逐次操作触发；这里再做一层硬护栏：
+ * - create/destroy 之前用户必须已经确认过「写入我的 X 账号」（consented）；
  * - 两条写请求之间至少隔 2 秒；
  * - 每天最多 30 次新增写入，超了就停，不自动重试；
- * - destroy 允许在 nativeSync 关闭后执行，用于清理已经同步过的词，
- *   不占新增额度（否则删到一半会被额度卡住）。
+ * - 删除不占新增额度（否则删到一半会被额度卡住）。
  */
 import {
   createNativeMute,
@@ -81,7 +80,7 @@ export function registerMuteMessageHandlers(): void {
       if (!phrase) return Promise.resolve({ ok: false, code: 'invalid_keyword' });
       return (async (): Promise<NativeMuteResult<{ mute: unknown; list: unknown }> | { ok: false; code: string }> => {
         const settings = await getMuteSettings();
-        if (!settings.nativeSync) return { ok: false, code: 'sync_disabled' };
+        if (!settings.consented) return { ok: false, code: 'consent_required' };
         const budget = await readBudget();
         if (budget.count >= DAILY_LIMIT) return { ok: false, code: 'daily_limit' };
         await waitForSlot();

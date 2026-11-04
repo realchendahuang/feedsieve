@@ -6,15 +6,25 @@ import {
   mergeNativeMutes,
   normalizeMutePhrase,
   normalizeMuteSettings,
-  normalizeNativeMute,
   removeMuteRule,
-  renameMuteRule,
-  type MuteSettings,
+  replaceMuteRule,
+  type MuteRule,
+  type NativeMute,
 } from './mute-store';
 
-const settings = (): MuteSettings => ({ ...DEFAULT_MUTE_SETTINGS, rules: [] });
+const native = (id: string, keyword: string): NativeMute => ({
+  keyword,
+  id,
+  surfaces: ['home_timeline'],
+  options: [],
+  validUntil: null,
+});
 
-describe('静音词规则存储', () => {
+function rule(id: string, phrase: string, nativeId: string, createdAt = 1): MuteRule {
+  return { id, phrase, nativeId, createdAt };
+}
+
+describe('静音词镜像与首次写入确认', () => {
   it('拒绝空词、单字和只有标点的词', () => {
     expect(normalizeMutePhrase('')).toBeNull();
     expect(normalizeMutePhrase('a')).toBeNull();
@@ -23,149 +33,64 @@ describe('静音词规则存储', () => {
     expect(normalizeMutePhrase('free airdrop')).toBe('free airdrop');
   });
 
-  it('添加时去重、限量，并放在列表最前', () => {
-    const first = addMuteRule(settings(), '加微信', { now: 1 });
-    expect(first.ok).toBe(true);
-    if (!first.ok) return;
-    expect(first.settings.rules[0]?.phrase).toBe('加微信');
-
-    const duplicate = addMuteRule(first.settings, '加微信');
-    expect(duplicate).toEqual({ ok: false, code: 'duplicate' });
-
-    const full = {
-      ...settings(),
-      rules: Array.from({ length: MAX_MUTE_RULES }, (_, index) => ({
-        id: String(index),
-        phrase: `词${index}`,
-        enabled: true,
-        origin: 'local' as const,
-        syncState: 'local' as const,
-        createdAt: index,
-      })),
-    };
-    expect(addMuteRule(full, '新词')).toEqual({ ok: false, code: 'limit' });
+  it('默认未确认写入、没有任何词', () => {
+    expect(DEFAULT_MUTE_SETTINGS).toEqual({ consented: false, rules: [] });
+    expect(normalizeMuteSettings(undefined).consented).toBe(false);
+    expect(normalizeMuteSettings({}).consented).toBe(false);
   });
 
-  it('归一化存储时丢弃非法词、去重并限制数量', () => {
+  it('旧版存储：没有 X 词 id 的本地词丢弃，开过同步视为已确认', () => {
     const normalized = normalizeMuteSettings({
-      enabled: false,
       nativeSync: true,
       rules: [
         { id: '1', phrase: '加微信' },
-        { id: '2', phrase: '加微信' },
-        { id: '3', phrase: '!!!' },
-        { id: '4', phrase: 'free airdrop', nativeId: '9' },
+        { id: '2', phrase: '免费空投', nativeId: '11' },
+        { id: '3', phrase: '免费空投', nativeId: '12' },
       ],
     });
-    expect(normalized.enabled).toBe(false);
-    expect(normalized.nativeSync).toBe(true);
-    expect(normalized.rules.map((rule) => rule.phrase)).toEqual(['加微信', 'free airdrop']);
-    expect(normalized.rules[1]?.syncState).toBe('synced');
-  });
-
-  it('默认走 X 原生静音词，显式关闭才退回只在本机', () => {
-    expect(normalizeMuteSettings(undefined).nativeSync).toBe(true);
-    expect(normalizeMuteSettings({ nativeSync: true }).nativeSync).toBe(true);
-    expect(normalizeMuteSettings({ nativeSync: false }).nativeSync).toBe(false);
-    expect(DEFAULT_MUTE_SETTINGS.nativeSync).toBe(true);
-  });
-
-  it('删除只移除指定规则', () => {
-    const current = addMuteRule(settings(), '加微信', { now: 1 });
-    if (!current.ok) return;
-    const next = addMuteRule(current.settings, '加V', { now: 2 });
-    if (!next.ok) return;
-    expect(removeMuteRule(next.settings, current.rule.id).rules.map((rule) => rule.phrase)).toEqual([
-      '加V',
+    expect(normalized.consented).toBe(true);
+    expect(normalized.rules.map((entry) => [entry.phrase, entry.nativeId])).toEqual([
+      ['免费空投', '11'],
     ]);
   });
 
-  it('改名校验长度和重复，但允许把词改回原文', () => {
-    const first = addMuteRule(settings(), '加微信', { now: 1 });
-    if (!first.ok) return;
-    const second = addMuteRule(first.settings, '加V', { now: 2 });
-    if (!second.ok) return;
-
-    expect(renameMuteRule(second.settings, first.rule.id, 'a')).toEqual({
-      ok: false,
-      code: 'invalid',
-    });
-    expect(renameMuteRule(second.settings, first.rule.id, '加V')).toEqual({
-      ok: false,
-      code: 'duplicate',
-    });
-    expect(renameMuteRule(second.settings, 'missing', '新词')).toEqual({
-      ok: false,
-      code: 'invalid',
-    });
-
-    const renamed = renameMuteRule(second.settings, first.rule.id, '领福利');
-    expect(renamed.ok).toBe(true);
-    if (!renamed.ok) return;
-    expect(renamed.rule.phrase).toBe('领福利');
-    expect(renamed.settings.rules.map((rule) => rule.phrase)).toEqual(['加V', '领福利']);
-    // 同一个词存回自己不算重复
-    expect(renameMuteRule(renamed.settings, first.rule.id, '领福利').ok).toBe(true);
-  });
-
-  it('合并原生静音词：导入、关联、缺失回退本地、过期跳过', () => {
-    const base = addMuteRule(settings(), '加微信', { now: 1 });
-    if (!base.ok) return;
-    const withNative = addMuteRule(base.settings, 'free airdrop', { now: 2 });
-    if (!withNative.ok) return;
-    const linked = {
-      ...withNative.settings,
-      rules: withNative.settings.rules.map((rule) =>
-        rule.phrase === 'free airdrop' ? { ...rule, nativeId: '42', syncState: 'synced' as const } : rule,
-      ),
+  it('用 X 列表对齐镜像：补新词、保留本地 id、删掉 X 端已删的词', () => {
+    const initial = {
+      consented: true,
+      rules: [rule('a', '加微信', '11'), rule('b', '刷单', '12')],
     };
-    const merged = mergeNativeMutes(
-      linked,
-      [
-        {
-          keyword: '加微信',
-          id: '41',
-          surfaces: ['home_timeline'],
-          options: [],
-          validUntil: null,
-        },
-        {
-          keyword: '过期词',
-          id: '43',
-          surfaces: [],
-          options: [],
-          validUntil: '2020-01-01T00:00:00.000Z',
-        },
-      ],
-      Date.UTC(2026, 10, 1),
-    );
-    expect(merged.imported).toBe(0);
-    expect(merged.linked).toBe(1);
-    expect(merged.settings.rules.find((rule) => rule.phrase === '加微信')?.nativeId).toBe('41');
-    // free airdrop 的 nativeId 42 不在原生列表里：退回本地，不删词
-    expect(merged.settings.rules.find((rule) => rule.phrase === 'free airdrop')).toMatchObject({
-      nativeId: undefined,
-      syncState: 'local',
-    });
-    expect(merged.settings.rules.some((rule) => rule.phrase === '过期词')).toBe(false);
+    const merged = mergeNativeMutes(initial, [native('11', '加微信'), native('13', '空投领取')]);
+    expect(merged.imported).toBe(1);
+    expect(merged.removed).toBe(1);
+    expect(merged.settings.rules.map((entry) => entry.phrase)).toEqual(['加微信', '空投领取']);
+    expect(merged.settings.rules[0]?.id).toBe('a');
+    expect(merged.settings.consented).toBe(true);
   });
 
-  it('解析原生静音词字段', () => {
-    expect(
-      normalizeNativeMute({
-        keyword: '加微信',
-        id: '1',
-        mute_surfaces: ['home_timeline', 'notifications'],
-        mute_options: ['exclude_following_accounts'],
-        valid_until: null,
-      }),
-    ).toEqual({
-      keyword: '加微信',
-      id: '1',
-      surfaces: ['home_timeline', 'notifications'],
-      options: ['exclude_following_accounts'],
-      validUntil: null,
-    });
-    expect(normalizeNativeMute({ keyword: '', id: '1' })).toBeNull();
+  it('新增去重、限量，并放在列表最前', () => {
+    const first = addMuteRule({ consented: true, rules: [] }, native('11', '加微信'), 5);
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    expect(first.settings.rules[0]).toMatchObject({ phrase: '加微信', nativeId: '11', createdAt: 5 });
+
+    const duplicate = addMuteRule(first.settings, native('12', '加微信'));
+    expect(duplicate).toEqual({ ok: false, code: 'duplicate' });
+
+    const full = {
+      consented: true,
+      rules: Array.from({ length: MAX_MUTE_RULES }, (_, index) => rule(String(index), `词${index}`, String(index))),
+    };
+    expect(addMuteRule(full, native('999', '新词'))).toEqual({ ok: false, code: 'limit' });
+  });
+
+  it('编辑用替换保持原 id 与创建时间', () => {
+    const settings = { consented: true, rules: [rule('a', '加微信', '11', 3)] };
+    const next = replaceMuteRule(settings, 'a', native('21', '加 V'), 9);
+    expect(next.rules[0]).toMatchObject({ id: 'a', phrase: '加 V', nativeId: '21', createdAt: 3 });
+  });
+
+  it('删除只移除指定条目', () => {
+    const settings = { consented: true, rules: [rule('a', '加微信', '11'), rule('b', '刷单', '12')] };
+    expect(removeMuteRule(settings, 'a').rules.map((entry) => entry.phrase)).toEqual(['刷单']);
   });
 });

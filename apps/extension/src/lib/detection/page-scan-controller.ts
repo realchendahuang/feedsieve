@@ -13,7 +13,7 @@ import { INSIGHT_DECORATION_SELECTOR } from '../insight/decorations';
  * 插件自己插进页面的节点：Observer 必须忽略它们的增删与内部变化，
  * 否则每次插入都会把所在推文标脏、触发重扫，形成反馈环。
  */
-const OWN_DECORATION_SELECTOR = `.fs-badge, .fs-manual-mark, [data-fs-action], .fs-ai-mark, .fs-ai-foldbar, [data-fs-ai-tab], .fs-mute-foldbar, ${INSIGHT_DECORATION_SELECTOR}`;
+const OWN_DECORATION_SELECTOR = `.fs-badge, .fs-manual-mark, [data-fs-action], .fs-ai-mark, .fs-ai-foldbar, [data-fs-ai-tab], ${INSIGHT_DECORATION_SELECTOR}`;
 
 /** mutation 停止后到扫描的固定间隔。 */
 export const SCAN_DEBOUNCE_MS = 300;
