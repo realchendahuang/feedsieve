@@ -56,6 +56,13 @@ const WriteView = lazy(() =>
 );
 const CleanView = lazy(() => import('./views/CleanView'));
 const WeeklyView = lazy(() => import('./views/WeeklyView'));
+
+/**
+ * 拾穗还没准备好：先不挂入口，链接里的 `?view=weekly` 也落到淘金。
+ * 视图、样式和测试都留着，准备好了把这里改回 true 就恢复。
+ * 标成 boolean 是为了让编译器别把后面的分支当死代码删掉。
+ */
+const WEEKLY_ENABLED: boolean = false;
 const MuteView = lazy(() => import('./views/MuteView'));
 const GlobalView = lazy(() => import('./views/settings/GlobalView'));
 const ModuleSettingsView = lazy(() => import('./views/settings/ModuleSettingsView'));
@@ -116,6 +123,7 @@ function initialRoute(): InitialRoute {
     case 'write':
       return { view: 'write', page: 'global', moduleSettingsOpen: null };
     case 'weekly':
+      if (!WEEKLY_ENABLED) return { view: 'hot', page: 'global', moduleSettingsOpen: null };
       return { view: 'weekly', page: 'global', moduleSettingsOpen: null };
     case 'mute':
       return { view: 'mute', page: 'global', moduleSettingsOpen: null };
@@ -539,8 +547,8 @@ export default function App() {
       title: module.titleKey ? t[module.titleKey] : t[module.labelKey],
     });
   }
-  // 拾穗与调校都是常驻入口，不属于模块开关
-  tabs.push({ id: 'weekly', label: t.weeklyNav, title: t.weeklyTabTitle });
+  // 拾穗与调校都是常驻入口，不属于模块开关；拾穗内容还没准备好，先不挂
+  if (WEEKLY_ENABLED) tabs.push({ id: 'weekly', label: t.weeklyNav, title: t.weeklyTabTitle });
   tabs.push({ id: 'global', label: t.globalNav, title: t.globalTabTitle });
 
   // 降噪下的二级 tab：组内模块按 MODULE_GROUPS 的顺序，关键词永远最后
