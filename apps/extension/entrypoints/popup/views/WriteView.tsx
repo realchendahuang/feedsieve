@@ -31,7 +31,7 @@ import {
   type ScheduledCache,
 } from '../../../src/lib/compose/schedule-store';
 import { OPEN_SCHEDULED_MESSAGE } from '../../../src/lib/compose/compose-schedule';
-import { AppIcon, formatAgo, HelpIcon, IconButton } from './shared';
+import { AppIcon, EmptyState, formatAgo, HelpIcon, IconButton } from './shared';
 import { useListPosition } from './use-list-position';
 
 const DAYS_SHOWN = 7;
@@ -507,9 +507,7 @@ export function WriteView({
             </h3>
 
             {activeItems.length === 0 ? (
-              <div className="empty-state is-clean">
-                <p>{c.noScheduleDay}</p>
-              </div>
+              <EmptyState className="is-clean">{c.noScheduleDay}</EmptyState>
             ) : (
               <div className="write-timeline">
                 {activeItems.map((item) => (
@@ -573,18 +571,24 @@ export function WriteView({
             ) : null}
           </>
         ) : (
-          <div className="empty-state is-clean write-empty">
-            <p>{c.empty}</p>
-            <span className="row-meta">{c.emptyHint}</span>
-            <div className="write-empty-actions">
-              <button type="button" className="secondary-button" onClick={onOpenSettings}>
-                {c.adjust}
-              </button>
-              <button type="button" className="secondary-button" onClick={() => void sync()}>
-                {c.openScheduled}
-              </button>
-            </div>
-          </div>
+          <EmptyState
+            className="is-clean write-empty"
+            extra={
+              <>
+                <span className="row-meta">{c.emptyHint}</span>
+                <div className="write-empty-actions">
+                  <button type="button" className="secondary-button" onClick={onOpenSettings}>
+                    {c.adjust}
+                  </button>
+                  <button type="button" className="secondary-button" onClick={() => void sync()}>
+                    {c.openScheduled}
+                  </button>
+                </div>
+              </>
+            }
+          >
+            {c.empty}
+          </EmptyState>
         )}
       </section>
     </section>

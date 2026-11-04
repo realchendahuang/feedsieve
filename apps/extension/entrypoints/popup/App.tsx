@@ -55,7 +55,13 @@ import ToastHost from './views/ToastHost';
 import { isProfileUrl } from './views/profile-model';
 import { PANEL_VIEW_REQUEST_KEY, readPanelViewRequest } from '../../src/lib/platform/panel-route';
 import { dismissToast, showToast } from '../../src/lib/platform/toast';
-import { AppIcon, asPageMarkedList, getChromeSidePanel, type PageMarkedItem } from './views/shared';
+import {
+  AppIcon,
+  asPageMarkedList,
+  getChromeSidePanel,
+  SkeletonList,
+  type PageMarkedItem,
+} from './views/shared';
 
 /**
  * 顶部栏目：每个功能模块一问，外加一个常驻的「周刊」推荐位，最后一栏「全局」放跨模块设置。
@@ -568,15 +574,7 @@ export default function App() {
 
       <div className="popup-content">
         {/* 懒加载的视图读回来之前先占住位置，切换栏目时不闪空白 */}
-        <Suspense
-          fallback={
-            <div className="loading-list" aria-hidden="true">
-              <span />
-              <span />
-              <span />
-            </div>
-          }
-        >
+        <Suspense fallback={<SkeletonList />}>
           {viewReady && effectiveView === 'hot' && !effectiveModuleSettingsOpen ? (
             <HotView
               language={language}

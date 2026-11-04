@@ -6,7 +6,7 @@ import {
   subscribeBackups,
   type ArticleBackup,
 } from '../../../../src/lib/compose/schedule-store';
-import { formatAgo, HelpIcon, IconButton } from '../shared';
+import { EmptyState, formatAgo, HelpIcon, IconButton } from '../shared';
 
 const COPY = {
   zh: {
@@ -73,9 +73,7 @@ export default function ArticleBackups({
         <HelpIcon text={c.backupsHint} />
       </div>
       {backups.length === 0 ? (
-        <div className="empty-state is-clean">
-          <p>{c.empty}</p>
-        </div>
+        <EmptyState className="is-clean">{c.empty}</EmptyState>
       ) : (
         backups.map((backup) => {
           const pick = Math.min(versionPick[backup.id] ?? 0, backup.versions.length - 1);

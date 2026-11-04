@@ -37,7 +37,7 @@ import {
   type CatalogEntry,
   type CatalogPost,
 } from '../../../src/lib/insight/profile-catalog';
-import { AppIcon, HelpIcon, IconButton, useTip } from './shared';
+import { AppIcon, EmptyState, HelpIcon, IconButton, SkeletonList, useTip } from './shared';
 import { Avatar, PostActions, readableText, shortAgo, VerifiedMark } from './post-parts';
 import {
   asCatalogEntry,
@@ -744,10 +744,7 @@ export default function ProfileView({
             <AppIcon name="settings" size={15} />
           </button>
         </div>
-        <div className="empty-state">
-          <p>{t.profileNotOnProfile}</p>
-          <HelpIcon text={t.profileNotOnProfileHint} />
-        </div>
+        <EmptyState hint={t.profileNotOnProfileHint}>{t.profileNotOnProfile}</EmptyState>
       </div>
     );
   }
@@ -755,11 +752,7 @@ export default function ProfileView({
   if (entry === undefined) {
     return (
       <div className="view profile-view" ref={rootRef}>
-        <div className="loading-list" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-        </div>
+        <SkeletonList />
       </div>
     );
   }
@@ -854,10 +847,7 @@ export default function ProfileView({
       <div className="view profile-view" ref={rootRef}>
         {entry ? <AccountCard entry={entry} now={now} language={language} tools={tools} /> : null}
         {googlePanel}
-        <div className="empty-state">
-          <p>{t.profileEmpty}</p>
-          <HelpIcon text={t.profileEmptyHint} />
-        </div>
+        <EmptyState hint={t.profileEmptyHint}>{t.profileEmpty}</EmptyState>
       </div>
     );
   }
@@ -926,9 +916,7 @@ export default function ProfileView({
       </div>
 
       {list.length === 0 ? (
-        <div className="empty-state">
-          <p>{t.allFiltered}</p>
-        </div>
+        <EmptyState>{t.allFiltered}</EmptyState>
       ) : (
         <ol className="hot-list profile-list" aria-label={`@${handle}`}>
           {shown.map((post) => {

@@ -11,9 +11,11 @@ import { UI_COPY, type UiLanguage } from '../../../../src/lib/platform/i18n';
 import {
   allowlistReason,
   AppIcon,
+  EmptyState,
   formatDate,
   normalizeManualInput,
   OfficialLinkIcon,
+  SkeletonList,
 } from '../shared';
 
 interface AllowlistPageProps {
@@ -92,14 +94,9 @@ export default function AllowlistPage({ language, notify, recommendList }: Allow
       </form>
 
       {allowlist === null ? (
-        <div className="loading-list" aria-hidden="true">
-          <span />
-          <span />
-        </div>
+        <SkeletonList />
       ) : allowlist.length === 0 ? (
-        <div className="empty-state">
-          <p>{t.allowlistEmpty}</p>
-        </div>
+        <EmptyState>{t.allowlistEmpty}</EmptyState>
       ) : (
         <ul className="account-list">
           {allowlist.map((item) => {

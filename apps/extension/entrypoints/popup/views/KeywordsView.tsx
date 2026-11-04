@@ -18,7 +18,7 @@ import {
 import { getCommunitySettings } from '../../../src/lib/community/community-store';
 import { contributeKeywordPhrases } from '../../../src/lib/community/contribute';
 import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
-import { AppIcon, HelpIcon, OfficialLinkIcon } from './shared';
+import { AppIcon, HelpIcon, OfficialLinkIcon, SkeletonList, Toggle } from './shared';
 
 interface KeywordsViewProps {
   language: UiLanguage;
@@ -116,11 +116,7 @@ export default function KeywordsView({ language, notify }: KeywordsViewProps) {
       </form>
 
       {rules === null ? (
-        <div className="loading-list" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-        </div>
+        <SkeletonList />
       ) : rules.customRules.length > 0 ? (
         <ul className="keyword-chips" aria-label={t.myKeywords}>
           {rules.customRules.map((rule) => (
@@ -197,22 +193,15 @@ export default function KeywordsView({ language, notify }: KeywordsViewProps) {
                     </span>
                   </button>
                   <HelpIcon text={pack.description[language]} />
-                  <label className="switch">
-                    <input
-                      type="checkbox"
-                      role="switch"
-                      checked={subscribed}
-                      aria-label={`${pack.name[language]} · ${
-                        subscribed ? t.unsubscribeKeywordPack : t.subscribeKeywordPack
-                      }`}
-                      onChange={() =>
-                        void setOfficialKeywordCategorySubscribed(pack.id, !subscribed).then(
-                          setRules,
-                        )
-                      }
-                    />
-                    <span aria-hidden="true" />
-                  </label>
+                  <Toggle
+                    checked={subscribed}
+                    label={`${pack.name[language]} · ${
+                      subscribed ? t.unsubscribeKeywordPack : t.subscribeKeywordPack
+                    }`}
+                    onChange={(next) =>
+                      void setOfficialKeywordCategorySubscribed(pack.id, next).then(setRules)
+                    }
+                  />
                 </div>
                 {open ? (
                   <ul className="rule-list">
@@ -244,11 +233,7 @@ export default function KeywordsView({ language, notify }: KeywordsViewProps) {
             );
           })
         ) : (
-          <div className="loading-list" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </div>
+          <SkeletonList />
         )}
       </section>
     </>

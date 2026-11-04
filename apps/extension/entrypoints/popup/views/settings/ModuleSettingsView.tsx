@@ -47,7 +47,13 @@ import {
   subscribeUiSettings,
   type UiSettings,
 } from '../../../../src/lib/settings/ui-settings';
-import { STRENGTH_HINTS, STRENGTH_LABELS, SubpageHeader, Toggle } from '../shared';
+import {
+  SkeletonList,
+  STRENGTH_HINTS,
+  STRENGTH_LABELS,
+  SubpageHeader,
+  Toggle,
+} from '../shared';
 import KeywordsView from '../KeywordsView';
 import CadencePage from './CadencePage';
 import BlockedPage from './BlockedPage';
@@ -181,11 +187,7 @@ export default function ModuleSettingsView({
   if (!community) {
     return (
       <div className="view settings-view">
-        <div className="loading-list" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-        </div>
+        <SkeletonList />
       </div>
     );
   }

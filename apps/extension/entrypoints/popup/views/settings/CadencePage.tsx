@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 import { analyzeProfile, HEATMAP_SLOT_HOURS } from '@feedsieve/metrics';
 import {
   GAP_OPTIONS,
@@ -16,7 +16,7 @@ import {
 import { setScheduleSettings } from '../../../../src/lib/compose/schedule-store';
 import { getSelfHandle } from '../../../../src/lib/community/following-allowlist';
 import type { UiLanguage } from '../../../../src/lib/platform/i18n';
-import { AppIcon, HelpIcon, IconButton, Toggle } from '../shared';
+import { AppIcon, HelpIcon, IconButton, Row, Toggle } from '../shared';
 import { asCatalogEntry } from '../profile-model';
 
 const COPY = {
@@ -83,26 +83,6 @@ const COPY = {
     invalidWindow: 'End time must be later than start time',
   },
 } as const;
-
-function SettingRow({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="row">
-      <div className="row-label">
-        <span>{label}</span>
-        {hint ? <HelpIcon text={hint} /> : null}
-      </div>
-      <div className="row-control">{children}</div>
-    </div>
-  );
-}
 
 function windowId(): string {
   return `w${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
@@ -217,12 +197,12 @@ export default function CadencePage({
 
   return (
     <section className="group cadence-page">
-      <SettingRow label={t.windows} hint={t.windowsHint}>
+      <Row label={t.windows} hint={t.windowsHint}>
         <button type="button" className="text-button" onClick={addWindow}>
           <AppIcon name="plus" size={14} />
           <span>{t.add}</span>
         </button>
-      </SettingRow>
+      </Row>
       {schedule.windows.length === 0 ? (
         <p className="row-meta write-warn">{t.previewEmpty}</p>
       ) : null}
@@ -282,14 +262,14 @@ export default function CadencePage({
         </div>
       ))}
 
-      <SettingRow label={t.randomize} hint={t.randomizeHint}>
+      <Row label={t.randomize} hint={t.randomizeHint}>
         <Toggle
           checked={schedule.randomize}
           label={t.randomize}
           onChange={(randomize) => save({ randomize })}
         />
-      </SettingRow>
-      <SettingRow label={t.lead} hint={t.leadHint}>
+      </Row>
+      <Row label={t.lead} hint={t.leadHint}>
         <select
           className="sort-select"
           aria-label={t.lead}
@@ -302,8 +282,8 @@ export default function CadencePage({
             </option>
           ))}
         </select>
-      </SettingRow>
-      <SettingRow label={t.horizon}>
+      </Row>
+      <Row label={t.horizon}>
         <select
           className="sort-select"
           aria-label={t.horizon}
@@ -316,8 +296,8 @@ export default function CadencePage({
             </option>
           ))}
         </select>
-      </SettingRow>
-      <SettingRow label={t.gap} hint={t.gapHint}>
+      </Row>
+      <Row label={t.gap} hint={t.gapHint}>
         <select
           className="sort-select"
           aria-label={t.gap}
@@ -330,7 +310,7 @@ export default function CadencePage({
             </option>
           ))}
         </select>
-      </SettingRow>
+      </Row>
 
       <div className="row cadence-foot">
         <span className="row-meta">

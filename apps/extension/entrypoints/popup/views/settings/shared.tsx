@@ -1,27 +1,8 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { UI_COPY, type UiLanguage } from '../../../../src/lib/platform/i18n';
-import { AppIcon, HelpIcon } from '../shared';
+import { AppIcon, useArmedConfirm } from '../shared';
 
-/** 设置页统一的一行：左标签（可带 ! 说明）+ 右控件。 */
-export function Row({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="row">
-      <div className="row-label">
-        <span>{label}</span>
-        {hint ? <HelpIcon text={hint} /> : null}
-      </div>
-      <div className="row-control">{children}</div>
-    </div>
-  );
-}
+export { Row } from '../shared';
 
 /** 可点进二级页的一行：标签 + 数量/状态 + 右侧箭头。 */
 export function NavRow({
@@ -55,7 +36,7 @@ export function ClearProfilesButton({
   notify: (message: string | null) => void;
 }) {
   const t = UI_COPY[language];
-  const [armed, setArmed] = useState(false);
+  const { isArmed, arm, reset } = useArmedConfirm();
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
     void browser.runtime
@@ -63,17 +44,9 @@ export function ClearProfilesButton({
       .then((value: unknown) => setCount(typeof value === 'number' ? value : null))
       .catch(() => setCount(null));
   }, []);
-  useEffect(() => {
-    if (!armed) return;
-    const timer = window.setTimeout(() => setArmed(false), 3_000);
-    return () => window.clearTimeout(timer);
-  }, [armed]);
   async function clear(): Promise<void> {
-    if (!armed) {
-      setArmed(true);
-      return;
-    }
-    setArmed(false);
+    if (!arm('clear')) return;
+    reset();
     try {
       await browser.runtime.sendMessage({ type: 'feedsieve:profile-clear' });
       setCount(0);
@@ -85,11 +58,11 @@ export function ClearProfilesButton({
   return (
     <button
       type="button"
-      className={`text-button${armed ? ' is-danger' : ''}`}
+      className={`text-button${isArmed('clear') ? ' is-danger' : ''}`}
       disabled={count === 0}
       onClick={() => void clear()}
     >
-      {armed
+      {isArmed('clear')
         ? t.profileClearConfirm
         : count
           ? t.profileClearAction(count)

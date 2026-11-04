@@ -23,7 +23,7 @@ import {
   type AiVoteOutcome,
 } from '../../../src/lib/ai-check/client';
 import { getSelfHandle } from '../../../src/lib/community/following-allowlist';
-import { AppIcon, HelpIcon, Toggle } from './shared';
+import { AppIcon, EmptyState, HelpIcon, SkeletonList, Toggle } from './shared';
 import { useListPosition } from './use-list-position';
 
 const TONE_COLOR = {
@@ -387,15 +387,11 @@ export function AiView({
           </button>
         </div>
         {!handle ? (
-          <div className="empty-state is-clean">
-            <AppIcon name="detect" size={18} />
-            <p>{c.noAccount}</p>
-          </div>
+          <EmptyState icon="detect" className="is-clean">
+            {c.noAccount}
+          </EmptyState>
         ) : lookup === 'loading' ? (
-          <div className="loading-list" aria-hidden="true">
-            <span />
-            <span />
-          </div>
+          <SkeletonList />
         ) : remote?.contested || (remote?.under_review && !remote?.contested) ? (
           <CommunityResult
             language={language}
@@ -448,9 +444,7 @@ export function AiView({
           {records.length ? <span className="count">{records.length}</span> : null}
         </div>
         {records.length === 0 ? (
-          <div className="empty-state is-clean">
-            <p>{c.historyEmpty}</p>
-          </div>
+          <EmptyState className="is-clean">{c.historyEmpty}</EmptyState>
         ) : (
           records.map((record) => {
             const flavor =

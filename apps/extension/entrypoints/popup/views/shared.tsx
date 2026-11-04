@@ -1,5 +1,5 @@
 import type { BlockEvidence } from '../../../src/lib/detection/detection-evidence';
-import { useId, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import type { MarkStrength } from '@feedsieve/community-lists';
 import type { AllowlistItem } from '../../../src/lib/community/allowlist';
@@ -304,7 +304,7 @@ export function IconButton({
 
 /**
  * 二级页顶部：‹ 父级名 + 页面标题。
- * 全局、模块设置、屏蔽三处二级页共用；返回按钮的 aria-label 固定为「返回 · 父级名」。
+ * 全局、模块设置、静音三处二级页共用；返回按钮的 aria-label 固定为「返回 · 父级名」。
  */
 export function SubpageHeader({
   language,
@@ -724,4 +724,92 @@ export function Toggle({
       <span aria-hidden="true" />
     </label>
   );
+}
+
+/** 设置页统一的一行：左标签（可带 ! 说明）+ 右控件。 */
+export function Row({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="row">
+      <div className="row-label">
+        <span>{label}</span>
+        {hint ? <HelpIcon text={hint} /> : null}
+      </div>
+      <div className="row-control">{children}</div>
+    </div>
+  );
+}
+
+/**
+ * 空态：可选图标 + 文案 + 「!」悬浮说明。
+ * 根节点 class 固定为 empty-state，is-clean / write-empty 等变体由 className 叠加；
+ * 文案之外还要放说明行或按钮时用 extra。
+ */
+export function EmptyState({
+  icon,
+  hint,
+  className,
+  extra,
+  children,
+}: {
+  icon?: AppIconName;
+  hint?: string;
+  className?: string;
+  extra?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className={className ? `empty-state ${className}` : 'empty-state'}>
+      {icon ? <AppIcon name={icon} size={18} /> : null}
+      <p>{children}</p>
+      {extra ?? null}
+      {hint ? <HelpIcon text={hint} /> : null}
+    </div>
+  );
+}
+
+/** 骨架占位：固定 3 行，加载完成时屏高不跳。 */
+export function SkeletonList() {
+  return (
+    <div className="loading-list" aria-hidden="true">
+      <span />
+      <span />
+      <span />
+    </div>
+  );
+}
+
+/** 「再点一次确认」的时间窗：3 秒内再点才真正执行。 */
+export const CONFIRM_TIMEOUT_MS = 3_000;
+
+/**
+ * 「再点一次确认」：第一次 arm 进入确认态，超时自动复位；
+ * 确认态下再次 arm 返回 true，调用方这时才执行危险操作。
+ * 按行区分（如静音词逐条删除）时用 key 区分。
+ */
+export function useArmedConfirm<K = string>(timeoutMs = CONFIRM_TIMEOUT_MS) {
+  const [armedKey, setArmedKey] = useState<K | null>(null);
+  useEffect(() => {
+    if (armedKey === null) return;
+    const timer = window.setTimeout(() => setArmedKey(null), timeoutMs);
+    return () => window.clearTimeout(timer);
+  }, [armedKey, timeoutMs]);
+  const isArmed = useCallback((key: K) => armedKey === key, [armedKey]);
+  const arm = useCallback(
+    (key: K): boolean => {
+      if (armedKey === key) return true;
+      setArmedKey(key);
+      return false;
+    },
+    [armedKey],
+  );
+  const reset = useCallback(() => setArmedKey(null), []);
+  return { armedKey, isArmed, arm, reset };
 }

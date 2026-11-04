@@ -20,7 +20,15 @@ import {
   type MuteSyncState,
   type NativeMute,
 } from '../../../src/lib/mute/mute-store';
-import { AppIcon, HelpIcon, SubpageHeader, Toggle } from './shared';
+import {
+  AppIcon,
+  EmptyState,
+  HelpIcon,
+  SkeletonList,
+  SubpageHeader,
+  Toggle,
+  useArmedConfirm,
+} from './shared';
 import { Row } from './settings/shared';
 
 interface MuteViewProps {
@@ -56,7 +64,7 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [nativeStatus, setNativeStatus] = useState<NativeStatus>({ status: 'idle' });
   const [consentOpen, setConsentOpen] = useState(false);
-  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const { isArmed, arm, reset } = useArmedConfirm();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -87,11 +95,6 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (!confirmId) return;
-    const timer = window.setTimeout(() => setConfirmId(null), 3_000);
-    return () => window.clearTimeout(timer);
-  }, [confirmId]);
 
   const callTab = useCallback(
     async (message: { type: string; keyword?: string; ids?: string[]; force?: boolean }): Promise<NativeReply> => {
@@ -298,11 +301,8 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
 
   async function deleteRule(rule: MuteRule): Promise<void> {
     if (busy || rule.id === syncingId) return;
-    if (confirmId !== rule.id) {
-      setConfirmId(rule.id);
-      return;
-    }
-    setConfirmId(null);
+    if (!arm(rule.id)) return;
+    reset();
     setErrorCode(null);
     setBusy(`del:${rule.id}`);
     if (rule.nativeId) {
@@ -321,7 +321,7 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
 
   function beginEdit(rule: MuteRule): void {
     if (busy || rule.id === syncingId) return;
-    setConfirmId(null);
+    reset();
     setErrorCode(null);
     setEditingId(rule.id);
     setEditingValue(rule.phrase);
@@ -440,11 +440,7 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
   if (!settings) {
     return (
       <div className="view mute-view">
-        <div className="loading-list" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-        </div>
+        <SkeletonList />
       </div>
     );
   }
@@ -624,11 +620,9 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
           ) : null}
 
           {rules.length === 0 ? (
-            <div className="empty-state is-clean">
-              <AppIcon name="clean" size={18} />
-              <p>{t.empty}</p>
-              <HelpIcon text={t.emptyHint} />
-            </div>
+            <EmptyState icon="clean" className="is-clean" hint={t.emptyHint}>
+              {t.empty}
+            </EmptyState>
           ) : (
             <>
               <div className="mute-summary">
@@ -637,7 +631,7 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
                 {!mineQueryKey && syncedTotal ? ` · ${t.countSynced(syncedTotal)}` : ''}
               </div>
               {visibleRules.length === 0 ? (
-                <div className="empty-state">{t.libraryNoMatch}</div>
+                <EmptyState>{t.libraryNoMatch}</EmptyState>
               ) : (
                 <ul className="mute-list" aria-label={t.count(rules.length)}>
                   {visibleRules.map((rule) => {
@@ -717,13 +711,13 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
                               </button>
                               <button
                                 type="button"
-                                className={`text-button${confirmId === rule.id ? ' is-danger' : ''}`}
+                                className={`text-button${isArmed(rule.id) ? ' is-danger' : ''}`}
                                 disabled={busy !== null || syncingId === rule.id}
                                 onClick={() => void deleteRule(rule)}
                               >
                                 {deleting
                                   ? '…'
-                                  : confirmId === rule.id
+                                  : isArmed(rule.id)
                                     ? rule.nativeId
                                       ? t.confirmRemoveNative
                                       : t.confirmRemove
@@ -759,7 +753,7 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
             </span>
           </div>
           {filteredPacks.length === 0 ? (
-            <div className="empty-state">{t.libraryNoMatch}</div>
+            <EmptyState>{t.libraryNoMatch}</EmptyState>
           ) : (
             filteredPacks.map((entry) => (
               <section className="mute-pack" key={entry.id}>

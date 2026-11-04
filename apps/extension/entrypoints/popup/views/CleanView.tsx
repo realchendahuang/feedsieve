@@ -18,7 +18,16 @@ import {
 } from '../../../src/lib/queue/block-safety';
 import { addAllowlist } from '../../../src/lib/community/allowlist';
 import { categoryLabel, UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
-import { AppIcon, FAILURE_LABELS, HelpIcon, OfficialLinkIcon, type PageMarkedItem } from './shared';
+import {
+  AppIcon,
+  EmptyState,
+  FAILURE_LABELS,
+  HelpIcon,
+  OfficialLinkIcon,
+  SkeletonList,
+  useArmedConfirm,
+  type PageMarkedItem,
+} from './shared';
 import { useListPosition } from './use-list-position';
 import QueuePanel from './QueuePanel';
 
@@ -88,7 +97,7 @@ export default function CleanView({
   const t = UI_COPY[language];
   const [running, setRunning] = useState(false);
   /** 「全部拉黑」是唯一一次点击影响上百个账号的操作，要求二次确认。 */
-  const [confirmCommunity, setConfirmCommunity] = useState(false);
+  const { isArmed, arm, reset } = useArmedConfirm();
   const [blockResult, setBlockResult] = useState<PageBlockResult | null>(null);
   const [operatingHandles, setOperatingHandles] = useState<Set<string>>(new Set());
   const [refreshing, setRefreshing] = useState(false);
@@ -388,16 +397,11 @@ export default function CleanView({
         </div>
 
         {pageCount === null ? (
-          <div className="loading-list" aria-hidden="true">
-            <span />
-            <span />
-          </div>
+          <SkeletonList />
         ) : displayedItems.length === 0 ? (
-          <div className="empty-state is-clean">
-            <AppIcon name="clean" size={18} />
-            <p>{pageCount === 0 ? t.pageClean : t.allDismissed}</p>
-            <HelpIcon text={t.pageCleanHint} />
-          </div>
+          <EmptyState icon="clean" className="is-clean" hint={t.pageCleanHint}>
+            {pageCount === 0 ? t.pageClean : t.allDismissed}
+          </EmptyState>
         ) : (
           <>
             <ul className="marked-list" aria-label={t.pageMarked}>
@@ -501,18 +505,12 @@ export default function CleanView({
             className="secondary-button"
             disabled={busy || communityLoading || communityEligible.length === 0}
             onClick={() => {
-              if (!confirmCommunity) {
-                setConfirmCommunity(true);
-                window.setTimeout(() => setConfirmCommunity(false), 3_000);
-                return;
-              }
-              setConfirmCommunity(false);
+              if (!arm('community')) return;
+              reset();
               void startCommunityQueue();
             }}
           >
-            {confirmCommunity
-              ? t.confirmBlockAll(communityEligible.length)
-              : t.blockAll}
+            {isArmed('community') ? t.confirmBlockAll(communityEligible.length) : t.blockAll}
           </button>
         </div>
         {queuePanel('community-batch')}

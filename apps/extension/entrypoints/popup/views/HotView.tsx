@@ -25,7 +25,9 @@ import {
   asGlobalHotList,
   asHotPostList,
   asPageBrief,
+  EmptyState,
   HelpIcon,
+  SkeletonList,
   type GlobalHotList,
   type HotPostItem,
   type PageBriefItem,
@@ -1062,28 +1064,19 @@ export default function HotView({ language, sendToXPage, onOpenSettings }: HotVi
       </p>
 
       {loading ? (
-        <div className="loading-list" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-        </div>
+        <SkeletonList />
       ) : isGlobal && global === null ? (
-        <div className="empty-state">
-          <p>{t.globalUnavailable}</p>
-        </div>
+        <EmptyState>{t.globalUnavailable}</EmptyState>
       ) : list.length === 0 ? (
-        <div className="empty-state">
-          <p>
-            {batch.length > 0
-              ? t.allFiltered
-              : isGlobal
-                ? t.globalEmpty
-                : hasBrief
-                  ? t.hotEmptySeen(brief.seen)
-                  : t.briefEmpty}
-          </p>
-          <HelpIcon text={isGlobal ? t.globalEmptyHint : t.hotEmptyHint} />
-        </div>
+        <EmptyState hint={isGlobal ? t.globalEmptyHint : t.hotEmptyHint}>
+          {batch.length > 0
+            ? t.allFiltered
+            : isGlobal
+              ? t.globalEmpty
+              : hasBrief
+                ? t.hotEmptySeen(brief.seen)
+                : t.briefEmpty}
+        </EmptyState>
       ) : (
         <ol className="hot-list" aria-label={t.hotPosts}>
           {shown.map(({ item, more, expanded, leader }) => {

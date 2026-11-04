@@ -11,7 +11,7 @@ import {
 import { MODULES, type ModuleDef } from '../../../../src/lib/settings/modules';
 import type { ModuleSettings } from '../../../../src/lib/settings/module-settings';
 import { setUiLanguage, UI_COPY, type UiLanguage } from '../../../../src/lib/platform/i18n';
-import { SubpageHeader, Toggle } from '../shared';
+import { SkeletonList, SubpageHeader, Toggle } from '../shared';
 import ArticleBackups from './ArticleBackups';
 import BackupRow from './BackupRow';
 import type { GlobalPage } from './pages';
@@ -77,11 +77,7 @@ export default function GlobalView({
   if (!community) {
     return (
       <div className="view settings-view">
-        <div className="loading-list" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-        </div>
+        <SkeletonList />
       </div>
     );
   }

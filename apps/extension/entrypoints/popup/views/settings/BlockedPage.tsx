@@ -11,7 +11,13 @@ import {
   type ManualReportReason,
 } from '../../../../src/lib/community/manual-reasons';
 import type { UnblockBatchResult } from '../../../../src/lib/queue/run-unblock-batch';
-import { FAILURE_LABELS, formatDate, normalizeManualInput } from '../shared';
+import {
+  EmptyState,
+  FAILURE_LABELS,
+  formatDate,
+  normalizeManualInput,
+  SkeletonList,
+} from '../shared';
 import type { SubpageSendToXPage } from './types';
 
 interface BlockedPageProps {
@@ -175,14 +181,9 @@ export default function BlockedPage({
       ) : null}
 
       {blocked === null ? (
-        <div className="loading-list" aria-hidden="true">
-          <span />
-          <span />
-        </div>
+        <SkeletonList />
       ) : blocked.length === 0 ? (
-        <div className="empty-state">
-          <p>{t.noBlocked}</p>
-        </div>
+        <EmptyState>{t.noBlocked}</EmptyState>
       ) : (
         <>
           <ul className="account-list">
