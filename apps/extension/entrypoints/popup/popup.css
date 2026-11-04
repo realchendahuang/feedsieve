@@ -1716,6 +1716,11 @@ input:not([type]):focus,
   border-bottom: 1px solid var(--line);
 }
 
+/* 末行紧挨着底部操作条：两条 1px 线相距 4px，看着像一条画歪的线 */
+.account-list li:last-child {
+  border-bottom: 0;
+}
+
 .account-main {
   flex: 1 1 0;
   display: flex;
