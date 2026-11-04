@@ -14,7 +14,7 @@ import {
 
 const settings = (): MuteSettings => ({ ...DEFAULT_MUTE_SETTINGS, rules: [] });
 
-describe('屏蔽词规则存储', () => {
+describe('静音词规则存储', () => {
   it('拒绝空词、单字和只有标点的词', () => {
     expect(normalizeMutePhrase('')).toBeNull();
     expect(normalizeMutePhrase('a')).toBeNull();

@@ -616,7 +616,7 @@ export function ensureStyles(): void {
     html[${THEME_ATTRIBUTE}='dark'] .fs-reason-menu-divider {
       background: rgba(255, 255, 255, 0.12);
     }
-    /* 推文屏蔽词：整条 cell 折叠成一行说明，不删除 X 的节点。 */
+    /* 静音词：整条 cell 折叠成一行说明，不删除 X 的节点。 */
     [data-fs-mute-fold='1'] > :not(.fs-mute-foldbar) {
       display: none !important;
     }

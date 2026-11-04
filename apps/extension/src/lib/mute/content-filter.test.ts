@@ -42,7 +42,7 @@ function mount(): { article: HTMLElement; cell: HTMLElement } {
   return { article, cell };
 }
 
-describe('推文屏蔽词折叠', () => {
+describe('静音词折叠', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
     window.history.replaceState({}, '', '/');

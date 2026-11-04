@@ -56,7 +56,7 @@ export function createScan(deps: {
   onRuleHit?: (hit: RuleHitItem) => void;
   /** 过滤模块总开关：关掉后不检测、不挂手动拉黑入口；流速装饰仍由 hot 模块控制。 */
   isFilterEnabled?: () => boolean;
-  /** 推文屏蔽词：命中后折叠该 cell；返回 true 表示这条不用再走检测。 */
+  /** 静音词：命中后折叠该 cell；返回 true 表示这条不用再走检测。 */
   applyMute?: (article: Element, item: FeedItem) => boolean;
 }) {
   const { state, controller, fold, badges, manual, insight } = deps;
@@ -113,7 +113,7 @@ export function createScan(deps: {
       reusedCell.removeAttribute(HIDDEN_TWEET_CELL_ATTRIBUTE);
       reusedCell.querySelectorAll('.fs-badge').forEach((badge) => badge.remove());
     }
-    // 推文屏蔽词优先于检测：命中后整条折叠，不再生成黄框/检测记录。
+    // 静音词优先于检测：命中后整条折叠，不再生成黄框/检测记录。
     if (deps.applyMute?.(article, item)) {
       return;
     }

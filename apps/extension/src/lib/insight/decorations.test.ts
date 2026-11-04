@@ -274,3 +274,40 @@ describe('hover content', () => {
     expect(tier.notes).toEqual(expect.arrayContaining([expect.stringContaining('互关号')]));
   });
 });
+
+describe('hover number format', () => {
+  it('uses the popup 万 / K compact style for counts, and 1.2K/h for velocity', async () => {
+    const { formatCount, formatVelocity } = await import('./format');
+    // 弹窗 formatCount 的写法：中文到 1 万才进位成「万」，英文用 K；流速一律紧凑英文 + /h。
+    expect(formatCount(50_000, 'zh')).toBe('5万');
+    expect(formatCount(50_000, 'en')).toBe('50K');
+    expect(formatCount(12_345, 'zh')).toBe('1.2万');
+    expect(formatVelocity(1_234)).toBe('1.2K/h');
+
+    const { velocityHover, tierHover } = await import('./decorations');
+    const store = createTweetStatsStore();
+    store.recordAuthor({ handle: 'alice', followers: 50_000, followingCount: 1_234 });
+    store.recordTweet(
+      { postId: '1', handle: 'alice', createdAt: NOW - 2 * HOUR, views: 50_000, likes: 12_345 },
+      NOW,
+    );
+    const insight = store.insight('1', NOW)!;
+
+    const zh = velocityHover(insight, 'zh');
+    expect(zh.rows).toContainEqual(['浏览', '5万']);
+    expect(zh.rows).toContainEqual(['点赞', '1.2万']);
+    // 流速和页面胶囊、弹窗一样写 1.2K/h，不是「每小时 1,234 次浏览」
+    const zhVelocity = zh.rows.find(([label]) => label === '当前流速')?.[1];
+    expect(zhVelocity).toBe(formatVelocity(insight.velocity!));
+    expect(zhVelocity).toMatch(/\/h$/);
+
+    const en = velocityHover(insight, 'en');
+    expect(en.rows).toContainEqual(['Views', '50K']);
+    expect(en.rows).toContainEqual(['Likes', '12.3K']);
+
+    const tier = tierHover({ followers: 50_000, followingCount: 1_234 }, 6, 'zh', NOW);
+    expect(tier.rows).toContainEqual(['粉丝', '5万']);
+    expect(tier.rows).toContainEqual(['关注', '1234']);
+    expect(tier.rows).toContainEqual(['关注比', '0.02']);
+  });
+});

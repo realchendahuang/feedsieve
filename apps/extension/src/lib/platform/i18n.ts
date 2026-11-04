@@ -49,7 +49,7 @@ export const UI_COPY = {
     writeNav: '发帖',
     aiNav: 'AI 味',
     filterNav: '过滤',
-    muteNav: '屏蔽',
+    muteNav: '静音',
     weeklyNav: '周刊',
     weeklyTitle: '小筛子周刊',
     weeklyTagline: '去噪精选社区',

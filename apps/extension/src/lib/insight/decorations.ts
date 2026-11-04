@@ -36,7 +36,14 @@ import {
 } from '@feedsieve/x-adapter';
 import type { UiLanguage } from '../platform/i18n';
 import { INSIGHT_COPY, tierTitle } from './copy';
-import { compact, formatReach, formatVelocity, tierCode, velocityLabel } from './format';
+import {
+  compact,
+  formatCount,
+  formatReach,
+  formatVelocity,
+  tierCode,
+  velocityLabel,
+} from './format';
 import { createHovercard, type HoverContent } from './hovercard';
 import { createIcon, TIER_ICONS, type IconName } from './icons';
 import type { AuthorEntry, TweetInsight, TweetStatsStore } from './tweet-stats';
@@ -82,12 +89,12 @@ export function velocityHover(
   multiple?: { value: number; estimated: boolean } | null,
 ): HoverContent {
   const t = INSIGHT_COPY[language];
-  const locale = localeOf(language);
-  const num = (value: number) => Math.round(value).toLocaleString(locale);
   const level: VelocityLevel = velocityLabel(insight.velocity)?.level ?? 'none';
   const rows: HoverContent['rows'] = [];
-  if (insight.velocity !== null) rows.push([t.velocityNow, t.perHour(num(insight.velocity))]);
-  if (insight.projected !== null) rows.push([t.projected, num(insight.projected)]);
+  // 数字与弹窗共用同一套格式：流速写 1.2K/h，计数按界面语言写 1.2万 / 12K。
+  if (insight.velocity !== null) rows.push([t.velocityNow, formatVelocity(insight.velocity)]);
+  if (insight.projected !== null)
+    rows.push([t.projected, formatCount(insight.projected, language)]);
   if (multiple)
     rows.push([t.multipleTitle.normal, formatMultiple(multiple.value, multiple.estimated)]);
   const counts: Array<[string, number | undefined]> = [
@@ -98,7 +105,8 @@ export function velocityHover(
     [t.quotes, insight.quotes],
     [t.bookmarks, insight.bookmarks],
   ];
-  for (const [label, value] of counts) if (value !== undefined) rows.push([label, num(value)]);
+  for (const [label, value] of counts)
+    if (value !== undefined) rows.push([label, formatCount(value, language)]);
   if (insight.breakout !== null && shouldShowBreakout(insight.breakout)) {
     rows.push([t.breakout, t.breakoutValue(formatReach(insight.breakout).slice(1))]);
   }
@@ -124,7 +132,6 @@ export function multipleHover(
   language: UiLanguage,
 ): HoverContent {
   const t = INSIGHT_COPY[language];
-  const locale = localeOf(language);
   const outlier = result.value >= OUTLIER_MULTIPLE;
   return {
     title: `${outlier ? '⭐' : '📊'} ${t.multipleTitle[outlier ? 'outlier' : 'normal']}`,
@@ -134,7 +141,7 @@ export function multipleHover(
         // 文案里自带「倍」/「×」，这里只传数字（去掉末尾的 ×）
         t.multipleValue(formatMultiple(result.value, false).slice(0, -1), profile.handle),
       ],
-      [t.multipleMedian, Math.round(profile.baseline.medianViews).toLocaleString(locale)],
+      [t.multipleMedian, formatCount(Math.round(profile.baseline.medianViews), language)],
     ],
     notes: result.estimated ? [t.multipleEstimated] : [],
     footer: t.multipleSample(profile.sample),
@@ -150,9 +157,9 @@ export function tierHover(
 ): HoverContent {
   const t = INSIGHT_COPY[language];
   const locale = localeOf(language);
-  const rows: HoverContent['rows'] = [[t.followers, author.followers.toLocaleString(locale)]];
+  const rows: HoverContent['rows'] = [[t.followers, formatCount(author.followers, language)]];
   if (author.followingCount !== undefined) {
-    rows.push([t.following, author.followingCount.toLocaleString(locale)]);
+    rows.push([t.following, formatCount(author.followingCount, language)]);
     const ratio = followRatio(author.followingCount, author.followers);
     if (ratio !== null) rows.push([t.ratio, ratio < 0.01 ? '<0.01' : ratio.toFixed(2)]);
   }

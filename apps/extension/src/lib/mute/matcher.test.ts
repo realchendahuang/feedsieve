@@ -12,7 +12,7 @@ function firstMatch(phrases: string[], text: string) {
   return matchMuteRules(rules, text)?.phrase ?? null;
 }
 
-describe('屏蔽词匹配', () => {
+describe('静音词匹配', () => {
   it('英文整词匹配，不误伤更长的单词', () => {
     expect(firstMatch(['AI'], 'AI Agent')).toBe('AI');
     expect(firstMatch(['AI'], 'AI-powered tools')).toBe('AI');

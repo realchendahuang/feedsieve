@@ -79,10 +79,10 @@ async function submitAdd(): Promise<void> {
   });
 }
 
-describe('屏蔽页', () => {
+describe('静音页', () => {
   it('本地添加一个词，立即出现在列表里并写入 storage', async () => {
     await render();
-    expect(container.textContent).toContain('还没有屏蔽词');
+    expect(container.textContent).toContain('还没有静音词');
 
     await act(async () => setInput('加微信'));
     await submitAdd();
@@ -93,12 +93,12 @@ describe('屏蔽页', () => {
     expect(saved.map((rule) => rule.phrase)).toEqual(['加微信']);
   });
 
-  it('右上角齿轮进入屏蔽设置，返回回到列表', async () => {
+  it('右上角齿轮进入静音设置，返回回到列表', async () => {
     await render();
     const gear = container.querySelector<HTMLButtonElement>('.toolbar-end .icon-button')!;
     await act(async () => gear.click());
-    expect(container.textContent).toContain('屏蔽设置');
-    expect(container.textContent).toContain('启用屏蔽');
+    expect(container.textContent).toContain('静音设置');
+    expect(container.textContent).toContain('启用静音');
 
     const back = container.querySelector<HTMLButtonElement>('.back-button')!;
     await act(async () => back.click());
@@ -106,13 +106,13 @@ describe('屏蔽页', () => {
     expect(container.querySelector('.toolbar-end')).not.toBeNull();
   });
 
-  it('关闭屏蔽时工具栏显示已关闭，点它进入设置', async () => {
+  it('关闭静音时工具栏显示已关闭，点它进入设置', async () => {
     stored.keywordMutesV1 = settings({ enabled: false });
     await render();
     const off = [...container.querySelectorAll<HTMLButtonElement>('.mute-off-chip')][0]!;
     expect(off.textContent).toBe('已关闭');
     await act(async () => off.click());
-    expect(container.textContent).toContain('屏蔽设置');
+    expect(container.textContent).toContain('静音设置');
   });
 
   it('词库是候选，点加入后才进入我的列表', async () => {
@@ -442,7 +442,7 @@ describe('屏蔽页', () => {
     stored.keywordMutesV1 = settings({
       rules: Array.from({ length: 6 }, (_, index) => ({
         id: `r${index}`,
-        phrase: `屏蔽词${index}`,
+        phrase: `静音词${index}`,
         enabled: true,
         origin: 'local' as const,
         syncState: 'local' as const,
@@ -452,10 +452,10 @@ describe('屏蔽页', () => {
     await render();
     const search = container.querySelector<HTMLInputElement>('.mute-search-field input');
     expect(search).not.toBeNull();
-    await act(async () => setValue(search!, '屏蔽词3'));
+    await act(async () => setValue(search!, '静音词3'));
 
     expect(container.querySelectorAll('.mute-item')).toHaveLength(1);
-    expect(container.textContent).toContain('屏蔽词3');
+    expect(container.textContent).toContain('静音词3');
     expect(container.textContent).toContain('1 个词 / 6 个词');
   });
 });

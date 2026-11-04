@@ -1,24 +1,24 @@
-/** 「屏蔽」页的中英文案。内容脚本的折叠条文案在 content-filter.ts 单独维护。 */
+/** 「静音」页的中英文案。内容脚本的折叠条文案在 content-filter.ts 单独维护。 */
 const zh = {
   mine: '我的',
   library: '词库',
-  settings: '屏蔽设置',
-  back: '屏蔽',
+  settings: '静音设置',
+  back: '静音',
   disabled: '已关闭',
-  enabled: '启用屏蔽',
-  enabledHint: '关掉后已保存的词仍保留，但不会折叠推文。',
+  enabled: '启用静音',
+  enabledHint: '已保存的静音词仍保留，但不会再生效。',
   nativeSync: '同步到 X（手机也生效）',
   nativeSyncHint:
-    '开启后，新添加的屏蔽词会写入 X 原生静音词，手机 App 的首页、通知和回复也会生效；X 会保存这些词。每次只写一条，遇到限流会停。',
+    '开启后，新添加的词会写入 X 原生静音词，手机 App 的首页、通知和回复也会生效；X 会保存这些词。每次只写一条，遇到限流会停。',
   nativeConsentTitle: '开启 X 原生同步？',
   nativeConsentBody:
-    '屏蔽词会保存到你的 X 账号设置，X 服务器可见，并同步到手机 App。不开启则只在本浏览器生效，搜索页仍然可以屏蔽。',
+    '这些词会保存到你的 X 账号设置，X 服务器可见，并同步到手机 App。不开启则只在本浏览器生效，搜索页仍然会折叠。',
   nativeConsentOk: '开启同步',
   nativeConsentCancel: '先不用',
   nativeOffNote: '已写入 X 的词不会自动删除；需要的话逐条删除。',
   addPlaceholder: '输入词或短语，例如：加微信',
   add: '添加',
-  empty: '还没有屏蔽词',
+  empty: '还没有静音词',
   emptyHint: '添加后，命中正文的推文会在搜索、主页和列表里折叠；可以随时点「显示」展开。',
   count: (n: number) => `${n} 个词`,
   syncLocal: '仅本机',
@@ -40,7 +40,7 @@ const zh = {
   syncNow: '同步到 X',
   duplicate: '这个词已经在列表里了。',
   invalid: '请输入 2–80 个字符的词或短语。',
-  limit: '最多 200 个屏蔽词。',
+  limit: '最多 200 个静音词。',
   dailyLimit: '今天写 X 的次数已用完，明天再试。',
   syncDisabled: '先开启「同步到 X」。',
   noTab: '先在标签页打开 x.com，再同步到 X。',
@@ -56,9 +56,9 @@ const zh = {
   libraryAdded: '已加入',
   addFromLibrary: '加入',
   packProgress: (added: number, total: number) => `已加入 ${added} / ${total}`,
-  helpToggle: '福滤娃功能 · 可在「屏蔽」页关闭',
+  helpToggle: '福滤娃功能 · 可在「静音」页关闭',
   helpMine:
-    '福滤娃的推文屏蔽词：命中正文后折叠推文，不拉黑账号，也不上传正文。搜索页同样生效；开启原生同步后，手机 App 的首页和通知也会生效。词条可以编辑，已同步到 X 的词会先删旧词再写新词。',
+    '福滤娃的静音词：命中正文后折叠推文，不拉黑账号，也不上传正文。搜索页同样生效；开启原生同步后，手机 App 的首页和通知也会生效。词条可以编辑，已同步到 X 的词会先删旧词再写新词。',
   helpNative:
     '写入的是 X 原生静音词，和你在 X 设置里手动添加是同一条链路；只在点击添加/同步时逐条写入，不批量、不后台重试。',
   helpLibrary:
@@ -76,13 +76,13 @@ const en: typeof zh = {
   back: 'Mute',
   disabled: 'Off',
   enabled: 'Enable muting',
-  enabledHint: 'Saved words stay, but tweets stop folding when this is off.',
+  enabledHint: 'Saved words stay, but they no longer take effect.',
   nativeSync: 'Sync to X (mobile too)',
   nativeSyncHint:
     'New muted words are also written to X native muted words, so they apply to Home, notifications and replies in the mobile app. X stores these words. One word per request, and it stops on rate limits.',
   nativeConsentTitle: 'Turn on native X sync?',
   nativeConsentBody:
-    'Muted words are saved in your X account settings, visible to X and synced to mobile. If you skip this, words stay in this browser only, and search is still filtered.',
+    'Muted words are saved in your X account settings, visible to X and synced to mobile. If you skip this, words stay in this browser only, and posts in search still fold.',
   nativeConsentOk: 'Turn on sync',
   nativeConsentCancel: 'Not now',
   nativeOffNote: 'Words already written to X are not deleted automatically. Remove them one by one if needed.',

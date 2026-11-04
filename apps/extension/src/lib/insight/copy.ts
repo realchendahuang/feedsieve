@@ -11,7 +11,6 @@ export const INSIGHT_COPY = {
   zh: {
     velocityTitle: { none: '当前流速', hot: '正在火', rocket: '正在爆' },
     velocityNow: '当前流速',
-    perHour: (n: string) => `每小时 ${n} 次浏览`,
     projected: '预计 24h 浏览',
     views: '浏览',
     likes: '点赞',
@@ -42,7 +41,6 @@ export const INSIGHT_COPY = {
   en: {
     velocityTitle: { none: 'Velocity', hot: 'Heating up', rocket: 'Going viral' },
     velocityNow: 'Velocity',
-    perHour: (n: string) => `${n} views per hour`,
     projected: 'Projected 24h views',
     views: 'Views',
     likes: 'Likes',
