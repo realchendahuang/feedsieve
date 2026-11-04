@@ -33,7 +33,8 @@ export interface ModuleDef {
   enabled: (settings: ModuleSettings) => boolean;
 }
 
-/** 固定顺序：热帖 → 主页 → 发帖 → AI 味 → 过滤。全局永远排最后，不在这里。 */
+/** 固定顺序：热帖 → 主页 → 发帖 → AI 味 → 过滤。全局永远排最后，不在这里。
+ *  AI 味与过滤同属「屏蔽」，顶栏合并成一格，组内顺序见 MODULE_GROUPS。 */
 export const MODULES: readonly ModuleDef[] = [
   {
     id: 'hot',
@@ -76,6 +77,26 @@ export const MODULES: readonly ModuleDef[] = [
     enabled: (settings) => settings.filter,
   },
 ];
+
+/**
+ * 二级导航分组：同组模块共用顶栏一个 tab，组内再分二级 tab。
+ * `moduleIds` 的顺序就是二级 tab 的顺序（过滤在前，AI 味在后）。
+ */
+export interface ModuleGroupDef {
+  id: 'block';
+  /** 顶栏 tab 名的 i18n key */
+  labelKey: 'blockNav';
+  moduleIds: readonly ModuleId[];
+}
+
+export const MODULE_GROUPS: readonly ModuleGroupDef[] = [
+  { id: 'block', labelKey: 'blockNav', moduleIds: ['filter', 'ai'] },
+];
+
+/** 模块属于哪个分组；不在分组里的模块自己占一个顶栏 tab。 */
+export function groupOf(moduleId: ModuleId): ModuleGroupDef | undefined {
+  return MODULE_GROUPS.find((group) => group.moduleIds.includes(moduleId));
+}
 
 export function enabledModules(settings: ModuleSettings | null): ModuleDef[] {
   if (!settings) return [...MODULES];

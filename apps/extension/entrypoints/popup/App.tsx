@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   parseSnapshotBody,
   type CommunityEntry,
@@ -35,7 +35,15 @@ import {
   subscribeModuleSettings,
   type ModuleSettings,
 } from '../../src/lib/settings/module-settings';
-import { enabledModules, moduleById, type ModuleId } from '../../src/lib/settings/modules';
+import {
+  enabledModules,
+  groupOf,
+  isModuleId,
+  MODULE_GROUPS,
+  MODULES,
+  moduleById,
+  type ModuleId,
+} from '../../src/lib/settings/modules';
 import HotView from './views/HotView';
 import type { GlobalPage, SettingsPage } from './views/settings/pages';
 import { isGlobalPage } from './views/settings/pages';
@@ -64,10 +72,26 @@ import {
 } from './views/shared';
 
 /**
- * 顶部栏目：每个功能模块一问，外加一个常驻的「周刊」推荐位，最后一栏「全局」放跨模块设置。
- * tab 是否出现由模块总开关决定，顺序由 MODULES 注册表决定；周刊不属于任何模块。
+ * 顶部栏目：功能模块各占一格，同组的模块（过滤 / AI 味）合并成「屏蔽」一格，
+ * 组内用二级 tab 切换；「静音」也挂在「屏蔽」下。最后是常驻的「周刊」和「全局」。
+ * tab 是否出现由模块总开关决定，顺序由 MODULES / MODULE_GROUPS 注册表决定。
  */
 type PopupView = ModuleId | 'global' | 'weekly' | 'mute';
+/** 顶栏 tab 的 id：分组 tab（屏蔽）不对应单个模块。 */
+type TopTabId = PopupView | 'block';
+
+/** 这个视图是否属于「屏蔽」分组（静音也算）。 */
+function inBlockGroup(view: PopupView): boolean {
+  if (view === 'mute') return true;
+  return isModuleId(view) && groupOf(view) !== undefined;
+}
+
+/** 模块被关掉后的落点：同组还有开着的就留在组里，其余回全局。 */
+function fallbackViewFor(module: ModuleId, settings: ModuleSettings | null): PopupView {
+  if (!groupOf(module)) return 'global';
+  const sibling = enabledModules(settings).find((item) => groupOf(item.id));
+  return sibling?.id ?? 'mute';
+}
 
 const PAGE_MARKED_MESSAGE = { type: 'feedsieve:page-marked-list' } as const;
 
@@ -157,6 +181,15 @@ export default function App() {
   const [language, setLanguage] = useState<UiLanguage>(defaultUiLanguage);
   const [route] = useState(initialRoute);
   const [view, setView] = useState<PopupView>(route.view);
+  // 从「屏蔽」切到别的栏目再切回来，停在刚才那个二级 tab。
+  // 记在 ref 里：它只是下次点「屏蔽」时的落点，不需要为它再渲染一次。
+  const lastBlockView = useRef<PopupView>(inBlockGroup(route.view) ? route.view : 'filter');
+
+  /** 切视图；落在「屏蔽」里时顺手记住是哪个二级 tab。 */
+  const showView = useCallback((next: PopupView): void => {
+    if (inBlockGroup(next)) lastBlockView.current = next;
+    setView(next);
+  }, []);
   const [settingsPage, setSettingsPage] = useState<SettingsPage>(route.page);
   const [moduleSettingsOpen, setModuleSettingsOpen] = useState<ModuleId | null>(
     route.moduleSettingsOpen,
@@ -223,14 +256,13 @@ export default function App() {
     const apply = (profileDefault: boolean): void => {
       if (!active) return;
       let next = route.view;
-      if (next !== 'global' && next !== 'weekly' && next !== 'mute' && !enabledIds.has(next))
-        next = 'global';
+      if (isModuleId(next) && !enabledIds.has(next)) next = fallbackViewFor(next, modules);
       if (!hasExplicitView && route.view === 'hot') {
         if (profileDefault && enabledIds.has('profile')) next = 'profile';
         else if (enabledIds.has('hot')) next = 'hot';
         else next = enabled[0]?.id ?? 'global';
       }
-      setView(next);
+      showView(next);
       if (next === 'global') {
         setSettingsPage(isGlobalPage(route.page) ? route.page : 'global');
         setModuleSettingsOpen(null);
@@ -472,9 +504,9 @@ export default function App() {
       setModules((prev) => (prev ? { ...prev, ...patch } : prev));
       const next = await setModuleSettings(patch);
       setModules(next);
-      // 当前正在看的模块被关掉：立即落到全局，不留在已不存在的 tab 上
-      if (view !== 'global' && view !== 'weekly' && view !== 'mute' && !moduleById(view).enabled(next)) {
-        setView('global');
+      // 当前正在看的模块被关掉：立即挪到还开着的同级视图，不留在已不存在的 tab 上
+      if (isModuleId(view) && !moduleById(view).enabled(next)) {
+        showView(fallbackViewFor(view, next));
         setSettingsPage('global');
         setModuleSettingsOpen(null);
         return;
@@ -484,23 +516,46 @@ export default function App() {
         setSettingsPage('global');
       }
     },
-    [view, moduleSettingsOpen],
+    [view, moduleSettingsOpen, showView],
   );
 
-  const tabs: Array<{ id: PopupView; label: string }> = enabledModules(modules).map((module) => ({
-    id: module.id,
-    label: t[module.labelKey],
-  }));
-  // 静音词与周刊都是常驻入口，不属于模块开关
-  tabs.push({ id: 'mute', label: t.muteNav });
+  // 顶栏：未分组的模块各占一格；分组的模块共用一格「屏蔽」。
+  // 即使组内模块全关掉，「屏蔽」也还在——静音是常驻入口，不属于任何模块开关。
+  const tabs: Array<{ id: TopTabId; label: string }> = [];
+  const seenGroups = new Set<string>();
+  for (const module of MODULES) {
+    const group = groupOf(module.id);
+    if (group) {
+      if (seenGroups.has(group.id)) continue;
+      seenGroups.add(group.id);
+      tabs.push({ id: group.id, label: t[group.labelKey] });
+      continue;
+    }
+    if (modules && !module.enabled(modules)) continue;
+    tabs.push({ id: module.id, label: t[module.labelKey] });
+  }
+  // 周刊与全局都是常驻入口，不属于模块开关
   tabs.push({ id: 'weekly', label: t.weeklyNav });
   tabs.push({ id: 'global', label: t.globalNav });
 
+  // 屏蔽下的二级 tab：组内模块按 MODULE_GROUPS 的顺序，静音永远最后
+  const blockTabs: Array<{ id: PopupView; label: string }> = [];
+  for (const group of MODULE_GROUPS) {
+    for (const id of group.moduleIds) {
+      const module = moduleById(id);
+      if (modules && !module.enabled(modules)) continue;
+      blockTabs.push({ id, label: t[module.labelKey] });
+    }
+  }
+  blockTabs.push({ id: 'mute', label: t.muteNav });
+
   // 外部窗口关掉模块时也要立刻生效：不依赖 effect 里的 setState，直接派生当前可渲染的视图
   const effectiveView: PopupView =
-    modules && view !== 'global' && view !== 'weekly' && view !== 'mute' && !moduleById(view).enabled(modules)
-      ? 'global'
+    modules && isModuleId(view) && !moduleById(view).enabled(modules)
+      ? fallbackViewFor(view, modules)
       : view;
+  const activeTab: TopTabId = inBlockGroup(effectiveView) ? 'block' : (effectiveView as TopTabId);
+
   const effectiveModuleSettingsOpen =
     moduleSettingsOpen &&
     modules &&
@@ -509,8 +564,16 @@ export default function App() {
       ? moduleSettingsOpen
       : null;
 
-  function selectSection(section: PopupView): void {
-    setView(section);
+  function selectSection(section: TopTabId): void {
+    if (section === 'block') {
+      // 回到上次停留的二级 tab；那个模块被关掉了就退到组里第一个
+      const remembered = lastBlockView.current;
+      const target = blockTabs.some((tab) => tab.id === remembered) ? remembered : blockTabs[0]?.id;
+      if (!target) return;
+      showView(target);
+    } else {
+      showView(section);
+    }
     setModuleSettingsOpen(null);
     setSettingsPage('global');
   }
@@ -531,9 +594,9 @@ export default function App() {
               <button
                 key={tab.id}
                 type="button"
-                className={`icon-button nav-settings${effectiveView === tab.id ? ' is-active' : ''}`}
+                className={`icon-button nav-settings${activeTab === tab.id ? ' is-active' : ''}`}
                 aria-label={tab.label}
-                aria-current={effectiveView === tab.id ? 'page' : undefined}
+                aria-current={activeTab === tab.id ? 'page' : undefined}
                 title={tab.label}
                 onClick={() => selectSection(tab.id)}
               >
@@ -543,15 +606,15 @@ export default function App() {
               <button
                 key={tab.id}
                 type="button"
-                className={`${effectiveView === tab.id ? 'is-active' : ''}${
+                className={`${activeTab === tab.id ? 'is-active' : ''}${
                   tab.id === 'weekly' ? ' nav-weekly' : ''
                 }`.trim()}
-                aria-current={effectiveView === tab.id ? 'page' : undefined}
+                aria-current={activeTab === tab.id ? 'page' : undefined}
                 onClick={() => selectSection(tab.id)}
               >
                 {tab.id === 'weekly' ? <AppIcon name="sparkles" size={13} /> : null}
                 <span>{tab.label}</span>
-                {tab.id === 'filter' && pageCount ? (
+                {tab.id === 'block' && activeTab !== 'block' && pageCount ? (
                   <span className="nav-badge">{Math.min(pageCount, 99)}</span>
                 ) : null}
               </button>
@@ -570,6 +633,25 @@ export default function App() {
             </button>
           ) : null}
         </nav>
+        {/* 「屏蔽」的二级 tab：过滤 / AI 味 / 静音 */}
+        {activeTab === 'block' ? (
+          <nav className="section-subnav" aria-label={t.secondaryNavigation}>
+            {blockTabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                className={effectiveView === tab.id ? 'is-active' : ''}
+                aria-current={effectiveView === tab.id ? 'page' : undefined}
+                onClick={() => selectSection(tab.id)}
+              >
+                <span>{tab.label}</span>
+                {tab.id === 'filter' && pageCount ? (
+                  <span className="nav-badge">{Math.min(pageCount, 99)}</span>
+                ) : null}
+              </button>
+            ))}
+          </nav>
+        ) : null}
       </header>
 
       <div className="popup-content">

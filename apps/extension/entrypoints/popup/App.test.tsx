@@ -113,6 +113,15 @@ async function openModuleSettings(
   gearLabel = `${navLabel}设置`,
 ): Promise<void> {
   await waitForLazy(() => root.querySelector('.section-nav button') !== null, 400);
+  // 过滤 / AI 味 合并进了「屏蔽」：先点顶栏那一格，再点它的二级 tab
+  if (['过滤', 'Filter', 'AI 味', 'AI'].includes(navLabel) && !root.querySelector('.section-subnav')) {
+    const groupTab = [...root.querySelectorAll<HTMLButtonElement>('.section-nav button')].find(
+      (button) => ['屏蔽', 'Block'].includes(button.textContent?.trim() ?? ''),
+    );
+    if (!groupTab) throw new Error('block tab not found');
+    await act(async () => groupTab.click());
+    await waitForLazy(() => root.querySelector('.section-subnav button') !== null);
+  }
   await act(async () => buttonWithText(root, navLabel).click());
   await waitForLazy(() => root.querySelector(`button[aria-label="${gearLabel}"]`) !== null);
   await act(async () =>
@@ -319,7 +328,10 @@ describe('popup App 渲染冒烟', () => {
     const nav = [...rootEl.querySelectorAll('.section-nav button')].map(
       (button) => button.getAttribute('aria-label') ?? button.textContent,
     );
-    expect(nav).toEqual(['热帖', '主页', '发帖', 'AI 味', '过滤', '静音', '周刊', '全局']);
+    expect(nav).toEqual(['热帖', '主页', '发帖', '屏蔽', '周刊', '全局']);
+    expect(
+      [...rootEl.querySelectorAll('.section-subnav button')].map((button) => button.textContent),
+    ).toEqual(['过滤', 'AI 味', '静音']);
 
     await openSettingsPage(rootEl, '关键词');
     expect(rootEl.textContent).toContain('官方预置词库');
@@ -378,6 +390,31 @@ describe('popup App 渲染冒烟', () => {
     await openModuleSettings(rootEl, 'Filter', 'Filter settings');
     await act(async () => navRow(rootEl, 'Filter rules').click());
     expect(rootEl.textContent).toContain('Detection level');
+  });
+
+  it('屏蔽二级 tab：过滤 / AI 味 / 静音，切走再切回停在原处', async () => {
+    const rootEl = renderApp();
+    await waitForLazy(() => rootEl.querySelector('.section-subnav button') !== null);
+
+    const subnavLabels = (): (string | null)[] =>
+      [...rootEl.querySelectorAll('.section-subnav button')].map((button) => button.textContent);
+    const activeSubtab = (): string | null | undefined =>
+      rootEl.querySelector('.section-subnav .is-active')?.textContent;
+
+    expect(subnavLabels()).toEqual(['过滤', 'AI 味', '静音']);
+    expect(activeSubtab()).toBe('过滤');
+
+    // 切到静音：顶栏仍停在「屏蔽」
+    await act(async () => buttonWithText(rootEl, '静音').click());
+    await waitForLazy(() => activeSubtab() === '静音');
+    expect(rootEl.querySelector('.section-nav .is-active')?.textContent).toBe('屏蔽');
+
+    // 切到别的栏目再回「屏蔽」：停在刚才的静音
+    await act(async () => buttonWithText(rootEl, '热帖').click());
+    await waitForLazy(() => rootEl.querySelector('.section-subnav') === null);
+    await act(async () => buttonWithText(rootEl, '屏蔽').click());
+    await waitForLazy(() => activeSubtab() === '静音');
+    expect(activeSubtab()).toBe('静音');
   });
 
   it('关闭模块后 tab 立即消失', async () => {
@@ -1208,7 +1245,8 @@ describe('popup App 渲染冒烟', () => {
     await act(async () => root.render(React.createElement(App)));
     await waitForCondition(() => rootEl.querySelector('.subpage-head') !== null);
     expect(rootEl.querySelector('.subpage-head h2')?.textContent).toBe('拉黑记录');
-    expect(rootEl.querySelector('.section-nav .is-active')?.textContent).toBe('过滤');
+    expect(rootEl.querySelector('.section-nav .is-active')?.textContent).toBe('屏蔽');
+    expect(rootEl.querySelector('.section-subnav .is-active')?.textContent).toBe('过滤');
 
     // 返回「过滤规则」→「过滤设置」→ 过滤页
     await act(async () => rootEl.querySelector<HTMLButtonElement>('.back-button')!.click());

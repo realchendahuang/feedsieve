@@ -224,6 +224,49 @@ ol {
   margin-left: 0;
 }
 
+/* 二级导航：分组 tab（屏蔽）下的子栏目，比一级更轻 */
+.section-subnav {
+  display: flex;
+  gap: 2px;
+  height: 30px;
+  padding: 0 8px;
+  border-top: 1px solid var(--line);
+}
+
+.section-subnav button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 12.5px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.section-subnav button:hover {
+  color: var(--ink);
+}
+
+.section-subnav button.is-active {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.section-subnav button.is-active::after {
+  content: '';
+  position: absolute;
+  right: 8px;
+  bottom: 0;
+  left: 8px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--ink);
+}
+
 .popup-content {
   flex: 1 1 auto;
   min-height: 0;
