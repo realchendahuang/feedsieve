@@ -101,7 +101,7 @@ describe('周刊推荐位', () => {
     });
     expect(container.querySelector('img')).toBeNull();
     expect(container.textContent).toContain('小筛子周刊');
-    expect(container.textContent).toContain('去噪精选社区');
+    expect(container.textContent).toContain('降噪精选社区');
   });
 
   it('英文界面使用英文文案和期号', async () => {

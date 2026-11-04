@@ -58,7 +58,7 @@ export const UI_COPY = {
     noiseTabTitle: '黄推水军、AI 味与关键词',
     weeklyTabTitle: '小筛子周刊',
     weeklyTitle: '小筛子周刊',
-    weeklyTagline: '去噪精选社区',
+    weeklyTagline: '降噪精选社区',
     weeklyEveryFriday: '每周五出刊',
     weeklyOpen: '打开周刊',
     weeklyLatest: (n: number) => `读第 ${n} 期`,
