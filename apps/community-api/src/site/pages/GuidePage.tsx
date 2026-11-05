@@ -472,6 +472,62 @@ export default function GuidePage() {
             q="支持哪些浏览器？需要在插件里注册账号吗？"
             a="完美支持 Chrome、Edge、Brave、Arc、Vivaldi 以及任何基于 Chromium 内核的现代浏览器。装好即用，完全不需要注册任何第三方平台账号或付费购买 API Key。"
           />
+
+          <FaqItem
+            q="打开 x.com 只看到「Something went wrong」和隐私扩展红条，是福滤娃导致的吗？"
+            a={
+              <div className="space-y-1.5">
+                <p>
+                  不是福滤娃拦的。福滤娃没有网络拦截能力：权限只有 storage、unlimitedStorage 和
+                  sidePanel，站点权限只有 x.com，没有 webRequest 或 declarativeNetRequest，
+                  不拦任何请求；它在页面里只做本地只读识别，不改请求、也不改响应。
+                </p>
+                <p>
+                  那个页面是 X 自己的兜底页：网页外壳里预埋了一块隐藏的报错面板（#ScriptLoadFailure），
+                  页尾内联脚本检查 window.__SCRIPTS_LOADED__ 里的 main 标记，只要 X 自己的 main.js /
+                  vendor.js 没加载成功、或 bundle 没执行完，就会显示这块面板。红条那句「隐私类扩展可能导致问题」
+                  是 X 写死的通用文案，不是它检测到了福滤娃。
+                </p>
+                <p>
+                  常见真实原因：代理或节点、DNS 把 abs.twimg.com 的脚本挡住；其它广告或隐私扩展、
+                  浏览器严格跟踪保护；网络抖动，或杀毒软件、公司代理的 MITM；以及 X 的 Cloudflare
+                  边缘风控拦了当前会话。按下面顺序排查：
+                </p>
+                <p>
+                  ① 硬刷新（Cmd+Shift+R / Ctrl+F5）；换一个代理节点或改用手机热点；关掉其它广告 /
+                  隐私扩展，浏览器跟踪保护调回「标准」；
+                </p>
+                <p>
+                  ② 按 F12 打开 Network 和 Console，看 abs.twimg.com 下的 main.*.js、vendor.*.js
+                  是否加载失败（4xx / 5xx 或 net::ERR_*）；
+                </p>
+                <p>
+                  ③ 在 Console 输入 window.__SCRIPTS_LOADED__，缺 main 或 vendor，
+                  就说明 X 的核心脚本没跑起来；
+                </p>
+                <p>
+                  ④ 点一次页面上的「Try again」，看地址栏的 ?failedScript=（会写明哪个脚本失败），
+                  再清理 x.com 的站点数据重试；
+                </p>
+                <p>
+                  ⑤ 对照：无痕窗口里只留福滤娃再试；只有这个组合稳定复现时，把控制台报错发到{' '}
+                  <a
+                    href={`${GITHUB_URL}/issues`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold text-gold hover:underline"
+                  >
+                    GitHub Issues
+                  </a>
+                  。
+                </p>
+                <p>
+                  关掉某个扩展后刷新恰好恢复，多半只是巧合——那一下网络或风控状态变了。
+                  这个提示对所有人都一样，不代表 X 真的识别到了某个扩展。
+                </p>
+              </div>
+            }
+          />
         </div>
       </section>
 
