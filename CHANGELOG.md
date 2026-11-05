@@ -5,6 +5,12 @@
 - 每个版本的详细工程记录见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)。
 - 二进制产物见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)；正式用户请从 [Chrome 应用商店](https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph)接收更新。
 
+## [0.16.2] — 2026-11-05
+
+### 修复
+
+- 主页洞察分享图（4:5，1080×1350）：量级徽章（如「人气」）不再压到 @handle 上。之前量 handle 宽度时 ctx.font 已经换成徽章的字号，宽度算小了，徽章就叠在 handle 尾巴上；现在两边各用各的字体量宽。
+
 ## [0.16.1] — 2026-11-05
 
 ### 官网 FAQ
@@ -591,6 +597,7 @@
 - WXT + React 19 + MV3 最小权限架构；X DOM fixtures 锁定 reader→detector 契约；95 个单元测试；pre-push 本地质量门禁。
 
 [Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.16.0...HEAD
+[0.16.2]: https://github.com/realchendahuang/feedsieve/compare/v0.16.1...v0.16.2
 [0.16.1]: https://github.com/realchendahuang/feedsieve/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/realchendahuang/feedsieve/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/realchendahuang/feedsieve/compare/v0.14.2...v0.15.0
