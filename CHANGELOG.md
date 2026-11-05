@@ -5,6 +5,19 @@
 - 每个版本的详细工程记录见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)。
 - 二进制产物见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)；正式用户请从 [Chrome 应用商店](https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph)接收更新。
 
+## [0.16.1] — 2026-11-05
+
+### 官网 FAQ
+
+- 「常见问题与排查」新增一条：在 x.com 只看到「Something went wrong」和「隐私扩展」红条时怎么判断、怎么排查。这页是 X 自己的脚本兜底页（X 的 main.js / vendor.js 没加载成功才会出现），那句提醒是 X 写死的通用文案，不是福滤娃拦了请求。
+
+### 工程
+
+- x.com 页面里的网络读取桥重写加固：安装幂等、异常全部吞在扩展这一侧、同一个响应只读一次；非 JSON / 超大 / 高并发响应直接跳过。桥出问题只影响扩展自己的数据来源，不影响页面。
+- 「屏蔽」签名桥在 X 改版、模块缺失、运行时冻结时静默失效，异常不外溢到页面。
+- 控制台输入 `window.__feedsieveMainBridge.state` 可以看桥是否装上、跳过了多少响应、吞了多少异常，方便用户反馈时取证。
+- 新增 15 条网络桥单测。
+
 ## [0.16.0] — 2026-11-04
 
 ### 顶栏
@@ -578,6 +591,7 @@
 - WXT + React 19 + MV3 最小权限架构；X DOM fixtures 锁定 reader→detector 契约；95 个单元测试；pre-push 本地质量门禁。
 
 [Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.16.0...HEAD
+[0.16.1]: https://github.com/realchendahuang/feedsieve/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/realchendahuang/feedsieve/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/realchendahuang/feedsieve/compare/v0.14.2...v0.15.0
 [0.14.2]: https://github.com/realchendahuang/feedsieve/compare/v0.14.1...v0.14.2
