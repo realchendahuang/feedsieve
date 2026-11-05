@@ -40,6 +40,25 @@ function tokenize(text: string): string[] {
   return tokens;
 }
 
+/**
+ * 用指定字体量文本宽度，量完把 ctx.font 还原成原来的值。
+ *
+ * 分享图里同一块经常混排不同字号（名字 54px、@handle 32px、量级徽章 26px），
+ * 直接改 ctx.font 再 measureText 很容易拿错字号量——2026-11 主页洞察卡的
+ * 「人气」徽章就是这样压到 @handle 尾巴上的。量谁就传谁的 font。
+ */
+export function measureTextWithFont(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  font: string,
+): number {
+  const previous = ctx.font;
+  ctx.font = font;
+  const width = ctx.measureText(text).width;
+  ctx.font = previous;
+  return width;
+}
+
 /** 折行：西文按词、中文按字；中文标点不落行首；最多 maxLines 行，超出加省略号。 */
 export function wrapText(
   ctx: CanvasRenderingContext2D,
@@ -95,10 +114,7 @@ export function roundRect(
  */
 export async function loadAvatar(url: string | null | undefined): Promise<ImageBitmap | null> {
   if (!url || !/^https:\/\/pbs\.twimg\.com\//.test(url)) return null;
-  const large = url.replace(
-    /_(normal|bigger|mini|x96|200x200)(\.[a-z]+)(\?.*)?$/i,
-    '_400x400$2',
-  );
+  const large = url.replace(/_(normal|bigger|mini|x96|200x200)(\.[a-z]+)(\?.*)?$/i, '_400x400$2');
   try {
     const response = await fetch(large, { credentials: 'omit' });
     if (!response.ok) return null;

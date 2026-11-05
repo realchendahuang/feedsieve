@@ -9,6 +9,7 @@ import {
   CARD_FONT,
   drawAvatar,
   loadAvatar,
+  measureTextWithFont,
   roundRect,
   wrapText,
 } from '../share/canvas-kit';
@@ -156,16 +157,20 @@ export async function drawProfileShareCard(input: ProfileShareInput): Promise<HT
   ctx.font = `800 54px ${CARD_FONT}`;
   ctx.fillText(wrapText(ctx, name, W - PAD - nameX, 1)[0] ?? name, nameX, 206);
 
+  const HANDLE_FONT = `600 32px ${CARD_FONT}`;
   ctx.fillStyle = 'rgba(255,255,255,0.58)';
-  ctx.font = `600 32px ${CARD_FONT}`;
+  ctx.font = HANDLE_FONT;
   const handleText = `@${input.handle}`;
   ctx.fillText(handleText, nameX, 252);
 
   const tierName = input.tier === null ? null : TIER_NAMES[input.tier][input.lang];
   if (tierName) {
-    ctx.font = `600 26px ${CARD_FONT}`;
-    const tagW = ctx.measureText(tierName).width + 36;
-    const tagX = nameX + ctx.measureText(handleText).width + 20;
+    const TAG_FONT = `600 26px ${CARD_FONT}`;
+    // 两个宽度各量各的字体：用徽章字号去量 32px 的 handle 会让徽章压到 handle 上
+    const handleWidth = measureTextWithFont(ctx, handleText, HANDLE_FONT);
+    const tagW = measureTextWithFont(ctx, tierName, TAG_FONT) + 36;
+    const tagX = nameX + handleWidth + 20;
+    ctx.font = TAG_FONT;
     roundRect(ctx, tagX, 220, tagW, 44, 22);
     ctx.strokeStyle = 'rgba(255, 212, 0, 0.45)';
     ctx.lineWidth = 1.5;
