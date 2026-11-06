@@ -5,6 +5,7 @@ import {
   createCleanUi,
   isFollowingTab,
   isForYouTab,
+  isPromotedArticle,
   isThinPremiumReply,
   isWhoToFollowHeading,
   moduleRoot,
@@ -14,9 +15,23 @@ import {
 
 afterEach(() => {
   document.body.innerHTML = '';
+  window.history.replaceState({}, '', '/');
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
+
+/** 模拟设置已就绪：界面净化打开，其余用默认值（含隐藏付费推广）。 */
+function stubBrowser(): void {
+  vi.stubGlobal('browser', {
+    storage: {
+      local: {
+        get: vi.fn(async () => ({ uiSettingsV1: { ...DEFAULT_UI_SETTINGS, cleanUi: true } })),
+        set: vi.fn(async () => undefined),
+      },
+      onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+    },
+  });
+}
 
 function tab(text: string): HTMLElement {
   const el = document.createElement('div');
@@ -39,6 +54,29 @@ function article(options: { text: string; verified: boolean }): HTMLElement {
   text.setAttribute('data-testid', 'tweetText');
   text.textContent = options.text;
   el.append(name, text);
+  return el;
+}
+
+/** 按 X 的真实结构拼一条推文：作者名一行 + 元信息行（标签 / 时间）+ 正文。 */
+function tweet(options: { name?: string; text?: string; meta?: string; media?: boolean }): HTMLElement {
+  const el = document.createElement('article');
+  const header = document.createElement('div');
+  const name = document.createElement('div');
+  name.setAttribute('data-testid', 'User-Name');
+  name.innerHTML = `<a href="/someone"><span>${options.name ?? 'someone'}</span></a>`;
+  const meta = document.createElement('div');
+  meta.innerHTML = `<div><span>${options.meta ?? '· 1小时'}</span></div>`;
+  header.append(name, meta);
+  const text = document.createElement('div');
+  text.setAttribute('data-testid', 'tweetText');
+  text.textContent = options.text ?? '一条正常的帖子';
+  el.append(header, text);
+  if (options.media) {
+    el.insertAdjacentHTML(
+      'beforeend',
+      '<div data-testid="tweetPhoto"><div data-testid="placementTracking"><div data-testid="videoPlayer"><video></video></div></div></div>',
+    );
+  }
   return el;
 }
 
@@ -92,6 +130,58 @@ describe('clean-ui 选择器', () => {
     expect(isThinPremiumReply(unverified, 1)).toBe(false);
     const border = 'x'.repeat(PREMIUM_REPLY_MAX_CHARS);
     expect(isThinPremiumReply(article({ text: border, verified: true }), 1)).toBe(false);
+  });
+
+  it('只认推文头部的「推广」标签，昵称、正文、话题里的同名文字不算', () => {
+    expect(isPromotedArticle(tweet({ meta: '推广' }))).toBe(true);
+    expect(isPromotedArticle(tweet({ meta: 'Promoted' }))).toBe(true);
+    expect(isPromotedArticle(tweet({ name: '推广' }))).toBe(false);
+    expect(isPromotedArticle(tweet({ text: '推广' }))).toBe(false);
+    const withTag = tweet({});
+    withTag.querySelector('[data-testid="tweetText"]')!.innerHTML =
+      '<a href="/hashtag/%E6%8E%A8%E5%B9%BF"><span>#推广</span></a>';
+    expect(isPromotedArticle(withTag)).toBe(false);
+    // 普通视频帖：X 一样用 placementTracking 包播放器，不能当成推广帖
+    expect(isPromotedArticle(tweet({ media: true }))).toBe(false);
+    expect(isPromotedArticle(document.createElement('article'))).toBe(false);
+  });
+
+  it('隐藏付费推广只藏整条推广帖，不碰视频/GIF 的容器标记', async () => {
+    vi.useFakeTimers();
+    stubBrowser();
+    const ad = tweet({ meta: '推广' });
+    const video = tweet({ media: true });
+    document.body.append(ad, video);
+    const clean = createCleanUi();
+    clean.start();
+    try {
+      await vi.advanceTimersByTimeAsync(2_000);
+      const css = document.getElementById('feedsieve-clean-ui-styles')?.textContent ?? '';
+      expect(css).toContain('article[data-fs-clean="promoted"]');
+      expect(css).not.toContain('[data-testid="placementTracking"]');
+      expect(ad.getAttribute('data-fs-clean')).toBe('promoted');
+      expect(video.hasAttribute('data-fs-clean')).toBe(false);
+    } finally {
+      clean.stop();
+    }
+  });
+
+  it('详情页的主帖即使是推广帖也不藏，只藏时间线里的推广帖', async () => {
+    vi.useFakeTimers();
+    stubBrowser();
+    window.history.pushState({}, '', '/someone/status/2118366625804202080');
+    const focal = tweet({ meta: '推广' });
+    const promotedReply = tweet({ meta: '推广' });
+    document.body.append(focal, promotedReply);
+    const clean = createCleanUi();
+    clean.start();
+    try {
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(focal.hasAttribute('data-fs-clean')).toBe(false);
+      expect(promotedReply.getAttribute('data-fs-clean')).toBe('promoted');
+    } finally {
+      clean.stop();
+    }
   });
 
   it('stop 之后清干净，迟到的设置不会再改页面', async () => {

@@ -2,7 +2,12 @@
  * 界面净化：按设置隐藏 X 的推荐模块、换字体、给纯回复位的蓝标回复降透明度。
  *
  * 只改 X 自己的 DOM / CSS，不碰内容；总开关在设置里，默认关闭。
- * 选择器按 2026-11-02 的真实 DOM 写，X 改版后在这里补。
+ * 选择器按 2026-11-06 的真实 DOM 写，X 改版后在这里补。
+ *
+ * 隐藏任何东西之前先问一句：这个 [data-testid] 在 X 里是不是只服务于这一个用途？
+ * 0.17.1 的事故就是这么来的：`placementTracking` 看着像广告位，其实 X 也拿它
+ * 包推文里的视频/GIF 播放器，隐藏它等于把所有视频和 GIF 一起藏掉。认不准的标记
+ * 就别拿来当判据，宁可改成认文案再打自己的标记。
  */
 import { getUiSettings, subscribeUiSettings, type UiSettings } from '../settings/ui-settings';
 
@@ -11,6 +16,8 @@ const MARK_ATTR = 'data-fs-clean';
 const FOR_YOU = ['为你推荐', 'For you'];
 const FOLLOWING = ['正在关注', 'Following'];
 const WHO_TO_FOLLOW = ['推荐关注', 'Who to follow'];
+/** X 给付费推广帖打的标签（贴在作者名那一行，取代发布时间） */
+const PROMOTED_LABELS = new Set(['推广', 'Promoted']);
 /** 正文少于这么多字的蓝标回复，按「只为回复位买蓝 V」处理 */
 export const PREMIUM_REPLY_MAX_CHARS = 20;
 const SCAN_DEBOUNCE_MS = 400;
@@ -24,7 +31,9 @@ const CLEAN_UI_CSS = `
     font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
       "Microsoft YaHei", "Segoe UI", system-ui, sans-serif !important;
   }
-  html[data-fs-clean-promoted] [data-testid="placementTracking"] { display: none !important; }
+  /* 推广帖整条隐藏：标记由 isPromotedArticle() 认「推广」标签后打上。
+     别改成隐藏 X 自己的容器标记，那些标记常被普通内容复用（见文件头注释）。 */
+  html[data-fs-clean-promoted] article[data-fs-clean="promoted"] { display: none !important; }
   html[data-fs-clean-grok] [data-fs-clean="grok"] { display: none !important; }
   html[data-fs-clean-foryou] [data-fs-clean="foryou"] { display: none !important; }
   html[data-fs-clean-trends] [data-fs-clean="trends"] { display: none !important; }
@@ -85,6 +94,28 @@ export function isThinPremiumReply(article: Element, index: number): boolean {
   if (!name || !text) return false;
   if (!name.querySelector('[data-testid="icon-verified"]')) return false;
   return textOf(text).length < PREMIUM_REPLY_MAX_CHARS;
+}
+
+/**
+ * 这条推文是不是标着「推广」的付费帖。
+ *
+ * 只认 X 贴在作者名那一行的「推广 / Promoted」标签：昵称、正文、链接卡片里
+ * 出现同样的字不算。不要改用 X 自己的容器标记（例如 placementTracking）来判断，
+ * 那个标记连推文里的视频/GIF 播放器一起包着，隐藏它会在时间线上留下空白媒体框。
+ */
+export function isPromotedArticle(article: Element): boolean {
+  if (!article.querySelector('[data-testid="User-Name"]')) return false;
+  for (const el of article.querySelectorAll('span')) {
+    if (el.childElementCount > 0) continue;
+    if (!PROMOTED_LABELS.has(textOf(el))) continue;
+    if (el.closest('[data-testid="User-Name"]')) continue;
+    if (el.closest('[data-testid="tweetText"]')) continue;
+    if (el.closest('[data-testid="card.wrapper"]')) continue;
+    // 话题、提及、正文里的链接都是 <a>，里面的「推广」是用户写的内容
+    if (el.closest('a')) continue;
+    return true;
+  }
+  return false;
 }
 
 export function createCleanUi() {
@@ -164,6 +195,15 @@ export function createCleanUi() {
       for (const heading of headings) {
         if (!isWhoToFollowHeading(heading)) continue;
         mark(whoToFollowCard(heading) ?? moduleRoot(heading), 'follow');
+      }
+    }
+
+    if (settings.hidePromoted) {
+      // 详情页的主帖是用户自己点进来的，藏掉等于把整页清空：只处理时间线里的推广帖
+      const focal = /\/status\/\d+/.test(location.pathname) ? document.querySelector('article') : null;
+      for (const article of document.querySelectorAll('article')) {
+        if (article === focal) continue;
+        if (isPromotedArticle(article)) mark(article, 'promoted');
       }
     }
 
