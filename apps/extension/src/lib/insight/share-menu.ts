@@ -15,6 +15,7 @@ import {
   menuSelectors,
   tweetSelectors,
 } from '@feedsieve/x-adapter';
+import { ACTION_SLOT_ATTR } from '../content/action-slot';
 import type { UiLanguage } from '../platform/i18n';
 import { threadToMarkdown, tweetToMarkdown, type MarkdownTweet } from './markdown';
 
@@ -23,6 +24,11 @@ export const TOAST_CLASS = 'fs-toast';
 const MENU_WAIT_MS = 1_500;
 const MAX_REPLIES = 100;
 const SVG_NS = 'http://www.w3.org/2000/svg';
+/**
+ * 我们自己注入的动作栏格子：AI 检测和手动拉黑都带 data-fs-action，热帖胶囊是 .fs-velocity。
+ * 这些按钮没有 X 的 data-testid，不排除的话会被当成分享按钮。
+ */
+const OWN_ACTION_SELECTOR = `[${ACTION_SLOT_ATTR}], [data-fs-manual-action], .fs-velocity`;
 /** Markdown 标志（M↓）。 */
 const MARKDOWN_ICON =
   'M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm2 3v8h2v-5l2 3 2-3v5h2V8H9.5L8 10.5 6.5 8H5zm11 0v4h-2l3 4 3-4h-2V8h-2z';
@@ -33,7 +39,9 @@ const THREAD_ICON =
 /** 动作栏里没有 data-testid 的按钮就是分享按钮（见 KNOWN_ACTION_TEST_IDS）。 */
 export function isShareButton(button: Element): boolean {
   if (!button.closest(tweetSelectors.actionGroup)) return false;
-  if (button.closest('[data-fs-manual-action], .fs-velocity')) return false;
+  // 我们自己注入的按钮同样没有 X 的 data-testid：不先排除，点「AI 检查」「拉黑」
+  // 也会去等分享菜单，把 Markdown 项塞进随后出现的任意 Dropdown。
+  if (button.closest(OWN_ACTION_SELECTOR)) return false;
   const testId = button.getAttribute('data-testid');
   return !testId || !(KNOWN_ACTION_TEST_IDS as readonly string[]).includes(testId);
 }
@@ -97,8 +105,9 @@ export function createShareMenu(deps: {
   }
 
   function closeMenu(): void {
-    // X 的菜单监听 Escape 关闭
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    // 只撤回我们插进去的菜单项，不合成 Escape：X 的 Escape 是全局快捷键，
+    // 会顺手关掉用户正开着的其它浮层（图片查看器、发帖框）。
+    for (const item of document.querySelectorAll(`[${SHARE_ITEM_ATTRIBUTE}]`)) item.remove();
   }
 
   async function copy(markdown: string): Promise<void> {

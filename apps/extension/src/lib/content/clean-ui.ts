@@ -9,6 +9,7 @@
  * 包推文里的视频/GIF 播放器，隐藏它等于把所有视频和 GIF 一起藏掉。认不准的标记
  * 就别拿来当判据，宁可改成认文案再打自己的标记。
  */
+import { tweetSelectors } from '@feedsieve/x-adapter';
 import { getUiSettings, subscribeUiSettings, type UiSettings } from '../settings/ui-settings';
 
 const STYLE_ID = 'feedsieve-clean-ui-styles';
@@ -21,6 +22,8 @@ const PROMOTED_LABELS = new Set(['推广', 'Promoted']);
 /** 正文少于这么多字的蓝标回复，按「只为回复位买蓝 V」处理 */
 export const PREMIUM_REPLY_MAX_CHARS = 20;
 const SCAN_DEBOUNCE_MS = 400;
+/** 推文状态链接（.../status/123）里的 id：详情页的 URL 和推文里的时间戳链接用同一套格式 */
+const STATUS_ID = /\/status\/(\d+)/;
 
 const CLEAN_UI_CSS = `
   /* Chirp 不含中文字形，中文回退到系统字体 */
@@ -38,7 +41,9 @@ const CLEAN_UI_CSS = `
   html[data-fs-clean-foryou] [data-fs-clean="foryou"] { display: none !important; }
   html[data-fs-clean-trends] [data-fs-clean="trends"] { display: none !important; }
   html[data-fs-clean-follow] [data-fs-clean="follow"] { display: none !important; }
-  html[data-fs-clean-premium] article[data-fs-clean="premium"] {
+  /* 只淡化真正的推文：页面里还有别的 <article>（长文卡片、模块容器），
+     那些不是推文，不该被压暗。 */
+  html[data-fs-clean-premium] article[data-testid="tweet"][data-fs-clean="premium"] {
     opacity: .38 !important;
     transition: opacity .15s ease;
   }
@@ -94,12 +99,42 @@ export function moduleRoot(el: Element): Element | null {
   return node.parentElement === column ? node : null;
 }
 
+/** 详情页 URL 里的主帖 id（/user/status/123、/i/web/status/123 都算）；其它页面为 null。 */
+export function focalStatusId(pathname: string = location.pathname): string | null {
+  return STATUS_ID.exec(pathname)?.[1] ?? null;
+}
+
+function statusIdOf(href: string): string | null {
+  return STATUS_ID.exec(href)?.[1] ?? null;
+}
+
+/**
+ * 这条推文是不是 URL 指向的主帖。
+ *
+ * 不能靠「详情页第一条 article 就是主帖」：X 会先渲染置顶推文、广告或其它
+ * article，主帖未必排在第一；按顺序猜会把主帖当回复压暗、把真回复漏掉。
+ * 这里只认推文自己带的状态链接 id。引用卡片里指向主帖的链接也算（宁可少淡化
+ * 一条回复），认不出就不当主帖。
+ */
+export function isFocalTweet(article: Element, focalId: string | null = focalStatusId()): boolean {
+  if (!focalId) return false;
+  for (const link of article.querySelectorAll('a[href*="/status/"]')) {
+    if (statusIdOf(link.getAttribute('href') ?? '') === focalId) return true;
+  }
+  return false;
+}
+
 /**
  * 只对评论区（详情页）里蓝标作者、正文很短的回复降透明度。
- * 第 0 条是主帖，不动；没有正文（纯媒体/纯转发）也不动。
+ * 主帖由 isFocalTweet 按 status id 认，不靠 DOM 顺序；不是推文的 <article> 不碰。
+ * 没有正文（纯媒体/纯转发）也不动。
  */
-export function isThinPremiumReply(article: Element, index: number): boolean {
-  if (index === 0) return false;
+export function isThinPremiumReply(
+  article: Element,
+  focalId: string | null = focalStatusId(),
+): boolean {
+  if (!article.matches(tweetSelectors.article)) return false;
+  if (isFocalTweet(article, focalId)) return false;
   const name = article.querySelector('[data-testid="User-Name"]');
   const text = article.querySelector('[data-testid="tweetText"]');
   if (!name || !text) return false;
@@ -134,6 +169,7 @@ export function isPromotedArticle(article: Element): boolean {
 export function createCleanUi() {
   let settings: UiSettings | null = null;
   let observer: MutationObserver | null = null;
+  let observing = false;
   let timer: number | undefined;
   let initialTimer: number | undefined;
   let switchedToFollowing = false;
@@ -147,6 +183,24 @@ export function createCleanUi() {
     style.id = STYLE_ID;
     style.textContent = CLEAN_UI_CSS;
     document.documentElement.appendChild(style);
+  }
+
+  /**
+   * 观察器跟着总开关走：默认关闭时不该常驻监听整页 DOM，设置关掉后也不该继续跑，
+   * 所以只在 cleanUi 为 true 时挂上、关掉就断开；start 后第一条设置到达时再决定。
+   */
+  function syncObserver(on: boolean): void {
+    if (on && active) {
+      if (observing) return;
+      // 懒创建：没打开过界面净化就一个观察器都不建
+      observer ??= new MutationObserver(schedule);
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+      observing = true;
+      return;
+    }
+    if (!observing) return;
+    observer?.disconnect();
+    observing = false;
   }
 
   function clearMarks(): void {
@@ -166,10 +220,14 @@ export function createCleanUi() {
   }
 
   function scan(): void {
+    timer = undefined;
     if (!settings?.cleanUi) {
+      // 总开关关闭：没有观察的必要，顺手断开
+      syncObserver(false);
       clearMarks();
       return;
     }
+    syncObserver(true);
     // 换了页面（SPA 路由）就重新给「为你推荐」一次自动切换的机会
     if (location.pathname !== lastPath) {
       lastPath = location.pathname;
@@ -179,8 +237,10 @@ export function createCleanUi() {
     clearMarks();
 
     if (settings.hideGrok) {
-      // 只隐藏链接本身（整行 50px），它的父级是整个左侧 NAV，不能连坐
-      for (const link of document.querySelectorAll('a[href="/i/grok"]')) {
+      // 只藏左侧导航里的入口（整行 50px）。全页匹配 a[href="/i/grok"] 会连推文、
+      // 引用卡片、下拉菜单里同 href 的链接一起藏掉——那些是用户内容。
+      // 导航外层是整个左侧 NAV，不能连坐，所以只标记 <a> 本身。
+      for (const link of document.querySelectorAll('nav a[href="/i/grok"]')) {
         mark(link, 'grok');
       }
     }
@@ -233,10 +293,19 @@ export function createCleanUi() {
       }
     }
 
-    if (settings.dimPremiumReplies && /\/status\/\d+/.test(location.pathname)) {
-      [...document.querySelectorAll('article')].forEach((article, index) => {
-        if (isThinPremiumReply(article, index)) article.setAttribute(MARK_ATTR, 'premium');
-      });
+    if (settings.dimPremiumReplies) {
+      const focalId = focalStatusId();
+      // 只在详情页淡化回复：主帖是用户自己点进来的，不能压暗
+      if (focalId) {
+        const tweets = [...document.querySelectorAll(tweetSelectors.article)];
+        // 认不出主帖（比如 X 没给时间戳挂状态链接）就整页不淡化：
+        // 宁可不生效，也不能靠顺序猜、把主帖当回复一起压暗。
+        if (tweets.some((article) => isFocalTweet(article, focalId))) {
+          for (const article of tweets) {
+            if (isThinPremiumReply(article, focalId)) mark(article, 'premium');
+          }
+        }
+      }
     }
   }
 
@@ -245,7 +314,10 @@ export function createCleanUi() {
   }
 
   function schedule(): void {
-    window.clearTimeout(timer);
+    // 固定节奏，不跟着每次 mutation 重置：X 播放视频、输入时 DOM 一直在变，
+    // 每来一次改动就 clearTimeout 会把 scan 无限往后推，用户改了设置像没生效。
+    // 已经排队就等它跑完（最多 SCAN_DEBOUNCE_MS 一轮），不做尾随重置。
+    if (timer !== undefined) return;
     timer = window.setTimeout(scan, SCAN_DEBOUNCE_MS);
   }
 
@@ -254,14 +326,14 @@ export function createCleanUi() {
     if (!active) return;
     settings = next;
     applyFlags(next);
+    syncObserver(next.cleanUi);
     if (next.cleanUi) ensureStyle();
     schedule();
   }
 
   function start(): void {
     active = true;
-    observer = new MutationObserver(schedule);
-    observer.observe(document.documentElement, { childList: true, subtree: true });
+    // 先不观察：等设置读回来、确认总开关打开再挂，默认关闭时别常驻监听整页
     void getUiSettings().then(apply);
     unsubscribe = subscribeUiSettings(apply);
     // X 首屏渲染比 content script 晚，补一次
@@ -270,7 +342,7 @@ export function createCleanUi() {
 
   function stop(): void {
     active = false;
-    observer?.disconnect();
+    syncObserver(false);
     observer = null;
     unsubscribe?.();
     unsubscribe = null;

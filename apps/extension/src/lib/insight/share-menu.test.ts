@@ -47,6 +47,30 @@ describe('isShareButton', () => {
     document.body.appendChild(outside);
     expect(isShareButton(outside)).toBe(false);
   });
+
+  it('不把自己注入的动作按钮当成分享按钮', () => {
+    const article = renderTweet('alice', '1');
+    const group = article.querySelector('[role="group"]')!;
+    // AI 检测格子：外层带 data-fs-action，克隆出来的按钮本身也可能就带这个属性
+    const ai = document.createElement('button');
+    ai.setAttribute('data-fs-action', 'ai');
+    group.appendChild(ai);
+    // 手动拉黑按钮
+    const manual = document.createElement('button');
+    manual.setAttribute('data-fs-manual-action', 'true');
+    manual.setAttribute('data-fs-action', 'block');
+    group.appendChild(manual);
+    // 热帖速度胶囊
+    const velocity = document.createElement('div');
+    velocity.className = 'fs-velocity';
+    group.appendChild(velocity);
+
+    expect(isShareButton(ai)).toBe(false);
+    expect(isShareButton(manual)).toBe(false);
+    expect(isShareButton(velocity)).toBe(false);
+    // 原生分享按钮仍然认得出来（回归：别一起排除了）
+    expect(isShareButton(article.querySelector('.share')!)).toBe(true);
+  });
 });
 
 describe('createShareMenu', () => {
@@ -80,6 +104,25 @@ describe('createShareMenu', () => {
     expect(writeText).toHaveBeenCalledWith(
       expect.stringContaining('text of 111\n\n[原帖](https://x.com/alice/status/111)'),
     );
+  });
+
+  it('点击我们的菜单项只撤掉自己插入的项，不合成 Escape 去关 X 的其它浮层', async () => {
+    const article = renderTweet('alice', '111');
+    const dropdown = renderMenu();
+    const menu = createShareMenu({ getLanguage: () => 'zh' });
+    menu.inject(dropdown, article);
+    const onKeyDown = vi.fn();
+    document.addEventListener('keydown', onKeyDown);
+    try {
+      dropdown.querySelector<HTMLElement>(`[${SHARE_ITEM_ATTRIBUTE}]`)!.click();
+      await Promise.resolve();
+      expect(onKeyDown).not.toHaveBeenCalled();
+      expect(dropdown.querySelector(`[${SHARE_ITEM_ATTRIBUTE}]`)).toBeNull();
+      // X 自己的原生项还在，菜单不会被我们弄坏
+      expect(dropdown.querySelector('[role="menuitem"]')).not.toBeNull();
+    } finally {
+      document.removeEventListener('keydown', onKeyDown);
+    }
   });
 
   it('adds the thread item on the focal tweet and includes replies below it', async () => {

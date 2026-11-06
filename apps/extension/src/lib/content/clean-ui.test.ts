@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_UI_SETTINGS } from '../settings/ui-settings';
+import { DEFAULT_UI_SETTINGS, type UiSettings } from '../settings/ui-settings';
 import {
   createCleanUi,
   isFollowingTab,
@@ -20,17 +20,53 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/** 模拟设置已就绪：界面净化打开，其余用默认值（含隐藏付费推广）。 */
-function stubBrowser(): void {
+/** 模拟设置已读完：界面净化打开，其余用默认值（含隐藏付费推广），并返回 storage 变更监听器。 */
+function stubBrowser(
+  overrides: Partial<UiSettings> = {},
+): Array<(changes: Record<string, unknown>, area: string) => void> {
+  const listeners: Array<(changes: Record<string, unknown>, area: string) => void> = [];
   vi.stubGlobal('browser', {
     storage: {
       local: {
-        get: vi.fn(async () => ({ uiSettingsV1: { ...DEFAULT_UI_SETTINGS, cleanUi: true } })),
+        get: vi.fn(async () => ({
+          uiSettingsV1: { ...DEFAULT_UI_SETTINGS, cleanUi: true, ...overrides },
+        })),
         set: vi.fn(async () => undefined),
       },
-      onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+      onChanged: {
+        addListener: (fn: (typeof listeners)[number]) => listeners.push(fn),
+        removeListener: vi.fn(),
+      },
     },
   });
+  return listeners;
+}
+
+/** 通过 storage.onChanged 把一份新设置推给页面，模拟用户在设置页改开关。 */
+function pushSettings(
+  listeners: Array<(changes: Record<string, unknown>, area: string) => void>,
+  settings: Partial<UiSettings>,
+): void {
+  for (const listener of listeners) {
+    listener({ uiSettingsV1: { newValue: { ...DEFAULT_UI_SETTINGS, ...settings } } }, 'local');
+  }
+}
+
+/**
+ * 可控的 MutationObserver 替身：记录 observe/disconnect 次数，并能手动喂一次 mutation。
+ * clean-ui 的观察器行为（何时挂、何时断）在 happy-dom 里没法从外部断言，只能这样测。
+ */
+function fakeObserverClass() {
+  class FakeMutationObserver {
+    static all: FakeMutationObserver[] = [];
+    observe = vi.fn();
+    disconnect = vi.fn();
+    takeRecords = vi.fn((): MutationRecord[] => []);
+    constructor(readonly callback: MutationCallback) {
+      FakeMutationObserver.all.push(this);
+    }
+  }
+  return FakeMutationObserver;
 }
 
 function tab(text: string): HTMLElement {
@@ -40,32 +76,30 @@ function tab(text: string): HTMLElement {
   return el;
 }
 
-function article(options: { text: string; verified: boolean }): HTMLElement {
+/** 按 X 的真实结构拼一条推文：作者名一行 + 元信息行（标签 / 时间 / 状态链接）+ 正文。 */
+function tweet(options: {
+  name?: string;
+  text?: string;
+  meta?: string;
+  media?: boolean;
+  verified?: boolean;
+  /** 本推文的状态链接 id；详情页里主帖就是 URL 里那个 id 的那一条 */
+  statusId?: string;
+}): HTMLElement {
   const el = document.createElement('article');
-  const name = document.createElement('div');
-  name.setAttribute('data-testid', 'User-Name');
-  name.textContent = 'someone';
-  if (options.verified) {
-    const icon = document.createElement('span');
-    icon.setAttribute('data-testid', 'icon-verified');
-    name.appendChild(icon);
-  }
-  const text = document.createElement('div');
-  text.setAttribute('data-testid', 'tweetText');
-  text.textContent = options.text;
-  el.append(name, text);
-  return el;
-}
-
-/** 按 X 的真实结构拼一条推文：作者名一行 + 元信息行（标签 / 时间）+ 正文。 */
-function tweet(options: { name?: string; text?: string; meta?: string; media?: boolean }): HTMLElement {
-  const el = document.createElement('article');
+  el.setAttribute('data-testid', 'tweet');
   const header = document.createElement('div');
   const name = document.createElement('div');
   name.setAttribute('data-testid', 'User-Name');
   name.innerHTML = `<a href="/someone"><span>${options.name ?? 'someone'}</span></a>`;
+  if (options.verified) {
+    name.insertAdjacentHTML('beforeend', '<span data-testid="icon-verified"></span>');
+  }
   const meta = document.createElement('div');
-  meta.innerHTML = `<div><span>${options.meta ?? '· 1小时'}</span></div>`;
+  const stamp = options.statusId
+    ? `<a href="/someone/status/${options.statusId}"><time datetime="2026-11-06T00:00:00.000Z">1小时</time></a>`
+    : `<span>${options.meta ?? '· 1小时'}</span>`;
+  meta.innerHTML = `<div>${stamp}</div>`;
   header.append(name, meta);
   const text = document.createElement('div');
   text.setAttribute('data-testid', 'tweetText');
@@ -171,16 +205,23 @@ describe('clean-ui 选择器', () => {
     }
   });
 
-  it('只淡化评论区里蓝标作者的短回复', () => {
-    const short = article({ text: '同意', verified: true });
-    const long = article({ text: '这是一条足够长的正常回复，用来验证不会被误伤', verified: true });
-    const unverified = article({ text: '同意', verified: false });
-    expect(isThinPremiumReply(short, 1)).toBe(true);
-    expect(isThinPremiumReply(short, 0)).toBe(false);
-    expect(isThinPremiumReply(long, 1)).toBe(false);
-    expect(isThinPremiumReply(unverified, 1)).toBe(false);
+  it('只淡化评论区里蓝标作者的短回复，主帖和非推文 article 不动', () => {
+    const short = tweet({ text: '同意', verified: true });
+    const long = tweet({ text: '这是一条足够长的正常回复，用来验证不会被误伤', verified: true });
+    const unverified = tweet({ text: '同意', verified: false });
+    expect(isThinPremiumReply(short, null)).toBe(true);
+    expect(isThinPremiumReply(long, null)).toBe(false);
+    expect(isThinPremiumReply(unverified, null)).toBe(false);
     const border = 'x'.repeat(PREMIUM_REPLY_MAX_CHARS);
-    expect(isThinPremiumReply(article({ text: border, verified: true }), 1)).toBe(false);
+    expect(isThinPremiumReply(tweet({ text: border, verified: true }), null)).toBe(false);
+    // 主帖（状态链接 id 等于 URL 里的 status id）绝不淡化：它是用户点进来的那条
+    expect(
+      isThinPremiumReply(tweet({ text: '同意', verified: true, statusId: '111' }), '111'),
+    ).toBe(false);
+    // 页面里不是推文的 <article>（长文卡片、模块容器）不淡化
+    const notTweet = tweet({ text: '同意', verified: true });
+    notTweet.removeAttribute('data-testid');
+    expect(isThinPremiumReply(notTweet, null)).toBe(false);
   });
 
   it('只认推文头部的「推广」标签，昵称、正文、话题里的同名文字不算', () => {
@@ -262,6 +303,152 @@ describe('clean-ui 选择器', () => {
     }
   });
 
+  it('淡化纯回复：主帖按 URL 的 status id 认，不靠第一条 article', async () => {
+    vi.useFakeTimers();
+    stubBrowser();
+    window.history.pushState({}, '', '/someone/status/111');
+    // 详情页第一条不是主帖：老实现按 index===0 跳过第一条，反而把第二条真正的
+    // 主帖当回复压暗（用户点进来的原帖变灰）
+    const pinned = tweet({ text: '一条置顶的普通推文' });
+    const focal = tweet({ text: '同意', verified: true, statusId: '111' });
+    const reply = tweet({ text: '同意', verified: true, statusId: '222' });
+    document.body.append(pinned, focal, reply);
+    const clean = createCleanUi();
+    clean.start();
+    try {
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(focal.hasAttribute('data-fs-clean')).toBe(false);
+      // 回复认自己的状态链接 id，不靠 DOM 顺序
+      expect(reply.getAttribute('data-fs-clean')).toBe('premium');
+      expect(pinned.hasAttribute('data-fs-clean')).toBe(false);
+      // CSS 也限定在推文 article 上，页面里别的 <article> 不该被压暗
+      const css = document.getElementById('feedsieve-clean-ui-styles')?.textContent ?? '';
+      expect(css).toContain('article[data-testid="tweet"][data-fs-clean="premium"]');
+      expect(css).not.toContain('article[data-fs-clean="premium"]');
+    } finally {
+      clean.stop();
+    }
+  });
+
+  it('淡化纯回复：认不出主帖时整页不淡化，不用索引猜', async () => {
+    vi.useFakeTimers();
+    stubBrowser();
+    window.history.pushState({}, '', '/someone/status/111');
+    // 两条都没有状态链接（占位/渲染失败等），无法确认哪条是主帖：
+    // 老实现会把第二条当回复压暗；新实现宁可不生效，也不能误伤主帖
+    const first = tweet({ text: '同意', verified: true });
+    const second = tweet({ text: '同意', verified: true });
+    document.body.append(first, second);
+    const clean = createCleanUi();
+    clean.start();
+    try {
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(first.hasAttribute('data-fs-clean')).toBe(false);
+      expect(second.hasAttribute('data-fs-clean')).toBe(false);
+    } finally {
+      clean.stop();
+    }
+  });
+
+  it('Grok 只藏左侧导航入口，推文/菜单里同 href 的链接不动', async () => {
+    vi.useFakeTimers();
+    stubBrowser();
+    document.body.innerHTML = `
+      <header><nav><a id="nav-grok" href="/i/grok">Grok</a></nav></header>
+      <article data-testid="tweet">
+        <div data-testid="User-Name"><a href="/someone"><span>someone</span></a></div>
+        <div data-testid="tweetText"><a id="tweet-grok" href="/i/grok">/i/grok</a></div>
+      </article>
+      <div role="menu" data-testid="Dropdown"><a id="menu-grok" href="/i/grok">Grok</a></div>`;
+    const clean = createCleanUi();
+    clean.start();
+    try {
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(document.querySelector('#nav-grok')!.getAttribute('data-fs-clean')).toBe('grok');
+      // 用户内容里指向同一路径的链接是正文，不是导航入口
+      expect(document.querySelector('#tweet-grok')!.hasAttribute('data-fs-clean')).toBe(false);
+      expect(document.querySelector('#menu-grok')!.hasAttribute('data-fs-clean')).toBe(false);
+    } finally {
+      clean.stop();
+    }
+  });
+
+  it('界面净化关着时不观察 DOM；打开才 observe，关掉和 stop 后 disconnect', async () => {
+    vi.useFakeTimers();
+    const FakeObserver = fakeObserverClass();
+    vi.stubGlobal('MutationObserver', FakeObserver);
+    const listeners = stubBrowser({ cleanUi: false });
+    document.body.innerHTML = '<nav><a id="grok" href="/i/grok">Grok</a></nav>';
+    const clean = createCleanUi();
+    clean.start();
+    try {
+      await vi.advanceTimersByTimeAsync(2_000);
+      // 总开关关闭：不该常驻监听整页，也不该改页面
+      expect(FakeObserver.all).toHaveLength(0);
+      expect(document.getElementById('feedsieve-clean-ui-styles')).toBeNull();
+      expect(document.querySelector('#grok')!.hasAttribute('data-fs-clean')).toBe(false);
+
+      // 用户打开总开关：立刻开始观察并跑一轮
+      pushSettings(listeners, { cleanUi: true });
+      await vi.advanceTimersByTimeAsync(500);
+      expect(FakeObserver.all).toHaveLength(1);
+      const observer = FakeObserver.all[0]!;
+      expect(observer.observe).toHaveBeenCalledTimes(1);
+      expect(document.querySelector('#grok')!.getAttribute('data-fs-clean')).toBe('grok');
+
+      // 再关掉：立刻断开，观察器不会继续吃 X 的 mutation
+      pushSettings(listeners, { cleanUi: false });
+      await vi.advanceTimersByTimeAsync(500);
+      expect(observer.disconnect).toHaveBeenCalledTimes(1);
+      expect(document.querySelector('#grok')!.hasAttribute('data-fs-clean')).toBe(false);
+      expect(FakeObserver.all).toHaveLength(1);
+
+      // 再打开：同一个观察器重新挂上
+      pushSettings(listeners, { cleanUi: true });
+      await vi.advanceTimersByTimeAsync(500);
+      expect(observer.observe).toHaveBeenCalledTimes(2);
+
+      clean.stop();
+      expect(observer.disconnect).toHaveBeenCalledTimes(2);
+      // stop 之后迟到的设置不能把观察器又挂回去
+      pushSettings(listeners, { cleanUi: true });
+      await vi.advanceTimersByTimeAsync(500);
+      expect(observer.observe).toHaveBeenCalledTimes(2);
+      expect(document.getElementById('feedsieve-clean-ui-styles')).toBeNull();
+    } finally {
+      clean.stop();
+    }
+  });
+
+  it('DOM 一直在变时扫描也按固定节奏跑，不会被无限顺延', async () => {
+    vi.useFakeTimers();
+    const FakeObserver = fakeObserverClass();
+    vi.stubGlobal('MutationObserver', FakeObserver);
+    stubBrowser();
+    const clean = createCleanUi();
+    clean.start();
+    try {
+      await vi.advanceTimersByTimeAsync(2_000);
+      const observer = FakeObserver.all[0]!;
+      expect(observer.observe).toHaveBeenCalledTimes(1);
+      // 先删掉样式，用「下一轮扫描是否重建」来判断 scan 有没有执行
+      document.getElementById('feedsieve-clean-ui-styles')!.remove();
+
+      // 模拟 X 播放视频 / 输入：每 100ms 一次 DOM 变化。老实现每次都重置 400ms
+      // 定时器，scan 永远等不到；新实现第一轮 400ms 一到就跑
+      for (let i = 0; i < 8; i += 1) {
+        observer.callback([], observer as unknown as MutationObserver);
+        await vi.advanceTimersByTimeAsync(100);
+        if (i === 3) {
+          expect(document.getElementById('feedsieve-clean-ui-styles')).toBeTruthy();
+        }
+      }
+      expect(document.getElementById('feedsieve-clean-ui-styles')).toBeTruthy();
+    } finally {
+      clean.stop();
+    }
+  });
+
   it('stop 之后清干净，迟到的设置不会再改页面', async () => {
     vi.useFakeTimers();
     const listeners: Array<(changes: Record<string, unknown>, area: string) => void> = [];
@@ -279,7 +466,7 @@ describe('clean-ui 选择器', () => {
         },
       },
     });
-    document.body.innerHTML = '<a href="/i/grok">Grok</a>';
+    document.body.innerHTML = '<nav><a href="/i/grok">Grok</a></nav>';
     const clean = createCleanUi();
     clean.start();
     // 让设置读完、首屏补扫跑完
