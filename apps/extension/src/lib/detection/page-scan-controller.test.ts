@@ -19,7 +19,8 @@ function setup(processOne?: ScanCallbacks['processOne']) {
   const processed: Array<{ article: Element; pending: number }> = [];
   const flushed: PendingBadge[][] = [];
   const health: Array<{ ok: boolean; reason?: string }> = [];
-  let done = 0;
+  /** 每次 scanDone 收到的「本轮扫过的节点」。 */
+  const scannedBatches: Element[][] = [];
   const controller = new PageScanController({
     processOne:
       processOne ??
@@ -27,12 +28,25 @@ function setup(processOne?: ScanCallbacks['processOne']) {
         processed.push({ article, pending: pendingBadges.length });
       }),
     flushBadges: (pending) => flushed.push([...pending]),
-    scanDone: () => {
-      done += 1;
+    scanDone: (scanned) => {
+      scannedBatches.push([...scanned]);
     },
     noteHealth: (ok, reason) => health.push({ ok, reason }),
   });
-  return { controller, processed, flushed, health, scanDone: () => done };
+  return {
+    controller,
+    processed,
+    flushed,
+    health,
+    scannedBatches,
+    scanDone: () => scannedBatches.length,
+  };
+}
+
+/** 仅供测试：读私有索引（TS private 只是编译期约束）。 */
+function indexOf(controller: PageScanController): Map<string, Set<Element>> {
+  return (controller as unknown as { articlesByHandle: Map<string, Set<Element>> })
+    .articlesByHandle;
 }
 
 beforeEach(() => {
@@ -76,23 +90,55 @@ describe('PageScanController', () => {
     expect(a).not.toBe(scanRevision({ ...item, postId: '1800000000000000002' }, 'bio1'));
   });
 
-  it('markDirty + schedule：去抖后按分片处理并汇报健康', async () => {
+  it('markDirty + schedule：去抖后按分片处理、汇报健康并带上本轮扫过的节点', async () => {
     const ctx = setup();
-    ctx.controller.markDirty(tweetArticle());
+    const article = tweetArticle();
+    const unrelated = tweetArticle();
+    document.body.append(article, unrelated); // 无关节点没标脏，不应进入扫描
+    ctx.controller.markDirty(article);
     ctx.controller.schedule();
     expect(ctx.processed).toHaveLength(0);
 
     await vi.advanceTimersByTimeAsync(SCAN_DEBOUNCE_MS);
-    expect(ctx.processed).toHaveLength(1);
+    expect(ctx.processed.map((item) => item.article)).toEqual([article]);
     expect(ctx.health).toEqual([{ ok: true }]);
     // 整页装饰（AI 标签按遍历顺序判断）在扫完之后才跑一次
     expect(ctx.scanDone()).toBe(1);
+    // scanDone 带上这一轮只处理过的节点：调用方不必整页重新解析
+    expect(ctx.scannedBatches).toEqual([[article]]);
+    expect(ctx.scannedBatches[0]).not.toContain(unrelated);
+  });
+
+  it('scanDone 汇总跨轮次处理过的节点，且只调用一次', async () => {
+    const extra = tweetArticle();
+    const ctx = setup((article: Element, _context, pendingBadges: PendingBadge[]) => {
+      // 第一轮扫描时又标脏（模拟扫描过程中 observer 命中新节点）
+      if (ctx.processed.length === 0) ctx.controller.markDirty(extra);
+      ctx.processed.push({ article, pending: pendingBadges.length });
+    });
+    const first = tweetArticle();
+    document.body.append(first, extra);
+    ctx.controller.markDirty(first);
+    ctx.controller.schedule();
+    await vi.advanceTimersByTimeAsync(SCAN_DEBOUNCE_MS);
+    await vi.advanceTimersByTimeAsync(SCAN_DEBOUNCE_MS);
+    expect(ctx.processed).toHaveLength(2);
+    expect(ctx.scannedBatches).toHaveLength(1);
+    expect(ctx.scannedBatches[0]).toEqual([first, extra]);
   });
 
   it('没有脏节点时不会触发 scanDone', async () => {
     const ctx = setup();
     await vi.advanceTimersByTimeAsync(SCAN_DEBOUNCE_MS);
     expect(ctx.scanDone()).toBe(0);
+  });
+
+  it('显式调度但脏集合为空时也回调 scanDone（传空数组）：整页装饰靠它做巡检', async () => {
+    const ctx = setup();
+    ctx.controller.schedule();
+    await vi.advanceTimersByTimeAsync(SCAN_DEBOUNCE_MS);
+    expect(ctx.scanDone()).toBe(1);
+    expect(ctx.scannedBatches).toEqual([[]]);
   });
 
   it('schedule 在已排程时去重；执行中再次标脏会自动续扫', async () => {
@@ -123,6 +169,64 @@ describe('PageScanController', () => {
     expect(controller.hasChanged(article, 'r2')).toBe(true);
     controller.dropSnapshot(article);
     expect(controller.hasChanged(article, 'r2')).toBe(true); // 快照被清后重新渲染
+  });
+
+  it('remember / cellsForHandle 顺手剔除已被虚拟列表回收的节点', () => {
+    const ctx = setup();
+    const live = tweetArticle();
+    const reclaimed = tweetArticle();
+    document.body.append(live, reclaimed);
+    ctx.controller.remember(live, 'spam');
+    ctx.controller.remember(reclaimed, 'spam');
+    expect(indexOf(ctx.controller).get('spam')?.size).toBe(2);
+
+    // 虚拟列表把其中一个 cell 移出 DOM
+    reclaimed.remove();
+    // 同 handle 的下一条卡片登记时，顺手清掉已回收的旧条目（不额外多一次遍历）
+    const fresh = tweetArticle();
+    document.body.append(fresh);
+    ctx.controller.remember(fresh, 'spam');
+    const indexed = indexOf(ctx.controller).get('spam');
+    expect(indexed?.size).toBe(2);
+    expect(indexed?.has(reclaimed)).toBe(false);
+    expect(indexed?.has(live)).toBe(true);
+    expect(indexed?.has(fresh)).toBe(true);
+
+    // 全部回收后，下一次按 handle 取 cell 时把空 Set 一并删掉
+    live.remove();
+    fresh.remove();
+    expect(ctx.controller.cellsForHandle('spam')).toEqual([]);
+    expect(indexOf(ctx.controller).has('spam')).toBe(false);
+  });
+
+  it('forget 清掉空 Set，索引不残留空 handle', () => {
+    const ctx = setup();
+    const article = tweetArticle();
+    document.body.append(article);
+    ctx.controller.remember(article, 'spam');
+    ctx.controller.forget(article);
+    expect(indexOf(ctx.controller).has('spam')).toBe(false);
+  });
+
+  it('fullRescan 与扫描收尾会清掉没人再扫到的回收节点', async () => {
+    const ctx = setup();
+    const gone = tweetArticle();
+    const cached = tweetArticle();
+    document.body.append(gone, cached);
+    ctx.controller.remember(gone, 'alpha');
+    ctx.controller.remember(cached, 'beta');
+
+    // 全页重扫前先回收索引：alpha 已被虚拟列表移出 DOM，beta 还在
+    gone.remove();
+    ctx.controller.fullRescan();
+    expect(indexOf(ctx.controller).has('alpha')).toBe(false);
+    expect(indexOf(ctx.controller).has('beta')).toBe(true);
+
+    // beta 也回收：扫描收尾统一清理，索引归零
+    cached.remove();
+    ctx.controller.fullRescan();
+    await vi.advanceTimersByTimeAsync(SCAN_DEBOUNCE_MS);
+    expect(indexOf(ctx.controller).size).toBe(0);
   });
 
   it('observer 忽略插件自己的 .fs-* 元素，页面内容变化才标脏', async () => {

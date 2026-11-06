@@ -20,6 +20,30 @@ import { communityVoteForDetection } from './block-core';
 import type { ManualActions } from './manual-actions';
 import { createIcon } from '../insight/icons';
 
+/** 标注属性值：`来源|postId`。postId 用来识别虚拟列表复用后残留的旧装饰。 */
+function markValue(source: string, postId?: string | null): string {
+  return postId ? `${source}|${postId}` : source;
+}
+
+/** 从标注属性值里读 postId：旧格式（只有来源）没有 postId，返回 null。 */
+function markPostId(value: string | null): string | null {
+  if (!value) return null;
+  const separator = value.indexOf('|');
+  if (separator < 0) return null;
+  return value.slice(separator + 1) || null;
+}
+
+/**
+ * 格子上的黄框是不是另一条推文的：X 虚拟列表会把同一个 cell 复用给新推文。
+ * 复用后若不清掉旧徽章，新推文下面会挂着上一条的理由——buildBadge 见到
+ * 已存在的 .fs-badge 会直接跳过，旧理由就永远留下来了。
+ */
+export function markedForOtherPost(cell: Element, postId?: string | null): boolean {
+  if (!postId) return false;
+  const marked = markPostId(cell.getAttribute(MARK_ATTRIBUTE));
+  return marked !== null && marked !== postId;
+}
+
 export function createBadges(deps: {
   state: ContentState;
   runBlockNow: ManualActions['runBlockNow'];
@@ -36,8 +60,15 @@ export function createBadges(deps: {
     pendingBadges: PendingBadge[],
     snippet?: string,
     displayName?: string,
+    postId?: string | null,
+    /** 同一条推文的装饰被 X 冲掉后重建时为 false：不重复计入检测统计。 */
+    countAsNew = true,
   ): void {
-    cell.setAttribute(MARK_ATTRIBUTE, detection.source);
+    // 同一个 cell 被复用给另一条推文：旧徽章先删掉，否则下面 buildBadge 会跳过
+    if (markedForOtherPost(cell, postId)) {
+      for (const stale of cell.querySelectorAll('.fs-badge')) stale.remove();
+    }
+    cell.setAttribute(MARK_ATTRIBUTE, markValue(detection.source, postId));
     const badge = buildBadge(cell, detection, category, evidence);
     // 徽章不立即挂载：同批标注集中到 flushPendingBadges 一次插入，
     // 避免逐条改高度 + 逐条触发滚动锚定。
@@ -57,8 +88,8 @@ export function createBadges(deps: {
       state.notifyPageMarkedChanged();
     }
     // 本地统计：每次新标注 +1（扫描快照保证每个 cell 只标一次）；
-    // 已拉黑回显不是新发现，不计数
-    if (detection.source !== 'blocked') {
+    // 已拉黑回显不是新发现，不计数；装饰被冲掉后的重建也不是新命中。
+    if (detection.source !== 'blocked' && countAsNew) {
       // 连续 30 天战斗统计与总累计一起记（页面快照保证同 cell 不重复计数）
       void bumpStat('detected').catch(() => {
         // 统计写入失败不影响标注
