@@ -5,6 +5,20 @@
 - 每个版本的详细工程记录见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)。
 - 二进制产物见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)；正式用户请从 [Chrome 应用商店](https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph)接收更新。
 
+## [0.17.2] — 2026-11-06
+
+### 修复
+
+- **AI 味折叠不再变成无法展开的空白**：折叠条会被 X 重渲染冲掉，而「已折叠」的属性还留在格子上，结果那条回复只剩一条横线、没有「显示」按钮，只能刷新页面。现在每轮装饰都会校验：该折叠的把折叠条补回来，不该折叠的连属性一起清掉。
+- **「隐藏推荐关注」不会再连坐整个右侧栏**：卡片定位加了「只含一个标题」「不含搜索框」两道判据。之前从标题一路向上找容器时，可能选中把搜索框和多个模块都包住的包裹层，一次隐藏就是整栏空白。
+- **「隐藏为你推荐」不再隐藏当前选中的标签页**：先切到「正在关注」，切过去之后再隐藏；SPA 换页后会重新给一次自动切换的机会。之前切页失败时会藏掉用户正在看的那一栏，标签栏看起来像 X 坏了。
+- **拉黑折叠不再连坐别的推文**：隐藏时会记下这条推文的 status id（认时间戳那条链接，引用帖里的 status 链接不会抢走归属）。X 把同一个格子复用给别的推文时，被拉黑账号继续藏、正常账号立刻放出来。
+- 扩展停用 / 重载、过滤模块关闭时，会取消待执行的延迟隐藏并解除已隐藏的格子，不再留下一直空着的位置。
+
+### 工程
+
+- 单测：`clean-ui` +3（推荐关注卡片边界、当前选中标签、未选中照常隐藏）、`remove-tweets` +3（记 status id、格子复用、取消待执行隐藏）、`ai-check` +1（折叠条被重渲染后补回）。
+
 ## [0.17.1] — 2026-11-06
 
 ### 修复
@@ -627,6 +641,7 @@
 [Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.17.0...HEAD
 [0.17.0]: https://github.com/realchendahuang/feedsieve/compare/v0.16.2...v0.17.0
 [0.17.1]: https://github.com/realchendahuang/feedsieve/compare/v0.17.0...v0.17.1
+[0.17.2]: https://github.com/realchendahuang/feedsieve/compare/v0.17.1...v0.17.2
 [0.16.2]: https://github.com/realchendahuang/feedsieve/compare/v0.16.1...v0.16.2
 [0.16.1]: https://github.com/realchendahuang/feedsieve/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/realchendahuang/feedsieve/compare/v0.15.0...v0.16.0
