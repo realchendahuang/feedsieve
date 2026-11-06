@@ -60,15 +60,26 @@ export function isWhoToFollowHeading(el: Element): boolean {
   return WHO_TO_FOLLOW.includes(textOf(el));
 }
 
-/** 「推荐关注」标题所属的模块卡片：从标题上溯，取最后一个仍以这个标题开头的容器。 */
+/**
+ * 「推荐关注」标题所属的模块卡片：从标题上溯到「只含这一个标题」的最大容器。
+ *
+ * 只看文案前缀不够：侧栏第一块模块前面没有文字（搜索框只有 placeholder），
+ * 一路上去会把整个侧栏包裹层都选中，一次 display:none 就是整栏空白。
+ * 多出一个标题就说明已经跨到别的模块了，停在前一层。
+ */
 export function whoToFollowCard(heading: Element): Element | null {
   const column = heading.closest('[data-testid="sidebarColumn"]');
   if (!column) return null;
+  const headingCount = (el: Element) => el.querySelectorAll('h2, [role="heading"]').length;
   let node: Element | null = heading;
   let best: Element | null = null;
   while (node && node !== column) {
     const text = textOf(node);
-    if (text.startsWith('推荐关注') || text.startsWith('Who to follow')) best = node;
+    if (!text.startsWith('推荐关注') && !text.startsWith('Who to follow')) break;
+    if (headingCount(node) > 1) break;
+    // 侧栏顶部的搜索框没有文字，会被包裹层吞进来：见到搜索框就说明这一层不是卡片
+    if (node.querySelector('form[role="search"], [data-testid="SearchBox_Search_Input"]')) break;
+    best = node;
     node = node.parentElement;
   }
   return best ?? heading.closest('aside[role="complementary"]');
@@ -126,6 +137,7 @@ export function createCleanUi() {
   let timer: number | undefined;
   let initialTimer: number | undefined;
   let switchedToFollowing = false;
+  let lastPath = location.pathname;
   let unsubscribe: (() => void) | null = null;
   let active = false;
 
@@ -158,6 +170,11 @@ export function createCleanUi() {
       clearMarks();
       return;
     }
+    // 换了页面（SPA 路由）就重新给「为你推荐」一次自动切换的机会
+    if (location.pathname !== lastPath) {
+      lastPath = location.pathname;
+      switchedToFollowing = false;
+    }
     ensureStyle();
     clearMarks();
 
@@ -174,11 +191,15 @@ export function createCleanUi() {
       ];
       const forYou = tabs.find(isForYouTab) ?? null;
       const following = tabs.find(isFollowingTab) ?? null;
-      mark(forYou, 'foryou');
-      // 当前停在「为你推荐」时切到「正在关注」；每次页面加载只切一次，不跟用户抢
-      if (!switchedToFollowing && forYou?.getAttribute('aria-selected') === 'true' && following) {
-        switchedToFollowing = true;
-        (following as HTMLElement).click();
+      // 当前选中的 Tab 绝不隐藏：藏掉的是自己正在看的那个，标签栏会像 X 坏了。
+      // 停在「为你推荐」时先切到「正在关注」，切过去之后下一轮扫描再隐藏。
+      if (forYou?.getAttribute('aria-selected') === 'true') {
+        if (!switchedToFollowing) {
+          switchedToFollowing = true;
+          (following as HTMLElement | null)?.click();
+        }
+      } else {
+        mark(forYou, 'foryou');
       }
     }
 

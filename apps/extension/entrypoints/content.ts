@@ -15,7 +15,7 @@ import {
 } from '../src/lib/queue/block-queue-store';
 import { getUiLanguage, subscribeUiLanguage } from '../src/lib/platform/i18n';
 import { createContentState, MARK_ATTRIBUTE } from '../src/lib/content/page-state';
-import { HIDDEN_TWEET_CELL_ATTRIBUTE } from '../src/lib/platform/remove-tweets';
+import { cancelPendingHides, HIDDEN_TWEET_CELL_ATTRIBUTE } from '../src/lib/platform/remove-tweets';
 import { createBlockOne } from '../src/lib/content/block-core';
 import { createBlockedFold } from '../src/lib/content/blocked-fold';
 import { createManualActions } from '../src/lib/content/manual-actions';
@@ -338,6 +338,12 @@ export default defineContentScript({
       for (const cell of document.querySelectorAll(`[${MARK_ATTRIBUTE}]`)) {
         cell.removeAttribute(MARK_ATTRIBUTE);
       }
+      // 拉黑折叠：延迟定时器要取消，已经藏起来的格子要放出来，
+      // 否则停用/重载扩展后这些推文会一直空着，只能刷新页面。
+      cancelPendingHides();
+      for (const cell of document.querySelectorAll(`[${HIDDEN_TWEET_CELL_ATTRIBUTE}]`)) {
+        cell.removeAttribute(HIDDEN_TWEET_CELL_ATTRIBUTE);
+      }
       for (const element of document.querySelectorAll('.fs-badge, [data-fs-action]')) {
         element.remove();
       }
@@ -443,6 +449,7 @@ export default defineContentScript({
         } else {
           state.detectionEnabled = false;
           sync.resetPageDecorations();
+          cancelPendingHides();
           for (const cell of document.querySelectorAll(`[${HIDDEN_TWEET_CELL_ATTRIBUTE}]`)) {
             cell.removeAttribute(HIDDEN_TWEET_CELL_ATTRIBUTE);
           }

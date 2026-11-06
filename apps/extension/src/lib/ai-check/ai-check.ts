@@ -537,6 +537,36 @@ export function createAiCheck(deps: {
     return rows[rows.length - 1] ?? area;
   }
 
+  /** 把「折叠了 N 条」那一行插到 cell 顶部；X 重渲冲掉后由 sync 逻辑再调一次。 */
+  function mountFoldBar(
+    cell: Element,
+    postId: string,
+    name: string,
+    mark: { percent: number; tone: string },
+  ): void {
+    cell.querySelectorAll(':scope > .fs-ai-foldbar').forEach((b) => b.remove());
+    const bar = el('div', 'fs-ai-foldbar');
+    bar.appendChild(
+      el(
+        'span',
+        undefined,
+        t().folded(name, mark.percent < 0 ? t().markListed : t().mark(mark.percent)),
+      ),
+    );
+    const show = el('button', undefined, t().unfold);
+    show.type = 'button';
+    show.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      unfolded.add(postId);
+      cell.removeAttribute(FOLD_ATTR);
+      cell.querySelectorAll(':scope > .fs-ai-foldbar').forEach((b) => b.remove());
+    });
+    bar.appendChild(show);
+    cell.prepend(bar);
+    cell.setAttribute(FOLD_ATTR, '1');
+  }
+
   // ---- 入口二、三：回复上的机器人图标，已有结论的号加标签 / 折叠 ----
   function decorateArticles(): void {
     const focal = location.pathname.match(/\/status\/(\d+)/)?.[1] ?? null;
@@ -588,12 +618,12 @@ export function createAiCheck(deps: {
       const mark =
         protectedAccount || settings.mode === 'off' || !inScope(article) ? null : markFor(handle);
       const markKey = mark ? `${handle}:${mark.percent}:${mark.tone}:${settings.mode}` : '-';
+      const cell = article.closest(tweetSelectors.timelineCell);
       if (article.getAttribute(MARK_ATTR) !== markKey) {
         article.setAttribute(MARK_ATTR, markKey);
         article.querySelectorAll('.fs-ai-mark').forEach((m) => m.remove());
         if (mark) article.setAttribute(TONE_ATTR, mark.tone);
         else article.removeAttribute(TONE_ATTR);
-        const cell = article.closest(tweetSelectors.timelineCell);
         cell?.removeAttribute(FOLD_ATTR);
         cell?.querySelectorAll(':scope > .fs-ai-foldbar').forEach((b) => b.remove());
         if (mark) {
@@ -611,30 +641,21 @@ export function createAiCheck(deps: {
             void openFor(handle);
           });
           nameRow?.appendChild(pill);
-          if (settings.mode === 'fold' && cell && !isFocal && !unfolded.has(item.postId)) {
-            const bar = el('div', 'fs-ai-foldbar');
-            const name = item.author.displayName || `@${handle}`;
-            bar.appendChild(
-              el(
-                'span',
-                undefined,
-                t().folded(name, mark.percent < 0 ? t().markListed : t().mark(mark.percent)),
-              ),
-            );
-            const show = el('button', undefined, t().unfold);
-            show.type = 'button';
-            const postId = item.postId;
-            show.addEventListener('click', (event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              unfolded.add(postId);
-              cell.removeAttribute(FOLD_ATTR);
-              bar.remove();
-            });
-            bar.appendChild(show);
-            cell.prepend(bar);
-            cell.setAttribute(FOLD_ATTR, '1');
+        }
+      }
+
+      // 折叠态自愈：X 重渲染会把折叠条冲掉，属性却还在——那就是「内容没了、也没有展开按钮」，
+      // 用户只能刷新。每轮都校验一次：该折的补回折叠条，不该折的连同属性一起清掉。
+      const shouldFold =
+        !!mark && settings.mode === 'fold' && !isFocal && !unfolded.has(item.postId);
+      if (cell) {
+        if (shouldFold) {
+          if (!cell.hasAttribute(FOLD_ATTR) || !cell.querySelector(':scope > .fs-ai-foldbar')) {
+            mountFoldBar(cell, item.postId, item.author.displayName || `@${handle}`, mark);
           }
+        } else if (cell.hasAttribute(FOLD_ATTR)) {
+          cell.removeAttribute(FOLD_ATTR);
+          cell.querySelectorAll(':scope > .fs-ai-foldbar').forEach((b) => b.remove());
         }
       }
 

@@ -9,6 +9,33 @@
 /** X cell 已被 FeedSieve 隐藏；由 content script 的注入样式折叠高度。 */
 export const HIDDEN_TWEET_CELL_ATTRIBUTE = 'data-fs-hidden';
 
+/** 延迟隐藏的定时器：扩展被停用/重载时要一起取消，否则 650ms 后还会把格子藏起来。 */
+const pendingHides = new Set<number>();
+
+export function cancelPendingHides(): void {
+  for (const handle of pendingHides) window.clearTimeout(handle);
+  pendingHides.clear();
+}
+
+/** 从格子里读这条推文的 status id；读不到返回 null（例如纯卡片）。 */
+function postIdOf(cell: Element): string | null {
+  // 先认时间戳那条链接：引用帖里也有 /status/ 链接，按文档顺序可能先撞上别人的 id
+  const anchor =
+    cell.querySelector('time')?.closest('a') ?? cell.querySelector('a[href*="/status/"]');
+  const href = anchor?.getAttribute('href') ?? '';
+  return /\/status\/(\d+)/.exec(href)?.[1] ?? null;
+}
+
+/**
+ * 格子记下的隐藏对象跟当前这条不是同一条：X 把格子复用给了别的推文。
+ * 只认数字 id；老数据（'true'）不做判断，保持原来的「藏了就藏了」。
+ */
+export function hiddenForOtherPost(cell: Element, postId: string): boolean {
+  const hiddenFor = cell.getAttribute(HIDDEN_TWEET_CELL_ATTRIBUTE);
+  if (!hiddenFor || !/^\d+$/.test(hiddenFor)) return false;
+  return hiddenFor !== postId;
+}
+
 interface ScrollSnapshot {
   element: HTMLElement;
   top: number;
@@ -33,7 +60,8 @@ export function hideCellsSoon(targets: Iterable<Element>, delayMs = 650): void {
   // 调用点通常来自实时 DOM 查询；在等待成功反馈期间保留当时的目标集合，避免
   // 外部可变数组或一次性 iterator 让这次隐藏意外指向其它 cell。
   const targetSnapshot = [...targets];
-  window.setTimeout(() => {
+  const timer = window.setTimeout(() => {
+    pendingHides.delete(timer);
     const cells = connectedUniqueCells(targetSnapshot).filter(
       (cell) => !cell.hasAttribute(HIDDEN_TWEET_CELL_ATTRIBUTE),
     );
@@ -42,10 +70,12 @@ export function hideCellsSoon(targets: Iterable<Element>, delayMs = 650): void {
     mutateWithStableViewport(cells, () => {
       blurFocusInside(cells);
       for (const cell of cells) {
-        cell.setAttribute(HIDDEN_TWEET_CELL_ATTRIBUTE, 'true');
+        // 记下藏的是哪条：X 复用这个格子时，扫描能据此发现并解除隐藏
+        cell.setAttribute(HIDDEN_TWEET_CELL_ATTRIBUTE, postIdOf(cell) ?? 'true');
       }
     });
   }, delayMs);
+  pendingHides.add(timer);
 }
 
 /**

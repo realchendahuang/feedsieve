@@ -166,6 +166,31 @@ describe('回复详情页与评论区标记', () => {
     ai.stop();
   });
 
+  it('折叠条被 X 重渲染冲掉后自动补回，不留下没有「显示」按钮的空白回复', async () => {
+    const html = `<div data-testid="cellInnerDiv">${tweet('op', '400')}</div><div data-testid="cellInnerDiv">${tweet('farm', '401')}</div>`;
+    const { ai, tick } = setup('/op/status/400', html, undefined, {
+      aiListV1: { at: Date.now(), entries: [['farm', 0.92, 1]] },
+      aiCheckSettingsV1: { mode: 'fold', scope: 'all' },
+    });
+    tick();
+    await new Promise((r) => setTimeout(r, 0));
+    tick();
+    const cell = document.querySelectorAll('[data-testid="cellInnerDiv"]')[1]!;
+    expect(cell.getAttribute('data-fs-ai-fold')).toBe('1');
+
+    // 模拟 X 重渲染：折叠条节点被丢掉，属性还留着
+    cell.querySelector('.fs-ai-foldbar')!.remove();
+    expect(cell.querySelector('.fs-ai-foldbar')).toBeNull();
+
+    ai.decorate();
+    expect(cell.querySelector('.fs-ai-foldbar')).not.toBeNull();
+    expect(cell.getAttribute('data-fs-ai-fold')).toBe('1');
+    // 补回来的折叠条仍然能点开
+    (cell.querySelector('.fs-ai-foldbar button') as HTMLButtonElement).click();
+    expect(cell.hasAttribute('data-fs-ai-fold')).toBe(false);
+    ai.stop();
+  });
+
   it('同一个号在一页里出现多条时都打标（结论按账号走，不是只标测过的那条）', async () => {
     const html = [
       `<div data-testid="cellInnerDiv">${tweet('farm', '410')}</div>`,

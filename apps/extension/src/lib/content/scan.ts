@@ -24,7 +24,7 @@ import {
   type PendingBadge,
 } from '../detection/page-scan-controller';
 import { getBundledEntries } from '../community/community-store';
-import { HIDDEN_TWEET_CELL_ATTRIBUTE, hideCellsSoon } from '../platform/remove-tweets';
+import { HIDDEN_TWEET_CELL_ATTRIBUTE, hiddenForOtherPost, hideCellsSoon } from '../platform/remove-tweets';
 import { MARK_ATTRIBUTE, type ContentState } from './page-state';
 import type { Badges } from './badges';
 import type { BlockedFold } from './blocked-fold';
@@ -102,14 +102,23 @@ export function createScan(deps: {
       return;
     }
     const handle = item.author.handle.toLowerCase();
+    const ownerCell = article.closest(tweetSelectors.timelineCell) ?? article;
+    // 格子记的隐藏对象不是这条推文（X 把格子复用给了别人）：别连坐。
+    // 换进来的还是被拉黑的账号就继续藏着，只把记号改对（别先放出来再藏，免得闪一下）。
+    if (item.postId && hiddenForOtherPost(ownerCell, item.postId)) {
+      if (state.blockedCache.has(handle)) {
+        ownerCell.setAttribute(HIDDEN_TWEET_CELL_ATTRIBUTE, item.postId);
+      } else {
+        ownerCell.removeAttribute(HIDDEN_TWEET_CELL_ATTRIBUTE);
+      }
+    }
     const previousHandle = controller.remember(element, handle);
     if (previousHandle) {
       // X 复用同一个 article 显示另一条推文：上一条的隐藏/黄框徽章必须一起清掉，
       // 否则新推文会被直接隐藏，或顶着别人的判定理由。
-      const reusedCell = article.closest(tweetSelectors.timelineCell) ?? article;
-      reusedCell.removeAttribute(MARK_ATTRIBUTE);
-      reusedCell.removeAttribute(HIDDEN_TWEET_CELL_ATTRIBUTE);
-      reusedCell.querySelectorAll('.fs-badge').forEach((badge) => badge.remove());
+      ownerCell.removeAttribute(MARK_ATTRIBUTE);
+      ownerCell.removeAttribute(HIDDEN_TWEET_CELL_ATTRIBUTE);
+      ownerCell.querySelectorAll('.fs-badge').forEach((badge) => badge.remove());
     }
     // 先于 revision 早退：指标会变而 DOM 不变；文案不变时 decorate 不写 DOM
     insight?.decorate(element, item);

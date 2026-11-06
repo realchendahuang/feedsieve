@@ -120,6 +120,57 @@ describe('clean-ui 选择器', () => {
     expect(whoToFollowCard(heading)?.id).toBe('card');
   });
 
+  it('推荐关注卡片不把侧栏包裹层当成自己：跨到搜索框或别的模块就停', () => {
+    document.body.innerHTML = `
+      <div data-testid="sidebarColumn">
+        <div id="wrap">
+          <form role="search"><input placeholder="搜索"></form>
+          <div id="card"><h2 role="heading">推荐关注</h2><span>Qwas</span></div>
+        </div>
+      </div>`;
+    const heading = document.querySelector('#card h2')!;
+    expect(whoToFollowCard(heading)?.id).toBe('card');
+  });
+
+  it('「为你推荐」当前选中时不隐藏，先切到「正在关注」', async () => {
+    vi.useFakeTimers();
+    stubBrowser();
+    document.body.innerHTML = `
+      <div role="tablist">
+        <div role="tab" id="foryou" aria-selected="true">为你推荐</div>
+        <div role="tab" id="following" aria-selected="false">正在关注</div>
+      </div>`;
+    const clicked = vi.fn();
+    document.querySelector('#following')!.addEventListener('click', clicked);
+    const clean = createCleanUi();
+    clean.start();
+    try {
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(document.querySelector('#foryou')!.hasAttribute('data-fs-clean')).toBe(false);
+      expect(clicked).toHaveBeenCalledTimes(1);
+    } finally {
+      clean.stop();
+    }
+  });
+
+  it('「为你推荐」没被选中时照常隐藏', async () => {
+    vi.useFakeTimers();
+    stubBrowser();
+    document.body.innerHTML = `
+      <div role="tablist">
+        <div role="tab" id="foryou" aria-selected="false">为你推荐</div>
+        <div role="tab" id="following" aria-selected="true">正在关注</div>
+      </div>`;
+    const clean = createCleanUi();
+    clean.start();
+    try {
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(document.querySelector('#foryou')!.getAttribute('data-fs-clean')).toBe('foryou');
+    } finally {
+      clean.stop();
+    }
+  });
+
   it('只淡化评论区里蓝标作者的短回复', () => {
     const short = article({ text: '同意', verified: true });
     const long = article({ text: '这是一条足够长的正常回复，用来验证不会被误伤', verified: true });

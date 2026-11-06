@@ -1,6 +1,8 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  cancelPendingHides,
+  hiddenForOtherPost,
   HIDDEN_TWEET_CELL_ATTRIBUTE,
   hideCellsSoon,
   mutateWithStableViewport,
@@ -29,6 +31,55 @@ function tweetCell(handle: string, postId: string): HTMLElement {
   return cell;
 }
 
+  it('引用帖里的 status 链接不会抢走格子归属（认时间戳那条）', () => {
+    vi.useFakeTimers();
+    const cell = tweetCell('spamking88', '777');
+    const article = cell.querySelector('article')!;
+    article.insertAdjacentHTML('afterbegin', '<div><a href="/quoted/status/999">quoted</a></div>');
+    article.insertAdjacentHTML(
+      'beforeend',
+      '<a href="/spamking88/status/777"><time datetime="2026-11-06T00:00:00Z">1h</time></a>',
+    );
+    document.body.append(cell);
+    hideCellsSoon([cell], 0);
+    vi.advanceTimersByTime(0);
+    expect(cell.getAttribute(HIDDEN_TWEET_CELL_ATTRIBUTE)).toBe('777');
+  });
+
+describe('隐藏格子的归属校验', () => {
+  it('隐藏时记下这条推文的 status id', () => {
+    vi.useFakeTimers();
+    const cell = tweetCell('spamking88', '2118366625804202080');
+    document.body.append(cell);
+    hideCellsSoon([cell], 0);
+    vi.advanceTimersByTime(0);
+    expect(cell.getAttribute(HIDDEN_TWEET_CELL_ATTRIBUTE)).toBe('2118366625804202080');
+    expect(hiddenForOtherPost(cell, '2118366625804202080')).toBe(false);
+  });
+
+  it('X 把格子复用给别的推文后，旧隐藏不再连坐', () => {
+    vi.useFakeTimers();
+    const cell = tweetCell('spamking88', '111');
+    document.body.append(cell);
+    hideCellsSoon([cell], 0);
+    vi.advanceTimersByTime(0);
+    expect(hiddenForOtherPost(cell, '222')).toBe(true);
+    // 老数据（'true'）和读不到 id 的格子不做判断，保持原来的行为
+    cell.setAttribute(HIDDEN_TWEET_CELL_ATTRIBUTE, 'true');
+    expect(hiddenForOtherPost(cell, '222')).toBe(false);
+  });
+
+  it('取消待执行的隐藏后，格子不会再被藏起来', () => {
+    vi.useFakeTimers();
+    const cell = tweetCell('spamking88', '333');
+    document.body.append(cell);
+    hideCellsSoon([cell], 650);
+    cancelPendingHides();
+    vi.advanceTimersByTime(1_000);
+    expect(cell.hasAttribute(HIDDEN_TWEET_CELL_ATTRIBUTE)).toBe(false);
+  });
+});
+
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
@@ -51,7 +102,7 @@ describe('hideCellsSoon', () => {
     expect(cell.hasAttribute(HIDDEN_TWEET_CELL_ATTRIBUTE)).toBe(false);
     vi.advanceTimersByTime(1);
     expect(cell.isConnected).toBe(true);
-    expect(cell.getAttribute(HIDDEN_TWEET_CELL_ATTRIBUTE)).toBe('true');
+    expect(cell.getAttribute(HIDDEN_TWEET_CELL_ATTRIBUTE)).toBe('1');
   });
 
   it('leaves already-detached cells alone', () => {
