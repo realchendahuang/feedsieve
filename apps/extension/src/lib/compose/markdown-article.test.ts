@@ -4,6 +4,7 @@ import {
   inlineToHtml,
   looksLikeMarkdown,
   markdownToArticle,
+  parseImagePlaceholder,
   textStats,
 } from './markdown-article';
 
@@ -98,5 +99,40 @@ describe('判断与统计', () => {
   it('字数与阅读时长', () => {
     expect(textStats('你好世界 hello world')).toEqual({ cjk: 4, words: 2, minutes: 1 });
     expect(textStats('字'.repeat(1200)).minutes).toBe(3);
+  });
+});
+
+describe('本地图片占位符', () => {
+  it('相对路径图片变成占位段并登记到 images；网络图片仍是外链', () => {
+    const out = markdownToArticle(
+      '![Obsidian 双链关系图谱](images/foo.png)\n\n![网络图](https://a.com/x.png)',
+    );
+    expect(out.images).toEqual([
+      { index: 1, src: 'images/foo.png', alt: 'Obsidian 双链关系图谱' },
+    ]);
+    expect(out.html).toBe(
+      '<p>🖼 图片 1：images/foo.png · Obsidian 双链关系图谱</p><p><a href="https://a.com/x.png">🖼 网络图</a></p>',
+    );
+  });
+
+  it('Obsidian 嵌入 ![[图片.png|别名]] 也算本地图片；笔记嵌入原样保留', () => {
+    const out = markdownToArticle('![[Pasted image 20240101.png|截图]]\n\n![[某篇笔记]]');
+    expect(out.images).toEqual([
+      { index: 1, src: 'Pasted image 20240101.png', alt: '截图' },
+    ]);
+    expect(out.html).toBe('<p>🖼 图片 1：Pasted image 20240101.png · 截图</p><p>![[某篇笔记]]</p>');
+  });
+
+  it('占位文字能被面板解析回来（编号 / 路径 / 文件名）', () => {
+    expect(parseImagePlaceholder('🖼 图片 2：images/foo.png · 双链图')).toEqual({
+      index: 2,
+      src: 'images/foo.png',
+      name: 'foo.png',
+    });
+    expect(parseImagePlaceholder('🖼 图片 3：foo bar.png')).toMatchObject({
+      index: 3,
+      name: 'foo bar.png',
+    });
+    expect(parseImagePlaceholder('普通段落')).toBeNull();
   });
 });

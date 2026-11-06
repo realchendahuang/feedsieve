@@ -5,6 +5,8 @@
  *   做法：拦下这次粘贴，换成转换好的 HTML 再交给 X 自己的编辑器粘贴，所以 ⌘Z 照常能撤销。
  *   ⌘⇧V / Ctrl+Shift+V 粘贴原文不转换；从网页、Word 复制来的带格式内容不接管。
  * - 右下角小面板：正文字数、预计阅读时长、小标题大纲（点击跳转）、导入 .md 文件、复制为 Markdown。
+ * - 本地图片：Markdown 里的相对路径 / Obsidian 嵌入先变成「🖼 图片 N」占位段；面板出现
+ *   「插入图片（N）」，选好文件后走 X 自己的「插入 › 媒体」上传入口换成真正的图片对象。
  * - 本机备份：编辑时把标题和正文（转成 Markdown）存进 storage.local，每篇留 5 个版本，
  *   X 编辑器出问题或误删时可以在面板「发帖 › 文章备份」里复制回来。
  *
@@ -18,6 +20,7 @@ import {
   textStats,
 } from './markdown-article';
 import { articleToMarkdown } from './article-export';
+import { insertLocalImages, readImageSlots } from './article-images';
 import { saveBackup } from './schedule-store';
 
 const EDITOR_SELECTOR = '[data-testid="composer"]';
@@ -41,8 +44,14 @@ const COPY = {
     collapse: '收起',
     expand: '展开',
     converted: '已按 Markdown 排版 · ⌘Z 撤销',
+    convertedWithImages: (n: number) => `已排版 · ${n} 张本地图片待插入`,
     imported: '已导入',
     importFailed: '导入失败',
+    insertImages: (n: number) => `插入图片（${n}）`,
+    imageInserting: '正在插入图片…',
+    imageInserted: (n: number) => `已插入 ${n} 张图片`,
+    imageInsertedLeft: (n: number, left: number) => `已插入 ${n} 张，还剩 ${left} 张待插入`,
+    imageInsertFailed: '图片插入失败，可手动插入或撤销',
   },
   en: {
     outline: 'Outline',
@@ -55,8 +64,15 @@ const COPY = {
     collapse: 'Collapse',
     expand: 'Expand',
     converted: 'Formatted from Markdown · ⌘Z to undo',
+    convertedWithImages: (n: number) => `Formatted · ${n} local image${n > 1 ? 's' : ''} to insert`,
     imported: 'Imported',
     importFailed: 'Import failed',
+    insertImages: (n: number) => `Insert images (${n})`,
+    imageInserting: 'Inserting images…',
+    imageInserted: (n: number) => `Inserted ${n} image${n > 1 ? 's' : ''}`,
+    imageInsertedLeft: (n: number, left: number) =>
+      `Inserted ${n}; ${left} still to insert`,
+    imageInsertFailed: 'Image insert failed; insert manually or undo',
   },
 } as const;
 
@@ -119,6 +135,12 @@ function ensureArticleStyles(): void {
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font: inherit;
     }
     #${PANEL_ID} li.fs-ap-l2 button { padding-left: 18px; color: rgba(127, 127, 127, 1); }
+    #${PANEL_ID} .fs-ap-image-row { padding: 0 6px 6px; }
+    #${PANEL_ID} .fs-ap-image-row button {
+      display: flex; align-items: center; justify-content: flex-start; gap: 6px;
+      width: 100%; height: auto; padding: 6px 8px; border-radius: 8px; font: inherit;
+    }
+    #${PANEL_ID} .fs-ap-image-row button:hover { background: rgba(127, 127, 127, 0.18); }
     #${PANEL_ID}.is-collapsed ol { display: none; }
     #${TOAST_ID} {
       position: fixed; left: 50%; bottom: 24px; z-index: 40; transform: translateX(-50%);
@@ -137,6 +159,7 @@ const ICONS = {
   // lucide copy（ISC License）
   copy: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`,
   import: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></svg>`,
+  image: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>`,
   down: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>`,
   up: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 15-6-6-6 6"/></svg>`,
 };
@@ -213,7 +236,7 @@ export function createArticleHelper(deps: ArticleHelperDeps) {
     (editorEl as HTMLElement).focus();
   }
 
-  function convertAndPaste(editorEl: Element, markdown: string): void {
+  function convertAndPaste(editorEl: Element, markdown: string): number {
     const result = markdownToArticle(markdown);
     if (result.html) pasteHtml(editorEl, result.html, result.text);
     // 等 X 把这次粘贴提交完再动焦点：粘贴还没渲染时就让编辑器失焦，它会拿粘贴前的内容覆盖回去
@@ -221,6 +244,7 @@ export function createArticleHelper(deps: ArticleHelperDeps) {
       const title = result.title;
       setTimeout(() => fillTitle(title, editorEl), 300);
     }
+    return result.images.length;
   }
 
   function onPaste(event: ClipboardEvent): void {
@@ -236,8 +260,8 @@ export function createArticleHelper(deps: ArticleHelperDeps) {
     if (!looksLikeMarkdown(text) || (html && htmlHasStructure(html))) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    convertAndPaste(editorEl, text);
-    toast(copy().converted);
+    const imageCount = convertAndPaste(editorEl, text);
+    toast(imageCount > 0 ? copy().convertedWithImages(imageCount) : copy().converted);
     scheduleRender();
   }
 
@@ -294,13 +318,40 @@ export function createArticleHelper(deps: ArticleHelperDeps) {
             );
             await new Promise((resolve) => setTimeout(resolve, 60));
           }
-          convertAndPaste(editorEl, text);
-          toast(copy().imported);
+          const imageCount = convertAndPaste(editorEl, text);
+          toast(imageCount > 0 ? copy().convertedWithImages(imageCount) : copy().imported);
           scheduleRender();
         })
         .catch(() => toast(copy().importFailed));
     });
     input.click();
+  }
+
+  /** 面板上的「插入图片（N）」：选本地图片文件，再逐张插到占位段。 */
+  function insertImagesFromPicker(): void {
+    const editorEl = editor() as HTMLElement | null;
+    if (!editorEl) return;
+    if (readImageSlots(editorEl).length === 0) return;
+    const picker = document.createElement('input');
+    picker.type = 'file';
+    picker.accept = 'image/*';
+    picker.multiple = true;
+    picker.addEventListener('change', () => {
+      const files = [...(picker.files ?? [])];
+      if (files.length > 0) void runImageInsert(editorEl, files);
+    });
+    picker.click();
+  }
+
+  async function runImageInsert(editorEl: HTMLElement, files: File[]): Promise<void> {
+    const slots = readImageSlots(editorEl);
+    if (slots.length === 0) return;
+    toast(copy().imageInserting);
+    const result = await insertLocalImages({ host: editorEl, files, slots }).catch(() => null);
+    if (!result || result.inserted === 0) toast(copy().imageInsertFailed);
+    else if (result.remaining > 0) toast(copy().imageInsertedLeft(result.inserted, result.remaining));
+    else toast(copy().imageInserted(result.inserted));
+    scheduleRender();
   }
 
   function themeColors(panel: HTMLElement): void {
@@ -345,6 +396,7 @@ export function createArticleHelper(deps: ArticleHelperDeps) {
     panel.classList.toggle('is-collapsed', collapsed);
     const stats = textStats(editorText(editorEl));
     const outline = readOutline(editorEl);
+    const imageSlots = readImageSlots(editorEl);
 
     const head = document.createElement('div');
     head.className = 'fs-ap-head';
@@ -396,6 +448,22 @@ export function createArticleHelper(deps: ArticleHelperDeps) {
       });
       li.append(button);
       list.append(li);
+    }
+    if (imageSlots.length > 0) {
+      const row = document.createElement('div');
+      row.className = 'fs-ap-image-row';
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.title = c.insertImages(imageSlots.length);
+      button.setAttribute('aria-label', c.insertImages(imageSlots.length));
+      button.innerHTML = ICONS.image;
+      button.append(Object.assign(document.createElement('span'), {
+        textContent: c.insertImages(imageSlots.length),
+      }));
+      button.addEventListener('click', insertImagesFromPicker);
+      row.append(button);
+      panel.replaceChildren(head, row, list);
+      return;
     }
     panel.replaceChildren(head, list);
   }

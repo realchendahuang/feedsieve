@@ -10,7 +10,9 @@
  * - 开头的 `# 标题` 或 frontmatter 的 `title:` → 文章标题（单独返回，填进标题框）
  * - 代码块 → 引用块，逐行保留缩进
  * - 分隔线 → `———` 段落；表格 → 表头加粗、每行一段，列之间用「 | 」
- * - 图片 → 指向图片地址的链接（X 不收外链图片，要在编辑器里手动插入）
+ * - 网络图片（http/https）→ 指向图片地址的链接（X 不收外链图片，编辑器里手动插入）
+ * - 本地图片（相对路径 / Obsidian 嵌入）→ 占位段「🖼 图片 N：路径」，由文章面板的
+ *   「插入图片」选好文件后调用 X 编辑器自己的上传入口替换成图片对象
  * 思路参考 xPoster（MIT）的转换表。
  */
 
@@ -19,7 +21,44 @@ export interface ArticleConversion {
   html: string;
   /** 转换后正文的纯文本（统计字数用） */
   text: string;
+  /** 正文里没法直接变成链接的本地图片（相对路径 / Obsidian 嵌入），按出现顺序 */
+  images: ArticleImage[];
 }
+
+/** 本地图片引用：Markdown 里没有可直接打开的地址，要用户选文件后走 X 的上传入口。 */
+export interface ArticleImage {
+  /** 1 起的占位编号，与正文里的占位文字一致 */
+  index: number;
+  /** Markdown 里写的原始路径（可能带目录、空格） */
+  src: string;
+  /** 图片语法里的 alt / 别名（空串表示没有） */
+  alt: string;
+}
+
+/** 正文里本地图片的占位文字（用户选图前先放在正文里，选中后替换成图片对象）。 */
+export function imagePlaceholder(index: number, src: string, alt = ''): string {
+  const suffix = alt.trim() ? ` · ${alt.trim()}` : '';
+  return `🖼 图片 ${index}：${src}${suffix}`;
+}
+
+export interface ParsedImagePlaceholder {
+  index: number;
+  src: string;
+  /** 文件名（匹配用户选择的图片用） */
+  name: string;
+}
+
+/** 从一段正文里认出占位文字（面板据此显示「插入图片」并匹配文件）。 */
+export function parseImagePlaceholder(text: string): ParsedImagePlaceholder | null {
+  const match = /^🖼 图片 (\d+)：(.+?)(?: · .*)?$/u.exec(text.trim());
+  if (!match) return null;
+  const src = match[2]!.trim();
+  const name = src.split(/[\\/]/).pop() ?? src;
+  return { index: Number(match[1]), src, name };
+}
+
+/** 本地图片文件扩展名（Obsidian 的 ![[...]] 只有这些才算图片，笔记嵌入保持原样）。 */
+const IMAGE_FILE_RE = /\.(?:png|jpe?g|gif|webp|avif|bmp|svg)$/i;
 
 const CJK = /[\u2e80-\u9fff\uf900-\ufaff\uff00-\uffef\u3000-\u303f]/;
 
@@ -36,8 +75,16 @@ function safeUrl(raw: string): string | null {
   return /^(https?:\/\/|mailto:)/i.test(url) ? url : null;
 }
 
-/** 行内：转义 → 代码 → 图片 → 链接 → 加粗 / 斜体 / 删除线。 */
-export function inlineToHtml(source: string): string {
+/**
+ * 行内：转义 → 代码 → 图片 → 链接 → 加粗 / 斜体 / 删除线。
+ *
+ * `onLocalImage` 传了才收集本地图片（相对路径、Obsidian 嵌入）：返回占位文字
+ * 交给正文；不传时保持旧行为（纯文本 🖼 前缀），给标题等不需要收集的位置用。
+ */
+export function inlineToHtml(
+  source: string,
+  onLocalImage?: (alt: string, src: string) => string,
+): string {
   const slots: string[] = [];
   const hold = (html: string): string => {
     slots.push(html);
@@ -46,17 +93,29 @@ export function inlineToHtml(source: string): string {
   let text = source.replace(/[\ue000\ue001]/g, '');
   // 行内代码：X 没有等宽样式，保留原文、去掉反引号，里面的 * _ 不当格式
   text = text.replace(/`([^`]+)`/g, (_m, code: string) => hold(escapeHtml(code)));
-  // 图片
+  // 图片：网络图片保留外链；相对路径 / 本地文件走占位符，等用户选图后插入
   text = text.replace(
     /!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g,
     (_m, alt: string, src: string) => {
       const url = safeUrl(src);
-      const label = `🖼 ${alt.trim() || '图片'}`;
+      if (url) {
+        const label = `🖼 ${alt.trim() || '图片'}`;
+        return hold(`<a href="${escapeHtml(url)}">${escapeHtml(label)}</a>`);
+      }
       return hold(
-        url ? `<a href="${escapeHtml(url)}">${escapeHtml(label)}</a>` : escapeHtml(label),
+        onLocalImage ? escapeHtml(onLocalImage(alt, src)) : escapeHtml(`🖼 ${alt.trim() || '图片'}`),
       );
     },
   );
+  // Obsidian 嵌入：![[图片.png]] / ![[图片.png|别名]]；非图片嵌入（笔记）原样保留
+  text = text.replace(/!\[\[([^\]]+)\]\]/g, (_m, raw: string) => {
+    const [target, alias] = raw.split('|');
+    const src = (target ?? '').trim();
+    if (!IMAGE_FILE_RE.test(src)) return _m;
+    const alt = (alias ?? '').trim();
+    if (onLocalImage) return hold(escapeHtml(onLocalImage(alt, src)));
+    return hold(escapeHtml(`🖼 ${alt || src.split(/[\\/]/).pop() || '图片'}`));
+  });
   // 链接
   text = text.replace(
     /\[([^\]]+)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g,
@@ -115,10 +174,13 @@ function joinLines(lines: string[]): string {
   return out;
 }
 
-function paragraph(lines: string[]): string {
+function paragraph(
+  lines: string[],
+  onLocalImage?: (alt: string, src: string) => string,
+): string {
   return joinLines(lines)
     .split('\n')
-    .map((part) => inlineToHtml(part))
+    .map((part) => inlineToHtml(part, onLocalImage))
     .join('<br>');
 }
 
@@ -155,6 +217,11 @@ export function markdownToArticle(source: string): ArticleConversion {
   let title = front.title;
   const lines = front.rest;
   const blocks: string[] = [];
+  const images: ArticleImage[] = [];
+  const collectImage = (alt: string, src: string): string => {
+    images.push({ index: images.length + 1, src: src.trim(), alt: alt.trim() });
+    return imagePlaceholder(images.length, src.trim(), alt);
+  };
   let i = 0;
   let sawContent = false;
 
@@ -204,7 +271,7 @@ export function markdownToArticle(source: string): ArticleConversion {
         title = plain(inlineToHtml(text)).trim();
         continue;
       }
-      const inner = inlineToHtml(text);
+      const inner = inlineToHtml(text, collectImage);
       blocks.push(
         level <= 2
           ? `<h1>${inner}</h1>`
@@ -232,7 +299,7 @@ export function markdownToArticle(source: string): ArticleConversion {
         i++;
       }
       for (const group of groups)
-        if (group.length) blocks.push(`<blockquote>${paragraph(group)}</blockquote>`);
+        if (group.length) blocks.push(`<blockquote>${paragraph(group, collectImage)}</blockquote>`);
       sawContent = true;
       continue;
     }
@@ -258,7 +325,7 @@ export function markdownToArticle(source: string): ArticleConversion {
       }
       const tag = ordered ? 'ol' : 'ul';
       blocks.push(
-        `<${tag}>${items.map((item) => `<li>${paragraph(item)}</li>`).join('')}</${tag}>`,
+        `<${tag}>${items.map((item) => `<li>${paragraph(item, collectImage)}</li>`).join('')}</${tag}>`,
       );
       sawContent = true;
       continue;
@@ -267,9 +334,11 @@ export function markdownToArticle(source: string): ArticleConversion {
     if (line.includes('|') && TABLE_SEP.test(lines[i + 1] ?? '')) {
       const head = splitRow(line);
       i += 2;
-      blocks.push(`<p><strong>${head.map(inlineToHtml).join(' | ')}</strong></p>`);
+      blocks.push(`<p><strong>${head.map((cell) => inlineToHtml(cell, collectImage)).join(' | ')}</strong></p>`);
       while (i < lines.length && lines[i]!.includes('|') && !isBlank(lines[i])) {
-        blocks.push(`<p>${splitRow(lines[i]!).map(inlineToHtml).join(' | ')}</p>`);
+        blocks.push(
+          `<p>${splitRow(lines[i]!).map((cell) => inlineToHtml(cell, collectImage)).join(' | ')}</p>`,
+        );
         i++;
       }
       sawContent = true;
@@ -285,7 +354,7 @@ export function markdownToArticle(source: string): ArticleConversion {
       para.push(lines[i]!);
       i++;
     }
-    blocks.push(`<p>${paragraph(para)}</p>`);
+    blocks.push(`<p>${paragraph(para, collectImage)}</p>`);
     sawContent = true;
   }
 
@@ -294,6 +363,7 @@ export function markdownToArticle(source: string): ArticleConversion {
     title: title && title.length > 0 ? title.slice(0, 100) : null,
     html,
     text: blocks.map(plain).join('\n'),
+    images,
   };
 }
 
