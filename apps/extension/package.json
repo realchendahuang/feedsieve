@@ -1,6 +1,6 @@
 {
   "name": "@feedsieve/extension",
-  "version": "0.16.2",
+  "version": "0.17.0",
   "private": true,
   "type": "module",
   "scripts": {

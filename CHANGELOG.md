@@ -5,7 +5,12 @@
 - 每个版本的详细工程记录见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)。
 - 二进制产物见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)；正式用户请从 [Chrome 应用商店](https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph)接收更新。
 
-## [Unreleased]
+## [0.17.0] — 2026-11-06
+
+### 新增
+
+- 文章编辑器支持把 Markdown 里的本地图片插成真正的图片对象：相对路径（`![说明](images/foo.png)`）和 Obsidian 嵌入（`![[图片.png]]`）先变成「🖼 图片 N：路径」占位段，右下角面板出现「插入图片（N）」；选好本地文件后按文件名配对，走 X 自己的媒体上传入口把图片插回占位段的位置，再清掉占位文字。网络图片仍保持原来的外链链接。
+- 一次点选多张也可以，但**一次只插一张**：Draft.js 连续插入会丢图或并段，插完面板保留剩余数量，再点一次继续；插坏了可以 ⌘Z 撤销。
 
 ### 修复
 
@@ -604,7 +609,8 @@
 - 首个可用版本：黄框标注（内置名单 + 启发式，带理由）、顺手拉黑、待拉黑列表、一键批量拉黑（持久队列）、一键撤销、本地统计。
 - WXT + React 19 + MV3 最小权限架构；X DOM fixtures 锁定 reader→detector 契约；95 个单元测试；pre-push 本地质量门禁。
 
-[Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.16.2...HEAD
+[Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.17.0...HEAD
+[0.17.0]: https://github.com/realchendahuang/feedsieve/compare/v0.16.2...v0.17.0
 [0.16.2]: https://github.com/realchendahuang/feedsieve/compare/v0.16.1...v0.16.2
 [0.16.1]: https://github.com/realchendahuang/feedsieve/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/realchendahuang/feedsieve/compare/v0.15.0...v0.16.0
