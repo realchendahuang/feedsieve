@@ -5,6 +5,21 @@
 - 每个版本的详细工程记录见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)。
 - 二进制产物见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)；正式用户请从 [Chrome 应用商店](https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph)接收更新。
 
+## [0.17.1] — 2026-11-06
+
+### 修复
+
+- **「界面净化 › 隐藏付费推广」不再误伤视频和 GIF（0.14.0 以来的事故）**：之前拿 X 的 `data-testid="placementTracking"` 当广告判据，但 X 也用同一个标记包推文里的视频 / GIF 播放器，于是开启该项后时间线和详情页里的视频、GIF 全变成空白框（头像和静态图片正常，容易被当成"图片加载不出来"）。现在改成认 X 贴在作者名那一行的「推广 / Promoted」标签，命中后整条帖子隐藏；昵称、正文、话题里出现同样的字不算。
+- 详情页的主帖不做隐藏：即使它本身是推广帖也照常显示，否则整页会被清空；只隐藏时间线里的推广帖。
+- 顺手收紧同类的两处过宽选择器：
+  - 「隐藏趋势」只在右侧栏里找趋势，不再上溯到 `section[role=region]`——探索页主栏有一模一样的结构，之前会把主页内容整块藏掉。
+  - 推广判定排除下拉菜单里的「推广」文案，避免把 X 的菜单操作项当成帖子的推广标签。
+
+### 工程
+
+- 新增 `isPromotedArticle()` 与 4 条单测，覆盖推广标签、昵称 / 正文 / 话题 / 菜单同名文字、普通视频帖、详情页主帖、探索页主栏不被藏。
+- `clean-ui.ts` 文件头补了一条规矩：隐藏任何东西之前先确认 X 的那个 `data-testid` 是不是只服务一个用途，认不准就改成认文案再打自己的标记。
+
 ## [0.17.0] — 2026-11-06
 
 ### 新增
@@ -611,6 +626,7 @@
 
 [Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.17.0...HEAD
 [0.17.0]: https://github.com/realchendahuang/feedsieve/compare/v0.16.2...v0.17.0
+[0.17.1]: https://github.com/realchendahuang/feedsieve/compare/v0.17.0...v0.17.1
 [0.16.2]: https://github.com/realchendahuang/feedsieve/compare/v0.16.1...v0.16.2
 [0.16.1]: https://github.com/realchendahuang/feedsieve/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/realchendahuang/feedsieve/compare/v0.15.0...v0.16.0
