@@ -80,7 +80,7 @@ export const HOME_TIMELINE_HTML = `
       </div>
     </div>
     <div data-testid="tweetText">
-      应该没人比我玩的更开了吧🍒我福不黑不信你看
+      应该没人比我玩的更开了吧🍒主页自取福利
       <a href="https://t.co/xyz789">example-link.top</a>
     </div>
   </article>

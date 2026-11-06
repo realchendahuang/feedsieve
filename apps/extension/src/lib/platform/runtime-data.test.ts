@@ -174,13 +174,13 @@ it.each([
     expect(effective.subscribedCategoryIds).toEqual(expected);
     const rules = createKeywordHeuristics(effective, catalog);
     if (expected.length) {
-      const match = rules.find((r) => r.id === 'keyword:official:adult-fu-not-black');
+      const match = rules.find((r) => r.id === 'keyword:official:adult-profile-collect-benefits');
       expect(
         match?.check({
           handle: 'SenaBeenelsh',
-          text: '应该没人比我👆玩的开了吧🍇🛶我福不黑不信你看\n1789266318520',
+          text: '应该没人比我👆玩的开了吧🍇🛶主页自取福利\n1789266318520',
         }),
-      ).toContain('我福不黑');
+      ).toContain('主页自取福利');
     } else expect(rules).toHaveLength(0);
     expect(api.runtime.sendMessage).not.toHaveBeenCalled();
   },

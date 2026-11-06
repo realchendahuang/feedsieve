@@ -1,0 +1,558 @@
+{
+  "schema_version": 1,
+  "retired_at": "2026-11-06",
+  "reason": "按线上误标反馈收敛默认黄推词库：命中高但被用户点「误标？」比例高的单字/通用词下线，避免正常讨论被标黄；词表保留在本文件，后续可按需恢复。",
+  "window": {
+    "hits_from": "2026-10-31",
+    "rescues_from": "2026-10-31",
+    "rescues_until": "2026-11-06"
+  },
+  "criteria": {
+    "noisy": "hits >= 100 且 误标票/命中次数 >= 0.25（窗口内整体误标率约 0.226）",
+    "high_volume": "误标票 >= 400（绝对噪音量最大的词，即使比例不算最高）",
+    "stale": "我福不黑：真实黄推已少见，命中主要来自提醒/讨论贴，按维护者判断下线",
+    "safety_keep": "含「幼」的规则一律保留"
+  },
+  "totals": {
+    "hits_window": 63335,
+    "rescues_window": 17226
+  },
+  "rules": [
+    {
+      "id": "adult-gray-traffic-9c3250ff63e15e91",
+      "phrase": "写真",
+      "hits": 5840,
+      "rescues": 1139,
+      "ratio": 0.195,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-87809878bddd9ccd",
+      "phrase": "强奸",
+      "hits": 3194,
+      "rescues": 1072,
+      "ratio": 0.336,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-fa5c4a73a63a1799",
+      "phrase": "做爱",
+      "hits": 4138,
+      "rescues": 1051,
+      "ratio": 0.254,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-3e58aa8710ba1d3a",
+      "phrase": "出轨",
+      "hits": 2386,
+      "rescues": 737,
+      "ratio": 0.309,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-852601d7b6b71ed7",
+      "phrase": "鸡巴",
+      "hits": 2406,
+      "rescues": 690,
+      "ratio": 0.287,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-1574b2157a28a423",
+      "phrase": "阿姨",
+      "hits": 2344,
+      "rescues": 674,
+      "ratio": 0.288,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-522d65c98381d854",
+      "phrase": "流出",
+      "hits": 2165,
+      "rescues": 600,
+      "ratio": 0.277,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-24d894eab18fc851",
+      "phrase": "高潮",
+      "hits": 2045,
+      "rescues": 520,
+      "ratio": 0.254,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-d947cc2e0d9621f8",
+      "phrase": "性感",
+      "hits": 3145,
+      "rescues": 484,
+      "ratio": 0.154,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-f87413e217d7f657",
+      "phrase": "我干",
+      "hits": 1510,
+      "rescues": 472,
+      "ratio": 0.313,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-49b57e52e99ff914",
+      "phrase": "约炮",
+      "hits": 2344,
+      "rescues": 441,
+      "ratio": 0.188,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-99003c9c9a19db00",
+      "phrase": "奶子",
+      "hits": 2764,
+      "rescues": 437,
+      "ratio": 0.158,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-f810641ae3b132e4",
+      "phrase": "内射",
+      "hits": 1720,
+      "rescues": 422,
+      "ratio": 0.245,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-e998241d6861ff3f",
+      "phrase": "性爱",
+      "hits": 2056,
+      "rescues": 403,
+      "ratio": 0.196,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-3cc114b23cde6734",
+      "phrase": "阉割",
+      "hits": 993,
+      "rescues": 376,
+      "ratio": 0.379,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-a4c8e25ccf1e31cc",
+      "phrase": "性欲",
+      "hits": 896,
+      "rescues": 346,
+      "ratio": 0.386,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-29845368f0649b29",
+      "phrase": "性交",
+      "hits": 973,
+      "rescues": 317,
+      "ratio": 0.326,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-c01dc884cf268927",
+      "phrase": "少妇",
+      "hits": 976,
+      "rescues": 305,
+      "ratio": 0.312,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-bb70beadeb7db709",
+      "phrase": "偷拍",
+      "hits": 778,
+      "rescues": 302,
+      "ratio": 0.388,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-d25d3ac64c911dfc",
+      "phrase": "屁眼",
+      "hits": 1033,
+      "rescues": 302,
+      "ratio": 0.292,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-c46177f4680a1e88",
+      "phrase": "胸部",
+      "hits": 1188,
+      "rescues": 300,
+      "ratio": 0.253,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-055dc1f10b45bac7",
+      "phrase": "妓女",
+      "hits": 989,
+      "rescues": 297,
+      "ratio": 0.3,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-6339d66a1807b2bf",
+      "phrase": "自慰",
+      "hits": 1071,
+      "rescues": 294,
+      "ratio": 0.275,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-6f424b45cca85a7f",
+      "phrase": "快感",
+      "hits": 759,
+      "rescues": 262,
+      "ratio": 0.345,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-16aa401ba627ec6a",
+      "phrase": "卖淫",
+      "hits": 946,
+      "rescues": 254,
+      "ratio": 0.268,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-edf0dcf51e4db76f",
+      "phrase": "伦理",
+      "hits": 856,
+      "rescues": 252,
+      "ratio": 0.294,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-7b2fede091f61a1f",
+      "phrase": "操我",
+      "hits": 586,
+      "rescues": 242,
+      "ratio": 0.413,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-577392c2680a4c10",
+      "phrase": "被干",
+      "hits": 855,
+      "rescues": 220,
+      "ratio": 0.257,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-3ac4373310014eeb",
+      "phrase": "不穿",
+      "hits": 827,
+      "rescues": 219,
+      "ratio": 0.265,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-72453fea93a7c582",
+      "phrase": "赤裸",
+      "hits": 441,
+      "rescues": 213,
+      "ratio": 0.483,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-7d0737df3df13576",
+      "phrase": "肉体",
+      "hits": 735,
+      "rescues": 192,
+      "ratio": 0.261,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-188219ab6457eb39",
+      "phrase": "黄片",
+      "hits": 688,
+      "rescues": 176,
+      "ratio": 0.256,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-b30ba82cd7f05aef",
+      "phrase": "大波",
+      "hits": 454,
+      "rescues": 171,
+      "ratio": 0.377,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-23fb072c4b50ac4a",
+      "phrase": "性生活",
+      "hits": 393,
+      "rescues": 171,
+      "ratio": 0.435,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-a8a2882ea4ffe2d7",
+      "phrase": "空姐",
+      "hits": 452,
+      "rescues": 171,
+      "ratio": 0.378,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-4bcf0b2ebe42d2d3",
+      "phrase": "屄",
+      "hits": 409,
+      "rescues": 155,
+      "ratio": 0.379,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-cf4cd06c4ad7cda5",
+      "phrase": "三级",
+      "hits": 494,
+      "rescues": 151,
+      "ratio": 0.306,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-c72549ca90843152",
+      "phrase": "操逼",
+      "hits": 495,
+      "rescues": 141,
+      "ratio": 0.285,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-dc4156e0b24de172",
+      "phrase": "炮友",
+      "hits": 460,
+      "rescues": 139,
+      "ratio": 0.302,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-65aa864b49421410",
+      "phrase": "精子",
+      "hits": 220,
+      "rescues": 139,
+      "ratio": 0.632,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-52ae1b8b2f9c9aa4",
+      "phrase": "猥亵",
+      "hits": 242,
+      "rescues": 120,
+      "ratio": 0.496,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-47c5ddc3d3c4e353",
+      "phrase": "脱裤",
+      "hits": 298,
+      "rescues": 120,
+      "ratio": 0.403,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-eaf79e41621e12f1",
+      "phrase": "体位",
+      "hits": 348,
+      "rescues": 117,
+      "ratio": 0.336,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-0a9795a17550af38",
+      "phrase": "拔出来",
+      "hits": 209,
+      "rescues": 103,
+      "ratio": 0.493,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-401acab9c5b77481",
+      "phrase": "生殖器",
+      "hits": 264,
+      "rescues": 103,
+      "ratio": 0.39,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-e1a5f8eba0b4f3ac",
+      "phrase": "性行为",
+      "hits": 341,
+      "rescues": 102,
+      "ratio": 0.299,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-2eeed1adb3cc4cba",
+      "phrase": "脱衣",
+      "hits": 247,
+      "rescues": 98,
+      "ratio": 0.397,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-fu-not-black",
+      "phrase": "我福不黑",
+      "hits": 1110,
+      "rescues": 89,
+      "ratio": 0.08,
+      "reason": "stale"
+    },
+    {
+      "id": "adult-gray-traffic-eefca5d7436ce86b",
+      "phrase": "轮奸",
+      "hits": 219,
+      "rescues": 86,
+      "ratio": 0.393,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-1079799056cac56a",
+      "phrase": "春药",
+      "hits": 150,
+      "rescues": 81,
+      "ratio": 0.54,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-eea4eb329dcf5044",
+      "phrase": "猛男",
+      "hits": 278,
+      "rescues": 80,
+      "ratio": 0.288,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-418010303ffa9987",
+      "phrase": "脱光",
+      "hits": 144,
+      "rescues": 79,
+      "ratio": 0.549,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-444485725ede9d20",
+      "phrase": "情色",
+      "hits": 289,
+      "rescues": 78,
+      "ratio": 0.27,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-fcd669779a4250c7",
+      "phrase": "火辣",
+      "hits": 190,
+      "rescues": 76,
+      "ratio": 0.4,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-2334ab3172ae72cb",
+      "phrase": "a片",
+      "hits": 193,
+      "rescues": 74,
+      "ratio": 0.383,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-825da03554eac018",
+      "phrase": "有码",
+      "hits": 119,
+      "rescues": 70,
+      "ratio": 0.588,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-0a291ce4b79ee76e",
+      "phrase": "龟头",
+      "hits": 126,
+      "rescues": 70,
+      "ratio": 0.556,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-538002c38aeb598d",
+      "phrase": "裸露",
+      "hits": 238,
+      "rescues": 68,
+      "ratio": 0.286,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-12b10746656988af",
+      "phrase": "色情网站",
+      "hits": 212,
+      "rescues": 57,
+      "ratio": 0.269,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-6bd0d3b8c8a477bc",
+      "phrase": "深喉",
+      "hits": 205,
+      "rescues": 52,
+      "ratio": 0.254,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-d5373ec8bce92744",
+      "phrase": "偷窥",
+      "hits": 165,
+      "rescues": 50,
+      "ratio": 0.303,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-b2c42d7b5cca0a46",
+      "phrase": "嫖客",
+      "hits": 138,
+      "rescues": 49,
+      "ratio": 0.355,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-aa289d65be1a57f5",
+      "phrase": "肛交",
+      "hits": 136,
+      "rescues": 39,
+      "ratio": 0.287,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-bbe562b9e3a8ee85",
+      "phrase": "各种姿势",
+      "hits": 121,
+      "rescues": 31,
+      "ratio": 0.256,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-54905ae44e4ee7a7",
+      "phrase": "色即是空",
+      "hits": 120,
+      "rescues": 31,
+      "ratio": 0.258,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-337c934caf19e43a",
+      "phrase": "舔脚",
+      "hits": 109,
+      "rescues": 29,
+      "ratio": 0.266,
+      "reason": "noisy"
+    },
+    {
+      "id": "adult-gray-traffic-1f29ce5c7db01948",
+      "phrase": "口爆",
+      "hits": 100,
+      "rescues": 25,
+      "ratio": 0.25,
+      "reason": "noisy"
+    }
+  ]
+}

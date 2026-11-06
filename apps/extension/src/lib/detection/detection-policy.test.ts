@@ -31,7 +31,7 @@ describe('扩展检测安全政策', () => {
     );
     expect(
       classifyDetection({
-        detection: { ...detection('heuristic'), ruleId: 'keyword:official:adult-fu-not-black' },
+        detection: { ...detection('heuristic'), ruleId: 'keyword:official:adult-profile-collect-benefits' },
         strength: 'standard',
       }),
     ).toBe('review');

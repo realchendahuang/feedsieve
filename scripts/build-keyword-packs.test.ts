@@ -104,7 +104,7 @@ describe('pinyinVariants (拼音代字家族展开)', () => {
     const catalog = build(source);
     const ids = catalog.packs.flatMap((p) => p.rules.map((r) => r.id));
     const variantIds = ids.filter((id) => /-py\d+$/.test(id));
-    expect(variantIds.length).toBeGreaterThan(100);
+    expect(variantIds.length).toBeGreaterThan(50);
     expect(new Set(ids).size).toBe(ids.length);
     // 骚货 的三形态变体在产物里（sao货 / sǎo货 / sa0货）
     for (const phrase of ['sao货', 'sǎo货', 'sa0货']) {

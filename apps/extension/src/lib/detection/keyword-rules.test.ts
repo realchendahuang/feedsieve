@@ -42,11 +42,11 @@ describe('本地关键词规则', () => {
   it('默认启用的黄推引流词库会命中目标成人引流样本', async () => {
     const settings = await getKeywordRuleSettings();
     const rule = createKeywordHeuristics(settings).find(
-      (candidate) => candidate.id === 'keyword:official:adult-fu-not-black',
+      (candidate) => candidate.id === 'keyword:official:adult-profile-collect-benefits',
     );
     expect(
-      rule?.check({ handle: 'bait', text: '应该没人比我玩的开了吧 🤚 😊 我福不黑不信你看' }),
-    ).toContain('我福不黑');
+      rule?.check({ handle: 'bait', text: '应该没人比我玩的开了吧 🤚 😊 主页自取福利' }),
+    ).toContain('主页自取福利');
     expect(activeKeywordRules(settings)).toHaveLength(OFFICIAL_RULE_COUNT);
   });
 
@@ -102,16 +102,16 @@ describe('本地关键词规则', () => {
 
   it('用户移除官方短语后立刻不再生成该规则，但可恢复', async () => {
     await setOfficialKeywordCategorySubscribed('adult_gray_traffic', true);
-    await setOfficialKeywordRuleEnabled('adult-fu-not-black', false);
+    await setOfficialKeywordRuleEnabled('adult-profile-collect-benefits', false);
     let settings = await getKeywordRuleSettings();
     expect(
-      createKeywordHeuristics(settings).some((rule) => rule.id.includes('adult-fu-not-black')),
+      createKeywordHeuristics(settings).some((rule) => rule.id.includes('adult-profile-collect-benefits')),
     ).toBe(false);
 
-    await setOfficialKeywordRuleEnabled('adult-fu-not-black', true);
+    await setOfficialKeywordRuleEnabled('adult-profile-collect-benefits', true);
     settings = await getKeywordRuleSettings();
     expect(
-      createKeywordHeuristics(settings).some((rule) => rule.id.includes('adult-fu-not-black')),
+      createKeywordHeuristics(settings).some((rule) => rule.id.includes('adult-profile-collect-benefits')),
     ).toBe(true);
   });
 
@@ -229,46 +229,46 @@ describe('本地关键词规则', () => {
   it('精确短语也会忽略用于规避的标点、符号和空格', async () => {
     const settings = await getKeywordRuleSettings();
     const rule = createKeywordHeuristics(settings).find(
-      (candidate) => candidate.id === 'keyword:official:adult-fu-not-black',
+      (candidate) => candidate.id === 'keyword:official:adult-profile-collect-benefits',
     );
-    expect(rule?.check({ handle: 'bait', text: '我·福 🔥 不 黑，不信你看' })).toContain('我福不黑');
+    expect(rule?.check({ handle: 'bait', text: '主·页 🔥 自 取 福 利' })).toContain('主页自取福利');
   });
 
   it('字间拆入不可见格式字符（U+2060 词连接符等）仍命中（真机样本）', async () => {
     const settings = await getKeywordRuleSettings();
     const rule = createKeywordHeuristics(settings).find(
-      (candidate) => candidate.id === 'keyword:official:adult-fu-not-black',
+      (candidate) => candidate.id === 'keyword:official:adult-profile-collect-benefits',
     );
     expect(rule).toBeDefined();
     const sample = [
       '应没没人比我玩的开了吧🍀🙉',
-      '我\u2060\u200C\u200D福\u200C\u2060不\u2060黑\u200D不信\u200C你看',
+      '主\u2060\u200C\u200D页\u200C\u2060自\u2060取\u200D福利',
     ].join('');
-    expect(rule?.check({ handle: 'bait', text: sample })).toContain('我福不黑');
+    expect(rule?.check({ handle: 'bait', text: sample })).toContain('主页自取福利');
   });
 
   it('变体矩阵：不可见附加符/填充符/繁体/部首/同形异源字均可命中', async () => {
     const settings = await getKeywordRuleSettings();
     const heuristics = createKeywordHeuristics(settings);
-    const fuRule = heuristics.find(
-      (candidate) => candidate.id === 'keyword:official:adult-fu-not-black',
+    const benefitRule = heuristics.find(
+      (candidate) => candidate.id === 'keyword:official:adult-profile-collect-benefits',
     );
     const cityRule = heuristics.find((candidate) =>
       candidate.id.includes('adult-terms-local-door'),
     );
 
     // Zalgo 组合附加符（Mn 类，NFKC 消不掉）
-    expect(fuRule?.check({ handle: 'bait', text: '我\u0301\u0316福不黑不信你看' })).toContain(
-      '我福不黑',
+    expect(benefitRule?.check({ handle: 'bait', text: '主\u0301\u0316页自取福利' })).toContain(
+      '主页自取福利',
     );
     // 韩文填充符（U+3164/115F/1160，Lo 类空白）
-    expect(fuRule?.check({ handle: 'bait', text: '我\u3164福\u115F不黑不信你看' })).toContain(
-      '我福不黑',
+    expect(benefitRule?.check({ handle: 'bait', text: '主\u3164页\u115F自取福利' })).toContain(
+      '主页自取福利',
     );
     // 繁体写法：官方简体词条要能在繁体样本上命中（opencc 映射）
     expect(
-      fuRule?.check({ handle: 'bait', text: '同城裏面誰都不信，快看我福不黑不信你看' }),
-    ).toContain('我福不黑');
+      benefitRule?.check({ handle: 'bait', text: '同城裏面誰都不信，快看我主頁自取福利' }),
+    ).toContain('主页自取福利');
     expect(cityRule?.check({ handle: 'bait', text: '同城上門服務' })).toContain('同城 + 上门');
     // CJK 补充部首替字（⻔→门 等，CJKRadicals.txt 映射）
     expect(cityRule?.check({ handle: 'bait', text: '同城上\u2ED4服務' })).toContain('同城 + 上门');

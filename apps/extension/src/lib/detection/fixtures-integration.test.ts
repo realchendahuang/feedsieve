@@ -81,7 +81,7 @@ describe('fixtures/x 生产管线联动（runDetectionPipeline）', () => {
         {
           "handle": "cndon91",
           "presentation": "review",
-          "ruleId": "keyword:official:adult-fu-not-black",
+          "ruleId": "keyword:official:adult-profile-collect-benefits",
         },
       ]
     `);
@@ -127,7 +127,7 @@ describe('fixtures/x 生产管线联动（runDetectionPipeline）', () => {
   });
 
   it('bio 通道：bio 埋官方词库短语时命中（DOM 无法提供 bio，XHR 桥独有路径）', () => {
-    const bios = new Map([['pinnedauthor', '我福不黑不信你看']]);
+    const bios = new Map([['pinnedauthor', '主页自取福利']]);
     const results = scanFixture(PROFILE_TIMELINE_HTML, bios);
     const hit = results.filter((r) => r.result.detection !== null);
     expect(hit.length).toBeGreaterThan(0);
@@ -175,7 +175,7 @@ describe('fixtures/x 生产管线联动（runDetectionPipeline）', () => {
   it('白名单一票豁免在生产管线最前：即使词库命中也放行', () => {
     const result = runPipeline({
       handle: 'pinnedauthor',
-      bio: '我福不黑不信你看',
+      bio: '主页自取福利',
     });
     // 未接 community 时无豁免；接上后必须豁免——锁生产顺序
     // 未接 community 时无豁免；接上后必须豁免——锁生产顺序
@@ -199,7 +199,7 @@ describe('fixtures/x 生产管线联动（runDetectionPipeline）', () => {
         handle: 'pinnedauthor',
         postId: '1999999999999999999',
         text: '用户仍可手动覆盖',
-        bio: '我福不黑不信你看',
+        bio: '主页自取福利',
       },
       community,
       builtinList: new Set(),
@@ -213,7 +213,7 @@ describe('fixtures/x 生产管线联动（runDetectionPipeline）', () => {
     expect(exempt.evidence).toMatchObject({
       evidencePostId: '1999999999999999999',
       tweetText: '用户仍可手动覆盖',
-      bio: '我福不黑不信你看',
+      bio: '主页自取福利',
     });
     expect(result.detection).not.toBeNull();
   });

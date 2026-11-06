@@ -157,7 +157,7 @@ export function normalizeKeywordPhrase(value: string): string {
     applyVariantMaps(value.trim())
       .normalize('NFKC') // 全角、上标、数学字母、兼容汉字在此归并
       // 零宽规避不止 200B-200D：U+2060 词连接符、U+00AD 软连字符、双向控制符等
-      // 全部是 Cf（格式字符），实战样本已被用来拆「我福不黑不信你看」，整类剥掉。
+      // 全部是 Cf（格式字符），实战样本已被用来拆「主页自取福利」这类短语，整类剥掉。
       .replace(/[\p{Cf}\u{FE00}-\u{FE0F}]/gu, ''),
   ) // NFKC 消不掉、先映射后 NFKC 可能再次产生的变体，第二轮映射补位
     // NFKC 消不下的残余组合附加符只剩 Zalgo 装饰一类，一并剥；

@@ -5,6 +5,14 @@
 - 每个版本的详细工程记录见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)。
 - 二进制产物见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)；正式用户请从 [Chrome 应用商店](https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph)接收更新。
 
+## [Unreleased]
+
+### 修复
+
+- 黄推词库按线上误标反馈收敛（词库版本 `2026.11.06.1`）：下线 67 条高误标短语，主要是「写真 / 做爱 / 强奸 / 阿姨 / 鸡巴 / 出轨 / 我干 / 约炮 / 性感 / 内射 / 性爱」这类正常讨论里也常见的单词。这批规则在 10-31～11-06 的窗口里占词库命中量约 51%、被用户点「误标？」的 62%；下线后默认词库只保留话术组合和更有指向性的短语。清单与窗口数据留档在 `community/keyword-packs/retired-2026-11-06.json`，需要时可按条恢复。
+- 「我福不黑」规则下线：真实黄推已很少用，剩余命中大多来自「提醒大家别点」的讨论贴。
+- 本次下线口径：命中 ≥100 次且误标票 ÷ 命中次数 ≥25%（窗口整体误标率约 22.6%），或误标票 ≥400 的词；含「幼」的规则不论数据一律保留。
+
 ## [0.16.2] — 2026-11-05
 
 ### 修复
@@ -596,7 +604,7 @@
 - 首个可用版本：黄框标注（内置名单 + 启发式，带理由）、顺手拉黑、待拉黑列表、一键批量拉黑（持久队列）、一键撤销、本地统计。
 - WXT + React 19 + MV3 最小权限架构；X DOM fixtures 锁定 reader→detector 契约；95 个单元测试；pre-push 本地质量门禁。
 
-[Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.16.2...HEAD
 [0.16.2]: https://github.com/realchendahuang/feedsieve/compare/v0.16.1...v0.16.2
 [0.16.1]: https://github.com/realchendahuang/feedsieve/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/realchendahuang/feedsieve/compare/v0.15.0...v0.16.0

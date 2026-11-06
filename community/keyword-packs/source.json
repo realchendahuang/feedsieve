@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "pack_version": "2026.09.13.2",
+  "pack_version": "2026.11.06.1",
   "generated_at": null,
   "packs": [
     {
@@ -57,10 +57,6 @@
         [
           "adult-gray-traffic-7fdc3e8038e87ff5",
           "adult"
-        ],
-        [
-          "adult-gray-traffic-2334ab3172ae72cb",
-          "a片"
         ],
         [
           "adult-gray-traffic-47c21198ebe6a08b",
@@ -139,10 +135,6 @@
           "一本道"
         ],
         [
-          "adult-gray-traffic-cf4cd06c4ad7cda5",
-          "三级"
-        ],
-        [
           "adult-gray-traffic-baac231fd4d244c5",
           "三级片"
         ],
@@ -157,10 +149,6 @@
         [
           "adult-gray-traffic-712eededffeca7fe",
           "下体"
-        ],
-        [
-          "adult-gray-traffic-3ac4373310014eeb",
-          "不穿"
         ],
         [
           "adult-professional-match",
@@ -271,10 +259,6 @@
           "伦图"
         ],
         [
-          "adult-gray-traffic-edf0dcf51e4db76f",
-          "伦理"
-        ],
-        [
           "adult-gray-traffic-58d42fda7ea878b6",
           "伦理大"
         ],
@@ -291,28 +275,12 @@
           "伦理电影"
         ],
         [
-          "adult-gray-traffic-eaf79e41621e12f1",
-          "体位"
-        ],
-        [
           "adult-gray-traffic-450098560762f5de",
           "体奸"
         ],
         [
-          "adult-gray-traffic-fa5c4a73a63a1799",
-          "做爱"
-        ],
-        [
-          "adult-gray-traffic-bb70beadeb7db709",
-          "偷拍"
-        ],
-        [
           "adult-gray-traffic-db8dfc5dfafaa5d7",
           "偷欢"
-        ],
-        [
-          "adult-gray-traffic-d5373ec8bce92744",
-          "偷窥"
         ],
         [
           "adult-gray-traffic-8bfa899191c7bdb7",
@@ -347,14 +315,6 @@
           "兽欲"
         ],
         [
-          "adult-gray-traffic-f810641ae3b132e4",
-          "内射"
-        ],
-        [
-          "adult-gray-traffic-9c3250ff63e15e91",
-          "写真"
-        ],
-        [
           "adult-gray-traffic-dfdb6153dcfd2040",
           "凌辱"
         ],
@@ -363,20 +323,12 @@
           "几吧"
         ],
         [
-          "adult-gray-traffic-3e58aa8710ba1d3a",
-          "出轨"
-        ],
-        [
           "adult-gray-traffic-45ce8abf119efdde",
           "前凸后翘"
         ],
         [
           "adult-gray-traffic-908e686854d1b622",
           "包二奶"
-        ],
-        [
-          "adult-gray-traffic-16aa401ba627ec6a",
-          "卖淫"
         ],
         [
           "adult-gray-traffic-008bb2f808f55639",
@@ -431,20 +383,12 @@
           "口淫"
         ],
         [
-          "adult-gray-traffic-1f29ce5c7db01948",
-          "口爆"
-        ],
-        [
           "adult-gray-traffic-bfae4fc6d2f0051a",
           "叫床"
         ],
         [
           "adult-gray-traffic-2e326ec05161bb01",
           "吃精"
-        ],
-        [
-          "adult-gray-traffic-bbe562b9e3a8ee85",
-          "各种姿势"
         ],
         {
           "id": "adult-terms-local-door",
@@ -571,10 +515,6 @@
           "大力抽送"
         ],
         [
-          "adult-gray-traffic-b30ba82cd7f05aef",
-          "大波"
-        ],
-        [
           "adult-gray-traffic-8d61a1b16fe719b9",
           "奈美"
         ],
@@ -587,20 +527,12 @@
           "女优"
         ],
         [
-          "adult-gray-traffic-99003c9c9a19db00",
-          "奶子"
-        ],
-        [
           "adult-gray-traffic-81cddbcf67e7820e",
           "奸情"
         ],
         [
           "adult-gray-traffic-c74f0538c72a56ac",
           "好嫩"
-        ],
-        [
-          "adult-gray-traffic-055dc1f10b45bac7",
-          "妓女"
         ],
         {
           "id": "adult-terms-girl-door",
@@ -626,10 +558,6 @@
         [
           "adult-gray-traffic-804416e83097e8c2",
           "嫖娼"
-        ],
-        [
-          "adult-gray-traffic-b2c42d7b5cca0a46",
-          "嫖客"
         ],
         [
           "adult-gray-traffic-0ef55bd5f2d93ba7",
@@ -713,10 +641,6 @@
           "少修正"
         ],
         [
-          "adult-gray-traffic-c01dc884cf268927",
-          "少妇"
-        ],
-        [
           "adult-young-woman-door",
           "少妇上门"
         ],
@@ -735,14 +659,6 @@
         [
           "adult-gray-traffic-00bb0b0a8bbe1e7e",
           "就去日"
-        ],
-        [
-          "adult-gray-traffic-d25d3ac64c911dfc",
-          "屁眼"
-        ],
-        [
-          "adult-gray-traffic-4bcf0b2ebe42d2d3",
-          "屄"
         ],
         [
           "adult-gray-traffic-15539ce91f0c4b67",
@@ -809,24 +725,12 @@
           "强jian"
         ],
         [
-          "adult-gray-traffic-87809878bddd9ccd",
-          "强奸"
-        ],
-        [
           "adult-gray-traffic-dfd9eb3bfaec110b",
           "强奸处女"
         ],
         [
           "adult-gray-traffic-3329afbd938ed72f",
           "强暴"
-        ],
-        [
-          "adult-gray-traffic-6f424b45cca85a7f",
-          "快感"
-        ],
-        [
-          "adult-gray-traffic-29845368f0649b29",
-          "性交"
         ],
         [
           "adult-gray-traffic-611f7690126cb0c1",
@@ -869,10 +773,6 @@
           "性息"
         ],
         [
-          "adult-gray-traffic-d947cc2e0d9621f8",
-          "性感"
-        ],
-        [
           "adult-gray-traffic-fe19186b28750ac5",
           "性感妖娆"
         ],
@@ -895,14 +795,6 @@
         [
           "adult-gray-traffic-3832f180636fb9ea",
           "性服务"
-        ],
-        [
-          "adult-gray-traffic-a4c8e25ccf1e31cc",
-          "性欲"
-        ],
-        [
-          "adult-gray-traffic-e998241d6861ff3f",
-          "性爱"
         ],
         [
           "adult-gray-traffic-bbd7ed3b0495c92a",
@@ -945,10 +837,6 @@
           "性爱贴图"
         ],
         [
-          "adult-gray-traffic-23fb072c4b50ac4a",
-          "性生活"
-        ],
-        [
           "adult-gray-traffic-e51834341b405b42",
           "性瘾"
         ],
@@ -969,10 +857,6 @@
           "性虐待"
         ],
         [
-          "adult-gray-traffic-e1a5f8eba0b4f3ac",
-          "性行为"
-        ],
-        [
           "adult-gray-traffic-decbe82fa7daaad6",
           "性饥渴"
         ],
@@ -983,10 +867,6 @@
         [
           "adult-gray-traffic-96147b64775d5222",
           "情欲"
-        ],
-        [
-          "adult-gray-traffic-444485725ede9d20",
-          "情色"
         ],
         [
           "adult-gray-traffic-8878a711b658aaa4",
@@ -1105,14 +985,6 @@
           "我就色"
         ],
         [
-          "adult-gray-traffic-f87413e217d7f657",
-          "我干"
-        ],
-        [
-          "adult-fu-not-black",
-          "我福不黑"
-        ],
-        [
           "adult-gray-traffic-8c29b68da747950d",
           "手淫"
         ],
@@ -1135,10 +1007,6 @@
         [
           "adult-gray-traffic-da302cdd5e1d0ab8",
           "拉拉香港"
-        ],
-        [
-          "adult-gray-traffic-0a9795a17550af38",
-          "拔出来"
         ],
         [
           "adult-gray-traffic-ce6b37624d6fad62",
@@ -1225,20 +1093,12 @@
           "摸胸"
         ],
         [
-          "adult-gray-traffic-7b2fede091f61a1f",
-          "操我"
-        ],
-        [
           "adult-gray-traffic-68c2efa2af765235",
           "操死"
         ],
         [
           "adult-gray-traffic-5436d35ba5d6fc07",
           "操烂"
-        ],
-        [
-          "adult-gray-traffic-c72549ca90843152",
-          "操逼"
         ],
         [
           "adult-gray-traffic-2f504a7ac4a6ce7b",
@@ -1305,10 +1165,6 @@
           "春宫"
         ],
         [
-          "adult-gray-traffic-1079799056cac56a",
-          "春药"
-        ],
-        [
           "adult-gray-traffic-b1648c034f469b16",
           "暴乳"
         ],
@@ -1323,10 +1179,6 @@
         [
           "adult-gray-traffic-fd917b446b3f15ff",
           "暴淫"
-        ],
-        [
-          "adult-gray-traffic-825da03554eac018",
-          "有码"
         ],
         [
           "adult-gray-traffic-da2024c66e61e968",
@@ -1375,10 +1227,6 @@
         [
           "adult-gray-traffic-9d9a5de705ae8bf4",
           "汤加丽"
-        ],
-        [
-          "adult-gray-traffic-522d65c98381d854",
-          "流出"
         ],
         [
           "adult-gray-traffic-58d8aeedd03daf36",
@@ -1609,10 +1457,6 @@
           "淫魔舞"
         ],
         [
-          "adult-gray-traffic-6bd0d3b8c8a477bc",
-          "深喉"
-        ],
-        [
           "adult-gray-traffic-5b6115c5e5131392",
           "滥交"
         ],
@@ -1631,14 +1475,6 @@
         [
           "adult-gray-traffic-bae9189bd39939dd",
           "激情打炮"
-        ],
-        [
-          "adult-gray-traffic-fcd669779a4250c7",
-          "火辣"
-        ],
-        [
-          "adult-gray-traffic-dc4156e0b24de172",
-          "炮友"
         ],
         [
           "adult-tap-profile-benefits",
@@ -1705,14 +1541,6 @@
           "狼友"
         ],
         [
-          "adult-gray-traffic-eea4eb329dcf5044",
-          "猛男"
-        ],
-        [
-          "adult-gray-traffic-52ae1b8b2f9c9aa4",
-          "猥亵"
-        ],
-        [
           "adult-gray-traffic-a0ed8b37f130c559",
           "玉乳"
         ],
@@ -1731,10 +1559,6 @@
         [
           "adult-gray-traffic-be3e71b52cf28504",
           "现代情色"
-        ],
-        [
-          "adult-gray-traffic-401acab9c5b77481",
-          "生殖器"
         ],
         [
           "adult-gray-traffic-861dd92b7560768a",
@@ -1846,10 +1670,6 @@
           "adult-gray-traffic-d969ce928151f1e1",
           "穴图"
         ],
-        [
-          "adult-gray-traffic-a8a2882ea4ffe2d7",
-          "空姐"
-        ],
         {
           "id": "adult-terms-flight-attendant-door",
           "phrase": "空姐 + 上门",
@@ -1868,10 +1688,6 @@
           "粉穴"
         ],
         [
-          "adult-gray-traffic-65aa864b49421410",
-          "精子"
-        ],
-        [
           "adult-gray-traffic-af45dc4f92c64c61",
           "精液"
         ],
@@ -1882,10 +1698,6 @@
         [
           "adult-gray-traffic-e3f1e193dcbd573d",
           "素质男"
-        ],
-        [
-          "adult-gray-traffic-49b57e52e99ff914",
-          "约炮"
         ],
         [
           "adult-offline-private-date",
@@ -1969,10 +1781,6 @@
           "聊性"
         ],
         [
-          "adult-gray-traffic-7d0737df3df13576",
-          "肉体"
-        ],
-        [
           "adult-gray-traffic-ecea8205f2671984",
           "肉具"
         ],
@@ -2025,10 +1833,6 @@
           "肏死"
         ],
         [
-          "adult-gray-traffic-aa289d65be1a57f5",
-          "肛交"
-        ],
-        [
           "adult-gray-traffic-3602bb450e53dc04",
           "肛洞"
         ],
@@ -2053,44 +1857,20 @@
           "胸推"
         ],
         [
-          "adult-gray-traffic-c46177f4680a1e88",
-          "胸部"
-        ],
-        [
           "adult-gray-traffic-f5582902dc11a4dd",
           "脚交"
-        ],
-        [
-          "adult-gray-traffic-418010303ffa9987",
-          "脱光"
         ],
         [
           "adult-gray-traffic-2b04070d17b9edc8",
           "脱内裤"
         ],
         [
-          "adult-gray-traffic-2eeed1adb3cc4cba",
-          "脱衣"
-        ],
-        [
-          "adult-gray-traffic-47c5ddc3d3c4e353",
-          "脱裤"
-        ],
-        [
           "adult-gray-traffic-8d8ee058ab47c84b",
           "腋毛女"
         ],
         [
-          "adult-gray-traffic-6339d66a1807b2bf",
-          "自慰"
-        ],
-        [
           "adult-gray-traffic-2ae6536f8eb235bb",
           "自拍"
-        ],
-        [
-          "adult-gray-traffic-337c934caf19e43a",
-          "舔脚"
         ],
         [
           "adult-gray-traffic-b478adebbc525e73",
@@ -2107,10 +1887,6 @@
         [
           "adult-gray-traffic-11048cdbf9d70603",
           "色区"
-        ],
-        [
-          "adult-gray-traffic-54905ae44e4ee7a7",
-          "色即是空"
         ],
         [
           "adult-gray-traffic-be6ba9c89136469d",
@@ -2143,10 +1919,6 @@
         [
           "adult-gray-traffic-b092c0a3d6b16e96",
           "色情电影"
-        ],
-        [
-          "adult-gray-traffic-12b10746656988af",
-          "色情网站"
         ],
         [
           "adult-gray-traffic-4fcc8387584b9938",
@@ -2237,10 +2009,6 @@
           "蜜穴"
         ],
         [
-          "adult-gray-traffic-577392c2680a4c10",
-          "被干"
-        ],
-        [
           "adult-gray-traffic-b18c23ce6959ee7f",
           "被插"
         ],
@@ -2293,10 +2061,6 @@
           "裸陪"
         ],
         [
-          "adult-gray-traffic-538002c38aeb598d",
-          "裸露"
-        ],
-        [
           "adult-gray-traffic-d555bfdf72037c09",
           "裹本"
         ],
@@ -2327,14 +2091,6 @@
         [
           "adult-gray-traffic-0db0710d878d47b2",
           "豪乳"
-        ],
-        [
-          "adult-gray-traffic-72453fea93a7c582",
-          "赤裸"
-        ],
-        [
-          "adult-gray-traffic-eefca5d7436ce86b",
-          "轮奸"
         ],
         [
           "adult-gray-traffic-a152fff1c9b38878",
@@ -2379,10 +2135,6 @@
         [
           "adult-gray-traffic-feec065620bd6438",
           "铃木麻"
-        ],
-        [
-          "adult-gray-traffic-3cc114b23cde6734",
-          "阉割"
         ],
         [
           "adult-gray-traffic-b86f18d8714487b6",
@@ -2451,10 +2203,6 @@
         [
           "adult-gray-traffic-621628ee869a105b",
           "阴阜"
-        ],
-        [
-          "adult-gray-traffic-1574b2157a28a423",
-          "阿姨"
         ],
         {
           "id": "adult-terms-nearby-door",
@@ -2559,10 +2307,6 @@
           "高清性愛"
         ],
         [
-          "adult-gray-traffic-24d894eab18fc851",
-          "高潮"
-        ],
-        [
           "adult-gray-traffic-d5af8cdb08e2eae9",
           "鬼畜抄"
         ],
@@ -2579,24 +2323,12 @@
           "鸡奸"
         ],
         [
-          "adult-gray-traffic-852601d7b6b71ed7",
-          "鸡巴"
-        ],
-        [
-          "adult-gray-traffic-188219ab6457eb39",
-          "黄片"
-        ],
-        [
           "adult-gray-traffic-5e4be82e6eea38f3",
           "黄色网站"
         ],
         [
           "adult-gray-traffic-fbe3dfd656909331",
           "黑逼"
-        ],
-        [
-          "adult-gray-traffic-0a291ce4b79ee76e",
-          "龟头"
         ],
         [
           "adult-gray-traffic-c8a5be76bc38ac44",
