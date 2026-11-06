@@ -111,6 +111,8 @@ export function isPromotedArticle(article: Element): boolean {
     if (el.closest('[data-testid="User-Name"]')) continue;
     if (el.closest('[data-testid="tweetText"]')) continue;
     if (el.closest('[data-testid="card.wrapper"]')) continue;
+    // 下拉菜单里的「推广 / 推广此帖」是操作文案，不是帖子的推广标签
+    if (el.closest('[role="menu"], [data-testid="Dropdown"]')) continue;
     // 话题、提及、正文里的链接都是 <a>，里面的「推广」是用户写的内容
     if (el.closest('a')) continue;
     return true;
@@ -181,7 +183,10 @@ export function createCleanUi() {
     }
 
     if (settings.hideTrends) {
-      for (const trend of document.querySelectorAll('[data-testid="trend"]')) {
+      // 设置文案是「隐藏右侧栏的趋势模块」，就只动侧栏：探索页主栏也有一模一样的
+      // [data-testid="trend"]，跟着 section[role=region] 上溯会把主页内容整块藏掉。
+      const sidebar = document.querySelector('[data-testid="sidebarColumn"]');
+      for (const trend of sidebar?.querySelectorAll('[data-testid="trend"]') ?? []) {
         // 趋势模块的根是包含它的 section[role=region]；不能上溯到 sidebarColumn，
         // 那一层把搜索框和所有侧栏模块都包在一起。
         mark(trend.closest('section[role="region"]') ?? trend.parentElement, 'trends');

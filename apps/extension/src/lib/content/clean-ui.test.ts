@@ -143,6 +143,10 @@ describe('clean-ui 选择器', () => {
     expect(isPromotedArticle(withTag)).toBe(false);
     // 普通视频帖：X 一样用 placementTracking 包播放器，不能当成推广帖
     expect(isPromotedArticle(tweet({ media: true }))).toBe(false);
+    // 下拉菜单里的「推广」是 X 的操作文案，不是这条帖子的推广标签
+    const withMenu = tweet({});
+    withMenu.insertAdjacentHTML('beforeend', '<div role="menu"><div><span>推广</span></div></div>');
+    expect(isPromotedArticle(withMenu)).toBe(false);
     expect(isPromotedArticle(document.createElement('article'))).toBe(false);
   });
 
@@ -161,6 +165,29 @@ describe('clean-ui 选择器', () => {
       expect(css).not.toContain('[data-testid="placementTracking"]');
       expect(ad.getAttribute('data-fs-clean')).toBe('promoted');
       expect(video.hasAttribute('data-fs-clean')).toBe(false);
+    } finally {
+      clean.stop();
+    }
+  });
+
+  it('趋势只藏右侧栏模块，探索页主栏的同一套结构不动', async () => {
+    vi.useFakeTimers();
+    stubBrowser();
+    document.body.innerHTML = `
+      <div data-testid="primaryColumn">
+        <section role="region" id="explore"><div data-testid="trend">主栏趋势</div></section>
+      </div>
+      <div data-testid="sidebarColumn">
+        <section role="region" id="side"><div data-testid="trend">侧栏趋势</div></section>
+      </div>`;
+    const clean = createCleanUi();
+    clean.start();
+    try {
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(document.querySelector('#side')!.getAttribute('data-fs-clean')).toBe('trends');
+      expect(
+        document.querySelector('[data-testid="primaryColumn"] section')!.hasAttribute('data-fs-clean'),
+      ).toBe(false);
     } finally {
       clean.stop();
     }
