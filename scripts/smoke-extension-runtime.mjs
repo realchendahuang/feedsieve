@@ -85,7 +85,7 @@ async function run(degraded, remoteCached = false) {
     await context.route('https://x.com/**', (route) =>
       route.fulfill({
         contentType: 'text/html; charset=utf-8',
-        body: `<!doctype html><html><body><main>${fixture('literalcase', '全国空降')}${fixture('variantcase', '全國空降')}${fixture('screenshotcase', '应该没人比我👆玩的开了吧🍇🛶我福不黑不信你看 1789266318520')}${fixture('normalcase', '今天去公园散步，天气很好。')}${familyFixture}</main></body></html>`,
+        body: `<!doctype html><html><body><main>${fixture('literalcase', '全国空降')}${fixture('variantcase', '全國空降')}${fixture('screenshotcase', '应该没人比我👆玩的开了吧🍇🛶主页自取福利 1789266318520')}${fixture('normalcase', '今天去公园散步，天气很好。')}${familyFixture}</main></body></html>`,
       }),
     );
     const page = await context.newPage();
