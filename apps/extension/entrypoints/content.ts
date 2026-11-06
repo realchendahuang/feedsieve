@@ -26,7 +26,7 @@ import { createStateSync } from '../src/lib/content/state-sync';
 import { createXhrIngest } from '../src/lib/content/xhr-ingest';
 import { createBlockQueueRunner } from '../src/lib/content/block-queue';
 import { registerContentMessageHandlers } from '../src/lib/content/messages';
-import { ensureStyles } from '../src/lib/content/styles';
+import { ensureStyles, unwatchPageTheme } from '../src/lib/content/styles';
 import { createTweetStatsStore } from '../src/lib/insight/tweet-stats';
 import { createInsightUplink, INSIGHT_OBSERVE_MESSAGE } from '../src/lib/insight/shared-insight';
 import {
@@ -114,8 +114,8 @@ export default defineContentScript({
       flushBadges: (pendingBadges) => {
         scanWiring.flushBadges(pendingBadges);
       },
-      scanDone: () => {
-        scanWiring.scanDone();
+      scanDone: (scanned) => {
+        scanWiring.scanDone(scanned);
       },
       noteHealth: (ok, reason) => {
         noteTimelineHealth(ok, reason);
@@ -361,6 +361,7 @@ export default defineContentScript({
       // 扩展被重载/停用后别再继续滚页面
       profileFill.stop();
       insight.dispose();
+      unwatchPageTheme();
       clearPageDecorations();
     });
 

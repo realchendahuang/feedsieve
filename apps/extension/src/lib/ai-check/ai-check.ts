@@ -568,7 +568,7 @@ export function createAiCheck(deps: {
   }
 
   // ---- 入口二、三：回复上的机器人图标，已有结论的号加标签 / 折叠 ----
-  function decorateArticles(): void {
+  function decorateArticles(only?: readonly Element[]): void {
     const focal = location.pathname.match(/\/status\/(\d+)/)?.[1] ?? null;
     // 通知页：别人对你的回复也加检测入口（聚合通知卡不算）。
     const notifications = /^\/notifications(?:[/?#]|$)/.test(location.pathname);
@@ -576,7 +576,18 @@ export function createAiCheck(deps: {
     const root = focal ? rootAuthor(focal) : null;
     let focalSeen = false;
     let focalAuthor: string | null = null;
-    for (const article of document.querySelectorAll(tweetSelectors.article)) {
+    // 只处理这一轮脏节点时，先把主帖信息补出来：下面的「这条是不是主帖作者的回复」
+    // 依赖整页顺序，子集里看不到。详情页主帖在第一屏，找起来基本不花时间。
+    if (focal && only) {
+      for (const article of document.querySelectorAll(tweetSelectors.article)) {
+        const item = extractFeedItem(article, 'reply');
+        if (item?.postId !== focal) continue;
+        focalSeen = true;
+        focalAuthor = item.author.handle.toLowerCase();
+        break;
+      }
+    }
+    for (const article of only ?? document.querySelectorAll(tweetSelectors.article)) {
       const item = extractFeedItem(article, focal ? 'reply' : contextFromPath(location.pathname));
       if (!item?.postId) continue;
       const handle = item.author.handle.toLowerCase();
@@ -1339,7 +1350,7 @@ export function createAiCheck(deps: {
    * 轮询全页——X 的虚拟列表在滚动时每秒把每条推文重新解析一遍是白烧 CPU，
    * 页面静止时更是纯浪费。名单、设置、单条查询结果回来时各自补一次。
    */
-  function decorate(): void {
+  function decorate(only?: readonly Element[]): void {
     if (stopped) return;
     if (deps.isEnabled?.() === false) {
       // 模块关掉：页面上不留标签 / 按钮 / Tab，已打开的面板也收掉。
@@ -1353,7 +1364,8 @@ export function createAiCheck(deps: {
       // 社区 AI 号名单：后台按 30 分钟节流同步；模块重新打开时补一次
       void deps.send({ type: AI_LIST_SYNC_MESSAGE }).catch(() => undefined);
     }
-    decorateArticles();
+    // 扫描回调会带上这一轮真正扫过的节点：只画这些，别整页重解析（滚动时每次都全页很贵）
+    decorateArticles(only);
     ensureTab();
   }
 

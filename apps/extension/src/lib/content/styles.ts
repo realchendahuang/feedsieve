@@ -30,7 +30,11 @@ export function syncPageTheme(): void {
   }
 }
 
+let stopThemeWatch: (() => void) | null = null;
+
 function watchPageTheme(): void {
+  // 扩展重载/重复注入时不要叠第二份观察器
+  stopThemeWatch?.();
   let pending = false;
   const schedule = () => {
     if (pending) return;
@@ -45,7 +49,18 @@ function watchPageTheme(): void {
     if (target) observer.observe(target, { attributes: true, attributeFilter: ['style', 'class'] });
   }
   // X 切主题时也可能只改 <meta name="theme-color"> 或系统主题，兜一层。
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', schedule);
+  const media = window.matchMedia('(prefers-color-scheme: dark)');
+  media.addEventListener('change', schedule);
+  stopThemeWatch = () => {
+    observer.disconnect();
+    media.removeEventListener('change', schedule);
+    stopThemeWatch = null;
+  };
+}
+
+/** 扩展被停用/重载时停掉主题观察，别让旧脚本继续响应页面切换。 */
+export function unwatchPageTheme(): void {
+  stopThemeWatch?.();
 }
 
 export function ensureStyles(): void {

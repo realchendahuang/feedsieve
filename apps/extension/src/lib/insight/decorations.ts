@@ -487,6 +487,7 @@ export function createInsightDecorations(deps: {
     refreshTimer = undefined;
     sizeObserver?.disconnect();
     observed.clear();
+    hovercard.unlisten();
   }
 
   return {

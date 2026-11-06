@@ -109,11 +109,26 @@ export function createHovercard(options: {
     }, SHOW_DELAY_MS);
   }
 
+  let listening = false;
+
   function listen(): void {
+    if (listening) return;
+    listening = true;
     document.addEventListener('mouseover', onOver, true);
     window.addEventListener('scroll', hide, true);
     window.addEventListener('blur', hide);
   }
 
-  return { listen, hide, render };
+  /** 扩展停用/重载时摘掉监听：否则旧脚本会继续响应每一次悬停和滚动。 */
+  function unlisten(): void {
+    if (!listening) return;
+    listening = false;
+    document.removeEventListener('mouseover', onOver, true);
+    window.removeEventListener('scroll', hide, true);
+    window.removeEventListener('blur', hide);
+    window.clearTimeout(timer);
+    hide();
+  }
+
+  return { listen, unlisten, hide, render };
 }

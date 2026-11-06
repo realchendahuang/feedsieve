@@ -191,6 +191,25 @@ describe('回复详情页与评论区标记', () => {
     ai.stop();
   });
 
+  it('只传入这一轮扫过的节点时，也能认出主帖、把回复标上', async () => {
+    const html = [
+      `<div data-testid="cellInnerDiv">${tweet('op', '500')}</div>`,
+      `<div data-testid="cellInnerDiv">${tweet('farm', '501')}</div>`,
+    ].join('');
+    const { ai } = setup('/op/status/500', html, undefined, {
+      aiListV1: { at: Date.now(), entries: [['farm', 0.93, 1]] },
+    });
+    ai.start();
+    await new Promise((r) => setTimeout(r, 0));
+
+    const farm = [...document.querySelectorAll('article')][1]!;
+    // 模拟「扫描回调只交来这一条脏节点」：主帖信息要在子集之外补算，否则会被当成主帖作者的回复
+    ai.decorate([farm]);
+    // 有标签的号不再挂检测入口（标签本身就是入口）
+    expect(farm.querySelector('.fs-ai-mark')?.textContent ?? '').toContain('AI 味');
+    ai.stop();
+  });
+
   it('同一个号在一页里出现多条时都打标（结论按账号走，不是只标测过的那条）', async () => {
     const html = [
       `<div data-testid="cellInnerDiv">${tweet('farm', '410')}</div>`,

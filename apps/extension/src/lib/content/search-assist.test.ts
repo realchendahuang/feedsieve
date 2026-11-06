@@ -276,6 +276,27 @@ describe('搜索框高级搜索弹窗', () => {
     expect(dialog()).toBeNull();
   });
 
+  it('滚动锁只接管自己设的那份，不会覆盖页面已有的锁', () => {
+    mountDom();
+    const opened: string[] = [];
+    const tabs: string[] = [];
+    create({ opened, tabs });
+
+    // 正常情况：打开时锁住，关闭后还回原值
+    document.body.style.overflow = '';
+    open();
+    expect(document.body.style.overflow).toBe('hidden');
+    dialog().querySelector<HTMLButtonElement>('.fs-adv-close')!.click();
+    expect(document.body.style.overflow).toBe('');
+
+    // X 自己已经锁了（例如图片查看器开着）：我们不动它，关掉弹窗也不能解开
+    document.body.style.overflow = 'hidden';
+    open();
+    dialog().querySelector<HTMLButtonElement>('.fs-adv-close')!.click();
+    expect(document.body.style.overflow).toBe('hidden');
+    document.body.style.overflow = '';
+  });
+
   it('每个分组和入口都有小问号，悬停能看到「福滤娃」和关闭位置', () => {
     vi.useFakeTimers();
     mountDom();

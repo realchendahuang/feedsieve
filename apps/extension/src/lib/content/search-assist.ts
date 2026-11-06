@@ -333,6 +333,28 @@ export function createSearchAssist(deps: SearchAssistDeps): SearchAssist {
   let trigger: HTMLButtonElement | null = null;
   let backdrop: HTMLElement | null = null;
   let previousOverflow = '';
+  let scrollLocked = false;
+
+  /** 弹窗自己的滚动锁：只在 body 原本没锁时接管，解锁时也只还回自己设的那份。 */
+  function lockBodyScroll(): void {
+    previousOverflow = document.body.style.overflow;
+    if (previousOverflow === 'hidden') {
+      // 页面已经有别的滚动锁（X 的图片查看器等）：不接管，免得关弹窗时把人家解开
+      scrollLocked = false;
+      return;
+    }
+    document.body.style.overflow = 'hidden';
+    scrollLocked = true;
+  }
+
+  function unlockBodyScroll(): void {
+    if (!scrollLocked) return;
+    scrollLocked = false;
+    // 期间 X 自己改过 overflow（打开查看器 / 菜单）就别覆盖别人的值
+    if (document.body.style.overflow === 'hidden') {
+      document.body.style.overflow = previousOverflow;
+    }
+  }
   let renderedLanguage: UiLanguage | null = null;
   let lastLocation = '';
   let saveTimer: number | undefined;
@@ -429,7 +451,7 @@ export function createSearchAssist(deps: SearchAssistDeps): SearchAssist {
     void savePrefs(prefs).catch(() => undefined);
     backdrop.remove();
     backdrop = null;
-    document.body.style.overflow = previousOverflow;
+    unlockBodyScroll();
     trigger?.setAttribute('aria-expanded', 'false');
     tips.hide();
   }
@@ -443,8 +465,7 @@ export function createSearchAssist(deps: SearchAssistDeps): SearchAssist {
     tips.hide();
     if (!authorTouched && handle) author = handle;
     backdrop = buildDialog();
-    previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    lockBodyScroll();
     document.body.appendChild(backdrop);
     syncDisabled();
     trigger?.setAttribute('aria-expanded', 'true');
@@ -910,7 +931,7 @@ export function createSearchAssist(deps: SearchAssistDeps): SearchAssist {
     // 弹窗被外部移除（页面脚本 / 其它扩展）时把状态收回来，避免再也打不开
     if (!backdrop || backdrop.isConnected) return;
     backdrop = null;
-    document.body.style.overflow = previousOverflow;
+    unlockBodyScroll();
     trigger?.setAttribute('aria-expanded', 'false');
   }
 
