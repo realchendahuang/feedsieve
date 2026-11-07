@@ -95,7 +95,13 @@ export function createWorkersAiProvider(model = DEFAULT_JUDGE_MODEL): JudgeProvi
       }
       await recordVendor(env, vendor, true);
       const usage = usageOf(json);
-      return { score, model: usage.model ?? model, tokens: usage.tokens, provider: id };
+      return {
+        score,
+        model: usage.model ?? model,
+        tokens: usage.tokens,
+        provider: id,
+        comment: null,
+      };
     },
   };
 }

@@ -1,0 +1,1 @@
+ALTER TABLE "ai_account_verdicts" ADD COLUMN "comment" text;

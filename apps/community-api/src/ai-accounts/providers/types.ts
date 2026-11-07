@@ -22,6 +22,8 @@ export interface JudgeResult {
   tokens: number;
   /** 实际干活的 provider（日志/排障用） */
   provider: string;
+  /** 模型给的一句话锐评（只描述写法/节奏；不支持或没给时为 null） */
+  comment: string | null;
 }
 
 export interface JudgeProvider {

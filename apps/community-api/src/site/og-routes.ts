@@ -49,7 +49,7 @@ export async function handleOg(
               percent: data.flavor.percent,
               tone: data.flavor.tone,
               level: data.flavor.level,
-              roast: data.flavor.roast,
+              roast: data.lookup.comment ?? data.flavor.roast,
               replyCount: data.lookup.reply_count,
             }
           : {}),

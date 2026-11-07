@@ -43,6 +43,7 @@ export interface AiJudgeValue {
   expires_at: number;
   confirmed?: boolean;
   rhythm?: AiRhythm | null;
+  comment?: string | null;
   cached: boolean;
 }
 
@@ -76,6 +77,8 @@ export interface AiLookupValue {
   /** 旧字段，保留兼容 */
   under_review?: boolean;
   reviewed?: boolean;
+  /** 判定模型给的一句话锐评（旧判定 / Clef 回落没有） */
+  comment?: string | null;
   votes: { ai_count: number; human_count: number; listed: boolean };
 }
 
@@ -92,6 +95,8 @@ export interface AiCheckRecord {
   rhythm?: AiRhythm | null;
   /** 服务端是否已公开（被第二个人印证） */
   confirmed?: boolean;
+  /** 判定模型给的一句话锐评 */
+  comment?: string | null;
   vote?: 'ai' | 'human';
 }
 
@@ -224,6 +229,7 @@ export async function judgeAiAccount(
         replyCount: json.reply_count,
         rhythm: json.rhythm ?? null,
         confirmed: json.confirmed === true,
+        comment: json.comment ?? null,
       });
       return { ok: true, value: json };
     }

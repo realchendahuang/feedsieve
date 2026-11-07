@@ -293,6 +293,8 @@ interface Known {
   /** 来自自己的本机记录、服务端还没公开 */
   mineOnly: boolean;
   underReview: boolean;
+  /** 判定模型给的一句话锐评（服务端判的或自己测出来的） */
+  comment: string | null;
 }
 
 type Judged = Known & { score: number; verdict: 'ai' | 'suspect' | 'human' };
@@ -311,6 +313,7 @@ function fromRecord(record: AiCheckRecord, myVote: 'ai' | 'human' | null): Known
     myVote,
     mineOnly: record.confirmed !== true,
     underReview: false,
+    comment: record.comment ?? null,
   };
 }
 
@@ -395,6 +398,7 @@ export function createAiCheck(deps: {
         myVote,
         mineOnly: false,
         underReview: false,
+        comment: remote.comment ?? null,
       };
     }
     // 服务端还没公开，但自己测过：用本机那份（只有本人能看到）
@@ -417,6 +421,7 @@ export function createAiCheck(deps: {
         myVote,
         mineOnly: false,
         underReview: remote?.contested === true || remote?.under_review === true,
+        comment: null,
       };
     }
     return null;
@@ -858,6 +863,7 @@ export function createAiCheck(deps: {
       expired: k.expired,
       mineOnly: k.mineOnly,
       underReview: k.underReview,
+      comment: k.comment,
     });
   }
 
@@ -974,6 +980,8 @@ export function createAiCheck(deps: {
     expired?: boolean;
     mineOnly?: boolean;
     underReview?: boolean;
+    /** 模型锐评；没有就用本地档位评语 */
+    comment?: string | null;
   }): void {
     const lang = deps.getLanguage();
     const text = t();
@@ -999,7 +1007,7 @@ export function createAiCheck(deps: {
     const level = el('span', 'fs-ai-level', flavor.level);
     level.style.background = color;
     body.appendChild(level);
-    body.appendChild(el('div', 'fs-ai-roast', `「${flavor.roast}」`));
+    body.appendChild(el('div', 'fs-ai-roast', `「${input.comment ?? flavor.roast}」`));
 
     const stats = el('div', 'fs-ai-stats');
     for (const [label, value] of [
@@ -1254,6 +1262,7 @@ export function createAiCheck(deps: {
       myVote: prev?.myVote ?? null,
       mineOnly: value.confirmed !== true,
       underReview: false,
+      comment: value.comment ?? null,
     };
     known.set(handle, entry);
     ensureTab();
@@ -1271,6 +1280,7 @@ export function createAiCheck(deps: {
       votes: entry.votes,
       myVote: entry.myVote,
       mineOnly: entry.mineOnly,
+      comment: value.comment ?? null,
     });
   }
 

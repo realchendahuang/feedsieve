@@ -31,6 +31,7 @@
 
 ### 工程
 
+- 判定模型多输出一句「模型锐评」：公开结果页与 OG 分享卡优先显示这句（没有时回落到原来的档位评语）；锐评只描述写法/节奏，随判定结果一起缓存（新列 `comment`），扩展弹窗与 X 页面检测卡下一版起也会显示。
 - 新增 / 改写回归测试 40 余条（全量 1241 条通过），关键修复都做过「回退到旧实现则测试失败」的反向验证。
 - 判定模型网关抽到 `apps/community-api/src/ai-accounts/providers/`：provider 级熔断（`vendor_breaker:workers-ai:<model>`）、按顺序 fallback、`typesafe-direct` 保留为可选备用通道；配套 7 条网关单测（默认模型与是否经网关、第三方模型网关参数、fallback、坏返回、熔断暂停、Clef body、灰区不跨模型混分）。
 - 判定阈值与 AI 味档位先后按两个模型重校准（2026-11-07）：Clef 口径 0.80 / 0.65 / 0.75（20/33、4/210），DeepSeek 口径 0.80 / 0.40 / 0.79（25/33、5/207、疑似 0/207，AUC 0.911，0–100 整数口径）；旧 Jev 口径 18/33、1/212。三套模型分数不可互比。评测脚本 `scripts/eval-ai-accounts.mjs` 新增 `--workers-ai <model>` 与 `--http <base> --model <name>`（OpenAI 兼容 + 并发 + 两套概率口径）。

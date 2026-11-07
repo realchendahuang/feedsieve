@@ -71,6 +71,7 @@ export interface VerdictRow {
   submitter: string | null;
   reply_ids: string | null;
   rhythm: string | null;
+  comment: string | null;
 }
 
 /** 判定节奏统计：rhythm JSON 列（无需迁移，后加的字段都可选）。 */
@@ -92,6 +93,8 @@ export interface AiCheckValue {
   /** 已被第二个独立安装印证（或服务端自己拉的证据），可以向所有人展示 */
   confirmed: boolean;
   rhythm: VerdictRhythm | null;
+  /** 判定模型给的一句话锐评（旧判定 / Clef 回落没有） */
+  comment: string | null;
   /** true = 来自缓存；stale = 已过期但新判定暂时不可用，先返回旧结果 */
   cached: boolean;
   stale?: boolean;
@@ -113,6 +116,7 @@ export function toValue(row: VerdictRow, cached: boolean, stale = false): AiChec
     expires_at: row.expires_at,
     confirmed: row.confirmed === 1,
     rhythm: parseRhythm(row.rhythm),
+    comment: row.comment,
     cached,
     ...(stale ? { stale: true } : {}),
   };
@@ -147,6 +151,7 @@ export async function readVerdict(
       submitter: aiAccountVerdicts.submitter,
       reply_ids: aiAccountVerdicts.replyIds,
       rhythm: aiAccountVerdicts.rhythm,
+      comment: aiAccountVerdicts.comment,
     })
     .from(aiAccountVerdicts)
     .where(eq(aiAccountVerdicts.handle, handle));
@@ -231,6 +236,8 @@ export async function writeVerdict(
     confirmed: boolean;
     displayName?: string | null;
     avatarUrl?: string | null;
+    /** 判定模型给的一句话锐评 */
+    comment?: string | null;
   },
 ): Promise<VerdictRow> {
   const expiresAt = row.judgedAt + TTL_S[row.verdict];
@@ -254,6 +261,7 @@ export async function writeVerdict(
       confirmed: row.confirmed ? 1 : 0,
       displayName: row.displayName ?? null,
       avatarUrl: row.avatarUrl ?? null,
+      comment: row.comment ?? null,
     })
     .onConflictDoUpdate({
       target: aiAccountVerdicts.handle,
@@ -273,6 +281,7 @@ export async function writeVerdict(
         confirmed: sql`excluded.confirmed`,
         displayName: sql`coalesce(excluded.display_name, ${aiAccountVerdicts.displayName})`,
         avatarUrl: sql`coalesce(excluded.avatar_url, ${aiAccountVerdicts.avatarUrl})`,
+        comment: sql`coalesce(excluded.comment, ${aiAccountVerdicts.comment})`,
         // 重新判过就是新结论：清掉上一次的复核标记
         reviewedAt: sql`null`,
         reviewedBy: sql`null`,
@@ -291,6 +300,7 @@ export async function writeVerdict(
     submitter: row.submitter,
     reply_ids: JSON.stringify(row.replyIds),
     rhythm: row.rhythm ? JSON.stringify(row.rhythm) : null,
+    comment: row.comment ?? null,
   };
 }
 
@@ -532,6 +542,7 @@ export async function checkAiAccount(
         judgedAt: nowS,
         submitter: null,
         confirmed: true,
+        comment: null,
       });
       return { status: 200, body: toValue(row, false) };
     }
@@ -551,6 +562,7 @@ export async function checkAiAccount(
       // 服务端自己拉的证据不可伪造：直接可公开
       submitter: null,
       confirmed: true,
+      comment: judged.comment,
     });
     /*
      * 广场样本：TikHub 路径拿得到正文（buildReplies 的 text），所以同样落库；原帖 ID 只有

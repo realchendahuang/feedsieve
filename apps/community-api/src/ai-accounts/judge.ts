@@ -324,6 +324,7 @@ export async function judgeAiAccount(
       confirmed: corroborated,
       displayName,
       avatarUrl,
+      comment: judged.comment,
     });
     /*
      * AI 号广场的回复样本：ai / suspect 把本次参与判定的回复落库（human 清除、insufficient 不写不删，

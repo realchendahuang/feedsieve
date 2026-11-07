@@ -40,7 +40,7 @@ function stubHttp(
     }
     const content =
       options.content === undefined
-        ? JSON.stringify({ probability: options.probability ?? 88, reason: '模板化回复' })
+        ? JSON.stringify({ probability: options.probability ?? 88, comment: '模板化回复', reason: '写法证据' })
         : options.content;
     return new Response(
       JSON.stringify({
@@ -92,7 +92,7 @@ describe('OpenAI 兼容 HTTP 判定 provider（DeepSeek / 中转）', () => {
       undefined,
     );
     expect(result.status).toBe(200);
-    expect(result.body).toMatchObject({ handle: 'httpbot', verdict: 'ai', score: 0.88 });
+    expect(result.body).toMatchObject({ handle: 'httpbot', verdict: 'ai', score: 0.88, comment: '模板化回复' });
 
     expect(calls).toHaveLength(1);
     expect(calls[0]!.url).toBe('https://judge.test/v1/chat/completions');
@@ -107,10 +107,11 @@ describe('OpenAI 兼容 HTTP 判定 provider（DeepSeek / 中转）', () => {
     expect(sent).toContain('reply_gaps_seconds');
 
     const [row] = await getDb(env)
-      .select({ model: aiAccountVerdicts.model })
+      .select({ model: aiAccountVerdicts.model, comment: aiAccountVerdicts.comment })
       .from(aiAccountVerdicts)
       .where(eq(aiAccountVerdicts.handle, 'httpbot'));
     expect(row!.model).toBe('deepseek-v4.1-flash');
+    expect(row!.comment).toBe('模板化回复');
   });
 
   it('返回的 content 解析不出 probability（或没有 content）时按失败处理（502），不写坏数据', async () => {

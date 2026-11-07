@@ -214,7 +214,7 @@ ${avatar}
 ${ring}
 ${nameBlock}
 ${right}
-${footer(card.replyCount ? `根据最近 ${card.replyCount} 条公开回复 · 模型判定，仅供娱乐参考` : '模型根据公开回复判定，仅供娱乐参考')}
+${footer(card.replyCount ? `根据最近 ${card.replyCount} 条公开回复 · 模型判定与锐评可能有误差 · 仅供娱乐参考` : '模型根据公开回复判定与锐评，可能有误差，仅供娱乐参考')}
 </g>
 </svg>`;
 }

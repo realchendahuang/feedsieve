@@ -700,6 +700,8 @@ export const aiAccountVerdicts = pgTable(
     /** 公开结果页 / OG 图用：检测时页面上的昵称与头像（头像只认 pbs.twimg.com） */
     displayName: text('display_name'),
     avatarUrl: text('avatar_url'),
+    /** 判定模型给的锐评（只描述写法/节奏证据，≤60 字；旧判定或回落模型为空） */
+    comment: text('comment'),
   },
   (t) => [
     check('ck_ai_account_verdicts_confirmed', sql`${t.confirmed} in (0, 1)`),

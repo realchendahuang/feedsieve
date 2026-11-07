@@ -41,6 +41,8 @@ export interface AiLookupValue {
   under_review: boolean;
   /** 维护者是否手动处理过（仅保留信息，不再影响公开状态） */
   reviewed: boolean;
+  /** 模型锐评（只描述写法/节奏；旧判定或回落模型没有） */
+  comment: string | null;
   votes: Omit<AiVoteTally, 'handle'>;
 }
 
@@ -62,6 +64,7 @@ export async function lookupAiAccount(
         expiresAt: aiAccountVerdicts.expiresAt,
         confirmed: aiAccountVerdicts.confirmed,
         reviewedAt: aiAccountVerdicts.reviewedAt,
+        comment: aiAccountVerdicts.comment,
       })
       .from(aiAccountVerdicts)
       .where(eq(aiAccountVerdicts.handle, handle)),
@@ -107,6 +110,7 @@ export async function lookupAiAccount(
     contested,
     under_review: false,
     reviewed: row?.reviewedAt != null,
+    comment: isPublic && verdict !== 'human' ? (row?.comment ?? null) : null,
     votes: { ai_count: tally.ai_count, human_count: tally.human_count, listed: tally.listed },
   };
 }

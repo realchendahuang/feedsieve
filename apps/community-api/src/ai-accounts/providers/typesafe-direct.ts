@@ -58,7 +58,13 @@ export function createTypesafeDirectProvider(): JudgeProvider {
       }
       await recordVendor(env, vendor, true);
       const usage = usageOf(json);
-      return { score, model: usage.model ?? model, tokens: usage.tokens, provider: 'typesafe-direct' };
+      return {
+        score,
+        model: usage.model ?? model,
+        tokens: usage.tokens,
+        provider: 'typesafe-direct',
+        comment: null,
+      };
     },
   };
 }

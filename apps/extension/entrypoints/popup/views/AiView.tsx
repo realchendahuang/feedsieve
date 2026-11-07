@@ -210,6 +210,8 @@ interface ShownResult {
   score: number;
   replyCount: number;
   rhythm: AiRhythm | null;
+  /** 判定模型给的一句话锐评；没有就用本地档位评语 */
+  comment?: string | null;
   expired: boolean;
   mineOnly: boolean;
   votes: { ai_count: number; human_count: number; listed: boolean } | null;
@@ -224,6 +226,7 @@ function shownFrom(handle: string, outcome: AiLookupOutcome): ShownResult | null
       score: remote.score,
       replyCount: remote.reply_count,
       rhythm: remote.rhythm,
+      comment: remote.comment ?? null,
       expired: remote.expired,
       mineOnly: false,
       votes: remote.votes,
@@ -817,7 +820,7 @@ function AiResult({
       <div className="ai-meter">
         <span style={{ left: `${flavor.percent}%` }} />
       </div>
-      <p className="ai-roast">「{flavor.roast}」</p>
+      <p className="ai-roast">「{value.comment ?? flavor.roast}」</p>
       <div className="ai-stats">
         <div>
           <span>{c.samples}</span>
