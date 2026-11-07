@@ -7,11 +7,12 @@ import { cn } from '../lib/utils';
 import { SITE_NAME, GITHUB_URL } from '../site';
 
 /**
- * 全站单层顶栏导航：首页 + 黑名单 + 白名单 + 抢救 + 词库 + 教程。
+ * 全站单层顶栏导航：首页 + AI 号广场 + 黑名单 + 白名单 + 抢救 + 词库 + 教程。
  * 杜绝双层 Tab 嵌套重合，所有名单与功能在一级顶栏平铺直达。
  */
 const NAV = [
   { label: '首页', to: '/', match: (p: string) => p === '/' },
+  { label: 'AI 号广场', to: '/ai', match: (p: string) => p === '/ai' || p.startsWith('/ai/') },
   { label: '黑名单', to: '/lists/blacklist', match: (p: string) => p === '/lists/blacklist' },
   { label: '白名单', to: '/lists/whitelist', match: (p: string) => p === '/lists/whitelist' },
   { label: '社区抢救', to: '/lists/rescue', match: (p: string) => p === '/lists/rescue' },

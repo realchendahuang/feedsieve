@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ShellRouteImport } from './routes/_shell'
 import { Route as ShellIndexRouteImport } from './routes/_shell/index'
 import { Route as ShellGuideRouteImport } from './routes/_shell/guide'
+import { Route as ShellAiIndexRouteImport } from './routes/_shell/ai.index'
 import { Route as ShellAiHandleRouteImport } from './routes/_shell/ai.$handle'
 import { Route as ShellListsIndexRouteImport } from './routes/_shell/lists.index'
 import { Route as ShellListsApplyRouteImport } from './routes/_shell/lists/apply'
@@ -32,6 +33,11 @@ const ShellIndexRoute = ShellIndexRouteImport.update({
 const ShellGuideRoute = ShellGuideRouteImport.update({
   id: '/guide',
   path: '/guide',
+  getParentRoute: () => ShellRoute,
+} as any)
+const ShellAiIndexRoute = ShellAiIndexRouteImport.update({
+  id: '/ai/',
+  path: '/ai/',
   getParentRoute: () => ShellRoute,
 } as any)
 const ShellAiHandleRoute = ShellAiHandleRouteImport.update({
@@ -79,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/lists/keywords': typeof ShellListsKeywordsRoute
   '/lists/rescue': typeof ShellListsRescueRoute
   '/lists/whitelist': typeof ShellListsWhitelistRoute
+  '/ai/': typeof ShellAiIndexRoute
   '/lists/': typeof ShellListsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -90,6 +97,7 @@ export interface FileRoutesByTo {
   '/lists/keywords': typeof ShellListsKeywordsRoute
   '/lists/rescue': typeof ShellListsRescueRoute
   '/lists/whitelist': typeof ShellListsWhitelistRoute
+  '/ai': typeof ShellAiIndexRoute
   '/lists': typeof ShellListsIndexRoute
 }
 export interface FileRoutesById {
@@ -103,6 +111,7 @@ export interface FileRoutesById {
   '/_shell/lists/keywords': typeof ShellListsKeywordsRoute
   '/_shell/lists/rescue': typeof ShellListsRescueRoute
   '/_shell/lists/whitelist': typeof ShellListsWhitelistRoute
+  '/_shell/ai/': typeof ShellAiIndexRoute
   '/_shell/lists/': typeof ShellListsIndexRoute
 }
 export interface FileRouteTypes {
@@ -116,6 +125,7 @@ export interface FileRouteTypes {
     | '/lists/keywords'
     | '/lists/rescue'
     | '/lists/whitelist'
+    | '/ai/'
     | '/lists/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -127,6 +137,7 @@ export interface FileRouteTypes {
     | '/lists/keywords'
     | '/lists/rescue'
     | '/lists/whitelist'
+    | '/ai'
     | '/lists'
   id:
     | '__root__'
@@ -139,6 +150,7 @@ export interface FileRouteTypes {
     | '/_shell/lists/keywords'
     | '/_shell/lists/rescue'
     | '/_shell/lists/whitelist'
+    | '/_shell/ai/'
     | '/_shell/lists/'
   fileRoutesById: FileRoutesById
 }
@@ -167,6 +179,13 @@ declare module '@tanstack/react-router' {
       path: '/guide'
       fullPath: '/guide'
       preLoaderRoute: typeof ShellGuideRouteImport
+      parentRoute: typeof ShellRoute
+    }
+    '/_shell/ai/': {
+      id: '/_shell/ai/'
+      path: '/ai'
+      fullPath: '/ai/'
+      preLoaderRoute: typeof ShellAiIndexRouteImport
       parentRoute: typeof ShellRoute
     }
     '/_shell/ai/$handle': {
@@ -230,6 +249,7 @@ interface ShellRouteChildren {
   ShellListsKeywordsRoute: typeof ShellListsKeywordsRoute
   ShellListsRescueRoute: typeof ShellListsRescueRoute
   ShellListsWhitelistRoute: typeof ShellListsWhitelistRoute
+  ShellAiIndexRoute: typeof ShellAiIndexRoute
   ShellListsIndexRoute: typeof ShellListsIndexRoute
 }
 
@@ -242,6 +262,7 @@ const ShellRouteChildren: ShellRouteChildren = {
   ShellListsKeywordsRoute: ShellListsKeywordsRoute,
   ShellListsRescueRoute: ShellListsRescueRoute,
   ShellListsWhitelistRoute: ShellListsWhitelistRoute,
+  ShellAiIndexRoute: ShellAiIndexRoute,
   ShellListsIndexRoute: ShellListsIndexRoute,
 }
 
