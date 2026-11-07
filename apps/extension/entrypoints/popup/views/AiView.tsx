@@ -19,8 +19,24 @@ import {
   type AiVoteOutcome,
 } from '../../../src/lib/ai-check/client';
 import { getSelfHandle } from '../../../src/lib/community/following-allowlist';
-import { AppIcon, EmptyState, HelpIcon, SkeletonList } from './shared';
+import {
+  blockQueueProgress,
+  getPersistentBlockQueue,
+  subscribePersistentBlockQueue,
+  type PersistentBlockQueueState,
+} from '../../../src/lib/queue/block-queue-store';
+import { DEFAULT_PRESET, SAFETY_PRESETS } from '../../../src/lib/queue/block-safety';
+import {
+  AppIcon,
+  EmptyState,
+  FAILURE_LABELS,
+  HelpIcon,
+  OfficialLinkIcon,
+  SkeletonList,
+  useArmedConfirm,
+} from './shared';
 import { useListPosition } from './use-list-position';
+import QueuePanel from './QueuePanel';
 
 const TONE_COLOR = {
   ai: 'var(--tone-ai)',
@@ -62,6 +78,15 @@ const COPY = {
     myVote: { ai: '我投：AI', human: '我投：真人' },
     checkSelf: '测测我自己',
     noSelf: '先在 X 上登录并打开任意页面',
+    aiListTitle: '社区伪人名单',
+    aiListMeta: (total: number, eligible: number) => `已收录 ${total} 个 · 可屏蔽 ${eligible} 个`,
+    aiListEmpty: '暂无可屏蔽账号',
+    aiViewSite: '查看全部 AI 号',
+    aiListHint:
+      '只批量屏蔽已进社区公共名单的账号；疑似号不在范围内。拉黑由本机队列逐个执行，受每日额度限制，可随时暂停或取消。',
+    aiBlockAll: '一键屏蔽',
+    aiConfirmBlockAll: (count: number) => `再点一次：屏蔽 ${count} 个`,
+    aiBlocked: (count: number) => `已加入拉黑队列（${count} 个）`,
   },
   en: {
     current: 'This account',
@@ -98,6 +123,15 @@ const COPY = {
     myVote: { ai: 'My vote: AI', human: 'My vote: human' },
     checkSelf: 'Check myself',
     noSelf: 'Sign in to X and open any page first',
+    aiListTitle: 'Community AI list',
+    aiListMeta: (total: number, eligible: number) => `${total} listed · ${eligible} blockable`,
+    aiListEmpty: 'Nothing to block',
+    aiViewSite: 'View all AI accounts',
+    aiListHint:
+      'Only accounts already on the community public list are included; suspected accounts are left out. Blocks run one by one from this browser, count against the daily limit, and can be paused or cancelled anytime.',
+    aiBlockAll: 'Block all',
+    aiConfirmBlockAll: (count: number) => `Click again: block ${count}`,
+    aiBlocked: (count: number) => `Added to block queue (${count})`,
   },
 } as const;
 
@@ -196,18 +230,52 @@ async function openOnX(path: string): Promise<void> {
   }
 }
 
+/** 社区伪人名单队列收尾后的失败项：如实展示失败码，不留无声的死循环。 */
+function AiFailedList({
+  items,
+  language,
+}: {
+  items: Array<{ handle: string; code?: string }>;
+  language: UiLanguage;
+}) {
+  const t = UI_COPY[language];
+  if (items.length === 0) return null;
+  return (
+    <ul className="failed-list" role="status">
+      {items.map((item) => (
+        <li key={item.handle}>
+          <span>@{item.handle}</span>
+          <span>{FAILURE_LABELS[language][item.code ?? ''] ?? item.code ?? t.unknown}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function AiView({
   language,
   notify,
   sendToXPage,
   onOpenSettings,
+  aiEligible,
+  aiListCount,
 }: {
   language: UiLanguage;
   notify: (message: string | null) => void;
-  sendToXPage: (message: { type: string; handle?: string; force?: boolean }) => Promise<unknown>;
+  sendToXPage: (message: {
+    type: string;
+    handle?: string;
+    force?: boolean;
+    items?: Array<{ handle: string; xUserId?: string; category: string }>;
+  }) => Promise<unknown>;
   onOpenSettings: () => void;
+  /** 社区伪人名单里已进公共名单（listed=1）、且不在白名单 / 关注 / 已拉黑里的账号（App 计算） */
+  aiEligible: Array<{ handle: string; score: number | null }>;
+  /** 社区伪人名单总条目数（行内「已收录 N 个」） */
+  aiListCount: number;
 }) {
   const c = COPY[language];
+  const t = UI_COPY[language];
   const handle = useActiveAccount();
   // 查询结果按账号存：当前账号还没查回来就算加载中（不在 effect 里同步 setState）
   const [result, setResult] = useState<{ handle: string; value: AiLookupOutcome } | null>(null);
@@ -216,6 +284,12 @@ export function AiView({
   const [voting, setVoting] = useState(false);
   // 检测是在 X 页面上跑的异步任务：按钮在飞行中禁用，避免连点排一队重复检测
   const [checking, setChecking] = useState(false);
+  // 批量屏蔽队列（全局单例）：只认 source === 'ai-batch' 的那支
+  const [queue, setQueue] = useState<PersistentBlockQueueState | null>(null);
+  // 入队请求在飞：按钮禁用，避免连点排出第二支队列
+  const [blocking, setBlocking] = useState(false);
+  // 一键屏蔽是批量破坏性操作：要求二段确认
+  const { isArmed, arm, reset } = useArmedConfirm();
 
   // 切走再回来：回到上次看的位置
   useListPosition({
@@ -261,6 +335,13 @@ export function AiView({
     browser.storage.onChanged.addListener(onChanged);
     return () => browser.storage.onChanged.removeListener(onChanged);
   }, [handle, loadLookup, loadRecords]);
+  // 社区伪人名单的队列进度：名单同步由 App（数据层）负责，这里只订阅队列状态
+  useEffect(() => {
+    void getPersistentBlockQueue()
+      .then(setQueue)
+      .catch(() => undefined);
+    return subscribePersistentBlockQueue(setQueue);
+  }, []);
 
   async function start(target: string | null, force = false): Promise<void> {
     if (!target || checking) return;
@@ -318,6 +399,37 @@ export function AiView({
     );
   }
 
+  async function controlQueue(action: 'resume' | 'pause' | 'cancel'): Promise<void> {
+    try {
+      await sendToXPage({ type: `feedsieve:block-queue-${action}` });
+    } catch {
+      notify(c.needXTab);
+    }
+  }
+
+  /**
+   * 一键屏蔽：把已进社区公共名单、且不在白名单 / 关注 / 已拉黑里的 AI 号入队，
+   * 由 X 页面上的队列逐个执行原生拉黑；进度和失败项就在本区块里跟进。
+   */
+  async function startAiBlock(): Promise<void> {
+    if (aiEligible.length === 0 || blocking) return;
+    setBlocking(true);
+    notify(null);
+    try {
+      const result = (await sendToXPage({
+        type: 'feedsieve:ai-block-start',
+        items: aiEligible.map((entry) => ({ handle: entry.handle, category: 'ai_slop' })),
+      })) as { status?: string; count?: number } | undefined;
+      if (result?.status !== 'started') throw new Error('ai_queue_not_started');
+      setQueue(await getPersistentBlockQueue());
+      notify(c.aiBlocked(result.count ?? aiEligible.length));
+    } catch {
+      notify(c.needXTab);
+    } finally {
+      setBlocking(false);
+    }
+  }
+
   const lookup: AiLookupOutcome | 'loading' | null = !handle
     ? null
     : result?.handle === handle
@@ -326,6 +438,36 @@ export function AiView({
   const shown = handle && lookup && lookup !== 'loading' ? shownFrom(handle, lookup) : null;
   const myVote = lookup && lookup !== 'loading' ? lookup.myVote : null;
   const remote = lookup && lookup !== 'loading' ? lookup.remote : null;
+
+  // 社区伪人名单行：未同步过（总数为 0）先显示省略号，同步由 App 触发
+  const aiMeta = aiListCount === 0 ? '…' : c.aiListMeta(aiListCount, aiEligible.length);
+  const queueSummary = blockQueueProgress(queue);
+  const queueDone = queueSummary.success + queueSummary.failed;
+  const queueActive = Boolean(
+    queue && queueSummary.total > 0 && (queue.status === 'running' || queue.status === 'paused'),
+  );
+  // 队列收尾后的失败项留在这里，原因如实展示，避免无声的死循环
+  const aiFailedTasks =
+    queue && queue.source === 'ai-batch' && !queueActive
+      ? queue.tasks
+          .filter((task) => task.status === 'failed')
+          .map((task) => ({ handle: task.handle, code: task.failureCode }))
+      : [];
+  const queueStatusLabel = queue
+    ? {
+        running: t.queueRunning,
+        paused: t.queuePaused,
+        completed: t.queueCompleted,
+        cancelled: t.queueCancelled,
+      }[queue.status]
+    : '';
+  // 只有额度用尽 / 短窗限流两种暂停需要解释
+  const queuePauseNote =
+    queue?.status === 'paused' && queue.pauseReason === 'quota_exhausted'
+      ? t.queuePausedQuota(SAFETY_PRESETS[DEFAULT_PRESET].dailyLimit)
+      : queue?.status === 'paused' && queue.pauseReason === 'rate_limit_storm'
+        ? t.queuePausedRateLimit
+        : null;
 
   return (
     <div className="view ai-view" ref={rootRef}>
@@ -449,6 +591,52 @@ export function AiView({
             );
           })
         )}
+      </section>
+
+      <section className="block" aria-label={c.aiListTitle}>
+        <div className="row community-row">
+          <div className="row-label">
+            <strong>{c.aiListTitle}</strong>
+            <span className="row-meta">{aiMeta}</span>
+          </div>
+          <HelpIcon text={c.aiListHint} />
+          <OfficialLinkIcon target="ai" label={c.aiViewSite} />
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={blocking || queueActive || aiEligible.length === 0}
+            onClick={() => {
+              if (!arm('ai')) return;
+              reset();
+              void startAiBlock();
+            }}
+          >
+            {aiEligible.length === 0
+              ? c.aiListEmpty
+              : isArmed('ai')
+                ? c.aiConfirmBlockAll(aiEligible.length)
+                : c.aiBlockAll}
+          </button>
+        </div>
+        {queueActive && queue && queue.source === 'ai-batch' ? (
+          <QueuePanel
+            language={language}
+            queue={queue}
+            done={queueDone}
+            total={queueSummary.total}
+            statusLabel={queueStatusLabel}
+            pauseNote={queuePauseNote}
+            onControl={(action) => void controlQueue(action)}
+          />
+        ) : null}
+        {aiFailedTasks.length > 0 ? (
+          <>
+            <p className="result">
+              {t.queueProgress(queueDone, queueSummary.total)} · {queueStatusLabel}
+            </p>
+            <AiFailedList items={aiFailedTasks} language={language} />
+          </>
+        ) : null}
       </section>
 
     </div>

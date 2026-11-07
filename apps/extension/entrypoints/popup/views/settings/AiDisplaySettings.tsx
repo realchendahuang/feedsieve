@@ -16,7 +16,7 @@ const COPY = {
   zh: {
     mode: '遇到伪人',
     modeHint:
-      '已进社区伪人名单、或你自己测出像 AI 代写的账号，在评论区和时间线上怎么显示。个人白名单里的账号不处理。',
+      '已进社区伪人名单、或你自己测出像 AI 代写的账号，在评论区和时间线上怎么显示。个人白名单里的账号不处理。批量屏蔽在伪人页。',
     modes: { off: '不处理', mark: '标记', fold: '折叠' },
     scope: '识别范围',
     scopeHint: '「仅蓝标」按页面上的认证标记判断，不影响水军识别。',
@@ -28,7 +28,7 @@ const COPY = {
   en: {
     mode: 'AI accounts',
     modeHint:
-      'How accounts on the community AI list, or ones you found AI-heavy, show up in replies and timelines. Personal allowlisted accounts are left alone.',
+      'How accounts on the community AI list, or ones you found AI-heavy, show up in replies and timelines. Personal allowlisted accounts are left alone. Batch blocking lives on the AI page.',
     modes: { off: 'Ignore', mark: 'Mark', fold: 'Fold' },
     scope: 'Scope',
     scopeHint: '“Blue only” uses the verified badge on the page. Spam detection is unaffected.',
