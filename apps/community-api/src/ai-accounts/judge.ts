@@ -28,6 +28,8 @@ import {
   IP_DAILY_CHECKS,
   releaseLock,
   reserve,
+  sampleRowsFromReplies,
+  syncVerdictSamples,
   toValue,
   writeVerdict,
   type AiCheckResult,
@@ -314,6 +316,12 @@ export async function judgeAiAccount(
       displayName,
       avatarUrl,
     });
+    /*
+     * AI 号广场的回复样本：ai / suspect 把本次参与判定的回复落库（human 清除、insufficient 不写不删，
+     * 见 saveVerdictSamples）。间隔直接用上面判定时的 usedGaps，与节奏统计同源；
+     * 扩展直传路径没有原帖 ID，parent_id 留空。
+     */
+    await syncVerdictSamples(env, handle, verdict, sampleRowsFromReplies(used, usedGaps), nowS);
     await bump(env, corroborated ? 'ai-outcome:confirmed' : 'ai-outcome:judged');
     return { status: 200, body: toValue(row, false) };
   } catch (error) {

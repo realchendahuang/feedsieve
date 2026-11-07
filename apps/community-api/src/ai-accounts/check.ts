@@ -5,18 +5,22 @@
  * 命中缓存不调用任何第三方。未命中时 TikHub 拉 1 页回复 + Jev 判 1 次。
  * 扩展只上报 handle，不上报正文；服务端不保存回复正文。
  */
-import { eq, sql } from 'drizzle-orm';
+import { and, desc, eq, notInArray, sql } from 'drizzle-orm';
 import { getDb } from '../db/client';
-import { aiAccountVerdicts, meta, trainingSampleUsage } from '../db/schema';
+import { aiAccountSamples, aiAccountVerdicts, meta, trainingSampleUsage } from '../db/schema';
 import { hashInstallationId, hashIp } from '../lib/hash';
+import { stripNul } from '../lib/sql';
 import { utcToday } from '../lib/time';
 import {
   buildReplies,
   decide,
+  MAX_PARENT_CHARS,
+  MAX_REPLY_CHARS,
   MIN_REPLIES,
   replyGaps,
   rhythm,
   type AiVerdict,
+  type ReplyEvidence,
   type Rhythm,
 } from './evidence';
 import {
@@ -287,6 +291,169 @@ export async function writeVerdict(
   };
 }
 
+// ---------------------------------------------------------------------------
+// AI 号广场的回复样本（页面展示「它最近回复了什么」）
+// ---------------------------------------------------------------------------
+
+/** 每个 handle 最多保留的样本条数（详情页最多展示 12 条，留余量给后续调整） */
+export const MAX_SAMPLES_PER_HANDLE = 20;
+const TWITTER_EPOCH = 1288834974657n;
+
+/**
+ * 一条待落库的回复样本。judge / check 两条判定路径各自从本次参与判定的回复整理出来，
+ * 写库前再统一截断、去 NUL、去重、排序。
+ */
+export interface AiSampleRow {
+  tweetId: string;
+  parentId: string | null;
+  text: string;
+  parentText: string | null;
+  /** Unix 秒 */
+  postedAt: number | null;
+  gapSeconds: number | null;
+}
+
+/** 按码点截断并去掉 NUL（PG 的 text 不接受 U+0000），与写库口径一致。 */
+function sampleText(value: string, max: number): string {
+  return stripNul([...value].slice(0, max).join('')).trim();
+}
+
+/** snowflake → Unix 秒；ID 解析不出发布时间返回 null。 */
+function snowflakeSeconds(id: string): number | null {
+  try {
+    const ms = Number((BigInt(id) >> 22n) + TWITTER_EPOCH);
+    return ms > Number(TWITTER_EPOCH) ? Math.floor(ms / 1000) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 把判定用的回复整理成样本行（judge / check 共用）。
+ * - posted_at 从 snowflake 算（与判定时的节奏统计同源），算不出为 NULL；
+ * - gap_seconds 是「与上一条回复的间隔」：gaps 是判定时按时间升序算好的间隔数组
+ *   （judge 传 gapsFromIds 的结果；check 传空数组，由 snowflake 现算），按时间排序后逐条配对；
+ * - 正文 / 原帖按 evidence 的同一口径截断（≤200 / ≤80 码点）并去 NUL，空正文的行丢弃。
+ */
+export function sampleRowsFromReplies(
+  replies: readonly ReplyEvidence[],
+  gaps: readonly number[],
+): AiSampleRow[] {
+  const postedAt = new Map(replies.map((reply) => [reply.id, snowflakeSeconds(reply.id)]));
+  const timed = replies
+    .filter((reply) => postedAt.get(reply.id) != null)
+    .sort((a, b) => (postedAt.get(a.id) as number) - (postedAt.get(b.id) as number));
+  // 间隔是相邻两条的差：按时间升序，第 i 条（i≥1）对应 gaps[i-1]
+  const gapOf = new Map<string, number>();
+  for (let i = 1; i < timed.length; i += 1) {
+    const current = timed[i]!;
+    const previous = timed[i - 1]!;
+    gapOf.set(
+      current.id,
+      gaps[i - 1] ??
+        Math.max(0, (postedAt.get(current.id) as number) - (postedAt.get(previous.id) as number)),
+    );
+  }
+  return replies
+    .map((reply) => ({
+      tweetId: reply.id,
+      parentId: null,
+      text: sampleText(reply.text, MAX_REPLY_CHARS),
+      parentText: reply.parent ? sampleText(reply.parent, MAX_PARENT_CHARS) || null : null,
+      postedAt: postedAt.get(reply.id) ?? null,
+      gapSeconds: gapOf.get(reply.id) ?? null,
+    }))
+    .filter((row) => row.text.length > 0);
+}
+
+/**
+ * 判定结果同步样本（judge / check 共用）：
+ * - verdict 为 ai / suspect：写入本次参与判定的回复，并把该 handle 裁到 20 条；
+ * - verdict 为 human：删除该 handle 全部样本（不给真人留存）；
+ * - verdict 为 insufficient：不写、不删。
+ * 写入用 ON CONFLICT DO NOTHING：同一批公开回复被重复判定时不产生重复行。
+ */
+export async function saveVerdictSamples(
+  env: Cloudflare.Env,
+  handle: string,
+  verdict: AiVerdict,
+  rows: readonly AiSampleRow[],
+  nowS: number,
+): Promise<void> {
+  if (verdict === 'insufficient') return;
+  const db = getDb(env);
+  if (verdict === 'human') {
+    await db.delete(aiAccountSamples).where(eq(aiAccountSamples.handle, handle));
+    return;
+  }
+  // 多行 UPSERT 先按主键排序；同一批里重复的 tweet 只留一条
+  const unique: AiSampleRow[] = [];
+  const seen = new Set<string>();
+  for (const row of rows) {
+    if (seen.has(row.tweetId)) continue;
+    seen.add(row.tweetId);
+    unique.push(row);
+  }
+  const values = unique
+    .sort((a, b) => (a.tweetId < b.tweetId ? -1 : a.tweetId > b.tweetId ? 1 : 0))
+    .map((row) => ({
+      handle,
+      tweetId: row.tweetId,
+      parentId: row.parentId,
+      text: row.text,
+      parentText: row.parentText,
+      postedAt: row.postedAt,
+      gapSeconds: row.gapSeconds,
+      // 两条判定路径（扩展直传 / TikHub）都是服务端判定时落库，来源统一记 judge
+      source: 'judge',
+      createdAt: nowS,
+    }));
+  if (values.length) {
+    await db.insert(aiAccountSamples).values(values).onConflictDoNothing();
+  }
+  // 每 handle 只留最近 20 条：新写入的 created_at 最新，旧的裁掉
+  const keep = await db
+    .select({ tweetId: aiAccountSamples.tweetId })
+    .from(aiAccountSamples)
+    .where(eq(aiAccountSamples.handle, handle))
+    .orderBy(
+      desc(aiAccountSamples.createdAt),
+      sql`${aiAccountSamples.postedAt} desc nulls last`,
+      desc(aiAccountSamples.tweetId),
+    )
+    .limit(MAX_SAMPLES_PER_HANDLE);
+  if (keep.length) {
+    await db
+      .delete(aiAccountSamples)
+      .where(
+        and(
+          eq(aiAccountSamples.handle, handle),
+          notInArray(
+            aiAccountSamples.tweetId,
+            keep.map((row) => row.tweetId),
+          ),
+        ),
+      );
+  }
+}
+
+/**
+ * 判定已经落库后再同步样本：样本只用于页面展示，写失败不能让一次成功的判定变成 500。
+ */
+export async function syncVerdictSamples(
+  env: Cloudflare.Env,
+  handle: string,
+  verdict: AiVerdict,
+  rows: readonly AiSampleRow[],
+  nowS: number,
+): Promise<void> {
+  try {
+    await saveVerdictSamples(env, handle, verdict, rows, nowS);
+  } catch (error) {
+    console.error('[community-api] ai account samples sync failed', error);
+  }
+}
+
 export async function checkAiAccount(
   env: Cloudflare.Env,
   raw: unknown,
@@ -365,10 +532,11 @@ export async function checkAiAccount(
     }
     const accountRhythm = rhythm(handle, data);
     const judged = await judgeAccount(env, replies, replyGaps(handle, data));
+    const verdict = decide(judged.score, accountRhythm);
     const row = await writeVerdict(env, {
       handle,
       xUserId,
-      verdict: decide(judged.score, accountRhythm),
+      verdict,
       score: Math.round(judged.score * 100) / 100,
       blue,
       replyIds: replies.map((r) => r.id),
@@ -379,6 +547,19 @@ export async function checkAiAccount(
       submitter: null,
       confirmed: true,
     });
+    /*
+     * 广场样本：TikHub 路径拿得到正文（buildReplies 的 text），所以同样落库；原帖 ID 只有
+     * timeline 里有（buildReplies 只保留原帖正文），按回复 ID 反查。间隔用 snowflake 现算：
+     * 这条路径没有客户端上报的 gaps，而 replyGaps 覆盖的时间线未必与这 10 条一一对应。
+     */
+    const parentIds = new Map(
+      data.timeline.map((tweet) => [tweet.tweet_id, tweet.in_reply_to_status_id_str ?? null]),
+    );
+    const samples = sampleRowsFromReplies(replies, []).map((sample) => ({
+      ...sample,
+      parentId: parentIds.get(sample.tweetId) ?? null,
+    }));
+    await syncVerdictSamples(env, handle, verdict, samples, nowS);
     return { status: 200, body: toValue(row, false) };
   } catch (error) {
     if (error instanceof VendorError) return fallback({ status: 502, code: 'upstream_failed' });
