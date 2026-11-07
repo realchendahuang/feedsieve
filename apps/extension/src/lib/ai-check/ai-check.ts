@@ -1072,6 +1072,7 @@ export function createAiCheck(deps: {
         authors: input.authors ?? null,
         spanS: input.spanS ?? null,
         flavor,
+        comment: input.comment ?? null,
         replyCount: input.replyCount,
         medianGapS: input.medianGapS,
         cv,
