@@ -6,6 +6,7 @@ import { HelpIcon } from '@/site/components/SiteHeader';
 import { toast } from '@/site/components/ui/toast';
 import { ListPageHeader } from '@/site/pages/lists/lists-common';
 import { CHROME_STORE_URL, GITHUB_URL, xProfileUrl } from '@/site/site';
+import { initialOf } from '@/site/lib/utils';
 
 /** 「AI 号」与「疑似」的语义色：红 / 琥珀（同站点 AI 味报告的 ai / mixed），且始终带文字标签，不只靠颜色。 */
 const KIND = {
@@ -279,7 +280,7 @@ function SquareCard({ entry, now }: { entry: AiSquareEntry; now: number }) {
             className="grid size-11 shrink-0 place-items-center rounded-full bg-[var(--wash-strong)] text-lg font-bold text-ink"
             style={{ boxShadow: `0 0 0 2px ${kind.color}` }}
           >
-            {[...name.replace(/^@/, '')][0]?.toUpperCase() ?? '?'}
+            {initialOf(name)}
           </span>
         )}
         <div className="min-w-0 flex-1">

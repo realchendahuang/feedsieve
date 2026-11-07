@@ -4,6 +4,7 @@ import type { AiSquareEntry } from '@/ai-accounts/square';
 import { HelpIcon } from '../components/SiteHeader';
 import { toast } from '../components/ui/toast';
 import { CHROME_STORE_URL, xProfileUrl } from '../site';
+import { initialOf } from '../lib/utils';
 
 const TONE = { ai: '#ff4d6d', mixed: '#e09a00', human: '#16b981' } as const;
 
@@ -77,7 +78,7 @@ export function AiPublicPage({
               className="grid size-16 place-items-center rounded-full bg-wash-strong text-2xl font-bold text-ink"
               style={{ boxShadow: `0 0 0 3px ${color}` }}
             >
-              {[...name.replace(/^@/, '')][0]?.toUpperCase()}
+              {initialOf(name)}
             </span>
           )}
           <div className="min-w-0">
