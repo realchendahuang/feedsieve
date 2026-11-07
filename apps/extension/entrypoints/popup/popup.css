@@ -3436,3 +3436,41 @@ input:not([type]):focus,
     --focus-ring: rgba(74, 168, 240, 0.55);
   }
 }
+
+/* 「我测过的」区块标题可点折叠：按钮外观与 .block-head 一致，chevron 展开时朝下 */
+.block-head-toggle {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.block-head-toggle:hover {
+  background: var(--hover);
+}
+
+.block-head-toggle:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.block-head-toggle .chevron-toggle {
+  margin-left: auto;
+  color: var(--muted);
+  transition: transform 0.15s;
+}
+
+.block-head-toggle[aria-expanded='true'] .chevron-toggle {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .block-head-toggle .chevron-toggle {
+    transition: none;
+  }
+}

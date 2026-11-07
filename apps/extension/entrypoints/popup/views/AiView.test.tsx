@@ -164,6 +164,12 @@ describe('AiView', () => {
     expect(host.querySelector('.ai-level')?.textContent).toBe('AI 感爆棚');
     expect(host.textContent).toContain('3 人认为是 AI · 1 人认为是真人 · 已进社区伪人名单');
     expect(host.querySelector('.ai-votes .is-selected')?.textContent).toBe('是 AI');
+    // 「我测过的」默认折叠：标题行显示数量，展开后才渲染记录行
+    const historyToggle = host.querySelector<HTMLButtonElement>('.block-head-toggle');
+    expect(historyToggle?.getAttribute('aria-expanded')).toBe('false');
+    expect(historyToggle?.textContent).toContain('1');
+    expect(host.querySelector('.ai-row')).toBeNull();
+    await act(async () => historyToggle?.click());
     expect(host.querySelector('.ai-row')?.textContent).toContain('@alice');
   });
 
