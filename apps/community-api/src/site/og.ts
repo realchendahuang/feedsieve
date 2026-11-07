@@ -41,6 +41,28 @@ function textW(s: string, size: number): number {
   return em * size;
 }
 
+/**
+ * 按可用宽度贪心折行（最多 maxLines 行；放不下时最后一行补省略号）。
+ * OG 卡没有自动换行，锐评最长 60 个汉字，单行放不下，所以给两行。
+ */
+export function wrapLines(s: string, maxW: number, size: number, maxLines: number): string[] {
+  const chars = [...s];
+  const lines: string[] = [];
+  let rest = chars;
+  while (rest.length && lines.length < maxLines) {
+    let take = rest.length;
+    while (take > 1 && textW(rest.slice(0, take).join(''), size) > maxW - size) take -= 1;
+    const line = rest.slice(0, take).join('');
+    rest = rest.slice(take);
+    lines.push(line);
+  }
+  if (rest.length) {
+    const last = lines[maxLines - 1] ?? '';
+    lines[maxLines - 1] = truncate(last + '…', maxW, size);
+  }
+  return lines;
+}
+
 /** 超宽截断：留出一个省略号的宽度 */
 export function truncate(s: string, maxW: number, size: number): string {
   if (textW(s, size) <= maxW) return s;
@@ -179,7 +201,12 @@ export function aiCardOgSvg(card: AiOgCard): string {
 <text x="462" y="370" font-size="190" font-weight="700" fill="${tone}">${card.percent}<tspan font-size="80">%</tspan></text>
 <rect x="470" y="404" width="${Math.min(640, textW(card.level ?? '', 38) + 56)}" height="64" rx="32" fill="${tone}"/>
 <text x="498" y="448" font-size="38" font-weight="700" fill="#0a0a0a">${esc(card.level ?? '')}</text>
-<text x="470" y="526" font-size="30" fill="${SUBTLE}">${esc(truncate(`「${card.roast ?? ''}」`, 650, 30))}</text>`
+${wrapLines(`「${card.roast ?? ''}」`, 650, 26, 2)
+  .map(
+    (line, index) =>
+      `<text x="470" y="${526 + index * 34}" font-size="26" fill="${SUBTLE}">${esc(line)}</text>`,
+  )
+  .join('\n')}`
       : card.state === 'human'
         ? `<text x="470" y="200" font-size="30" font-weight="700" fill="${MIST}">社区结论</text>
 <text x="462" y="370" font-size="150" font-weight="700" fill="${tone}">真人</text>
