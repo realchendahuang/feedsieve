@@ -32,6 +32,7 @@ import {
   vendorOpen,
   VendorError,
 } from './vendors';
+import { judgeAvailability } from './providers';
 
 const HANDLE = /^[a-z0-9_]{1,15}$/;
 const DAY_S = 86_400;
@@ -487,10 +488,12 @@ export async function checkAiAccount(
       ? { status: 200, body: toValue(existing, true, true) }
       : { status: error.status, body: { error: error.code } };
 
-  if (!env.TIKHUB_API_KEY || !env.TYPESAFE_API_KEY) {
+  // 判定模型网关：没配好（缺 AI binding / key）→ unavailable；配好但熔断全开 → paused。
+  const availability = await judgeAvailability(env, now);
+  if (!env.TIKHUB_API_KEY || availability === 'unavailable') {
     return fallback({ status: 503, code: 'ai_check_unavailable' });
   }
-  if (!(await vendorOpen(env, 'tikhub', now)) || !(await vendorOpen(env, 'typesafe', now))) {
+  if (!(await vendorOpen(env, 'tikhub', now)) || availability === 'paused') {
     return fallback({ status: 503, code: 'ai_check_paused' });
   }
 

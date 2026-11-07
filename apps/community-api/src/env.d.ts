@@ -50,8 +50,16 @@ declare namespace Cloudflare {
     SMTP_FROM?: string;
     /** TikHub API key（拉账号最近回复，AI 号判定用；线上 wrangler secret put）；缺省 = /v1/ai-accounts/check 返回 503 */
     TIKHUB_API_KEY?: string;
-    /** TypeSafe Jev API key（AI 号账号级判定；线上 wrangler secret put）；缺省 = 同上 */
+    /** TypeSafe 直连 key（旧判定通道，只有 AI_JUDGE_PROVIDERS 里写了 typesafe-direct 才用；默认不走） */
     TYPESAFE_API_KEY?: string;
+    /** Cloudflare Workers AI / AI Gateway 绑定（AI 号判定模型网关的默认通道）；缺省 = workers-ai provider 不可用 */
+    AI?: Ai;
+    /** AI 号判定的模型 provider 顺序（逗号分隔）：workers-ai、workers-ai:<model id>、typesafe-direct；默认 workers-ai */
+    AI_JUDGE_PROVIDERS?: string;
+    /** workers-ai provider 的默认模型 id（默认 typesafe/jev-1.14.0；换模型不用改代码） */
+    AI_JUDGE_MODEL?: string;
+    /** AI Gateway id（第三方模型必须经网关；默认 default，首次认证请求自动创建） */
+    AI_GATEWAY_ID?: string;
     /** 全站每天新判定 AI 号的「兜底闸」（默认 200000，纯防余额烧穿；单用户限额才是业务闸）；0 = 暂停新判定，只返缓存 */
     AI_CHECK_DAILY_BUDGET?: string;
     /** 福滤娃周刊 Worker（fsw-web）的 service binding：首页「本周 X 精选」读它的公开热帖；缺省 = 不显示该模块 */

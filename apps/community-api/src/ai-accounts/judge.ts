@@ -5,7 +5,8 @@
  * 服务端不再经过 TikHub。省掉 TikHub 成本，也省掉用户 X 会话额度——用户要查谁，他自己点进
  * 那个人的 with_replies 页就有数据（见 docs/06 的 2026-10-31 定稿：砍掉 TikHub 主通道）。
  *
- * Jev 的 key 只在服务端，扩展不持有，所以判定这一跳必须经过本 Worker 中转。
+ * 判定模型的凭据（Workers AI / AI Gateway，或可配置的其他 provider）只在服务端，扩展不持有，
+ * 所以判定这一跳必须经过本 Worker 中转；具体走哪个模型由 providers/ 的网关按部署配置决定。
  *
  * 判一次、全体共享：结果写同一张 ai_account_verdicts 表并缓存（ai/suspect 7 天给翻身机会，
  * human/insufficient 30 天）。命中缓存不调用 Jev、不计费、不计入单用户额度。
@@ -45,7 +46,8 @@ import {
   type AiVerdict,
   type ReplyEvidence,
 } from './evidence';
-import { judgeAccount, vendorOpen, VendorError } from './vendors';
+import { judgeAccount, VendorError } from './vendors';
+import { judgeAvailability } from './providers';
 
 const HANDLE = /^[a-z0-9_]{1,15}$/;
 const POST_ID = /^\d{1,25}$/;
@@ -248,8 +250,13 @@ export async function judgeAiAccount(
       ? { status: 200, body: toValue(existing, true, true) }
       : { status: error.status, body: { error: error.code } };
 
-  if (!env.TYPESAFE_API_KEY) return fallback({ status: 503, code: 'ai_check_unavailable' });
-  if (!(await vendorOpen(env, 'typesafe', now))) {
+  // 判定模型网关：没配好（缺 AI binding / key）→ unavailable；配好但熔断全开 → paused。
+  // 放在扣额度之前：供应商不可用时不能白扣用户的每日额度。
+  const availability = await judgeAvailability(env, now);
+  if (availability === 'unavailable') {
+    return fallback({ status: 503, code: 'ai_check_unavailable' });
+  }
+  if (availability === 'paused') {
     return fallback({ status: 503, code: 'ai_check_paused' });
   }
 

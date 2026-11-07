@@ -43,6 +43,15 @@ function timeline(
   return { timeline: items, user: { rest_id: '42', blue_verified: true, protected: false } };
 }
 
+interface FakeAiCall {
+  model: string;
+  input: Record<string, unknown>;
+  options?: Record<string, unknown>;
+}
+
+/** 当前测试注入的 Workers AI 绑定（判定默认走 workers-ai provider）。 */
+let activeAi: Ai | undefined;
+
 function stubVendors(
   options: {
     data?: VendorTimeline;
@@ -51,10 +60,25 @@ function stubVendors(
     jevStatus?: number;
   } = {},
 ) {
-  const calls = { tikhub: 0, jev: 0, jevBodies: [] as unknown[] };
+  const calls = { tikhub: 0, jev: 0, jevBodies: [] as FakeAiCall[] };
+  const binding = {
+    run: async (model: string, input: Record<string, unknown>, opts?: Record<string, unknown>) => {
+      calls.jev += 1;
+      calls.jevBodies.push({ model, input, options: opts });
+      if (options.jevStatus && options.jevStatus >= 400) {
+        throw Object.assign(new Error('ai failed'), { status: options.jevStatus });
+      }
+      return {
+        model: 'jev-1.14.0',
+        answers: { ai_account: { type: 'noul', noul: options.score ?? 0.9 } },
+        usage: { input_tokens: 2500 },
+      };
+    },
+  };
+  activeAi = binding as unknown as Ai;
   vi.stubGlobal(
     'fetch',
-    vi.fn(async (input: Request | string | URL, init?: RequestInit) => {
+    vi.fn(async (input: Request | string | URL) => {
       const url = new URL(String(input instanceof Request ? input.url : input));
       if (url.hostname === 'api.tikhub.io') {
         calls.tikhub += 1;
@@ -63,18 +87,6 @@ function stubVendors(
           status: options.tikhubStatus ?? 200,
         });
       }
-      if (url.hostname === 'api.typesafe.ai') {
-        calls.jev += 1;
-        calls.jevBodies.push(JSON.parse(String(init?.body)));
-        return new Response(
-          JSON.stringify({
-            model: 'jev-1.14.0',
-            answers: { ai_account: { type: 'noul', noul: options.score ?? 0.9 } },
-            usage: { input_tokens: 2500 },
-          }),
-          { status: options.jevStatus ?? 200 },
-        );
-      }
       return new Response('{}', { status: 404 });
     }),
   );
@@ -82,9 +94,10 @@ function stubVendors(
 }
 
 const keyed = (extra: Partial<Cloudflare.Env> = {}) =>
-  ({ ...env, TIKHUB_API_KEY: 'tk', TYPESAFE_API_KEY: 'ts', ...extra }) as Cloudflare.Env;
+  ({ ...env, TIKHUB_API_KEY: 'tk', AI: activeAi, ...extra }) as unknown as Cloudflare.Env;
 
 beforeEach(async () => {
+  activeAi = undefined;
   const db = getDb(env);
   await Promise.all([
     db.delete(aiAccountVerdicts),
@@ -182,7 +195,8 @@ describe('POST /v1/ai-accounts/check', () => {
     expect(sent).not.toContain('bot_one');
     expect(sent).not.toContain('poster');
     expect(
-      (calls.jevBodies[0] as { state: { reply_gaps_seconds: number[] } }).state.reply_gaps_seconds,
+      (calls.jevBodies[0]?.input as { state: { reply_gaps_seconds: number[] } }).state
+        .reply_gaps_seconds,
     ).toHaveLength(9);
 
     const [row] = await getDb(env)

@@ -7,6 +7,9 @@
   "compatibility_date": "2026-08-01",
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
+  // Workers AI / AI Gateway：AI 号判定走 typesafe/jev-1.14.0（第三方模型，需要 AI Gateway credits）。
+  // 本地 dev 直接调 AI 需要给这个 binding 加 "remote": true。
+  "ai": { "binding": "AI" },
   "assets": {
     // 官网 TanStack SSR + admin SPA 同一个绑定（部署前 merge-client-assets 合并）
     "directory": "./dist/client",

@@ -73,9 +73,22 @@ function timeline(
   return { timeline: items, user: { rest_id: '42', blue_verified: true, protected: false } };
 }
 
-/** 只 stub 第三方（judge 只经过 Jev，check 还经过 TikHub）。 */
+/** 当前测试注入的 Workers AI 绑定；判定默认走 workers-ai provider，TikHub 仍走 fetch。 */
+let activeAi: Ai | undefined;
+
 function stubVendors(options: { data?: VendorTimeline; score?: number } = {}) {
   const calls = { tikhub: 0, jev: 0 };
+  const binding = {
+    run: async () => {
+      calls.jev += 1;
+      return {
+        model: 'jev-1.14.0',
+        answers: { ai_account: { type: 'noul', noul: options.score ?? 0.9 } },
+        usage: { input_tokens: 2000 },
+      };
+    },
+  };
+  activeAi = binding as unknown as Ai;
   vi.stubGlobal(
     'fetch',
     vi.fn(async (input: Request | string | URL) => {
@@ -92,19 +105,6 @@ function stubVendors(options: { data?: VendorTimeline; score?: number } = {}) {
           { status: 200 },
         );
       }
-      if (url.hostname === 'api.typesafe.ai') {
-        calls.jev += 1;
-        return new Response(
-          JSON.stringify({
-            model: 'jev-1.14.0',
-            answers: {
-              ai_account: { type: 'noul', noul: options.score ?? 0.9 },
-            },
-            usage: { input_tokens: 2000 },
-          }),
-          { status: 200 },
-        );
-      }
       return new Response('{}', { status: 404 });
     }),
   );
@@ -112,7 +112,7 @@ function stubVendors(options: { data?: VendorTimeline; score?: number } = {}) {
 }
 
 const keyed = (extra: Partial<Cloudflare.Env> = {}) =>
-  ({ ...env, TIKHUB_API_KEY: 'tk', TYPESAFE_API_KEY: 'ts', ...extra }) as Cloudflare.Env;
+  ({ ...env, TIKHUB_API_KEY: 'tk', AI: activeAi, ...extra }) as unknown as Cloudflare.Env;
 
 /** 当前库里的样本，按发布时间从早到晚（时间算不出的排在最后）。 */
 async function samplesOf(handle: string) {
@@ -125,6 +125,7 @@ async function samplesOf(handle: string) {
 }
 
 beforeEach(async () => {
+  activeAi = undefined;
   const db = getDb(env);
   await Promise.all([
     db.delete(aiAccountSamples),

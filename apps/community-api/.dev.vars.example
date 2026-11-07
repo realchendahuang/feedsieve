@@ -9,7 +9,13 @@ SIGNING_PRIVATE_KEY=<pkcs8-der-base64>
 SIGNING_KEY_ID=release-1
 # 词库后台发布 / 回滚必须带发布者签名；密钥缺失时拒绝发布（线上同样用 wrangler secret put 设置）
 REQUIRE_SIGNED_KEYWORD_PACKS=1
-# AI 号判定（/v1/ai-accounts/check）：TikHub 拉回复 + TypeSafe Jev 判定；缺省时接口返回 503
+# AI 号判定：默认走 Cloudflare Workers AI 的 typesafe/jev-1.14.0（wrangler 里的 AI binding，
+# 本地 dev 直接调需要给 binding 加 "remote": true；第三方模型要在账户里充 AI Gateway credits）。
+# 旧 /v1/ai-accounts/check 还要 TikHub 拉回复；缺省时接口返回 503
 TIKHUB_API_KEY=<tikhub-key>
-TYPESAFE_API_KEY=<typesafe-key>
+# 只有 AI_JUDGE_PROVIDERS 里写了 typesafe-direct 才用（TypeSafe 直连备用通道）
+# TYPESAFE_API_KEY=<typesafe-key>
+# AI_JUDGE_PROVIDERS=workers-ai
+# AI_JUDGE_MODEL=typesafe/jev-1.14.0
+# AI_GATEWAY_ID=default
 # AI_CHECK_DAILY_BUDGET=500

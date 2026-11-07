@@ -21,44 +21,52 @@ function replies(
   }));
 }
 
-/** 只 stub Jev（judge 不经过 TikHub）。 */
-function stubJev(options: { score?: number; scores?: number[]; jevStatus?: number } = {}) {
-  const calls = { jev: 0, tikhub: 0, jevBodies: [] as unknown[] };
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async (input: Request | string | URL, init?: RequestInit) => {
-      const url = new URL(String(input instanceof Request ? input.url : input));
-      if (url.hostname === 'api.tikhub.io') {
-        calls.tikhub += 1;
-        return new Response('{}', { status: 500 });
+interface FakeAiCall {
+  model: string;
+  input: Record<string, unknown>;
+  options?: Record<string, unknown>;
+}
+
+/** 当前测试注入的 Workers AI 绑定；keyed() 会把它塞进 env（默认 provider 是 workers-ai）。 */
+let activeAi: Ai | undefined;
+
+/**
+ * 只 stub Workers AI（judge 不经过 TikHub）。
+ * calls.jev = 模型判定次数；calls.jevBodies = 每次的 {model, input, options}。
+ */
+function stubJev(
+  options: { score?: number; scores?: number[]; jevStatus?: number; badBody?: boolean } = {},
+) {
+  const calls = { jev: 0, tikhub: 0, jevBodies: [] as FakeAiCall[] };
+  const binding = {
+    run: async (model: string, input: Record<string, unknown>, opts?: Record<string, unknown>) => {
+      calls.jev += 1;
+      calls.jevBodies.push({ model, input, options: opts });
+      if (options.jevStatus && options.jevStatus >= 400) {
+        throw Object.assign(new Error('ai failed'), { status: options.jevStatus });
       }
-      if (url.hostname === 'api.typesafe.ai') {
-        calls.jev += 1;
-        calls.jevBodies.push(JSON.parse(String(init?.body)));
-        return new Response(
-          JSON.stringify({
-            model: 'jev-1.14.0',
-            answers: {
-              ai_account: {
-                type: 'noul',
-                noul: options.scores?.[calls.jev - 1] ?? options.score ?? 0.9,
-              },
-            },
-            usage: { input_tokens: 2000 },
-          }),
-          { status: options.jevStatus ?? 200 },
-        );
-      }
-      return new Response('{}', { status: 404 });
-    }),
-  );
+      if (options.badBody) return { model: 'jev-1.14.0', answers: {} };
+      return {
+        model: 'jev-1.14.0',
+        answers: {
+          ai_account: {
+            type: 'noul',
+            noul: options.scores?.[calls.jev - 1] ?? options.score ?? 0.9,
+          },
+        },
+        usage: { input_tokens: 2000 },
+      };
+    },
+  };
+  activeAi = binding as unknown as Ai;
   return calls;
 }
 
 const keyed = (extra: Partial<Cloudflare.Env> = {}) =>
-  ({ ...env, TYPESAFE_API_KEY: 'ts', ...extra }) as Cloudflare.Env;
+  ({ ...env, AI: activeAi, ...extra }) as unknown as Cloudflare.Env;
 
 beforeEach(async () => {
+  activeAi = undefined;
   const db = getDb(env);
   await Promise.all([
     db.delete(aiAccountVerdicts),
@@ -122,7 +130,8 @@ describe('POST /v1/ai-accounts/judge（证据直传）', () => {
     const sent = JSON.stringify(calls.jevBodies[0]);
     expect(sent).not.toContain('bot_one');
     expect(
-      (calls.jevBodies[0] as { state: { reply_gaps_seconds: number[] } }).state.reply_gaps_seconds,
+      (calls.jevBodies[0]?.input as { state: { reply_gaps_seconds: number[] } }).state
+        .reply_gaps_seconds,
     ).toHaveLength(9);
 
     const [row] = await getDb(env)
@@ -178,7 +187,7 @@ describe('POST /v1/ai-accounts/judge（证据直传）', () => {
     expect(calls.jev).toBe(0);
   });
 
-  it('没有 Jev 密钥返回 503', async () => {
+  it('没有可用的判定 provider（缺 AI binding）返回 503', async () => {
     stubJev();
     const result = await judgeAiAccount(
       { ...env } as Cloudflare.Env,
@@ -188,7 +197,7 @@ describe('POST /v1/ai-accounts/judge（证据直传）', () => {
     expect(result).toEqual({ status: 503, body: { error: 'ai_check_unavailable' } });
   });
 
-  it('Jev 失败返回 502 且不写结果；有旧结果时降级返回旧结果', async () => {
+  it('判定模型失败返回 502 且不写结果；有旧结果时降级返回旧结果', async () => {
     stubJev({ jevStatus: 500 });
     const failed = await judgeAiAccount(
       keyed(),
@@ -301,5 +310,106 @@ describe('POST /v1/ai-accounts/judge（证据直传）', () => {
     );
     expect(response.status).toBe(503);
     expect(response.headers.get('cache-control')).toBe('no-store');
+  });
+
+  it('默认经 AI Gateway 调 Workers AI 的 typesafe/jev-1.14.0，不上传 handle、不写网关日志', async () => {
+    const calls = stubJev({ score: 0.9 });
+    const result = await judgeAiAccount(
+      keyed(),
+      {
+        installation_id: INSTALL,
+        handle: 'gatewayone',
+        replies: replies(10),
+        gaps: Array(9).fill(300),
+      },
+      undefined,
+    );
+    expect(result.status).toBe(200);
+    expect(calls.jevBodies[0]!.model).toBe('typesafe/jev-1.14.0');
+    expect(calls.jevBodies[0]!.options).toMatchObject({
+      gateway: { id: 'default', collectLog: false },
+    });
+    const sent = JSON.stringify(calls.jevBodies[0]!.input);
+    expect(sent).not.toContain('gatewayone');
+    expect(
+      (calls.jevBodies[0]!.input as { state: { reply_gaps_seconds: number[] } }).state
+        .reply_gaps_seconds,
+    ).toHaveLength(9);
+  });
+
+  it('Workers AI 失败时按 AI_JUDGE_PROVIDERS 轮到 typesafe-direct', async () => {
+    const calls = stubJev({ jevStatus: 500 });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: Request | string | URL) => {
+        const url = new URL(String(input instanceof Request ? input.url : input));
+        if (url.hostname === 'api.typesafe.ai') {
+          return new Response(
+            JSON.stringify({
+              model: 'jev-1.14.0',
+              answers: { ai_account: { type: 'noul', noul: 0.88 } },
+              usage: { input_tokens: 2000 },
+            }),
+            { status: 200 },
+          );
+        }
+        return new Response('{}', { status: 404 });
+      }),
+    );
+    const result = await judgeAiAccount(
+      keyed({ AI_JUDGE_PROVIDERS: 'workers-ai,typesafe-direct', TYPESAFE_API_KEY: 'ts' }),
+      { installation_id: INSTALL, handle: 'fallbackone', replies: replies(10) },
+      undefined,
+    );
+    expect(result.status).toBe(200);
+    expect(calls.jev).toBe(1);
+    expect(result.body).toMatchObject({ verdict: 'ai', score: 0.88 });
+    const [row] = await getDb(env)
+      .select({ model: aiAccountVerdicts.model })
+      .from(aiAccountVerdicts)
+      .where(eq(aiAccountVerdicts.handle, 'fallbackone'));
+    expect(row!.model).toBe('jev-1.14.0');
+  });
+
+  it('模型返回里没有 noul 概率时按失败处理（502），不写坏数据', async () => {
+    stubJev({ badBody: true });
+    const result = await judgeAiAccount(
+      keyed(),
+      { installation_id: INSTALL, handle: 'badbody', replies: replies(10) },
+      undefined,
+    );
+    expect(result).toEqual({ status: 502, body: { error: 'upstream_failed' } });
+    expect(await getDb(env).select({ n: count() }).from(aiAccountVerdicts)).toEqual([{ n: 0 }]);
+  });
+
+  it('provider 熔断全开时返回 503 paused，且不扣每日额度', async () => {
+    stubJev();
+    await getDb(env).insert(meta).values({
+      key: 'vendor_breaker:workers-ai:typesafe/jev-1.14.0',
+      value: JSON.stringify({ disabled_until: Date.now() + 60_000 }),
+    });
+    const result = await judgeAiAccount(
+      keyed(),
+      { installation_id: INSTALL, handle: 'pausedone', replies: replies(10) },
+      undefined,
+    );
+    expect(result).toEqual({ status: 503, body: { error: 'ai_check_paused' } });
+    const used = await getDb(env)
+      .select({ n: count() })
+      .from(trainingSampleUsage)
+      .where(like(trainingSampleUsage.identity, 'ai-check%'));
+    expect(used).toEqual([{ n: 0 }]);
+  });
+
+  it('AI_JUDGE_PROVIDERS 可指定其他 Workers AI 模型（Clef 的 body 带短模型名）', async () => {
+    const calls = stubJev({ score: 0.7 });
+    const result = await judgeAiAccount(
+      keyed({ AI_JUDGE_PROVIDERS: 'workers-ai:@cf/cloudflare/clef-flash' }),
+      { installation_id: INSTALL, handle: 'clefone', replies: replies(10) },
+      undefined,
+    );
+    expect(result.status).toBe(200);
+    expect(calls.jevBodies[0]!.model).toBe('@cf/cloudflare/clef-flash');
+    expect(calls.jevBodies[0]!.input).toMatchObject({ model: 'clef-flash' });
   });
 });

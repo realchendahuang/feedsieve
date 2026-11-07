@@ -14,6 +14,10 @@
   // 发信域名需在面板 Email Sending > Onboard Domain；发件地址走 MAIL_FROM。
   // 不放公开配置：remote 绑定会让 vitest 起远程会话，需要账号选择。
   "observability": { "enabled": true },
+  // Workers AI / AI Gateway：AI 号判定默认走 Cloudflare 上的 typesafe/jev-1.14.0（第三方模型，
+  // 经 AI Gateway 计费，需要账户里有 AI Gateway credits；模型/provider 顺序见 AI_JUDGE_PROVIDERS）。
+  // 本地 dev 想直接调 AI 需要给这个 binding 加 "remote": true（会连线上账号，fork 默认不开）。
+  "ai": { "binding": "AI" },
   // Workers Cache：公开只读端点（快照 latest / 版本化文件 / 词库）按各自的
   // Cache-Control 在边缘缓存，命中时不再执行 Worker（不碰数据库和 R2）。
   // /api/* 与 /v1/kill-switch 已显式 no-store，不会被共享缓存误命中。

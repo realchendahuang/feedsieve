@@ -29,33 +29,31 @@ function replies(n: number, offset = 0) {
   }));
 }
 
+/** 当前测试注入的 Workers AI 绑定；判定默认走 workers-ai provider。 */
+let activeAi: Ai | undefined;
+
 function stubJev(score = 0.9) {
   const calls = { jev: 0 };
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async (input: Request | string | URL) => {
-      const url = new URL(String(input instanceof Request ? input.url : input));
-      if (url.hostname === 'api.typesafe.ai') {
-        calls.jev += 1;
-        return new Response(
-          JSON.stringify({
-            model: 'jev-1.14.0',
-            answers: { ai_account: { type: 'noul', noul: score } },
-            usage: { input_tokens: 2000 },
-          }),
-        );
-      }
-      return new Response('{}', { status: 404 });
-    }),
-  );
+  const binding = {
+    run: async () => {
+      calls.jev += 1;
+      return {
+        model: 'jev-1.14.0',
+        answers: { ai_account: { type: 'noul', noul: score } },
+        usage: { input_tokens: 2000 },
+      };
+    },
+  };
+  activeAi = binding as unknown as Ai;
   return calls;
 }
 
-const keyed = () => ({ ...env, TYPESAFE_API_KEY: 'ts' }) as Cloudflare.Env;
+const keyed = () => ({ ...env, AI: activeAi }) as unknown as Cloudflare.Env;
 const judge = (installation_id: string, handle: string, list = replies(10)) =>
   judgeAiAccount(keyed(), { installation_id, handle, replies: list }, undefined);
 
 beforeEach(async () => {
+  activeAi = undefined;
   const db = getDb(env);
   await Promise.all([
     db.delete(aiAccountVerdicts),
