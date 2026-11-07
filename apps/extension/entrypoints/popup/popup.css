@@ -3474,3 +3474,78 @@ input:not([type]):focus,
     transition: none;
   }
 }
+
+/* 一键屏蔽前的预览：确认前先让用户看清要屏蔽谁（首字母占位 + handle + 分数） */
+.ai-preview {
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--line);
+}
+
+.ai-preview-title {
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
+.ai-preview-list {
+  max-height: 220px;
+  margin: 0 0 8px;
+  padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+}
+
+.ai-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  border-bottom: 1px solid var(--line);
+}
+
+.ai-preview-row:last-child {
+  border-bottom: 0;
+}
+
+.ai-preview-avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--fill);
+  color: var(--ink);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+.ai-preview-handle {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ai-preview-score {
+  flex: none;
+  margin-left: auto;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.ai-preview-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.ai-month-count {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}

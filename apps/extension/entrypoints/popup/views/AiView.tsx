@@ -20,6 +20,11 @@ import {
 } from '../../../src/lib/ai-check/client';
 import { getSelfHandle } from '../../../src/lib/community/following-allowlist';
 import {
+  getBlockedAccounts,
+  subscribeBlocked,
+  type BlockedAccount,
+} from '../../../src/lib/community/blocked-accounts';
+import {
   blockQueueProgress,
   getPersistentBlockQueue,
   subscribePersistentBlockQueue,
@@ -33,10 +38,18 @@ import {
   HelpIcon,
   OfficialLinkIcon,
   SkeletonList,
-  useArmedConfirm,
 } from './shared';
 import { useListPosition } from './use-list-position';
 import QueuePanel from './QueuePanel';
+
+/**
+ * 预览里没有头像（扩展不请求主页数据），用 handle 首字母做占位：
+ * 跳过 `_`、`.`、emoji 这些非字母数字字符，中文名取第一个汉字，取不到用 `?`。
+ */
+function initialOf(handle: string): string {
+  const match = handle.match(/[\p{L}\p{N}]/u);
+  return match ? match[0].toUpperCase() : '?';
+}
 
 const TONE_COLOR = {
   ai: 'var(--tone-ai)',
@@ -85,6 +98,12 @@ const COPY = {
     aiListHint:
       '只批量屏蔽已进社区公共名单的账号；疑似号不在范围内。拉黑由本机队列逐个执行，受每日额度限制，可随时暂停或取消。',
     aiBlockAll: '一键屏蔽',
+    aiPreviewTitle: (n: number) => `将屏蔽 ${n} 个账号`,
+    aiPreviewConfirm: (n: number) => `确认屏蔽 ${n} 个`,
+    aiPreviewCancel: '取消',
+    aiNoScore: '无模型分数',
+    aiScoreLine: (p: number) => `AI 味 ${p}%`,
+    aiMonthCount: (n: number) => `本月已屏蔽 ${n} 个 AI 号`,
     aiConfirmBlockAll: (count: number) => `再点一次：屏蔽 ${count} 个`,
     aiBlocked: (count: number) => `已加入拉黑队列（${count} 个）`,
   },
@@ -130,6 +149,12 @@ const COPY = {
     aiListHint:
       'Only accounts already on the community public list are included; suspected accounts are left out. Blocks run one by one from this browser, count against the daily limit, and can be paused or cancelled anytime.',
     aiBlockAll: 'Block all',
+    aiPreviewTitle: (n: number) => `Blocking ${n} accounts`,
+    aiPreviewConfirm: (n: number) => `Confirm ${n}`,
+    aiPreviewCancel: 'Cancel',
+    aiNoScore: 'No model score',
+    aiScoreLine: (p: number) => `AI ${p}%`,
+    aiMonthCount: (n: number) => `Blocked ${n} AI accounts this month`,
     aiConfirmBlockAll: (count: number) => `Click again: block ${count}`,
     aiBlocked: (count: number) => `Added to block queue (${count})`,
   },
@@ -290,8 +315,20 @@ export function AiView({
   const [queue, setQueue] = useState<PersistentBlockQueueState | null>(null);
   // 入队请求在飞：按钮禁用，避免连点排出第二支队列
   const [blocking, setBlocking] = useState(false);
-  // 一键屏蔽是批量破坏性操作：要求二段确认
-  const { isArmed, arm, reset } = useArmedConfirm();
+  // 一键屏蔽前先看要屏蔽谁：展开预览，确认后才真正入队
+  const [previewOpen, setPreviewOpen] = useState(false);
+  /** 本月通过「伪人名单」拉黑的 AI 号数量（只读本机记账，origin === 'ai-batch'） */
+  const [blockedThisMonth, setBlockedThisMonth] = useState(0);
+
+  useEffect(() => {
+    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+    const count = (accounts: BlockedAccount[]): number =>
+      accounts.filter((account) => account.origin === 'ai-batch' && account.blockedAt >= monthStart)
+        .length;
+    void getBlockedAccounts().then((accounts) => setBlockedThisMonth(count(accounts)));
+    // 队列执行期间每成功一个都会写本机记账，这里跟着涨
+    return subscribeBlocked((accounts) => setBlockedThisMonth(count(accounts)));
+  }, []);
 
   // 切走再回来：回到上次看的位置
   useListPosition({
@@ -413,6 +450,12 @@ export function AiView({
    * 一键屏蔽：把已进社区公共名单、且不在白名单 / 关注 / 已拉黑里的 AI 号入队，
    * 由 X 页面上的队列逐个执行原生拉黑；进度和失败项就在本区块里跟进。
    */
+  /** 预览里点「确认屏蔽」：收起面板后才入队，入队失败会 notify 提示 */
+  async function confirmAiBlock(): Promise<void> {
+    setPreviewOpen(false);
+    await startAiBlock();
+  }
+
   async function startAiBlock(): Promise<void> {
     if (aiEligible.length === 0 || blocking) return;
     setBlocking(true);
@@ -565,18 +608,46 @@ export function AiView({
             className="secondary-button"
             disabled={blocking || queueActive || aiEligible.length === 0}
             onClick={() => {
-              if (!arm('ai')) return;
-              reset();
-              void startAiBlock();
+              notify(null);
+              setPreviewOpen(true);
             }}
           >
-            {aiEligible.length === 0
-              ? c.aiListEmpty
-              : isArmed('ai')
-                ? c.aiConfirmBlockAll(aiEligible.length)
-                : c.aiBlockAll}
+            {aiEligible.length === 0 ? c.aiListEmpty : c.aiBlockAll}
           </button>
         </div>
+        {previewOpen ? (
+          <div className="ai-preview" aria-label={c.aiPreviewTitle(aiEligible.length)}>
+            <p className="ai-preview-title">{c.aiPreviewTitle(aiEligible.length)}</p>
+            <ul className="ai-preview-list">
+              {aiEligible.map((entry) => (
+                <li key={entry.handle} className="ai-preview-row">
+                  <span className="ai-preview-avatar" aria-hidden="true">
+                    {initialOf(entry.handle)}
+                  </span>
+                  <span className="ai-preview-handle">@{entry.handle}</span>
+                  <span className="ai-preview-score">
+                    {entry.score == null
+                      ? c.aiNoScore
+                      : c.aiScoreLine(Math.round((entry.score * 100) / 5) * 5)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <div className="ai-preview-actions">
+              <button
+                type="button"
+                className="primary-button"
+                disabled={blocking}
+                onClick={() => void confirmAiBlock()}
+              >
+                {c.aiPreviewConfirm(aiEligible.length)}
+              </button>
+              <button type="button" className="text-button" onClick={() => setPreviewOpen(false)}>
+                {c.aiPreviewCancel}
+              </button>
+            </div>
+          </div>
+        ) : null}
         {queueActive && queue && queue.source === 'ai-batch' ? (
           <QueuePanel
             language={language}
@@ -587,6 +658,9 @@ export function AiView({
             pauseNote={queuePauseNote}
             onControl={(action) => void controlQueue(action)}
           />
+        ) : null}
+        {blockedThisMonth > 0 ? (
+          <p className="ai-month-count">{c.aiMonthCount(blockedThisMonth)}</p>
         ) : null}
         {aiFailedTasks.length > 0 ? (
           <>

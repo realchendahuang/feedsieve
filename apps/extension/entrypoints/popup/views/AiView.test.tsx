@@ -349,26 +349,36 @@ describe('AiView › 社区伪人名单', () => {
     expect(openOfficialPage).toHaveBeenCalledWith('https://feedsieve.win/ai');
   });
 
-  it('一键屏蔽需二次确认：首点只进入确认态，再点才发出 ai-block-start', async () => {
+  it('点一键屏蔽先展开预览：列出账号与分数，不发消息', async () => {
+    const sendToXPage = vi.fn(async () => ({ status: 'started', id: 'queue-1', count: 2 }));
+    const { host } = await render(sendToXPage, { aiEligible: AI_ELIGIBLE, aiListCount: 128 });
+    await act(async () => aiBlockButton(host).click());
+    await flush();
+    expect(sendToXPage).not.toHaveBeenCalled();
+    const preview = host.querySelector<HTMLElement>('.ai-preview');
+    expect(preview).not.toBeNull();
+    expect(preview?.textContent).toContain('将屏蔽 2 个账号');
+    expect(preview?.textContent).toContain('@aislop_one');
+    expect(preview?.textContent).toContain('AI 味 90%');
+    expect(preview?.textContent).toContain('@aislop_two');
+    expect(preview?.textContent).toContain('无模型分数');
+  });
+
+  it('预览里点确认才入队，成功后收起预览并提示', async () => {
     const notify = vi.fn();
-    const sendToXPage = vi.fn(async () => ({
-      status: 'started',
-      id: 'queue-1',
-      count: AI_ELIGIBLE.length,
-    }));
+    const sendToXPage = vi.fn(async () => ({ status: 'started', id: 'queue-1', count: 2 }));
     const { host } = await render(sendToXPage, {
       aiEligible: AI_ELIGIBLE,
       aiListCount: 128,
       notify,
     });
-
     await act(async () => aiBlockButton(host).click());
     await flush();
-    // 第一次点击：不发送消息，文案变成确认态
-    expect(sendToXPage).not.toHaveBeenCalled();
-    expect(aiBlockButton(host).textContent).toBe('再点一次：屏蔽 2 个');
-
-    await act(async () => aiBlockButton(host).click());
+    const confirm = [
+      ...host.querySelectorAll<HTMLButtonElement>('.ai-preview-actions button'),
+    ].find((candidate) => candidate.textContent === '确认屏蔽 2 个');
+    expect(confirm).not.toBeUndefined();
+    await act(async () => confirm!.click());
     await flush();
     expect(sendToXPage).toHaveBeenCalledTimes(1);
     expect(sendToXPage).toHaveBeenCalledWith({
@@ -379,6 +389,33 @@ describe('AiView › 社区伪人名单', () => {
       ],
     });
     expect(notify).toHaveBeenCalledWith('已加入拉黑队列（2 个）');
+    expect(host.querySelector('.ai-preview')).toBeNull();
+  });
+
+  it('预览里点取消收起面板，不发消息', async () => {
+    const sendToXPage = vi.fn(async () => ({ status: 'started', id: 'queue-1', count: 2 }));
+    const { host } = await render(sendToXPage, { aiEligible: AI_ELIGIBLE, aiListCount: 128 });
+    await act(async () => aiBlockButton(host).click());
+    await flush();
+    const cancel = [...host.querySelectorAll<HTMLButtonElement>('.ai-preview-actions button')].find(
+      (candidate) => candidate.textContent === '取消',
+    );
+    await act(async () => cancel!.click());
+    await flush();
+    expect(sendToXPage).not.toHaveBeenCalled();
+    expect(host.querySelector('.ai-preview')).toBeNull();
+  });
+
+  it('本月已屏蔽计数只统计 origin=ai-batch 且在本月的记录', async () => {
+    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+    localStored.blockedAccounts = [
+      { handle: 'a', blockedAt: monthStart + 3_600_000, origin: 'ai-batch' },
+      { handle: 'b', blockedAt: monthStart + 3_600_000, origin: 'community-batch' },
+      { handle: 'c', blockedAt: monthStart - 3_600_000, origin: 'ai-batch' },
+    ];
+    const { host } = await render(undefined, { aiEligible: AI_ELIGIBLE, aiListCount: 128 });
+    await flush();
+    expect(host.textContent).toContain('本月已屏蔽 1 个 AI 号');
   });
 
   it('队列进度只显示 source=ai-batch 的队列', async () => {
