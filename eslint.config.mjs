@@ -10,6 +10,7 @@ export default tseslint.config(
       '**/dist/**',
       '**/.output/**',
       '**/.wxt/**',
+      '**/.wrangler/**',
       '**/coverage/**',
       '**/*.gen.*',
       'third_party/**',

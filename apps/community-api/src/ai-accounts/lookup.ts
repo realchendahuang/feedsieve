@@ -74,7 +74,13 @@ export async function lookupAiAccount(
     tally.ai_count >= AI_LIST_MIN_VOTES &&
     tally.human_count >= AI_LIST_MIN_VOTES &&
     tally.ai_count === tally.human_count;
-  const jevAi = row?.verdict === 'ai' || row?.verdict === 'suspect';
+  /**
+   * 判定过期即不再是可公开结论（与 /v1/ai-accounts/list、广场 square.ts 同源）：
+   * 过期是「有人再遇到就重判」的信号，旧分数不该继续对外展示，否则同一个号
+   * 在广场（按过期过滤）和结果页（按旧口径）会给出两个结论。
+   */
+  const fresh = row != null && row.expiresAt > nowS;
+  const jevAi = fresh && (row?.verdict === 'ai' || row?.verdict === 'suspect');
   let verdict: AiVerdict | null = null;
   let score: number | null = null;
   if (!contested && humanWin) {
@@ -82,7 +88,7 @@ export async function lookupAiAccount(
   } else if (!contested && aiWin) {
     verdict = jevAi ? row!.verdict : 'ai';
     score = jevAi ? row!.score : null;
-  } else if (!contested && row?.confirmed === 1 && row.verdict !== 'insufficient') {
+  } else if (!contested && fresh && row?.confirmed === 1 && row.verdict !== 'insufficient') {
     verdict = row.verdict;
     score = jevAi ? row.score : null;
   }
