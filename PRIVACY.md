@@ -1,6 +1,6 @@
 # FeedSieve 隐私政策 / Privacy Policy
 
-生效日期：2026-09-01（2026-09-13 增补独立用户反馈样本；2026-10-30 增补本地热帖、全站热榜与本机保存的博主主页帖子；2026-10-31 增补博主主页帖子库众包、调整全站热榜上报节奏与防刷、增补 AI 味检测与规则命中上报，随 0.11.0 发布生效；2026-11-01 增补发帖排期与文章编辑（仅本机），随 0.12.0 发布生效；2026-11-01 调整 AI 味公开裁决为社区投票 + Jev，不再由维护者复核；2026-11-01 增补：你自己的主页公开帖子数字也参与主页帖子库众包，使用独立的每日会话编号；2026-11-02 取消主页帖子库的粉丝数门槛；2026-11-04 增补 X 原生静音词管理，首次写入前确认） · Contact: [GitHub Issues](https://github.com/realchendahuang/feedsieve/issues)
+生效日期：2026-09-01（2026-09-13 增补独立用户反馈样本；2026-10-30 增补本地热帖、全站热榜与本机保存的博主主页帖子；2026-10-31 增补博主主页帖子库众包、调整全站热榜上报节奏与防刷、增补 AI 味检测与规则命中上报，随 0.11.0 发布生效；2026-11-01 增补发帖排期与文章编辑（仅本机），随 0.12.0 发布生效；2026-11-01 调整 AI 味公开裁决为社区投票 + Jev，不再由维护者复核；2026-11-01 增补：你自己的主页公开帖子数字也参与主页帖子库众包，使用独立的每日会话编号；2026-11-02 取消主页帖子库的粉丝数门槛；2026-11-04 增补 X 原生静音词管理，首次写入前确认；2026-11-07 增补 AI 号广场：公开 AI / 疑似 AI 账号的回复摘要、节奏指标与主页公开数据，AI 味检测的回复正文保存口径相应调整） · Contact: [GitHub Issues](https://github.com/realchendahuang/feedsieve/issues)
 
 FeedSieve（福滤娃）是 X（Twitter）扩展：黄框标注垃圾账号、用户点击后执行拉黑；并基于页面已经加载的公开数据，显示帖子热度、热帖列表和博主主页分析。
 本政策说明它处理什么数据、什么数据出设备、什么数据绝不出设备。
@@ -67,9 +67,20 @@ Firefox 版通过 `browser_specific_settings.gecko.data_collection_permissions` 
 **9. AI 味检测（显式动作；「仅本地运行」打开时不可用）**
 只有你点了回复上的机器人图标、主页的「AI 味」Tab 或面板里的「开始检测 / 测测我自己」，扩展才会在那个账号的「回复」页往下翻几屏，读取 X 已经加载的这个账号最近最多 20 条公开回复及其所回复的原帖（回复截 200 字、原帖截 80 字、去掉 t.co 短链）、帖子 ID，以及页面上显示的这个账号的昵称和头像地址，连同对方 handle、本机随机安装 ID、回复涉及几个不同的人（只有数字）发给官方 API。扩展不会为此额外请求 X。
 
-官方 API 把最近 10 条回复和回复间隔（不含 handle）交给第三方语言模型服务判定一次；分数落在灰色地带时再用后 10 条判一次。结论（AI / 疑似 / 真人、分数、参与判定的回复 ID、节奏统计、昵称、头像地址）按账号缓存 7–30 天；服务器不保存回复正文。一个人测出的结论只返回给他本人：要等另一个安装交来重合的回复、或独立重判落在同一侧，才对所有人公开（主页 Tab、评论区标记、官网结果页 `feedsieve.win/ai/账号`、分享预览图）。公开结论由社区票和 Jev 的判定一起决定：任一方向至少 3 票且领先，就按该方向公开；两边都至少 3 票且持平，显示「社区争议中」；不再由维护者复核，也不会因为申诉自动撤下。
+官方 API 把最近 10 条回复和回复间隔（不含 handle）交给第三方语言模型服务判定一次；分数落在灰色地带时再用后 10 条判一次。结论（AI / 疑似 / 真人、分数、参与判定的回复 ID、节奏统计、昵称、头像地址）按账号缓存 7–30 天。被判为 AI 或疑似 AI 的账号，服务器会另存最多 20 条参与判定的回复正文（每条最多 200 字）、原帖摘要（最多 80 字）、发帖时间和与上一条回复的间隔，用于 AI 号广场展示（只有按公开规则可以公示的账号才会展示，见第 9.1 条）；重判为真人时删除该账号已存的全部样本，证据不足时不保存。一个人测出的结论只返回给他本人：要等另一个安装交来重合的回复、或独立重判落在同一侧，才对所有人公开（主页 Tab、评论区标记、官网结果页 `feedsieve.win/ai/账号`、分享预览图）。公开结论由社区票和 Jev 的判定一起决定：任一方向至少 3 票且领先，就按该方向公开；两边都至少 3 票且持平，显示「社区争议中」；不再由维护者复核，也不会因为申诉自动撤下。
 
 你点「是 AI / 是真人」时上传对方 handle、你的选择和安装 ID。AI 票至少 3 票且多于真人票时，账号进入社区 AI 号名单；真人票至少 3 票且领先时，公开结论为真人并从名单撤下；两边都至少 3 票且持平显示「社区争议中」。扩展每 30 分钟最多下载一次这份名单（只含 handle、分数、是否入名单），用来在评论区标记或折叠，你可以在面板「AI 味」里关掉或改成折叠。你查过谁、自己测出的结果、投过什么只在本机另存一份（`storage.local`）。分享图在本机生成，不上传。检测失败时（回复不够、太集中、你点了停止）只上报失败类型，不带账号。每个安装每天最多发起 20 次新判定。
+
+**9.1 AI 号广场（公开展示）**
+官网「[AI 号广场](https://feedsieve.win/ai)」（`feedsieve.win/ai` 与 `feedsieve.win/ai/账号`）公开展示按公开规则可以公示的 AI 号与疑似 AI 号，帮访客判断是否值得屏蔽。展示内容：
+
+- handle、昵称、头像、结论（页面会把「疑似」单独标注，不与 AI 号混列）、Jev 分数、判定时间；
+- 回复节奏指标：中位回复间隔、≤90 秒回复占比、≤6 字回复占比、长度变异系数、参与判定的回复条数；
+- 主页公开数据：粉丝数、关注数、发帖数、注册时间、是否蓝V。这些来自第 8 条的主页帖子库众包，没采到的显示为「未知」，不会显示成 0；
+- 社区票数（AI 票 / 真人票）与是否已进公共 AI 号名单；
+- 最近的回复样本：列表页最多 3 条、账号详情页最多 12 条，每条正文最多显示 120 字（超出以省略号收尾），附原帖摘要（若有）、发帖时间、与上一条回复的间隔，以及这条回复在 X 上的链接。
+
+这些正文都来自被判定账号自己公开发布的回复，只用来参考「是否值得屏蔽」，不构成事实认定。判定与票数口径见第 9 条，性质与救济见 [DISCLAIMER.md](https://github.com/realchendahuang/feedsieve/blob/main/DISCLAIMER.md)。服务器对每个账号最多保存 20 条回复样本，只在账号可公示时展示：判定过期后不再作为公开展示的依据；若账号靠社区「是 AI」票留在广场，则按名单口径继续展示。重判为真人时删除该账号的全部样本。屏蔽与否始终由你自己在 X 上决定，FeedSieve 不代你执行任何拉黑。
 
 **10. 规则命中上报（默认开启，可单独关闭；「仅本地运行」打开时一并停止）**
 扩展的官方规则（官方关键词词库、昵称/提及招揽、内置组合规则、社区指纹/域名）给某个账号打了黄框时，会匿名记一条，默认每 15 分钟最多上报一次：对方 handle、规则 ID、检测来源、分类、正文指纹的单向哈希、触发的帖子 ID。同一账号同一规则每天只报一次。不上传：你的自定义关键词及其命中、名单命中、正文原文、昵称和简介、你自己的 X 账号、安装 ID、Cookie 或任何 X 凭证；扩展不会为此额外请求 X。请求只带一个每天更换的随机会话编号（与全站热榜、主页帖子库的都不是同一个），服务器另存「IP 网段 + 当天日期」加盐哈希的前 16 位，用来判断命中来自不同网络；不保存完整 IP。
@@ -78,12 +89,13 @@ Firefox 版通过 `browser_specific_settings.gecko.data_collection_permissions` 
 
 ### 服务器保存什么
 
-官方 API（运行在 Cloudflare Workers，数据存放在维护者自管服务器上的 PostgreSQL 数据库）保存：handle、x_user_id、分类、指纹、外链域名、拉黑时携带的公开判定材料（推文原文/昵称/简介，只做反滥用分析，不对外公开检索）、误标来源/规则/理由、当前黑白标签、加盐哈希后的安装 ID、你主动贡献的关键词短语、时间。不保存原始 IP（网页关键词提交的 IP 级限流只保存盐哈希）、原始安装 ID、Cookie、任何 X 凭证。
+官方 API（运行在 Cloudflare Workers，数据存放在维护者自管服务器上的 PostgreSQL 数据库）保存：handle、x_user_id、分类、指纹、外链域名、拉黑时携带的公开判定材料（推文原文/昵称/简介，只做反滥用分析，不对外公开检索）、误标来源/规则/理由、当前黑白标签、AI 号广场公开展示用的回复样本（仅被判为 AI / 疑似 AI 的账号，每账号最多 20 条，正文最多 200 字，公开展示时截到 120 字）、加盐哈希后的安装 ID、你主动贡献的关键词短语、时间。不保存原始 IP（网页关键词提交的 IP 级限流只保存盐哈希）、原始安装 ID、Cookie、任何 X 凭证。
 
 ### 删除与退出
 
 - 关闭上报：扩展面板 → 设置 → 关闭「名单上传」；或分别关闭「参与全站热榜」「上报规则命中」；打开「仅本地运行」停止全部上报。
 - 删除服务器数据：在 [GitHub Issues](https://github.com/realchendahuang/feedsieve/issues) 提出请求，按安装 ID 哈希删除相关记录。
+- AI 号广场样本：重判为真人时自动删除该账号的全部样本，判定过期后随下一次判定替换；认为自己被误判，可在[申诉入口](https://feedsieve.win/lists/apply?kind=appeal)提交（邮箱验证）。
 - 卸载扩展即删除全部本地数据。
 
 ### 变更
@@ -150,9 +162,14 @@ After you open a creator's profile, the extension fetches the public post number
 **9. AI flavor check (explicit action; unavailable in local-only mode)**
 Only after you click the robot icon on a reply, the "AI flavor" tab on a profile, or "Check / Check myself" in the panel does the extension scroll a few screens down that account's Replies tab and read up to 20 of its most recent public replies X already loaded, the posts they reply to (replies truncated to 200 characters, parent posts to 80, t.co links removed), post IDs, and the display name and avatar URL shown on the page. These are sent with the account handle, this device's random install ID and the number of distinct people replied to (a number only) to the official API. The extension makes no extra requests to X for this.
 
-The official API passes the 10 most recent replies and the reply gaps (without the handle) to a third-party language model service once, and a second time with the next 10 when the score is borderline. The result (AI / suspect / human, score, IDs of replies used, rhythm stats, display name, avatar URL) is cached per account for 7–30 days; reply text is not stored. A result from one person is returned only to that person; it becomes visible to everyone (profile tab, reply labels, the public page `feedsieve.win/ai/handle`, share previews) only after another install submits overlapping replies or an independent re-check lands on the same side. The public verdict is decided by community votes together with Jev's result: at least 3 votes in one direction and a lead in that direction publishes that verdict; at least 3 votes on both sides with a tie shows "community dispute". Maintainer review is no longer used, and an appeal no longer withdraws a public verdict automatically.
+The official API passes the 10 most recent replies and the reply gaps (without the handle) to a third-party language model service once, and a second time with the next 10 when the score is borderline. The result (AI / suspect / human, score, IDs of replies used, rhythm stats, display name, avatar URL) is cached per account for 7–30 days. For accounts judged AI or suspect, the server also stores up to 20 replies used in the judgment (200 characters each), a parent-post excerpt (80 characters), the post time and the gap to the previous reply, for display in the AI account square (shown only for accounts that are public under the public rules, see item 9.1); when an account is re-judged human, all stored samples for it are deleted, and an insufficient result stores nothing. A result from one person is returned only to that person; it becomes visible to everyone (profile tab, reply labels, the public page `feedsieve.win/ai/handle`, share previews) only after another install submits overlapping replies or an independent re-check lands on the same side. The public verdict is decided by community votes together with Jev's result: at least 3 votes in one direction and a lead in that direction publishes that verdict; at least 3 votes on both sides with a tie shows "community dispute". Maintainer review is no longer used, and an appeal no longer withdraws a public verdict automatically.
 
 Clicking "It's AI / It's human" sends the handle, your choice and the install ID. An account joins the community AI list when at least 3 votes say AI and they outnumber human votes; when at least 3 human votes lead, the public verdict is human and the account leaves the list; at least 3 votes on both sides with a tie shows "community dispute". The extension downloads that list (handle, score, listed flag) at most every 30 minutes to label or fold those accounts in replies; you can turn this off or switch to folding under "AI flavor" in the panel. Who you checked, your own results and your votes are also kept on this device (`storage.local`). Share images are made on your device and never uploaded. When a check fails (too few replies, too concentrated, or you pressed Stop), only the failure type is reported, without any account. Each install can start at most 20 new checks per day.
+
+**9.1 AI account square (public display)**
+The official "[AI account square](https://feedsieve.win/ai)" (`feedsieve.win/ai` and `feedsieve.win/ai/handle`) shows accounts that are public under the public rules — AI accounts and suspected AI accounts — so visitors can decide whether an account is worth blocking. It shows: handle, display name, avatar, verdict (suspected accounts are labeled "suspected" and kept visually separate from AI accounts), Jev score and judgment time; reply rhythm metrics (median reply gap, share of replies within 90 seconds, share of replies of 6 characters or fewer, length coefficient of variation, number of replies used); public profile data (followers, following, posts, join date, blue verification) taken from the profile crowdsourcing in item 8, shown as "unknown" rather than 0 when not collected; community vote counts (AI / human) and whether the account is on the public AI list; and recent reply samples — up to 3 on the list page and up to 12 on the account page, each showing at most 120 characters of the reply text (longer text ends with an ellipsis), a parent-post excerpt if any, the post time, the gap to the previous reply, and a link to that reply on X.
+
+All reply text comes from replies the judged account published publicly. It is provided only as a reference for "is this account worth blocking" and is not a factual finding. See item 9 for the verdict and vote rules and [DISCLAIMER.md](https://github.com/realchendahuang/feedsieve/blob/main/DISCLAIMER.md) for the nature of the content and remedies. The server keeps at most 20 reply samples per account, shown only while the account is public: once the verdict expires it is no longer used as the basis for public display, and an account that stays in the square on community "AI" votes is shown under the list rules. When an account is re-judged human, all its samples are deleted. Whether to block is always your own decision on X; FeedSieve never performs blocks for you.
 
 **10. Rule hit reports (on by default, can be turned off on its own; local-only mode stops it too)**
 When an official rule (the official keyword packs, profile/mention invitation rules, built-in combination rules, community fingerprints or domains) marks an account, the extension records it anonymously and reports at most every 15 minutes by default: the account handle, rule ID, detection source, category, a one-way hash of the text fingerprint, and the post ID. Each account and rule is reported at most once a day. Not sent: your custom keywords or their hits, list hits, tweet text, display names or bios, your own X account, the install ID, cookies or any X credentials; the extension makes no extra requests to X for this. Requests carry only a random session ID that changes every day (separate from the hot list and profile library ones); the server also stores the first 16 characters of a salted hash of the request's network plus the date to tell hits from different networks apart; the full IP is not stored.
@@ -161,12 +178,13 @@ Rule hits are **not votes** and can never put an account on the blocklist by the
 
 ### What the server stores
 
-The official API (running on Cloudflare Workers, with data in a PostgreSQL database on servers run by the maintainer) stores: handle, x_user_id, category, fingerprint, link domains, the public block-time evidence carried with votes (tweet text, display name, bio — used for abuse analysis, never publicly searchable), false-positive source/rule/reason, current block/allow label, salted-hashed installation ID, keyword phrases you actively contributed, and timestamps. It does not store raw IPs (IP-level rate limiting for web keyword submissions keeps only a salted hash), raw installation IDs, cookies, or any X credentials.
+The official API (running on Cloudflare Workers, with data in a PostgreSQL database on servers run by the maintainer) stores: handle, x_user_id, category, fingerprint, link domains, the public block-time evidence carried with votes (tweet text, display name, bio — used for abuse analysis, never publicly searchable), false-positive source/rule/reason, current block/allow label, reply samples used for the public AI account square (AI / suspect accounts only, at most 20 per account, 200 characters of text in storage and 120 shown publicly), salted-hashed installation ID, keyword phrases you actively contributed, and timestamps. It does not store raw IPs (IP-level rate limiting for web keyword submissions keeps only a salted hash), raw installation IDs, cookies, or any X credentials.
 
 ### Deletion and opt-out
 
 - Stop reporting: popup → Settings → disable List uploads; or turn off "Join the global hot list" and "Report rule hits" separately; local-only mode stops all uploads.
 - Delete server data: open a request in [GitHub Issues](https://github.com/realchendahuang/feedsieve/issues); records are deleted by hashed installation ID.
+- AI account square samples: when an account is re-judged human, all its samples are deleted automatically; when a verdict expires, samples are no longer used for public display and are replaced by the next judgment. If you believe you were wrongly judged, submit an appeal through the [appeal entry](https://feedsieve.win/lists/apply?kind=appeal) (email-verified).
 - Uninstalling the extension removes all local data.
 
 ### Changes
