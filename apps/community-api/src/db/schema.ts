@@ -729,6 +729,39 @@ export const aiAccountVotes = pgTable(
   ],
 );
 
+/**
+ * AI 号广场的回复样本：参与判定的公开回复正文摘要，页面展示「它最近回复了什么」。
+ * 只给 ai / suspect 存；重判落到 human 时按 handle 全量删除（不给真人留存），insufficient 不写不删。
+ * 每 handle 最多保留 20 条（写入后按 created_at 裁剪）。正文 ≤200 码点、原帖 ≤80 码点，业务层截断。
+ * source 已知值：judge（扩展直传 / TikHub 判定落库）、backfill（回填脚本）；本地种子另有 seed。
+ */
+export const aiAccountSamples = pgTable(
+  'ai_account_samples',
+  {
+    /** 小写 handle */
+    handle: text('handle').notNull(),
+    /** 该账号自己的回复 ID（snowflake） */
+    tweetId: text('tweet_id').notNull(),
+    /** 被回复的原帖 ID；扩展直传路径拿不到，TikHub / 回填路径才有 */
+    parentId: text('parent_id'),
+    /** 回复正文，≤200 码点 */
+    text: text('text').notNull(),
+    /** 原帖摘要，≤80 码点 */
+    parentText: text('parent_text'),
+    /** 秒，从 snowflake 算；算不出为 NULL */
+    postedAt: ts('posted_at'),
+    /** 与上一条回复的间隔（秒） */
+    gapSeconds: integer('gap_seconds'),
+    source: text('source').notNull(),
+    /** 秒 */
+    createdAt: ts('created_at').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.handle, t.tweetId] }),
+    index('idx_ai_account_samples_handle').on(t.handle, t.createdAt.desc()),
+  ],
+);
+
 // ---------------------------------------------------------------------------
 // 快照、杂项（旧 D1 的 seasons 表属于已删除的排位赛，没有迁过来）
 // ---------------------------------------------------------------------------
