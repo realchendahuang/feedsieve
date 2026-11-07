@@ -1,14 +1,27 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { getAiPublicData } from '@/site/data.functions';
+import { getAiPublicData, getAiSquareDetail } from '@/site/data.functions';
 import { pageHead } from '@/site/seo';
 import { SITE_URL } from '@/site/site';
 import { AiPublicPage } from '@/site/pages/AiPublicPage';
 
+type PageLoaderData = {
+  data: Awaited<ReturnType<typeof getAiPublicData>>;
+  detail: Awaited<ReturnType<typeof getAiSquareDetail>>;
+};
+
 /** AI 味公开结果页：分享链接落地页，带头像 OG 预览图（/og/ai/:handle.png） */
 export const Route = createFileRoute('/_shell/ai/$handle')({
-  loader: ({ params }) => getAiPublicData({ data: { handle: params.handle } }),
+  loader: async ({ params }): Promise<PageLoaderData> => {
+    // 公开结论与广场详情并行取：详情只对可公示账号有值，用来补「为什么判为 AI」与回复样本
+    const [data, detail] = await Promise.all([
+      getAiPublicData({ data: { handle: params.handle } }),
+      getAiSquareDetail({ data: { handle: params.handle } }),
+    ]);
+    return { data, detail };
+  },
   head: (ctx) => {
-    const data = ctx.loaderData as Awaited<ReturnType<typeof getAiPublicData>> | undefined;
+    const loaded = ctx.loaderData as PageLoaderData | undefined;
+    const data = loaded?.data;
     const handle = data?.handle ?? ctx.params.handle.replace(/^@/, '').toLowerCase();
     const name = data?.displayName || `@${handle}`;
     const description = data?.flavor
@@ -27,6 +40,6 @@ export const Route = createFileRoute('/_shell/ai/$handle')({
 });
 
 function AiRoute() {
-  const data = Route.useLoaderData();
-  return <AiPublicPage data={data} />;
+  const { data, detail } = Route.useLoaderData();
+  return <AiPublicPage data={data} detail={detail} />;
 }
