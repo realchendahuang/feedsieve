@@ -9,7 +9,7 @@
  * 所以判定这一跳必须经过本 Worker 中转；具体走哪个模型由 providers/ 的网关按部署配置决定。
  *
  * 判一次、全体共享：结果写同一张 ai_account_verdicts 表并缓存（ai/suspect 7 天给翻身机会，
- * human/insufficient 30 天）。命中缓存不调用 Jev、不计费、不计入单用户额度。
+ * human/insufficient 30 天）。命中缓存不调用判定模型、不计费、不计入单用户额度。
  * 单用户每天新判定上限（INSTALL_DAILY_CHECKS）是真正拦人的闸；全站只有防余额烧穿的兜底闸。
  *
  * 防刷：本接口的判定结果只决定「本人看到的标签」；要进公共 AI 号名单，必须 ≥3 个独立安装
@@ -71,7 +71,7 @@ function gapsFromIds(replies: ReplyEvidence[], fallback: number[]): number[] {
   return at.slice(1).map((x, i) => Math.round((x - at[i]!) / 1000));
 }
 
-/** Jev 在疑似线到强线之间（0.40–0.55）最容易判错：第二批够数时补判一次取平均 */
+/** 模型在疑似线到强线之间（0.75–0.80）最容易判错：第二批够数时补判一次取平均 */
 function grayZone(score: number): boolean {
   return score >= DECISION.suspect && score < DECISION.strong;
 }
@@ -235,7 +235,7 @@ export async function judgeAiAccount(
     }
   }
 
-  // 证据不足：不花 Jev 的钱，直接记 insufficient（客户端据此引导用户往下滚、加载更多回复）。
+  // 证据不足：不花模型的钱，直接记 insufficient（客户端据此引导用户往下滚、加载更多回复）。
   if (replies.length < MIN_REPLIES) {
     await bump(env, 'ai-outcome:insufficient');
     return { status: 400, body: { error: 'insufficient_replies' } };

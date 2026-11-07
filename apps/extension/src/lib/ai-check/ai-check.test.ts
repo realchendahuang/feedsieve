@@ -158,7 +158,7 @@ describe('flavorOf', () => {
       tone: 'human',
       level: '活人感爆棚',
     });
-    expect(flavorOf(0.42, 'suspect', calm, 'zh').level).toBe('人机难辨');
+    expect(flavorOf(0.6, 'suspect', calm, 'zh').level).toBe('人机难辨');
   });
   it('服务端结论优先：节奏判出的 ai 站到 AI 一侧，锐评点出节奏', () => {
     const f = flavorOf(0.55, 'ai', { fast: 0.8, short: 0, cv: 0.2 }, 'zh');

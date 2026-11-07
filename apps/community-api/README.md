@@ -48,11 +48,12 @@ wrangler r2 bucket create feedsieve-keyword-packs
 cp wrangler.local.example.jsonc wrangler.local.jsonc
 #   编辑 wrangler.local.jsonc：填 account_id、Hyperdrive id、你的域名
 echo "your-salt" | wrangler secret put INSTALLATION_SALT --config wrangler.local.jsonc
-# AI 号判定：默认走 Cloudflare Workers AI 的 typesafe/jev-1.14.0（第三方模型，经 AI Gateway）。
-# wrangler 配置里已声明 AI binding，不用额外 secret；账户里需要有 AI Gateway credits（第三方模型计费）。
+# AI 号判定：默认走 Cloudflare Workers AI 的 Cloudflare 自家决策模型 @cf/cloudflare/clef，
+# 走 Workers AI 自己的计费（不需要 AI Gateway credits，也没有第三方 5% 手续费）。
+# wrangler 配置里已声明 AI binding，不用额外 secret。
 # 旧 /v1/ai-accounts/check 还要 TikHub 拉回复：
 echo "tikhub-key" | wrangler secret put TIKHUB_API_KEY --config wrangler.local.jsonc
-# 只有要继续用 TypeSafe 直连做备用通道时，才需要这个 secret 并在 AI_JUDGE_PROVIDERS 里写 typesafe-direct：
+# 只有要接第三方模型 / 走 TypeSafe 直连备用通道时，才需要这些：
 echo "typesafe-key" | wrangler secret put TYPESAFE_API_KEY --config wrangler.local.jsonc
 pnpm --filter @feedsieve/admin build
 pnpm deploy                                   # = wrangler deploy --config wrangler.local.jsonc
@@ -69,10 +70,11 @@ curl https://你的域名/healthz
 ```jsonc
 "vars": {
   "AI_JUDGE_PROVIDERS": "workers-ai",               // 默认，Cloudflare Workers AI
-  // "AI_JUDGE_PROVIDERS": "workers-ai:@cf/cloudflare/clef-flash",  // 换 Cloudflare 自家决策模型；没 credits 时可临时顶，但分数分布不同、别长期用
+  "AI_JUDGE_MODEL": "@cf/cloudflare/clef",          // 默认模型：Cloudflare 自家 Clef（27B 决策模型）
+  // "AI_JUDGE_MODEL": "@cf/cloudflare/clef-flash", // 9B 版，更便宜更快但分离度略差
   // "AI_JUDGE_PROVIDERS": "workers-ai,typesafe-direct",            // Workers AI 挂了再用 TypeSafe 直连
-  "AI_JUDGE_MODEL": "typesafe/jev-1.14.0",          // workers-ai 的默认模型（版本钉住，别用浮动别名）
-  "AI_GATEWAY_ID": "default"                        // 第三方模型必须经 AI Gateway
+  // "AI_JUDGE_PROVIDERS": "workers-ai:typesafe/jev-1.14.0",        // 换第三方 Jev（会经 AI Gateway，需要 credits）
+  "AI_GATEWAY_ID": "default"                        // 只有第三方模型才需要
 }
 ```
 

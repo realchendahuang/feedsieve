@@ -114,7 +114,7 @@ export function AiSquarePage({ data }: { data: AiSquareData | null }) {
         title="AI 号广场"
         aside={
           <HelpIcon ariaLabel="AI 号广场说明">
-            收录社区投票与 Jev 判定共同确认的 AI / 疑似 AI 账号，按公共名单与分数排序。
+            收录社区投票与模型判定共同确认的 AI / 疑似 AI 账号，按公共名单与分数排序。
             <br />
             内容来自这些账号的公开回复，仅供「是否值得屏蔽」参考，不构成事实认定；误判可申诉。
             <br />

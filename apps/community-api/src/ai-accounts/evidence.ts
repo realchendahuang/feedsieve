@@ -42,15 +42,20 @@ export const MAX_REPLY_CHARS = 200;
 export const MAX_PARENT_CHARS = 80;
 
 /**
- * 判定阈值（docs/06 §6，2026-10-31 按 10 条一批重新校准：247 个标注账号、真人 212 / AI 号 33，
- * 误判真人为 AI 号 1/212 不变，AI 号命中 12/33 → 18/33，真人落入疑似 1/212 → 5/212）。
+ * 判定阈值（按判定模型重新校准：2026-11-07 换成 Cloudflare 自家 Clef 后重扫 247 个标注账号）。
+ *
+ * 口径：AI 号 33 / 真人 210，10 条一批、灰区补判第二批取平均，节奏分支条件不变。
+ * 结果：强线 0.80 / 节奏分支 0.65 / 疑似 0.75 → AI 号命中 20/33，真人误判为 AI 号 4/210（1.9%，
+ * 与旧政策「≤3%」同档），真人落入疑似 3/210。
+ * 对照：Jev 口径 0.55 / 0.45 / 0.40 是 18/33、1/212、5/212；两套模型分数不可互比，缓存里过期的旧分数
+ * 只能按其 verdict 展示，不能按新阈值重新解释。
  */
 export const DECISION = {
-  strong: 0.55,
-  /** 节奏分支下限：Jev ≥ 0.45 且节奏机械 → ai */
-  weak: 0.45,
-  /** 疑似下限：Jev ≥ 0.4 → 至少 suspect */
-  suspect: 0.4,
+  strong: 0.8,
+  /** 节奏分支下限：Clef ≥ 0.65 且节奏机械 → ai */
+  weak: 0.65,
+  /** 疑似下限：Clef ≥ 0.75 → 至少 suspect（Clef 的真人分数上限比 Jev 高，疑似线也随之上移） */
+  suspect: 0.75,
   fast: 0.6,
   maxShort: 0.05,
   maxCv: 0.45,
@@ -59,7 +64,7 @@ export const DECISION = {
 const LEADING_MENTIONS = /^(@\w+\s+)+/;
 const TCO_LINK = /https:\/\/t\.co\/\S+/g;
 
-/** 按码点截断，并去掉截断产生的孤立代理项（Jev 会拒绝非法 Unicode）。 */
+/** 按码点截断，并去掉截断产生的孤立代理项（模型 API 会拒绝非法 Unicode）。 */
 function cut(value: string, max: number): string {
   return [...value]
     .slice(0, max)
@@ -138,7 +143,7 @@ function rhythmFrom(lens: number[], gaps: number[]): Rhythm {
   };
 }
 
-/** Jev ≥ 0.55 → ai；Jev ≥ 0.45 且节奏机械 → ai；其余 Jev ≥ 0.4 → suspect；更低 → human。 */
+/** 模型分 ≥ 0.80 → ai；≥ 0.65 且节奏机械 → ai；其余 ≥ 0.75 → suspect；更低 → human。 */
 export function decide(score: number, r: Rhythm): Exclude<AiVerdict, 'insufficient'> {
   if (score >= DECISION.strong) return 'ai';
   const mechanical =

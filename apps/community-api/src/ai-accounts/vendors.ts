@@ -1,7 +1,7 @@
 /**
  * AI 号判定的外部入口：TikHub（拉账号最近回复）与模型网关（账号级判定）。
  *
- * 判定模型不再写死在 TypeSafe 直连：默认走 Cloudflare Workers AI 的 `typesafe/jev-1.14.0`
+ * 判定模型不再写死在 TypeSafe 直连：默认走 Cloudflare Workers AI 的 `@cf/cloudflare/clef`
  * （经 AI Gateway，见 ./providers/workers-ai.ts），可通过 AI_JUDGE_PROVIDERS 切换/追加其他
  * Jev 或决策类模型。熔断状态存 meta 表（与 prober 同模式），连续失败后暂停一段时间。
  */

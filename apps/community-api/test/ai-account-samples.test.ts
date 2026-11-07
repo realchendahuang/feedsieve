@@ -182,7 +182,7 @@ describe('judge 路径落库样本（扩展直传）', () => {
   });
 
   it('判 suspect 同样落库；重复判定同一批回复不产生重复行', async () => {
-    stubVendors({ score: 0.45 });
+    stubVendors({ score: 0.76 });
     const now = Date.parse('2026-10-30T06:00:00Z');
     const payload = replies(now, 10);
     const first = await judgeAiAccount(

@@ -3,7 +3,7 @@
  *
  * 可公示口径与 `lookup.ts` 的 listAiAccounts 完全同源 —— 这里抄的是同一段 where：
  *   1. 真人票 ≥ 3 且不落后 → 社区认为真人 / 争议，不进广场；
- *   2. Jev 判 ai / suspect 且未过期且被第二个独立安装印证（confirmed=1）；或
+ *   2. 模型判 ai / suspect 且未过期且被第二个独立安装印证（confirmed=1）；或
  *   3. 社区「是 AI」票 ≥ 3 且领先。
  * 不再另立阈值：广场只做聚合，把主页画像、互动指标、最近回复样本拼上去。
  *
@@ -40,7 +40,7 @@ export interface AiSquareEntry {
   displayName: string | null;
   avatarUrl: string | null;
   kind: SquareKind;
-  /** 0–1；社区投票入名单但没有 Jev 分时为 null */
+  /** 0–1；社区投票入名单但没有模型分时为 null */
   score: number | null;
   listed: boolean;
   votes: { ai_count: number; human_count: number };

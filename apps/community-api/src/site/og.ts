@@ -194,7 +194,7 @@ export function aiCardOgSvg(card: AiOgCard): string {
             ? `<text x="470" y="200" font-size="30" font-weight="700" fill="${MIST}">社区结论</text>
 <text x="462" y="370" font-size="150" font-weight="700" fill="${tone}">AI</text>
 <text x="470" y="448" font-size="30" fill="${MIST}">AI ${card.aiVotes ?? 0} 票 · 真人 ${card.humanVotes ?? 0} 票</text>
-<text x="470" y="526" font-size="30" fill="${SUBTLE}">还没有可公开的 Jev 分数</text>`
+<text x="470" y="526" font-size="30" fill="${SUBTLE}">还没有可公开的判定分数</text>`
             : `<text x="470" y="250" font-size="54" font-weight="700" fill="${INK}">${
                 card.state === 'pending' ? '已有人测过 · 待确认' : '还没人测过'
               }</text>

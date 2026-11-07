@@ -2,7 +2,7 @@
  * AI 味报告的对外文案（纯函数）。
  *
  * 内部判定等级 ai / suspect / human 只驱动逻辑；对外给「AI 味 N%」+ 档位 + 一句锐评，
- * 方便截图传播。百分比按 5 取整：Jev 同一输入会有 ±0.02 的抖动，取整后复测不容易变数字。
+ * 方便截图传播。百分比按 5 取整：同一输入会有 ±0.02 的抖动，取整后复测不容易变数字。
  */
 /** 回复节奏：≤90 秒间隔占比、≤6 字短回复占比、长度变异系数（扩展与服务端同口径）。 */
 export interface Rhythm {
@@ -32,13 +32,17 @@ interface Tier {
   en: string;
 }
 
-/** 从高到低匹配第一个 score ≥ min 的档位。评语在 roasts.ts，每档几十条。 */
+/**
+ * 从高到低匹配第一个 score ≥ min 的档位。评语在 roasts.ts，每档几十条。
+ * 分档按当前判定模型（Cloudflare Clef）的分数分布校准，见 apps/community-api/src/ai-accounts/evidence.ts
+ * 的 DECISION：强线 0.80 / 节奏分支 0.65 / 疑似 0.75；档位边界围绕这三条线分布。
+ */
 const TIERS: Tier[] = [
-  { min: 0.8, tone: 'ai', pool: 'aiMax', zh: 'AI 感爆棚', en: 'Off-the-charts AI' },
-  { min: 0.55, tone: 'ai', pool: 'aiStrong', zh: 'AI 味很冲', en: 'Strong AI flavor' },
-  { min: 0.45, tone: 'mixed', pool: 'aiBit', zh: '有点 AI 味', en: 'A bit AI-ish' },
-  { min: 0.4, tone: 'mixed', pool: 'unsure', zh: '人机难辨', en: 'Hard to tell' },
-  { min: 0.2, tone: 'human', pool: 'humanMostly', zh: '人味为主', en: 'Mostly human' },
+  { min: 0.89, tone: 'ai', pool: 'aiMax', zh: 'AI 感爆棚', en: 'Off-the-charts AI' },
+  { min: 0.8, tone: 'ai', pool: 'aiStrong', zh: 'AI 味很冲', en: 'Strong AI flavor' },
+  { min: 0.65, tone: 'mixed', pool: 'aiBit', zh: '有点 AI 味', en: 'A bit AI-ish' },
+  { min: 0.55, tone: 'mixed', pool: 'unsure', zh: '人机难辨', en: 'Hard to tell' },
+  { min: 0.3, tone: 'human', pool: 'humanMostly', zh: '人味为主', en: 'Mostly human' },
   { min: 0, tone: 'human', pool: 'humanMax', zh: '活人感爆棚', en: 'Certified human' },
 ];
 

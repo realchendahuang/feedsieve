@@ -1,12 +1,12 @@
 /**
- * Cloudflare Workers AI（经 AI Gateway）判定 provider。
+ * Cloudflare Workers AI 判定 provider。
  *
- * 默认模型 `typesafe/jev-1.14.0`：Jev 是第三方模型，Worker 里用 `env.AI` 绑定调，Cloudflare
- * 负责凭据与计费（AI Gateway Unified Billing 预付费 credits，价格 $0.042/百万输入 token），
- * 不再需要维护 TypeSafe 直连 key。`@cf/cloudflare/clef-flash` 这类自家决策模型也走同一个
- * provider（body 里要多带一遍短模型名，见 requestBody），可用 AI_JUDGE_PROVIDERS 配成兜底。
+ * 默认模型 `@cf/cloudflare/clef`（Cloudflare 自家的决策模型，27B）：直接走 Workers AI 计费，
+ * 不经 AI Gateway 的第三方通道，也不需要预付费 credits 或 5% 手续费。
+ * 也可以配 `@cf/cloudflare/clef-flash`（9B，更便宜更快、但评测分离度略差）。
+ * 第三方模型（如 `typesafe/jev-1.14.0`）同样能走这里：会改经 AI Gateway，需要 credits。
  *
- * 隐私：判定正文只发给模型，不写 AI Gateway 日志（collectLog: false），也不带 handle。
+ * 隐私：判定正文只发给模型；第三方模型路径关闭 AI Gateway 日志（collectLog: false），正文不带 handle。
  */
 import { recordVendor, VendorError } from '../breaker';
 import questionFile from '../question.json';
@@ -20,10 +20,12 @@ import {
 } from './types';
 
 /**
- * Jev 在 Workers AI 上的模型 id。
- * `typesafe/jev` 是浮动别名（当前 1.13），要 1.14 必须显式写版本，否则升级不可预期。
+ * 默认判定模型：Cloudflare 自家的 Clef（27B，noul 决策模型）。
+ * 2026-11-07 评测（247 个标注账号）：Clef AUC 0.936，重扫阈值后命中 20/33、误判真人 4/210；
+ * clef-flash AUC 0.912（14/33）；clef-omni AUC 0.843，不适合这个任务。
+ * 换第三方模型（如 typesafe/jev-1.14.0）时用 AI_JUDGE_MODEL 或 AI_JUDGE_PROVIDERS 覆盖。
  */
-export const DEFAULT_JUDGE_MODEL = 'typesafe/jev-1.14.0';
+export const DEFAULT_JUDGE_MODEL = '@cf/cloudflare/clef';
 /** 第三方模型必须经 AI Gateway；`default` 网关在首次认证请求时自动创建。 */
 export const DEFAULT_AI_GATEWAY_ID = 'default';
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -63,17 +65,24 @@ export function createWorkersAiProvider(model = DEFAULT_JUDGE_MODEL): JudgeProvi
         throw new VendorError(vendor, 0);
       }
       let json: Record<string, unknown>;
+      const body = requestBody(model, input);
       try {
-        json = (await ai.run(model, requestBody(model, input), {
-          gateway: {
-            id: gatewayId(env),
-            requestTimeoutMs: REQUEST_TIMEOUT_MS,
-            // 判定正文是用户可见内容：不落 AI Gateway 日志（Cloudflare 侧不留 prompt）
-            collectLog: false,
-            // 只对瞬时错误重试一次；最终失败由熔断记一次
-            retries: { maxAttempts: 2, backoff: 'linear', retryDelayMs: 300 },
-          },
-        })) as Record<string, unknown>;
+        // Cloudflare 自家模型（@cf/*）直连 Workers AI：不经 AI Gateway，不进第三方 credits 计费，
+        // 也没有网关的 200 次/分钟限流。只有第三方模型（如 typesafe/jev-1.14.0）才必须经网关。
+        if (model.startsWith('@cf/')) {
+          json = (await ai.run(model, body)) as Record<string, unknown>;
+        } else {
+          json = (await ai.run(model, body, {
+            gateway: {
+              id: gatewayId(env),
+              requestTimeoutMs: REQUEST_TIMEOUT_MS,
+              // 判定正文是用户可见内容：不落 AI Gateway 日志（Cloudflare 侧不留 prompt）
+              collectLog: false,
+              // 只对瞬时错误重试一次；最终失败由熔断记一次
+              retries: { maxAttempts: 2, backoff: 'linear', retryDelayMs: 300 },
+            },
+          })) as Record<string, unknown>;
+        }
       } catch (error) {
         await recordVendor(env, vendor, false);
         throw new VendorError(vendor, errorStatus(error));

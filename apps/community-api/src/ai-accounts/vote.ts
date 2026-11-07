@@ -8,7 +8,7 @@
  *   ai 票 ≥ AI_LIST_MIN_VOTES 且 ai 票 > human 票 → listed=true（进公共名单）
  *   human 票追平或反超 → listed=false（撤出 / 拦住）
  *
- * 每个安装对每个账号只保留一张当前票（改票 = 覆盖）。投票不调用任何第三方、不花 Jev 的钱，
+ * 每个安装对每个账号只保留一张当前票（改票 = 覆盖）。投票不调用任何第三方、不花模型的钱，
  * 所以限额比判定宽松：每安装每天最多投 VOTE_DAILY 票，防脚本刷票。
  */
 import { and, eq, sql } from 'drizzle-orm';

@@ -55,9 +55,9 @@ function stubJev(
       ) {
         throw Object.assign(new Error('ai failed'), { status: options.jevStatus ?? 500 });
       }
-      if (options.badBody) return { model: 'jev-1.14.0', answers: {} };
+      if (options.badBody) return { model: 'clef', answers: {} };
       return {
-        model: 'jev-1.14.0',
+        model: 'clef',
         answers: {
           ai_account: {
             type: 'noul',
@@ -278,7 +278,7 @@ describe('POST /v1/ai-accounts/judge（证据直传）', () => {
   });
 
   it('灰色地带用第二批再判一次取平均；分数明确时只判一次', async () => {
-    const gray = stubJev({ scores: [0.45, 0.75] });
+    const gray = stubJev({ scores: [0.76, 0.86] });
     const many = Array.from({ length: 20 }, (_, i) => ({
       id: String(1_980_000_000_000_000_000n + BigInt(i) * 1_258_291_200_000n),
       parent: `原帖 ${i}`,
@@ -290,7 +290,7 @@ describe('POST /v1/ai-accounts/judge（证据直传）', () => {
       undefined,
     );
     expect(gray.jev).toBe(2);
-    expect(result.body).toMatchObject({ score: 0.6, verdict: 'ai', reply_count: 20 });
+    expect(result.body).toMatchObject({ score: 0.81, verdict: 'ai', reply_count: 20 });
     const [row] = await getDb(env)
       .select({ rhythm: aiAccountVerdicts.rhythm })
       .from(aiAccountVerdicts)
@@ -322,16 +322,37 @@ describe('POST /v1/ai-accounts/judge（证据直传）', () => {
     expect(response.headers.get('cache-control')).toBe('no-store');
   });
 
-  it('默认经 AI Gateway 调 Workers AI 的 typesafe/jev-1.14.0，不上传 handle、不写网关日志', async () => {
+  it('默认直连 Workers AI 调 Cloudflare 自家 Clef，不经 AI Gateway、不上传 handle', async () => {
     const calls = stubJev({ score: 0.9 });
     const result = await judgeAiAccount(
       keyed(),
       {
         installation_id: INSTALL,
-        handle: 'gatewayone',
+        handle: 'clefdefault',
         replies: replies(10),
         gaps: Array(9).fill(300),
       },
+      undefined,
+    );
+    expect(result.status).toBe(200);
+    expect(calls.jevBodies[0]!.model).toBe('@cf/cloudflare/clef');
+    // @cf 自家模型不走网关：没有 gateway/credits 依赖
+    expect(calls.jevBodies[0]!.options).toBeUndefined();
+    // Clef 要求 body 里再带一遍短模型名；这是 Cloudflare 模型的 schema，不是 Jev 那种顶层 model 字段
+    expect((calls.jevBodies[0]!.input as Record<string, unknown>).model).toBe('clef');
+    const sent = JSON.stringify(calls.jevBodies[0]!.input);
+    expect(sent).not.toContain('clefdefault');
+    expect(
+      (calls.jevBodies[0]!.input as { state: { reply_gaps_seconds: number[] } }).state
+        .reply_gaps_seconds,
+    ).toHaveLength(9);
+  });
+
+  it('配第三方 typesafe/jev 时才经 AI Gateway（以后换回或接别的第三方模型用）', async () => {
+    const calls = stubJev({ score: 0.8 });
+    const result = await judgeAiAccount(
+      keyed({ AI_JUDGE_PROVIDERS: 'workers-ai:typesafe/jev-1.14.0' }),
+      { installation_id: 'install-0005-abcdef', handle: 'thirdparty', replies: replies(10) },
       undefined,
     );
     expect(result.status).toBe(200);
@@ -339,12 +360,6 @@ describe('POST /v1/ai-accounts/judge（证据直传）', () => {
     expect(calls.jevBodies[0]!.options).toMatchObject({
       gateway: { id: 'default', collectLog: false },
     });
-    const sent = JSON.stringify(calls.jevBodies[0]!.input);
-    expect(sent).not.toContain('gatewayone');
-    expect(
-      (calls.jevBodies[0]!.input as { state: { reply_gaps_seconds: number[] } }).state
-        .reply_gaps_seconds,
-    ).toHaveLength(9);
   });
 
   it('Workers AI 失败时按 AI_JUDGE_PROVIDERS 轮到 typesafe-direct', async () => {
@@ -395,7 +410,7 @@ describe('POST /v1/ai-accounts/judge（证据直传）', () => {
   it('provider 熔断全开时返回 503 paused，且不扣每日额度', async () => {
     stubJev();
     await getDb(env).insert(meta).values({
-      key: 'vendor_breaker:workers-ai:typesafe/jev-1.14.0',
+      key: 'vendor_breaker:workers-ai:@cf/cloudflare/clef',
       value: JSON.stringify({ disabled_until: Date.now() + 60_000 }),
     });
     const result = await judgeAiAccount(
@@ -423,8 +438,8 @@ describe('POST /v1/ai-accounts/judge（证据直传）', () => {
     expect(calls.jevBodies[0]!.input).toMatchObject({ model: 'clef-flash' });
   });
   it('灰色地带第二轮锁死第一轮的 provider，不跨模型混分', async () => {
-    // 第一轮 workers-ai 判 0.45（灰区），第二轮同 provider 失败；typesafe-direct 虽配了兜底，也不许拿来混分
-    const calls = stubJev({ scores: [0.45], failOn: 2 });
+    // 第一轮 workers-ai 判 0.76（灰区 0.75–0.80），第二轮同 provider 失败；typesafe-direct 虽配了兜底，也不许拿来混分
+    const calls = stubJev({ scores: [0.76], failOn: 2 });
     const direct = vi.fn();
     vi.stubGlobal(
       'fetch',

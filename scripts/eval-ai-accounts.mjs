@@ -9,6 +9,7 @@
  *   node scripts/eval-ai-accounts.mjs --handles a,b,c       # 只判指定账号
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -22,6 +23,14 @@ const MAX_UPLOAD = 20;
 const MAX_PER_PARENT_AUTHOR = 2;
 const RESULTS = join(CACHE, 'results.json');
 const JEV_PRICE_PER_M = 0.042;
+/** Cloudflare 自家决策模型（@cf 前缀，直接走 Workers AI 计费，不经第三方 AI Gateway credits，也没有 5% 手续费）。 */
+const CF_MODEL_PRICE_PER_M = {
+  '@cf/cloudflare/clef': 0.24,
+  '@cf/cloudflare/clef-flash': 0.038,
+  '@cf/cloudflare/clef-omni': 0.15,
+};
+const TIKHUB_UA =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36';
 
 function devVar(name) {
   const text = readFileSync(join(ROOT, 'apps/community-api/.dev.vars'), 'utf8');
@@ -82,11 +91,11 @@ export function rhythm(handle, data) {
   };
 }
 
-/** 判定（和服务端 evidence.ts 一致）：Jev ≥ 0.55；或 Jev ≥ 0.45 且节奏机械（多数间隔 ≤90 秒、几乎没有短回复、长度均匀）。 */
+/** 判定（和服务端 evidence.ts 一致，2026-11-07 按 Cloudflare Clef 重校准）：≥0.80；或 ≥0.65 且节奏机械（多数间隔 ≤90 秒、几乎没有短回复、长度均匀）。 */
 export const DECISION = {
-  strong: 0.55,
-  weak: 0.45,
-  suspect: 0.4,
+  strong: 0.8,
+  weak: 0.65,
+  suspect: 0.75,
   fast: 0.6,
   maxShort: 0.05,
   maxCv: 0.45,
@@ -109,7 +118,9 @@ async function fetchReplies(handle, tikhubKey) {
   if (existsSync(file)) return JSON.parse(readFileSync(file, 'utf8'));
   const url = new URL('https://api.tikhub.io/api/v1/twitter/web/fetch_user_tweet_replies');
   url.searchParams.set('screen_name', handle);
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${tikhubKey}` } });
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${tikhubKey}`, 'User-Agent': TIKHUB_UA, Accept: 'application/json' },
+  });
   const json = await res.json();
   if (!res.ok || !json.data) throw new Error(`tikhub ${res.status} ${json.message ?? ''}`);
   writeFileSync(file, JSON.stringify(json.data));
@@ -150,6 +161,68 @@ export function buildReplies(handle, data) {
   return out;
 }
 
+function readWranglerToken() {
+  const path = join(homedir(), 'Library/Preferences/.wrangler/config/default.toml');
+  try {
+    return readFileSync(path, 'utf8').match(/oauth_token\s*=\s*"([^"]+)"/)?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function readLocalAccountId() {
+  try {
+    const text = readFileSync(join(ROOT, 'apps/community-api/wrangler.local.jsonc'), 'utf8');
+    return text.match(/"account_id"\s*:\s*"([0-9a-f]{32})"/)?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Cloudflare REST 凭据：CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID，缺省读 wrangler login 的 oauth token 与私有配置。 */
+function loadCloudflareAuth() {
+  const token =
+    process.env.CLOUDFLARE_API_TOKEN?.trim() ||
+    process.env.CF_API_TOKEN?.trim() ||
+    readWranglerToken();
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID?.trim() || readLocalAccountId();
+  if (!token) throw new Error('找不到 Cloudflare 凭据：设置 CLOUDFLARE_API_TOKEN，或先 wrangler login');
+  if (!accountId) throw new Error('找不到 Cloudflare account id：设置 CLOUDFLARE_ACCOUNT_ID');
+  return { token, accountId };
+}
+
+/** Cloudflare 自家决策模型：POST /accounts/{id}/ai/run，body 是 {model, input:{state,questions}}。 */
+async function judgeWorkersAi(replies, gaps, model, auth) {
+  const endpoint = `https://api.cloudflare.com/client/v4/accounts/${auth.accountId}/ai/run`;
+  const input = {
+    ...(model.startsWith('@cf/cloudflare/clef') ? { model: model.split('/').pop() } : {}),
+    state: { replies, reply_gaps_seconds: gaps },
+    questions: AI_ACCOUNT_QUESTION,
+  };
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${auth.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, input }),
+    });
+    const json = await res.json().catch(() => null);
+    const noul = json?.result?.answers?.ai_account?.noul;
+    if (res.ok && typeof noul === 'number') {
+      return {
+        p: noul,
+        tokens: json.result.usage?.input_tokens ?? 0,
+        model: json.result.model,
+      };
+    }
+    if ((res.status === 429 || res.status >= 500) && attempt < 3) {
+      await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
+      continue;
+    }
+    const reason = json?.errors?.[0]?.message ?? '';
+    throw new Error(`workers-ai ${res.status} ${reason}`.trim());
+  }
+}
+
 async function judge(replies, gaps, typesafeKey) {
   for (let attempt = 0; ; attempt++) {
     const res = await fetch('https://api.typesafe.ai/v1/systemone', {
@@ -177,9 +250,23 @@ async function judge(replies, gaps, typesafeKey) {
   }
 }
 
+function workerAiFlagMissing(model, index) {
+  return index > 0 && (!model || model.startsWith('--'));
+}
+
 async function main() {
   const tikhubKey = devVar('TIKHUB_API_KEY');
-  const typesafeKey = devVar('TYPESAFE_API_KEY');
+  const workersAiArg = process.argv.indexOf('--workers-ai');
+  const cfModel = workersAiArg > 0 ? process.argv[workersAiArg + 1] : null;
+  if (workerAiFlagMissing(cfModel, workersAiArg)) throw new Error('--workers-ai 需要一个模型 id');
+  const cfAuth = cfModel ? loadCloudflareAuth() : null;
+  const typesafeKey = cfModel ? null : devVar('TYPESAFE_API_KEY');
+  const judgeFn = cfModel
+    ? (replies, gaps) => judgeWorkersAi(replies, gaps, cfModel, cfAuth)
+    : (replies, gaps) => judge(replies, gaps, typesafeKey);
+  const pricePerM = cfModel ? (CF_MODEL_PRICE_PER_M[cfModel] ?? 0) : JEV_PRICE_PER_M;
+  const modelLabel = cfModel ?? 'jev-latest';
+  const resultsFile = cfModel ? join(CACHE, `results-${cfModel.split('/').pop()}.json`) : RESULTS;
   const arg = process.argv.indexOf('--handles');
   const items =
     arg > 0
@@ -200,7 +287,7 @@ async function main() {
         console.log(`${item.handle.padEnd(18)} 证据不足（${replies.length} 条）`);
         continue;
       }
-      const result = await judge(replies, replyGaps(item.handle, data), typesafeKey);
+      const result = await judgeFn(replies, replyGaps(item.handle, data));
       tokens += result.tokens;
       // 灰色地带（疑似线到强线之间）且第二批够数：再判一次取平均，和服务端 judge.ts 一致
       const second = all.slice(MAX_REPLIES);
@@ -210,7 +297,7 @@ async function main() {
         result.p < DECISION.strong &&
         second.length >= MIN_REPLIES
       ) {
-        const again = await judge(second, [], typesafeKey);
+        const again = await judgeFn(second, []);
         tokens += again.tokens;
         p2 = again.p;
       }
@@ -238,11 +325,11 @@ async function main() {
       `\n判定规则：AI 号命中 ${hit}/${ai.length}，真人误判为 AI 号 ${fp}/${human.length}，真人落入疑似 ${suspect}/${human.length}`,
     );
   }
-  console.log(`\nJev 输入 ${tokens} tokens ≈ $${((tokens * JEV_PRICE_PER_M) / 1e6).toFixed(4)}`);
+  console.log(`\n${modelLabel} 输入 ${tokens} tokens ≈ $${((tokens * pricePerM) / 1e6).toFixed(4)}`);
   if (arg < 0) {
-    writeFileSync(RESULTS, JSON.stringify(rows, null, 2));
+    writeFileSync(resultsFile, JSON.stringify(rows, null, 2));
     console.log(
-      `结果写入 ${RESULTS}（node scripts/eval-ai-accounts.mjs --sweep 离线扫阈值，不再计费）`,
+      `结果写入 ${resultsFile}（node scripts/eval-ai-accounts.mjs --sweep ${resultsFile} 离线扫阈值，不再计费）`,
     );
   }
 }
@@ -252,9 +339,10 @@ export function sweep(rows, maxFpRate = 0.03) {
   const ai = rows.filter((r) => r.label === 'ai');
   const human = rows.filter((r) => r.label === 'human');
   const results = [];
-  for (let strong = 0.5; strong <= 0.9001; strong += 0.05) {
-    for (let weak = 0.4; weak <= strong + 1e-9; weak += 0.05) {
-      for (let suspect = 0.3; suspect <= weak + 1e-9; suspect += 0.05) {
+  // 不同模型的分数尺度差别很大（Clef 的疑似线可以高于节奏分支线），三档各自独立扫，只要求 weak ≤ strong。
+  for (let strong = 0.3; strong <= 0.9501; strong += 0.05) {
+    for (let weak = 0.2; weak <= strong + 1e-9; weak += 0.05) {
+      for (let suspect = 0.2; suspect <= strong + 1e-9; suspect += 0.05) {
         const verdictOf = (row) => {
           if (row.p >= strong) return 'ai';
           const m =
@@ -292,8 +380,13 @@ export function sweep(rows, maxFpRate = 0.03) {
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  if (process.argv.includes('--sweep')) {
-    const rows = JSON.parse(readFileSync(RESULTS, 'utf8'));
+  const sweepIdx = process.argv.indexOf('--sweep');
+  if (sweepIdx >= 0) {
+    const sweepFile =
+      process.argv[sweepIdx + 1] && !process.argv[sweepIdx + 1].startsWith('--')
+        ? process.argv[sweepIdx + 1]
+        : RESULTS;
+    const rows = JSON.parse(readFileSync(sweepFile, 'utf8'));
     const ai = rows.filter((r) => r.label === 'ai').length;
     const human = rows.filter((r) => r.label === 'human').length;
     console.log(`样本：AI 号 ${ai}，真人 ${human}`);

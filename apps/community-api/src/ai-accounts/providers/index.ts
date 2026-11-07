@@ -2,8 +2,9 @@
  * AI 判定模型网关：按部署配置给出一条 provider 顺序，逐个试，谁先成功用谁。
  *
  * 配置：`AI_JUDGE_PROVIDERS` 逗号分隔，默认 `workers-ai`。
- *   workers-ai                  → Cloudflare Workers AI，模型取 AI_JUDGE_MODEL（默认 typesafe/jev-1.14.0）
- *   workers-ai:<model id>       → 指定 Workers AI 模型（例如 workers-ai:@cf/cloudflare/clef-flash）
+ *   workers-ai                  → Cloudflare Workers AI，模型取 AI_JUDGE_MODEL（默认 @cf/cloudflare/clef）
+ *   workers-ai:<model id>       → 指定 Workers AI 模型（例如 workers-ai:@cf/cloudflare/clef-flash，
+ *                                 或第三方 typesafe/jev-1.14.0 —— 后者会经 AI Gateway，需要 credits）
  *   typesafe-direct             → TypeSafe 直连，需要 TYPESAFE_API_KEY（默认不启用）
  *
  * 每个 provider 有独立的熔断闸；某个挂了自动轮到下一个，全挂才抛 VendorError（接口返回 502）。

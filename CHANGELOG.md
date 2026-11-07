@@ -25,12 +25,13 @@
 - **分享菜单不再误判自己的按钮**：AI 检查、手动拉黑、热度胶囊这些没有 X `data-testid` 的按钮不再被当成分享按钮；关闭菜单只撤掉我们插入的项，不再合成全局 Escape 去关 X 的其它浮层。
 - **高级搜索弹窗的滚动锁不再覆盖 X 自己的锁**：只在页面本来没锁时接管，关闭时也只还回自己设的那份，图片查看器开着时不会把页面的滚动锁一起解掉。
 - **停用 / 重载扩展后不再有旧脚本继续响应事件**：主题观察与徽标悬停卡片的监听器都会在注销时摘掉。
-- **AI 味检测恢复可用**：判定模型从 TypeSafe 直连切到 Cloudflare Workers AI 的 `typesafe/jev-1.14.0`（经 AI Gateway，网关请求日志关闭），TypeSafe 组织被停用导致的「检测服务暂时不可用」不再出现（部署方需在 Cloudflare 为 AI Gateway 充入 credits，第三方模型才会计费成功）。判定模型改成可配置的 provider 网关（`AI_JUDGE_PROVIDERS`），以后换模型 / 加供应商不用动判定、缓存、熔断与额度逻辑。
+- **AI 味检测恢复可用**：判定模型从 TypeSafe 直连切到 Cloudflare 自家的决策模型 Clef（`@cf/cloudflare/clef`，27B，零数据留存），走 Workers AI 计费，不需要第三方 AI Gateway credits 或 5% 手续费；TypeSafe 组织被停用导致的「检测服务暂时不可用」不再出现。判定模型改成可配置的 provider 网关（`AI_JUDGE_PROVIDERS`），以后换模型 / 加供应商不用动判定、缓存、熔断与额度逻辑。
 
 ### 工程
 
 - 新增 / 改写回归测试 40 余条（全量 1241 条通过），关键修复都做过「回退到旧实现则测试失败」的反向验证。
-- 判定模型网关抽到 `apps/community-api/src/ai-accounts/providers/`：provider 级熔断（`vendor_breaker:workers-ai:<model>`）、按顺序 fallback、`typesafe-direct` 保留为可选备用通道；配套 5 条网关单测（默认模型与网关参数、fallback、坏返回、熔断暂停、Clef body）。
+- 判定模型网关抽到 `apps/community-api/src/ai-accounts/providers/`：provider 级熔断（`vendor_breaker:workers-ai:<model>`）、按顺序 fallback、`typesafe-direct` 保留为可选备用通道；配套 7 条网关单测（默认模型与是否经网关、第三方模型网关参数、fallback、坏返回、熔断暂停、Clef body、灰区不跨模型混分）。
+- 2026-11-07 按 Clef 的分数分布重新校准判定阈值与 AI 味档位（247 个标注账号，AI 33 / 真人 210）：强线 0.80 / 节奏分支 0.65 / 疑似 0.75，AI 号命中 20/33、真人误判为 AI 4/210（1.9%）、真人疑似 3/210；旧 Jev 口径为 18/33、1/212、5/212，两套模型分数不可互比。评测脚本 `scripts/eval-ai-accounts.mjs` 新增 `--workers-ai <model>`。
 
 ## [0.17.2] — 2026-11-06
 

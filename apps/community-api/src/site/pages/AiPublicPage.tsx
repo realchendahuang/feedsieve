@@ -172,7 +172,7 @@ export function AiPublicPage({
           <div className="mt-8">
             <p className="text-2xl font-bold text-ink">社区认为这是 AI</p>
             <p className="mt-2 text-mist">
-              还没有可公开的 Jev 分数。AI {votes.ai_count} 票 · 真人 {votes.human_count} 票
+              还没有可公开的判定分数。AI {votes.ai_count} 票 · 真人 {votes.human_count} 票
             </p>
           </div>
         ) : (
