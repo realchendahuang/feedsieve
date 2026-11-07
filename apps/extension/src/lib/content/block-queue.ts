@@ -45,7 +45,7 @@ export function createBlockQueueRunner(deps: {
   const { state, blockOne, runQueue, fold } = deps;
 
   async function startPersistentQueue(
-    source: 'page-batch' | 'community-batch',
+    source: 'page-batch' | 'community-batch' | 'ai-batch',
     items: Array<{
       handle: string;
       xUserId?: string;

@@ -126,6 +126,22 @@ export function registerContentMessageHandlers(deps: {
       }
       return startPersistentQueue('community-batch', items, msg.targetTabId);
     }
+    // 伪人页「一键屏蔽 AI 号」：与社区黑名单共用同一套入队 / 执行 / 额度链路，只换队列 source，
+    // 这样进度、暂停、取消、失败重试都不用另写一套。
+    if (type === 'feedsieve:ai-block-start' && Array.isArray(msg?.items)) {
+      if (!filterOn()) {
+        return { status: 'error', error: 'module-disabled', id: '', count: 0 };
+      }
+      const items = (msg.items as unknown[])
+        .map(sanitizeQueueItem)
+        .filter((item): item is NonNullable<typeof item> => item !== null)
+        // 拉黑 AI 号不是「给黑名单投票」：这批不写 communityVote，避免污染黑名单票数与训练样本
+        .map((item) => ({ ...item, communityVote: false }));
+      if (items.length === 0) {
+        return { status: 'error', error: 'invalid-items', id: '', count: 0 };
+      }
+      return startPersistentQueue('ai-batch', items, msg.targetTabId);
+    }
     if (type === 'feedsieve:capabilities') {
       // popup 用：当前 X 会话 / Block 接口 / 解析 / 扫描的能力快照（非破坏性观测）
       return Promise.resolve(readCapabilities());

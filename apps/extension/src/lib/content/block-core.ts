@@ -38,7 +38,12 @@ export function createBlockOne(state: ContentState) {
     item: PageMarkedAccount,
     options: {
       origin?:
-        'manual-spam' | 'manual-personal' | 'single-detection' | 'page-batch' | 'community-batch';
+        | 'manual-spam'
+        | 'manual-personal'
+        | 'single-detection'
+        | 'page-batch'
+        | 'community-batch'
+        | 'ai-batch';
       communityVote?: boolean;
       batchId?: string;
       deferContribution?: boolean;
@@ -105,7 +110,10 @@ export function createBlockOne(state: ContentState) {
 
     // Freeze before the network action; the page may change while X responds.
     const sample =
-      options.origin === 'manual-personal' || options.origin === 'community-batch'
+      options.origin === 'manual-personal' ||
+      options.origin === 'community-batch' ||
+      // AI 号广场的一键屏蔽不是黑名单标注，不产拉黑训练样本
+      options.origin === 'ai-batch'
         ? null
         : createTrainingSample(
             handle,

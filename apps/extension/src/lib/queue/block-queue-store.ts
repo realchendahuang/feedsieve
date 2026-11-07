@@ -7,7 +7,7 @@
 
 import { normalizeStrictHandle, sanitizeXUserId } from '../platform/xhr-bridge-guard';
 
-export type PersistentBlockQueueSource = 'page-batch' | 'community-batch';
+export type PersistentBlockQueueSource = 'page-batch' | 'community-batch' | 'ai-batch';
 export type PersistentBlockQueueStatus = 'running' | 'paused' | 'completed' | 'cancelled';
 export type PersistentBlockTaskStatus = 'pending' | 'running' | 'success' | 'failed' | 'cancelled';
 
@@ -69,7 +69,9 @@ function normalizeQueue(value: unknown): PersistentBlockQueueState | null {
   const raw = value as Partial<PersistentBlockQueueState>;
   if (
     typeof raw.id !== 'string' ||
-    (raw.source !== 'page-batch' && raw.source !== 'community-batch') ||
+    (raw.source !== 'page-batch' &&
+      raw.source !== 'community-batch' &&
+      raw.source !== 'ai-batch') ||
     !['running', 'paused', 'completed', 'cancelled'].includes(String(raw.status)) ||
     !Array.isArray(raw.tasks)
   ) {

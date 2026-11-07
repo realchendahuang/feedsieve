@@ -41,7 +41,12 @@ export interface BlockedAccount {
 }
 
 export type BlockOrigin =
-  'manual-spam' | 'manual-personal' | 'single-detection' | 'page-batch' | 'community-batch';
+  | 'manual-spam'
+  | 'manual-personal'
+  | 'single-detection'
+  | 'page-batch'
+  | 'community-batch'
+  | 'ai-batch';
 
 export interface BlockedAccountEvidence {
   /** 注意：不在这里带推文原文/简介/昵称 —— evidence 会被展开进多个通道，

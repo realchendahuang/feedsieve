@@ -14,6 +14,7 @@ export const SITE_URLS = {
   blacklist: `${SITE_BASE}/lists/blacklist`,
   rescue: `${SITE_BASE}/lists/rescue`,
   keywords: `${SITE_BASE}/lists/keywords`,
+  ai: `${SITE_BASE}/ai`,
 } as const;
 
 export type SiteList = keyof typeof SITE_URLS;

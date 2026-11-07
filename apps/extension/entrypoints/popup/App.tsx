@@ -12,6 +12,7 @@ import {
   getFollowingAllowlist,
   subscribeFollowingAllowlist,
 } from '../../src/lib/community/following-allowlist';
+import { AI_LIST_KEY, syncAiList, type AiListEntry } from '../../src/lib/ai-check/client';
 import {
   getCommunityKillSwitch,
   getCommunitySettings,
@@ -220,6 +221,8 @@ export default function App() {
   const [blocked, setBlocked] = useState<Array<{ handle: string }> | null>(null);
   const [allowlist, setAllowlist] = useState<Array<{ handle: string }> | null>(null);
   const [following, setFollowing] = useState<Array<{ handle: string }> | null>(null);
+  /** 社区伪人名单（aiListV1）：[handle, score|null, listed 0|1]，伪人页的一键屏蔽从这里取 */
+  const [aiEntries, setAiEntries] = useState<AiListEntry[]>([]);
 
   const t = UI_COPY[language];
 
@@ -438,6 +441,22 @@ export default function App() {
       }
     };
     browser.runtime.onMessage.addListener(onPageMarkedUpdated);
+    // 伪人页的一键屏蔽要用社区 AI 号名单：进弹窗强制同步一次（失败保留旧值），
+    // 名单变化（后台同步 / 另一处触发）时跟着刷新
+    void syncAiList(true)
+      .then((state) => {
+        if (state) setAiEntries(state.entries);
+      })
+      .catch(() => undefined);
+    const onAiListChanged = (
+      changes: Record<string, { newValue?: unknown }>,
+      area: string,
+    ): void => {
+      if (area !== 'local' || !changes[AI_LIST_KEY]) return;
+      const next = changes[AI_LIST_KEY].newValue as { entries?: AiListEntry[] } | undefined;
+      setAiEntries(Array.isArray(next?.entries) ? next.entries : []);
+    };
+    browser.storage.onChanged.addListener(onAiListChanged);
     const unsubs = [
       subscribeUiLanguage(setLanguage),
       subscribeBlocked(setBlocked),
@@ -456,6 +475,7 @@ export default function App() {
     ];
     return () => {
       browser.runtime.onMessage.removeListener(onPageMarkedUpdated);
+      browser.storage.onChanged.removeListener(onAiListChanged);
       unsubs.forEach((unsub) => unsub());
     };
   }, [applyCommunitySnapshotState, refreshPageMarked, sendToXPage]);
@@ -506,6 +526,23 @@ export default function App() {
     ]);
     return communityEntries.filter((entry) => !protectedHandles.has(entry.handle.toLowerCase()));
   }, [communityEntries, allowlist, following, blocked]);
+
+  /**
+   * 伪人页「一键屏蔽」的候选：只取已进社区公共名单（listed=1）的账号，
+   * 再排掉个人白名单 / 关注中 / 本机已拉黑的——和白名单保护口径一致，
+   * 疑似号（listed=0）不进批量，避免误伤。
+   */
+  const aiEligible = useMemo(() => {
+    const protectedHandles = new Set([
+      ...(allowlist ?? []).map((item) => item.handle.toLowerCase()),
+      ...(following ?? []).map((item) => item.handle.toLowerCase()),
+      ...(blocked ?? []).map((item) => item.handle.toLowerCase()),
+    ]);
+    return aiEntries
+      .filter((entry) => entry[2] === 1)
+      .map((entry) => ({ handle: entry[0], score: entry[1] }))
+      .filter((entry) => !protectedHandles.has(entry.handle));
+  }, [aiEntries, allowlist, following, blocked]);
 
   const updateModules = useCallback(
     async (patch: Partial<ModuleSettings>): Promise<void> => {
@@ -696,6 +733,8 @@ export default function App() {
               notify={notify}
               sendToXPage={sendToXPage}
               onOpenSettings={() => openModuleSettings('ai')}
+              aiEligible={aiEligible}
+              aiListCount={aiEntries.length}
             />
           ) : null}
           {viewReady && effectiveView === 'filter' && !effectiveModuleSettingsOpen ? (
