@@ -142,3 +142,17 @@ export const getAiPublicData = createServerFn({ method: 'GET' })
     const { getAiPublic } = await import('../ai-accounts/public-page');
     return getAiPublic(env, data.handle);
   });
+
+/** AI 号广场（/ai）：可公示的 AI / 疑似账号聚合，含主页画像与最近回复样本（见 ai-accounts/square.ts） */
+export const getAiSquareData = createServerFn({ method: 'GET' }).handler(async () => {
+  const { listAiSquare } = await import('../ai-accounts/square');
+  return listAiSquare(env);
+});
+
+/** AI 号广场单人详情（/ai/:handle）：广场口径的完整条目；不可公示返回 null */
+export const getAiSquareDetail = createServerFn({ method: 'GET' })
+  .validator((data: { handle: string }) => ({ handle: String(data?.handle ?? '').slice(0, 32) }))
+  .handler(async ({ data }) => {
+    const { getAiSquareDetail: load } = await import('../ai-accounts/square');
+    return load(env, data.handle);
+  });

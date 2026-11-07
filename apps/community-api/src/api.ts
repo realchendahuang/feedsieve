@@ -40,6 +40,7 @@ export async function handleWorkerRoutes(
 const SITE_PAGES = [
   { path: '/', title: '福滤娃 FeedSieve｜首页' },
   { path: '/guide', title: '使用教程' },
+  { path: '/ai', title: 'AI 号广场' },
   { path: '/lists/blacklist', title: '黑名单公示' },
   { path: '/lists/whitelist', title: '推荐白名单公示' },
   { path: '/lists/rescue', title: '社区抢救名单公示' },
