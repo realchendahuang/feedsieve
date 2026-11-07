@@ -74,6 +74,25 @@ function copyHandle(handle: string) {
   );
 }
 
+/** 复制内容的唯一来源：每行一个 @handle（导出给单测断言口径） */
+export function handlesToClipboard(handles: readonly string[]): string {
+  return handles.map((handle) => `@${handle}`).join('\n');
+}
+
+/** 复制当前筛选结果的全部 handle，方便去 X 的屏蔽列表批量粘贴 */
+function copyHandles(handles: readonly string[]) {
+  const text = handlesToClipboard(handles);
+  const clipboard = typeof navigator === 'undefined' ? null : navigator.clipboard;
+  if (!clipboard) {
+    toast.info('复制失败，请手动复制');
+    return;
+  }
+  void clipboard.writeText(text).then(
+    () => toast.success(`已复制 ${handles.length} 个 handle`),
+    () => toast.info('复制失败，请手动复制'),
+  );
+}
+
 function avatarUrlOf(entry: AiSquareEntry): string | null {
   return entry.avatarUrl?.replace(/_(normal|bigger|mini|x96)(\.[a-z]+)$/i, '_200x200$2') ?? null;
 }
@@ -180,6 +199,14 @@ export function AiSquarePage({ data }: { data: AiSquareData | null }) {
                 aria-label="搜索账号"
                 className="h-9 w-44 rounded-full border border-line bg-surface px-4 text-sm outline-none focus:border-gold focus:ring-[3px] focus:ring-ring/30"
               />
+              <button
+                type="button"
+                disabled={rows.length === 0}
+                onClick={() => copyHandles(rows.map((entry) => entry.handle))}
+                className="h-9 cursor-pointer rounded-full border border-line bg-surface px-3.5 text-xs font-semibold text-mist transition-colors hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                复制全部（{rows.length}）
+              </button>
             </div>
           </div>
 

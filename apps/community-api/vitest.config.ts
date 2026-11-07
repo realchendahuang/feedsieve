@@ -1,6 +1,10 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { cloudflareTest } from '@cloudflare/vitest-plugin';
 import { defineConfig, defineProject } from 'vitest/config';
 import { testDatabaseUrl } from './test/database-url';
+
+const appDir = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(() => {
   return defineProject({
@@ -27,6 +31,10 @@ export default defineConfig(() => {
         },
       }),
     ],
+    // 站点页组件用了 `@/site/...` 别名（vite.config.ts 里配的），vitest 侧要跟着解析
+    resolve: {
+      alias: { '@': path.resolve(appDir, 'src') },
+    },
     test: {
       globalSetup: ['./test/global-setup.ts'],
       setupFiles: ['./test/reset-database.ts'],

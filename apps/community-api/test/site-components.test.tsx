@@ -6,6 +6,7 @@
  */
 
 import { renderToString } from 'react-dom/server';
+import { handlesToClipboard } from '../src/site/pages/AiSquarePage';
 import { describe, expect, it } from 'vitest';
 
 import { BlacklistPanel } from '../src/site/pages/lists/BlacklistPanel';
@@ -131,3 +132,15 @@ describe('文案与错误码', () => {
   });
 });
 
+/** 广场页「复制全部」的剪贴板口径：每行一个 @handle，顺序即当前列表顺序 */
+describe('AI 号广场页 · 复制全部 handle', () => {
+  it('每行一个 @handle', () => {
+    expect(handlesToClipboard(['ai_one', 'ai_two', 'maybe_three'])).toBe(
+      '@ai_one\n@ai_two\n@maybe_three',
+    );
+  });
+
+  it('空列表复制为空串（页面按钮此时禁用）', () => {
+    expect(handlesToClipboard([])).toBe('');
+  });
+});
