@@ -35,15 +35,25 @@ let activeAi: Ai | undefined;
  * calls.jev = 模型判定次数；calls.jevBodies = 每次的 {model, input, options}。
  */
 function stubJev(
-  options: { score?: number; scores?: number[]; jevStatus?: number; badBody?: boolean } = {},
+  options: {
+    score?: number;
+    scores?: number[];
+    jevStatus?: number;
+    badBody?: boolean;
+    /** 从第几次调用开始抛错（1-based） */
+    failOn?: number;
+  } = {},
 ) {
   const calls = { jev: 0, tikhub: 0, jevBodies: [] as FakeAiCall[] };
   const binding = {
     run: async (model: string, input: Record<string, unknown>, opts?: Record<string, unknown>) => {
       calls.jev += 1;
       calls.jevBodies.push({ model, input, options: opts });
-      if (options.jevStatus && options.jevStatus >= 400) {
-        throw Object.assign(new Error('ai failed'), { status: options.jevStatus });
+      if (
+        (options.jevStatus && options.jevStatus >= 400) ||
+        (options.failOn !== undefined && calls.jev >= options.failOn)
+      ) {
+        throw Object.assign(new Error('ai failed'), { status: options.jevStatus ?? 500 });
       }
       if (options.badBody) return { model: 'jev-1.14.0', answers: {} };
       return {
@@ -411,5 +421,40 @@ describe('POST /v1/ai-accounts/judge（证据直传）', () => {
     expect(result.status).toBe(200);
     expect(calls.jevBodies[0]!.model).toBe('@cf/cloudflare/clef-flash');
     expect(calls.jevBodies[0]!.input).toMatchObject({ model: 'clef-flash' });
+  });
+  it('灰色地带第二轮锁死第一轮的 provider，不跨模型混分', async () => {
+    // 第一轮 workers-ai 判 0.45（灰区），第二轮同 provider 失败；typesafe-direct 虽配了兜底，也不许拿来混分
+    const calls = stubJev({ scores: [0.45], failOn: 2 });
+    const direct = vi.fn();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: Request | string | URL) => {
+        const url = new URL(String(input instanceof Request ? input.url : input));
+        if (url.hostname === 'api.typesafe.ai') {
+          direct();
+          return new Response(
+            JSON.stringify({
+              model: 'jev-1.14.0',
+              answers: { ai_account: { type: 'noul', noul: 0.95 } },
+            }),
+            { status: 200 },
+          );
+        }
+        return new Response('{}', { status: 404 });
+      }),
+    );
+    const many = Array.from({ length: 20 }, (_, i) => ({
+      id: String(1_980_000_000_000_000_000n + BigInt(i) * 1_258_291_200_000n),
+      parent: `原帖 ${i}`,
+      text: `第 ${i} 条回复`,
+    }));
+    const result = await judgeAiAccount(
+      keyed({ AI_JUDGE_PROVIDERS: 'workers-ai,typesafe-direct', TYPESAFE_API_KEY: 'ts' }),
+      { installation_id: 'install-0004-abcdef', handle: 'mixedrounds', replies: many },
+      undefined,
+    );
+    expect(result).toEqual({ status: 502, body: { error: 'upstream_failed' } });
+    expect(calls.jev).toBe(2);
+    expect(direct).not.toHaveBeenCalled();
   });
 });

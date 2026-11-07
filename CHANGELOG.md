@@ -19,7 +19,7 @@
 - **分享菜单不再误判自己的按钮**：AI 检查、手动拉黑、热度胶囊这些没有 X `data-testid` 的按钮不再被当成分享按钮；关闭菜单只撤掉我们插入的项，不再合成全局 Escape 去关 X 的其它浮层。
 - **高级搜索弹窗的滚动锁不再覆盖 X 自己的锁**：只在页面本来没锁时接管，关闭时也只还回自己设的那份，图片查看器开着时不会把页面的滚动锁一起解掉。
 - **停用 / 重载扩展后不再有旧脚本继续响应事件**：主题观察与徽标悬停卡片的监听器都会在注销时摘掉。
-- **AI 味检测恢复可用**：判定模型从 TypeSafe 直连切到 Cloudflare Workers AI 的 `typesafe/jev-1.14.0`（经 AI Gateway，网关请求日志关闭），TypeSafe 组织被停用导致的「检测服务暂时不可用」不再出现。判定模型改成可配置的 provider 网关（`AI_JUDGE_PROVIDERS`），以后换模型 / 加供应商不用动判定、缓存、熔断与额度逻辑。
+- **AI 味检测恢复可用**：判定模型从 TypeSafe 直连切到 Cloudflare Workers AI 的 `typesafe/jev-1.14.0`（经 AI Gateway，网关请求日志关闭），TypeSafe 组织被停用导致的「检测服务暂时不可用」不再出现（部署方需在 Cloudflare 为 AI Gateway 充入 credits，第三方模型才会计费成功）。判定模型改成可配置的 provider 网关（`AI_JUDGE_PROVIDERS`），以后换模型 / 加供应商不用动判定、缓存、熔断与额度逻辑。
 
 ### 工程
 

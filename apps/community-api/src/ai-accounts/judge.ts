@@ -285,7 +285,9 @@ export async function judgeAiAccount(
     let used = first;
     let rounds = 1;
     if (grayZone(judged.score) && second.length >= MIN_REPLIES) {
-      const again = await judgeAccount(env, second, gapsFromIds(second, []));
+      const again = await judgeAccount(env, second, gapsFromIds(second, []), {
+        preferredProvider: judged.provider,
+      });
       judged = { ...again, score: (judged.score + again.score) / 2 };
       used = replies;
       rounds = 2;

@@ -49,9 +49,10 @@ export function requestBody(model: string, input: JudgeInput): Record<string, un
 }
 
 export function createWorkersAiProvider(model = DEFAULT_JUDGE_MODEL): JudgeProvider {
-  const vendor = `workers-ai:${model}`;
+  const id = `workers-ai:${model}`;
+  const vendor = id;
   return {
-    id: `workers-ai:${model}`,
+    id,
     vendor,
     model,
     available: (env) => !!env.AI,
@@ -85,7 +86,7 @@ export function createWorkersAiProvider(model = DEFAULT_JUDGE_MODEL): JudgeProvi
       }
       await recordVendor(env, vendor, true);
       const usage = usageOf(json);
-      return { score, model: usage.model ?? model, tokens: usage.tokens, provider: 'workers-ai' };
+      return { score, model: usage.model ?? model, tokens: usage.tokens, provider: id };
     },
   };
 }

@@ -75,8 +75,15 @@ export async function judgeAccount(
   env: Cloudflare.Env,
   replies: JudgeInput['replies'],
   gaps: JudgeInput['gaps'],
+  options: { preferredProvider?: string } = {},
 ): Promise<JudgeResult> {
-  const providers = parseJudgeProviders(env).filter((provider) => provider.available(env));
+  const configured = parseJudgeProviders(env).filter((provider) => provider.available(env));
+  // 灰色地带补判第二轮必须锁死第一轮胜出的 provider：两个轮次换模型会把两份不同量纲的
+  // noul 概率取平均，结论不可解释。preferredProvider 已不在配置里时退回全量。
+  const preferred = options.preferredProvider
+    ? configured.filter((provider) => provider.id === options.preferredProvider)
+    : [];
+  const providers = preferred.length ? preferred : configured;
   let lastError: VendorError | null = null;
   for (const provider of providers) {
     if (!(await vendorOpen(env, provider.vendor))) continue;
