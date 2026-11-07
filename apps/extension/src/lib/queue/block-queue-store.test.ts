@@ -147,6 +147,31 @@ describe('持久化拉黑队列', () => {
     );
   });
 
+  it('ai-batch 可作为 source 创建、持久化并读回（伪人页一键屏蔽）', async () => {
+    const created = await createPersistentBlockQueue(
+      'ai-batch',
+      [
+        { handle: '@AiSlopOne', category: 'ai_slop', communityVote: false },
+        { handle: 'ai_slop_two', category: 'ai_slop' },
+      ],
+      { targetTabId: 7 },
+    );
+    expect(created.source).toBe('ai-batch');
+    expect(created.targetTabId).toBe(7);
+    expect(created.tasks.map((task) => task.handle)).toEqual(['aislopone', 'ai_slop_two']);
+    await setPersistentBlockQueue(created);
+
+    expect(await getPersistentBlockQueue()).toMatchObject({
+      source: 'ai-batch',
+      targetTabId: 7,
+      status: 'running',
+      tasks: [
+        { handle: 'aislopone', category: 'ai_slop', communityVote: false, status: 'pending' },
+        { handle: 'ai_slop_two', category: 'ai_slop', status: 'pending' },
+      ],
+    });
+  });
+
   it('runner 的重试/失败字段原样持久化，failed 任务补 failureCode 供 UI 展示', async () => {
     storage.persistentBlockQueueV1 = {
       id: 'retry-queue',

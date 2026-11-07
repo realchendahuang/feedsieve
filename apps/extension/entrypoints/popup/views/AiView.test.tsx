@@ -4,17 +4,27 @@ import ReactDOM from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { accountFromUrl, AiView } from './AiView';
 import { AiDisplaySettings } from './settings/AiDisplaySettings';
+import { openOfficialPage } from '../../../src/lib/platform/site-links';
+
+// 「查看全部 AI 号」只验证跳转目标，不真开标签页
+vi.mock('../../../src/lib/platform/site-links', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../src/lib/platform/site-links')>();
+  return { ...actual, openOfficialPage: vi.fn(async () => undefined) };
+});
 
 const tabUrl = 'https://x.com/Alice';
 let lookup: unknown;
 let records: unknown[];
 let sessionStored: Record<string, unknown>;
+let localStored: Record<string, unknown>;
 const mounted: Array<{ unmount: () => void }> = [];
 
 beforeEach(() => {
+  vi.clearAllMocks();
   lookup = { remote: null, myVote: null, mine: null };
   records = [];
   sessionStored = {};
+  localStored = {};
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
   (globalThis as unknown as { browser: unknown }).browser = {
     tabs: {
@@ -39,7 +49,11 @@ beforeEach(() => {
         set: vi.fn(async (items: Record<string, unknown>) => Object.assign(sessionStored, items)),
       },
       onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
-      local: { get: vi.fn(async () => ({})), set: vi.fn(async () => undefined) },
+      local: {
+        // 持久化拉黑队列（persistentBlockQueueV1）等按 key 读取
+        get: vi.fn(async (key: string) => ({ [key]: localStored[key] })),
+        set: vi.fn(async (items: Record<string, unknown>) => Object.assign(localStored, items)),
+      },
     },
   };
 });
@@ -49,7 +63,14 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-async function render(sendToXPage = vi.fn(async () => ({ ok: true }))) {
+async function render(
+  sendToXPage: Parameters<typeof AiView>[0]['sendToXPage'] = vi.fn(async () => ({ ok: true })),
+  options: {
+    aiEligible?: Array<{ handle: string; score: number | null }>;
+    aiListCount?: number;
+    notify?: (message: string | null) => void;
+  } = {},
+) {
   const host = document.createElement('div');
   host.className = 'popup-content';
   document.body.appendChild(host);
@@ -59,9 +80,11 @@ async function render(sendToXPage = vi.fn(async () => ({ ok: true }))) {
     root.render(
       <AiView
         language="zh"
-        notify={() => undefined}
+        notify={options.notify ?? (() => undefined)}
         sendToXPage={sendToXPage}
         onOpenSettings={vi.fn()}
+        aiEligible={options.aiEligible ?? []}
+        aiListCount={options.aiListCount ?? 1}
       />,
     );
   });
@@ -70,6 +93,47 @@ async function render(sendToXPage = vi.fn(async () => ({ ok: true }))) {
   });
   return { host, root, sendToXPage };
 }
+
+/** 按键名/文案找「社区伪人名单」区块里的按钮（官方跳转图标靠 aria-label 区分） */
+function aiListSection(host: HTMLElement): HTMLElement {
+  const section = host.querySelector<HTMLElement>('section[aria-label="社区伪人名单"]');
+  if (!section) throw new Error('community ai list section not found');
+  return section;
+}
+
+function aiBlockButton(host: HTMLElement): HTMLButtonElement {
+  const button = [...aiListSection(host).querySelectorAll<HTMLButtonElement>('button')].find(
+    (candidate) => !candidate.getAttribute('aria-label')?.startsWith('查看全部'),
+  );
+  if (!button) throw new Error('ai block button not found');
+  return button;
+}
+
+async function flush(): Promise<void> {
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 0));
+  });
+}
+
+function aiQueueFixture(source: 'ai-batch' | 'community-batch'): Record<string, unknown> {
+  return {
+    id: 'queue-1',
+    source,
+    status: 'running',
+    createdAt: 1,
+    updatedAt: 2,
+    tasks: [
+      { handle: 'aislop_one', category: 'ai_slop', status: 'success' },
+      { handle: 'aislop_two', category: 'ai_slop', status: 'failed', failureCode: 'no-id' },
+      { handle: 'aislop_three', category: 'ai_slop', status: 'pending' },
+    ],
+  };
+}
+
+const AI_ELIGIBLE = [
+  { handle: 'aislop_one', score: 0.91 },
+  { handle: 'aislop_two', score: null },
+];
 
 describe('AiView', () => {
   it('从主页、帖子详情取当前账号', () => {
@@ -243,5 +307,90 @@ describe('AiView', () => {
 
     const second = await render();
     expect(second.host.scrollTop).toBe(640);
+  });
+});
+
+describe('AiView › 社区伪人名单', () => {
+  it('显示名单总数与可屏蔽数，按钮可用', async () => {
+    const { host } = await render(undefined, {
+      aiEligible: AI_ELIGIBLE,
+      aiListCount: 128,
+    });
+    const section = aiListSection(host);
+    expect(section.textContent).toContain('社区伪人名单');
+    expect(section.textContent).toContain('已收录 128 个 · 可屏蔽 2 个');
+    expect(aiBlockButton(host).textContent).toBe('一键屏蔽');
+    expect(aiBlockButton(host).disabled).toBe(false);
+  });
+
+  it('没有可屏蔽账号：按钮禁用并显示暂无可屏蔽账号', async () => {
+    const { host } = await render(undefined, { aiEligible: [], aiListCount: 128 });
+    const button = aiBlockButton(host);
+    expect(button.textContent).toBe('暂无可屏蔽账号');
+    expect(button.disabled).toBe(true);
+  });
+
+  it('点「查看全部 AI 号」打开官网 AI 号广场', async () => {
+    const { host } = await render(undefined, {
+      aiEligible: AI_ELIGIBLE,
+      aiListCount: 128,
+    });
+    const link = aiListSection(host).querySelector<HTMLButtonElement>(
+      'button[aria-label="查看全部 AI 号"]',
+    );
+    expect(link).not.toBeNull();
+    await act(async () => link!.click());
+    expect(openOfficialPage).toHaveBeenCalledWith('https://feedsieve.win/ai');
+  });
+
+  it('一键屏蔽需二次确认：首点只进入确认态，再点才发出 ai-block-start', async () => {
+    const notify = vi.fn();
+    const sendToXPage = vi.fn(async () => ({
+      status: 'started',
+      id: 'queue-1',
+      count: AI_ELIGIBLE.length,
+    }));
+    const { host } = await render(sendToXPage, {
+      aiEligible: AI_ELIGIBLE,
+      aiListCount: 128,
+      notify,
+    });
+
+    await act(async () => aiBlockButton(host).click());
+    await flush();
+    // 第一次点击：不发送消息，文案变成确认态
+    expect(sendToXPage).not.toHaveBeenCalled();
+    expect(aiBlockButton(host).textContent).toBe('再点一次：屏蔽 2 个');
+
+    await act(async () => aiBlockButton(host).click());
+    await flush();
+    expect(sendToXPage).toHaveBeenCalledTimes(1);
+    expect(sendToXPage).toHaveBeenCalledWith({
+      type: 'feedsieve:ai-block-start',
+      items: [
+        { handle: 'aislop_one', category: 'ai_slop' },
+        { handle: 'aislop_two', category: 'ai_slop' },
+      ],
+    });
+    expect(notify).toHaveBeenCalledWith('已加入拉黑队列（2 个）');
+  });
+
+  it('队列进度只显示 source=ai-batch 的队列', async () => {
+    // 社区黑名单批量队列正在跑：伪人页不应该把它的进度画到自己头上
+    localStored.persistentBlockQueueV1 = aiQueueFixture('community-batch');
+    const community = await render(undefined, {
+      aiEligible: AI_ELIGIBLE,
+      aiListCount: 128,
+    });
+    await flush();
+    expect(community.host.querySelector('.queue-panel')).toBeNull();
+
+    // 同样是 running 队列，换成 ai-batch 才显示进度（3 条：1 成功 1 失败 1 待执行）
+    localStored.persistentBlockQueueV1 = aiQueueFixture('ai-batch');
+    const ai = await render(undefined, { aiEligible: AI_ELIGIBLE, aiListCount: 128 });
+    await flush();
+    const panel = ai.host.querySelector('.queue-panel');
+    expect(panel).not.toBeNull();
+    expect(panel?.textContent).toContain('进度 2 / 3');
   });
 });
