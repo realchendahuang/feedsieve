@@ -169,8 +169,9 @@ async function loadPublicRows(
                 then v.verdict end as verdict,
            case when v.verdict in ('ai', 'suspect') and v.expires_at > ${nowS}
                 then v.score end as score,
-           v.display_name,
-           v.avatar_url,
+           -- 与 public-page.ts 一致：判定时记下的昵称/头像优先，缺了退回主页画像
+           coalesce(v.display_name, p.display_name) as display_name,
+           coalesce(v.avatar_url, p.avatar_url) as avatar_url,
            v.reply_count,
            v.rhythm,
            v.blue_verified,
