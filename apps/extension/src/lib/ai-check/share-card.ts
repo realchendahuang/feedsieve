@@ -45,7 +45,7 @@ const TEXT = {
     spreadMid: '中',
     spreadLow: '小',
     footer: '福滤娃 FeedSieve · feedsieve.win',
-    note: '由模型根据公开回复判定与锐评，可能有误差，仅供娱乐参考',
+    note: '判定与锐评可能有误差 · 仅供娱乐参考',
     human: '人味',
     samplesWithin: (span: string) => `回复样本（${span}内）`,
     sampleValue: (n: number, authors: number | null) =>
@@ -62,7 +62,7 @@ const TEXT = {
     spreadMid: 'Mid',
     spreadLow: 'Low',
     footer: 'FeedSieve · feedsieve.win',
-    note: 'Model-judged and roasted from public replies. For fun only.',
+    note: 'Model-judged, may be wrong. For fun only.',
     human: 'Human',
     samplesWithin: (span: string) => `Replies (last ${span})`,
     sampleValue: (n: number, authors: number | null) =>
@@ -215,9 +215,21 @@ export function drawShareCard(input: ShareCardInput): HTMLCanvasElement {
   ctx.fillText(input.flavor.level, pad + 32, 936);
 
   ctx.fillStyle = '#ffffff';
+  const roastText = `「${input.comment ?? input.flavor.roast}」`;
+  const roastW = W - pad * 2;
   ctx.font = `600 46px ${FONT}`;
-  wrap(ctx, `「${input.comment ?? input.flavor.roast}」`, W - pad * 2, 3).forEach((line, i) => {
-    ctx.fillText(line, pad, 1040 + i * 64);
+  let roastLines = wrap(ctx, roastText, roastW, 3);
+  // 三行放不进统计区：缩一号字并整体上移，避免压住「回复样本 / 回复间隔」
+  let roastY = 1040;
+  let roastLineH = 64;
+  if (roastLines.length > 2) {
+    ctx.font = `600 40px ${FONT}`;
+    roastLines = wrap(ctx, roastText, roastW, 3);
+    roastY = 1000;
+    roastLineH = 54;
+  }
+  roastLines.forEach((line, i) => {
+    ctx.fillText(line, pad, roastY + i * roastLineH);
   });
 
   // 统计
