@@ -1,5 +1,6 @@
 /**
- * AI 味报告分享图（纯前端 Canvas，离线生成，不上传）。1080×1350（4:5），发 X 时不被裁。
+ * AI 味报告分享图（纯前端 Canvas，离线生成，不上传）。1080×1080 正方形：
+ * 长锐评最多三行也留得下，发 X/朋友圈/聊天都清楚。
  * 图里不放被检测账号的回复原文，只放结论、档位、锐评和统计数字。
  */
 import type { Flavor, Lang } from '@feedsieve/shared';
@@ -25,7 +26,7 @@ export interface ShareCardInput {
 }
 
 const W = 1080;
-const H = 1350;
+const H = 1080;
 
 const TONE = {
   ai: { accent: '#ff4d6d', glow: 'rgba(255, 77, 109, 0.35)' },
@@ -92,11 +93,12 @@ export function drawShareCard(input: ShareCardInput): HTMLCanvasElement {
   const ctx = canvas.getContext('2d')!;
   const t = TEXT[input.lang];
   const tone = TONE[input.flavor.tone];
+  const pad = 80;
 
   // 背景：深色底 + 档位色的光晕
   ctx.fillStyle = '#0b0d12';
   ctx.fillRect(0, 0, W, H);
-  const glow = ctx.createRadialGradient(W * 0.75, 260, 40, W * 0.75, 260, 820);
+  const glow = ctx.createRadialGradient(W * 0.78, 300, 40, W * 0.78, 300, 760);
   glow.addColorStop(0, tone.glow);
   glow.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = glow;
@@ -117,24 +119,23 @@ export function drawShareCard(input: ShareCardInput): HTMLCanvasElement {
     ctx.stroke();
   }
 
-  const pad = 88;
   ctx.textBaseline = 'alphabetic';
 
-  // 抬头
+  // 抬头：标题 + 日期
   ctx.fillStyle = tone.accent;
   ctx.font = `700 34px ${FONT}`;
-  ctx.fillText(t.title, pad, 138);
+  ctx.fillText(t.title, pad, 104);
   ctx.fillStyle = 'rgba(255,255,255,0.45)';
   ctx.font = `500 30px ${FONT}`;
   const date = input.date.toISOString().slice(0, 10);
   ctx.textAlign = 'right';
-  ctx.fillText(date, W - pad, 138);
+  ctx.fillText(date, W - pad, 104);
   ctx.textAlign = 'left';
 
   // 账号：头像 + 名字 + @id
-  const avatarSize = 132;
+  const avatarSize = 104;
   const avatarX = pad;
-  const avatarY = 182;
+  const avatarY = 138;
   const cx = avatarX + avatarSize / 2;
   const cy = avatarY + avatarSize / 2;
   ctx.save();
@@ -148,93 +149,86 @@ export function drawShareCard(input: ShareCardInput): HTMLCanvasElement {
     ctx.fillStyle = '#1f2430';
     ctx.fillRect(avatarX, avatarY, avatarSize, avatarSize);
     ctx.fillStyle = '#ffffff';
-    ctx.font = `800 60px ${FONT}`;
+    ctx.font = `800 48px ${FONT}`;
     ctx.textAlign = 'center';
     const initial = [...(input.displayName?.trim() || input.handle)][0]?.toUpperCase() ?? '?';
-    ctx.fillText(initial, cx, cy + 21);
+    ctx.fillText(initial, cx, cy + 17);
     ctx.textAlign = 'left';
   }
   ctx.restore();
   ctx.strokeStyle = tone.accent;
-  ctx.lineWidth = 6;
+  ctx.lineWidth = 5;
   ctx.beginPath();
-  ctx.arc(cx, cy, avatarSize / 2 + 7, 0, Math.PI * 2);
+  ctx.arc(cx, cy, avatarSize / 2 + 6, 0, Math.PI * 2);
   ctx.stroke();
 
-  const textX = avatarX + avatarSize + 40;
+  const textX = avatarX + avatarSize + 32;
   const textW = W - pad - textX;
   ctx.fillStyle = '#ffffff';
-  ctx.font = `800 58px ${FONT}`;
+  ctx.font = `800 54px ${FONT}`;
   const name = input.displayName?.trim() || `@${input.handle}`;
-  ctx.fillText(wrap(ctx, name, textW, 1)[0] ?? name, textX, avatarY + 66);
+  ctx.fillText(wrap(ctx, name, textW, 1)[0] ?? name, textX, avatarY + 52);
   ctx.fillStyle = 'rgba(255,255,255,0.6)';
-  ctx.font = `600 36px ${FONT}`;
-  ctx.fillText(`@${input.handle}`, textX, avatarY + 120);
+  ctx.font = `600 34px ${FONT}`;
+  ctx.fillText(`@${input.handle}`, textX, avatarY + 96);
 
   // 大百分比
   ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.font = `600 40px ${FONT}`;
-  ctx.fillText(t.flavor, pad, 440);
+  ctx.font = `600 38px ${FONT}`;
+  ctx.fillText(t.flavor, pad, 318);
   ctx.fillStyle = tone.accent;
-  ctx.font = `900 260px ${FONT}`;
+  ctx.font = `900 212px ${FONT}`;
   const pct = String(input.flavor.percent);
-  ctx.fillText(pct, pad - 8, 680);
+  ctx.fillText(pct, pad - 6, 520);
   const pctWidth = ctx.measureText(pct).width;
-  ctx.font = `800 110px ${FONT}`;
-  ctx.fillText('%', pad + pctWidth + 4, 680);
+  ctx.font = `800 92px ${FONT}`;
+  ctx.fillText('%', pad + pctWidth + 2, 520);
 
   // 刻度条：左人味、右 AI 味
-  const barY = 740;
+  const barY = 566;
   const barW = W - pad * 2;
   const grad = ctx.createLinearGradient(pad, 0, pad + barW, 0);
   grad.addColorStop(0, TONE.human.accent);
   grad.addColorStop(0.5, TONE.mixed.accent);
   grad.addColorStop(1, TONE.ai.accent);
   ctx.fillStyle = grad;
-  roundRect(ctx, pad, barY, barW, 18, 9);
+  roundRect(ctx, pad, barY, barW, 16, 8);
   ctx.fill();
   const markerX = pad + (barW * input.flavor.percent) / 100;
   ctx.fillStyle = '#ffffff';
   ctx.beginPath();
-  ctx.arc(markerX, barY + 9, 20, 0, Math.PI * 2);
+  ctx.arc(markerX, barY + 8, 18, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
-  ctx.font = `500 26px ${FONT}`;
-  ctx.fillText(t.human, pad, barY + 64);
+  ctx.font = `500 25px ${FONT}`;
+  ctx.fillText(t.human, pad, barY + 56);
   ctx.textAlign = 'right';
-  ctx.fillText('AI', pad + barW, barY + 64);
+  ctx.fillText('AI', pad + barW, barY + 56);
   ctx.textAlign = 'left';
 
-  // 档位 + 锐评
-  ctx.font = `800 56px ${FONT}`;
-  const levelW = ctx.measureText(input.flavor.level).width + 64;
+  // 档位徽章
+  ctx.font = `800 46px ${FONT}`;
+  const levelW = ctx.measureText(input.flavor.level).width + 56;
   ctx.fillStyle = tone.accent;
-  roundRect(ctx, pad, 870, levelW, 92, 46);
+  roundRect(ctx, pad, 646, levelW, 78, 39);
   ctx.fill();
   ctx.fillStyle = '#0b0d12';
-  ctx.fillText(input.flavor.level, pad + 32, 936);
+  ctx.fillText(input.flavor.level, pad + 28, 700);
 
+  // 锐评：正方形宽度够，最长 60 字（含引号）最多三行
   ctx.fillStyle = '#ffffff';
   const roastText = `「${input.comment ?? input.flavor.roast}」`;
   const roastW = W - pad * 2;
-  ctx.font = `600 46px ${FONT}`;
-  let roastLines = wrap(ctx, roastText, roastW, 3);
-  // 三行放不进统计区：缩一号字并整体上移，避免压住「回复样本 / 回复间隔」
-  let roastY = 1040;
-  let roastLineH = 64;
-  if (roastLines.length > 2) {
-    ctx.font = `600 40px ${FONT}`;
-    roastLines = wrap(ctx, roastText, roastW, 3);
-    roastY = 1000;
-    roastLineH = 54;
-  }
+  ctx.font = `600 42px ${FONT}`;
+  const roastLines = wrap(ctx, roastText, roastW, 3);
+  const roastY = 766;
+  const roastLineH = 56;
   roastLines.forEach((line, i) => {
     ctx.fillText(line, pad, roastY + i * roastLineH);
   });
 
   // 统计
   const stats: Array<[string, string]> = [
-    // 样本范围写进统计里：「回复样本（3 天内）15 条 · 9 人」，看得出结论的底气
     [
       input.spanS ? t.samplesWithin(formatGap(input.spanS, input.lang)) : t.samples,
       t.sampleValue(input.replyCount, input.authors ?? null),
@@ -246,23 +240,23 @@ export function drawShareCard(input: ShareCardInput): HTMLCanvasElement {
   stats.forEach(([label, value], i) => {
     const x = pad + i * colW;
     ctx.fillStyle = 'rgba(255,255,255,0.45)';
-    ctx.font = `500 28px ${FONT}`;
-    ctx.fillText(label, x, 1190);
+    ctx.font = `500 27px ${FONT}`;
+    ctx.fillText(label, x, 934);
     ctx.fillStyle = '#ffffff';
     ctx.font = `700 40px ${FONT}`;
-    ctx.fillText(value, x, 1240);
+    ctx.fillText(value, x, 982);
   });
 
   // 页脚
   ctx.fillStyle = 'rgba(255,255,255,0.08)';
-  ctx.fillRect(pad, 1272, W - pad * 2, 2);
+  ctx.fillRect(pad, 1014, W - pad * 2, 2);
   ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.font = `700 28px ${FONT}`;
-  ctx.fillText(t.footer, pad, 1318);
+  ctx.font = `700 27px ${FONT}`;
+  ctx.fillText(t.footer, pad, 1058);
   ctx.fillStyle = 'rgba(255,255,255,0.4)';
   ctx.font = `500 22px ${FONT}`;
   ctx.textAlign = 'right';
-  ctx.fillText(t.note, W - pad, 1318);
+  ctx.fillText(t.note, W - pad, 1058);
   ctx.textAlign = 'left';
   return canvas;
 }
