@@ -3,7 +3,9 @@
  *
  * 判一次、全体共享：结果按账号缓存（ai / suspect 7 天给翻身机会，human / insufficient 30 天），
  * 命中缓存不调用任何第三方。未命中时 TikHub 拉 1 页回复 + Jev 判 1 次。
- * 扩展只上报 handle，不上报正文；服务端不保存回复正文。
+ * 扩展只上报 handle 与截断后的回复证据；服务端不保存 handle 之外的请求身份。被判为 AI /
+ * 疑似 AI 的账号，会把参与判定的回复样本落库（最多 20 条，判为真人时清除），供官网 AI 号广场
+ * 公示；证据不足时不落库。
  */
 import { and, desc, eq, notInArray, sql } from 'drizzle-orm';
 import { getDb } from '../db/client';
