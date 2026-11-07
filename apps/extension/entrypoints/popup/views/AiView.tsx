@@ -38,6 +38,9 @@ import {
 import { useListPosition } from './use-list-position';
 import QueuePanel from './QueuePanel';
 
+/** 「我测过的」默认只露最近几条：测过几十个账号时，整页会被历史撑满，把下面的社区执法入口顶出视口 */
+const HISTORY_PREVIEW = 5;
+
 const TONE_COLOR = {
   ai: 'var(--tone-ai)',
   mixed: 'var(--tone-mixed)',
@@ -75,6 +78,8 @@ const COPY = {
     voteFailed: '投票没成功，稍后再试',
     history: '我测过的',
     historyEmpty: '还没测过账号',
+    historyShowAll: (n: number) => `展开全部 ${n} 个`,
+    historyCollapse: '收起',
     myVote: { ai: '我投：AI', human: '我投：真人' },
     checkSelf: '测测我自己',
     noSelf: '先在 X 上登录并打开任意页面',
@@ -120,6 +125,8 @@ const COPY = {
     voteFailed: 'Vote failed. Try later',
     history: 'My checks',
     historyEmpty: 'No accounts checked yet',
+    historyShowAll: (n: number) => `Show all ${n}`,
+    historyCollapse: 'Collapse',
     myVote: { ai: 'My vote: AI', human: 'My vote: human' },
     checkSelf: 'Check myself',
     noSelf: 'Sign in to X and open any page first',
@@ -280,6 +287,7 @@ export function AiView({
   // 查询结果按账号存：当前账号还没查回来就算加载中（不在 effect 里同步 setState）
   const [result, setResult] = useState<{ handle: string; value: AiLookupOutcome } | null>(null);
   const [records, setRecords] = useState<AiCheckRecord[]>([]);
+  const [historyExpanded, setHistoryExpanded] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [voting, setVoting] = useState(false);
   // 检测是在 X 页面上跑的异步任务：按钮在飞行中禁用，避免连点排一队重复检测
@@ -558,38 +566,52 @@ export function AiView({
         {records.length === 0 ? (
           <EmptyState className="is-clean">{c.historyEmpty}</EmptyState>
         ) : (
-          records.map((record) => {
-            const flavor =
-              record.score !== null && record.verdict !== 'insufficient'
-                ? flavorOf(
-                    record.score,
-                    record.verdict,
-                    record.rhythm ?? null,
-                    language,
-                    record.handle,
-                  )
-                : null;
-            return (
-              <button
-                key={record.handle}
-                type="button"
-                className="row ai-row"
-                onClick={() => void openOnX(`/${record.handle}`)}
-              >
-                <span className="row-label">
-                  <span>@{record.handle}</span>
-                </span>
-                {record.vote ? <span className="row-meta">{c.myVote[record.vote]}</span> : null}
-                {flavor ? (
-                  <span className="row-value ai-row-pct" style={{ color: TONE_COLOR[flavor.tone] }}>
-                    {flavor.level} · {flavor.percent}%
+          <>
+            {(historyExpanded ? records : records.slice(0, HISTORY_PREVIEW)).map((record) => {
+              const flavor =
+                record.score !== null && record.verdict !== 'insufficient'
+                  ? flavorOf(
+                      record.score,
+                      record.verdict,
+                      record.rhythm ?? null,
+                      language,
+                      record.handle,
+                    )
+                  : null;
+              return (
+                <button
+                  key={record.handle}
+                  type="button"
+                  className="row ai-row"
+                  onClick={() => void openOnX(`/${record.handle}`)}
+                >
+                  <span className="row-label">
+                    <span>@{record.handle}</span>
                   </span>
-                ) : (
-                  <span className="row-value">—</span>
-                )}
+                  {record.vote ? <span className="row-meta">{c.myVote[record.vote]}</span> : null}
+                  {flavor ? (
+                    <span
+                      className="row-value ai-row-pct"
+                      style={{ color: TONE_COLOR[flavor.tone] }}
+                    >
+                      {flavor.level} · {flavor.percent}%
+                    </span>
+                  ) : (
+                    <span className="row-value">—</span>
+                  )}
+                </button>
+              );
+            })}
+            {records.length > HISTORY_PREVIEW ? (
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => setHistoryExpanded((value) => !value)}
+              >
+                {historyExpanded ? c.historyCollapse : c.historyShowAll(records.length)}
               </button>
-            );
-          })
+            ) : null}
+          </>
         )}
       </section>
 
@@ -638,7 +660,6 @@ export function AiView({
           </>
         ) : null}
       </section>
-
     </div>
   );
 }
