@@ -36,7 +36,7 @@ import {
   type AiCheckResult,
 } from './check';
 import {
-  DECISION,
+  GRAY_ZONE,
   decide,
   MAX_PARENT_CHARS,
   MAX_REPLIES,
@@ -71,9 +71,9 @@ function gapsFromIds(replies: ReplyEvidence[], fallback: number[]): number[] {
   return at.slice(1).map((x, i) => Math.round((x - at[i]!) / 1000));
 }
 
-/** 模型在疑似线到强线之间（0.75–0.80）最容易判错：第二批够数时补判一次取平均 */
+/** 模型在灰区带（0.80–0.86）最容易判错：第二批够数时补判一次取平均 */
 function grayZone(score: number): boolean {
-  return score >= DECISION.suspect && score < DECISION.strong;
+  return score >= GRAY_ZONE.low && score < GRAY_ZONE.high;
 }
 
 /** 两份证据的回复 ID 重合到这个比例（按较少的一份算），就算同一批公开回复的独立印证 */

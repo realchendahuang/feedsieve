@@ -27,7 +27,12 @@
     // 多域名逗号分隔（SITE_HOST 同理）：域名迁移期把旧域与新域并列，旧客户端不断链
     "ADMIN_HOST": "admin.your-api.example.com,admin.your-old-domain.example.com",
     // 官网 SSR 公开页仅服务这个 hostname
-    "SITE_HOST": "www.example.com"
+    "SITE_HOST": "www.example.com",
+    // AI 号判定：可选的 OpenAI 兼容 HTTP 判定服务（DeepSeek / 中转）；不配时用 Workers AI 的 Clef。
+    // key 用 wrangler secret put AI_JUDGE_HTTP_API_KEY 设置。
+    // "AI_JUDGE_PROVIDERS": "openai-compatible,workers-ai",
+    // "AI_JUDGE_HTTP_BASE_URL": "https://你的中转/v1",
+    // "AI_JUDGE_HTTP_MODEL": "deepseek-v4.1-flash"
   },
   // PostgreSQL 经 Hyperdrive 接入；关闭缓存，读写都要实时。
   // 本地开发与测试连 docker-compose.yml 的库（localConnectionString）。

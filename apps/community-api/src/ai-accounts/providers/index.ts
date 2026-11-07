@@ -2,6 +2,8 @@
  * AI 判定模型网关：按部署配置给出一条 provider 顺序，逐个试，谁先成功用谁。
  *
  * 配置：`AI_JUDGE_PROVIDERS` 逗号分隔，默认 `workers-ai`。
+ *   openai-compatible / http    → OpenAI 兼容的 /v1/chat/completions（DeepSeek / 中转），
+ *                                 用 AI_JUDGE_HTTP_BASE_URL + AI_JUDGE_HTTP_API_KEY + AI_JUDGE_HTTP_MODEL
  *   workers-ai                  → Cloudflare Workers AI，模型取 AI_JUDGE_MODEL（默认 @cf/cloudflare/clef）
  *   workers-ai:<model id>       → 指定 Workers AI 模型（例如 workers-ai:@cf/cloudflare/clef-flash，
  *                                 或第三方 typesafe/jev-1.14.0 —— 后者会经 AI Gateway，需要 credits）
@@ -12,6 +14,7 @@
  */
 import { vendorOpen, VendorError } from '../breaker';
 import { DEFAULT_JUDGE_MODEL, createWorkersAiProvider } from './workers-ai';
+import { createOpenAiCompatibleProvider } from './openai-compatible';
 import { createTypesafeDirectProvider } from './typesafe-direct';
 import type { JudgeInput, JudgeProvider, JudgeResult } from './types';
 
@@ -25,6 +28,7 @@ function providerForSpec(env: Cloudflare.Env, spec: string): JudgeProvider | nul
     const model = spec.slice('workers-ai:'.length).trim();
     return model ? createWorkersAiProvider(model) : null;
   }
+  if (spec === 'openai-compatible' || spec === 'http') return createOpenAiCompatibleProvider(env);
   if (spec === 'typesafe-direct') return createTypesafeDirectProvider();
   console.warn(`[community-api] 忽略未知的 AI 判定 provider：${spec}`);
   return null;

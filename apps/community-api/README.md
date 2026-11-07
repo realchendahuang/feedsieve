@@ -48,12 +48,13 @@ wrangler r2 bucket create feedsieve-keyword-packs
 cp wrangler.local.example.jsonc wrangler.local.jsonc
 #   编辑 wrangler.local.jsonc：填 account_id、Hyperdrive id、你的域名
 echo "your-salt" | wrangler secret put INSTALLATION_SALT --config wrangler.local.jsonc
-# AI 号判定：默认走 Cloudflare Workers AI 的 Cloudflare 自家决策模型 @cf/cloudflare/clef，
-# 走 Workers AI 自己的计费（不需要 AI Gateway credits，也没有第三方 5% 手续费）。
-# wrangler 配置里已声明 AI binding，不用额外 secret。
-# 旧 /v1/ai-accounts/check 还要 TikHub 拉回复：
+# AI 号判定：官方实例默认走 goupiti 中转的 DeepSeek V4.1 Flash（OpenAI 兼容 /v1/chat/completions），
+# 由维护者自己配 base URL + key；不配这个通道时回落到 Cloudflare Workers AI 的 Clef（AI binding 已在 wrangler 配置里）。
+# 旧 /v1/ai-accounts/check 的 TikHub 拉回复：
 echo "tikhub-key" | wrangler secret put TIKHUB_API_KEY --config wrangler.local.jsonc
-# 只有要接第三方模型 / 走 TypeSafe 直连备用通道时，才需要这些：
+# HTTP 判定通道（DeepSeek / 任意 OpenAI 兼容服务）的 key（base URL 和模型名写 vars）：
+echo "judge-key" | wrangler secret put AI_JUDGE_HTTP_API_KEY --config wrangler.local.jsonc
+# 只有要接 TypeSafe 直连备用通道时，才需要这个 secret：
 echo "typesafe-key" | wrangler secret put TYPESAFE_API_KEY --config wrangler.local.jsonc
 pnpm --filter @feedsieve/admin build
 pnpm deploy                                   # = wrangler deploy --config wrangler.local.jsonc
@@ -69,14 +70,18 @@ curl https://你的域名/healthz
 
 ```jsonc
 "vars": {
-  "AI_JUDGE_PROVIDERS": "workers-ai",               // 默认，Cloudflare Workers AI
-  "AI_JUDGE_MODEL": "@cf/cloudflare/clef",          // 默认模型：Cloudflare 自家 Clef（27B 决策模型）
-  // "AI_JUDGE_MODEL": "@cf/cloudflare/clef-flash", // 9B 版，更便宜更快但分离度略差
-  // "AI_JUDGE_PROVIDERS": "workers-ai,typesafe-direct",            // Workers AI 挂了再用 TypeSafe 直连
-  // "AI_JUDGE_PROVIDERS": "workers-ai:typesafe/jev-1.14.0",        // 换第三方 Jev（会经 AI Gateway，需要 credits）
+  // 官方实例：先走 HTTP 判定服务（DeepSeek），失败再回落 Workers AI 的 Clef
+  "AI_JUDGE_PROVIDERS": "openai-compatible,workers-ai",
+  "AI_JUDGE_HTTP_BASE_URL": "https://你的中转/v1",   // OpenAI 兼容 base（需从 Cloudflare 出网可达）
+  "AI_JUDGE_HTTP_MODEL": "deepseek-v4.1-flash",
+  // "AI_JUDGE_PROVIDERS": "workers-ai",             // 只走 Cloudflare 自家模型
+  "AI_JUDGE_MODEL": "@cf/cloudflare/clef",          // workers-ai 回落到 Clef；也可换 clef-flash
+  // "AI_JUDGE_PROVIDERS": "workers-ai:typesafe/jev-1.14.0",        // 第三方 Jev（会经 AI Gateway，需要 credits）
   "AI_GATEWAY_ID": "default"                        // 只有第三方模型才需要
 }
 ```
+
+HTTP 判定服务按 OpenAI Chat Completions 协议调用（`POST {base}/chat/completions`），非思考模式 + JSON 输出 + temperature 0；只发账号最近的公开回复与回复间隔，不带 handle。
 
 本地 `pnpm dev` 想直接调 AI，需要给 `wrangler.jsonc` 的 `ai` binding 加 `"remote": true`（会连线上账号；fork 默认不开）。新增供应商：实现 `src/ai-accounts/providers/types.ts` 的 `JudgeProvider`，在 `providers/index.ts` 里加一个配置名分支，判定/缓存/熔断/额度逻辑不用动。
 

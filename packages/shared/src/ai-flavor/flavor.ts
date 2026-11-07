@@ -34,14 +34,15 @@ interface Tier {
 
 /**
  * 从高到低匹配第一个 score ≥ min 的档位。评语在 roasts.ts，每档几十条。
- * 分档按当前判定模型（Cloudflare Clef）的分数分布校准，见 apps/community-api/src/ai-accounts/evidence.ts
- * 的 DECISION：强线 0.80 / 节奏分支 0.65 / 疑似 0.75；档位边界围绕这三条线分布。
+ * 分档按当前判定模型（goupiti 中转的 DeepSeek V4.1 Flash，0–100 整数口径）的分数分布校准，见
+ * apps/community-api/src/ai-accounts/evidence.ts 的 DECISION：强线 0.80 / 节奏分支 0.40；
+ * 档位边界围绕这两条线分布（DeepSeek 的 0.78 / 0.82 / 0.88 平台值较多）。
  */
 const TIERS: Tier[] = [
-  { min: 0.89, tone: 'ai', pool: 'aiMax', zh: 'AI 感爆棚', en: 'Off-the-charts AI' },
+  { min: 0.9, tone: 'ai', pool: 'aiMax', zh: 'AI 感爆棚', en: 'Off-the-charts AI' },
   { min: 0.8, tone: 'ai', pool: 'aiStrong', zh: 'AI 味很冲', en: 'Strong AI flavor' },
-  { min: 0.65, tone: 'mixed', pool: 'aiBit', zh: '有点 AI 味', en: 'A bit AI-ish' },
-  { min: 0.55, tone: 'mixed', pool: 'unsure', zh: '人机难辨', en: 'Hard to tell' },
+  { min: 0.7, tone: 'mixed', pool: 'aiBit', zh: '有点 AI 味', en: 'A bit AI-ish' },
+  { min: 0.5, tone: 'mixed', pool: 'unsure', zh: '人机难辨', en: 'Hard to tell' },
   { min: 0.3, tone: 'human', pool: 'humanMostly', zh: '人味为主', en: 'Mostly human' },
   { min: 0, tone: 'human', pool: 'humanMax', zh: '活人感爆棚', en: 'Certified human' },
 ];

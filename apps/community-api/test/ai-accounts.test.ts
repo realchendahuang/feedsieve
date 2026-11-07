@@ -131,11 +131,11 @@ describe('AI 号证据整理', () => {
   it('判定阈值：强分直接判 AI；中分要节奏机械；其余疑似或真人', () => {
     const mechanical = { fast: 0.9, short: 0, cv: 0.2 };
     const humanLike = { fast: 0.3, short: 0.3, cv: 0.9 };
-    // 2026-11-07 换 Cloudflare Clef 后重校准：强线 0.80，节奏分支 0.65，疑似 0.75
-    expect(decide(0.85, humanLike)).toBe('ai');
-    expect(decide(0.68, mechanical)).toBe('ai');
-    expect(decide(0.78, humanLike)).toBe('suspect');
-    expect(decide(0.7, humanLike)).toBe('human');
+    // 2026-11-07 换 DeepSeek V4.1 Flash 后重校准：强线 0.80，节奏分支 0.40，疑似 0.79
+    expect(decide(0.88, humanLike)).toBe('ai');
+    expect(decide(0.5, mechanical)).toBe('ai');
+    expect(decide(0.8, humanLike)).toBe('ai');
+    expect(decide(0.79, humanLike)).toBe('suspect');
     expect(decide(0.3, mechanical)).toBe('human');
   });
 });

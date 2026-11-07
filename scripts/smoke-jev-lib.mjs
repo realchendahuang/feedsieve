@@ -1,6 +1,6 @@
 /** Jev 调用 + 节奏 + 判定（冒烟脚本用，口径同 eval-ai-accounts.mjs / evidence.ts）。 */
 
-const DECISION = { strong: 0.8, weak: 0.65, suspect: 0.75, fast: 0.6, maxShort: 0.05, maxCv: 0.45 };
+const DECISION = { strong: 0.8, weak: 0.4, suspect: 0.79, fast: 0.6, maxShort: 0.05, maxCv: 0.45 };
 
 export function decide(p, r) {
   if (p >= DECISION.strong) return 'ai';

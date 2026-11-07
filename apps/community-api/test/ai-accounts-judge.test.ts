@@ -278,7 +278,7 @@ describe('POST /v1/ai-accounts/judge（证据直传）', () => {
   });
 
   it('灰色地带用第二批再判一次取平均；分数明确时只判一次', async () => {
-    const gray = stubJev({ scores: [0.76, 0.86] });
+    const gray = stubJev({ scores: [0.82, 0.9] });
     const many = Array.from({ length: 20 }, (_, i) => ({
       id: String(1_980_000_000_000_000_000n + BigInt(i) * 1_258_291_200_000n),
       parent: `原帖 ${i}`,
@@ -290,7 +290,7 @@ describe('POST /v1/ai-accounts/judge（证据直传）', () => {
       undefined,
     );
     expect(gray.jev).toBe(2);
-    expect(result.body).toMatchObject({ score: 0.81, verdict: 'ai', reply_count: 20 });
+    expect(result.body).toMatchObject({ score: 0.86, verdict: 'ai', reply_count: 20 });
     const [row] = await getDb(env)
       .select({ rhythm: aiAccountVerdicts.rhythm })
       .from(aiAccountVerdicts)
@@ -438,8 +438,8 @@ describe('POST /v1/ai-accounts/judge（证据直传）', () => {
     expect(calls.jevBodies[0]!.input).toMatchObject({ model: 'clef-flash' });
   });
   it('灰色地带第二轮锁死第一轮的 provider，不跨模型混分', async () => {
-    // 第一轮 workers-ai 判 0.76（灰区 0.75–0.80），第二轮同 provider 失败；typesafe-direct 虽配了兜底，也不许拿来混分
-    const calls = stubJev({ scores: [0.76], failOn: 2 });
+    // 第一轮 workers-ai 判 0.82（灰区 0.80–0.86），第二轮同 provider 失败；typesafe-direct 虽配了兜底，也不许拿来混分
+    const calls = stubJev({ scores: [0.82], failOn: 2 });
     const direct = vi.fn();
     vi.stubGlobal(
       'fetch',

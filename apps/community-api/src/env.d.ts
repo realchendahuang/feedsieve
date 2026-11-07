@@ -56,6 +56,12 @@ declare namespace Cloudflare {
     AI?: Ai;
     /** AI 号判定的模型 provider 顺序（逗号分隔）：workers-ai、workers-ai:<model id>、typesafe-direct；默认 workers-ai */
     AI_JUDGE_PROVIDERS?: string;
+    /** OpenAI 兼容 HTTP 判定服务（DeepSeek / 中转）的 base URL，如 https://host/v1；缺省 = 该 provider 不可用 */
+    AI_JUDGE_HTTP_BASE_URL?: string;
+    /** 上述判定服务的 API key（线上 wrangler secret put，绝不入库） */
+    AI_JUDGE_HTTP_API_KEY?: string;
+    /** 上述判定服务的模型名（默认 deepseek-v4.1-flash） */
+    AI_JUDGE_HTTP_MODEL?: string;
     /** workers-ai provider 的默认模型 id（默认 @cf/cloudflare/clef；换模型不用改代码） */
     AI_JUDGE_MODEL?: string;
     /** AI Gateway id（只有第三方模型如 typesafe/jev 才走网关；默认 default，首次认证请求自动创建） */

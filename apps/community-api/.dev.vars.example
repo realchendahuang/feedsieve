@@ -9,8 +9,13 @@ SIGNING_PRIVATE_KEY=<pkcs8-der-base64>
 SIGNING_KEY_ID=release-1
 # 词库后台发布 / 回滚必须带发布者签名；密钥缺失时拒绝发布（线上同样用 wrangler secret put 设置）
 REQUIRE_SIGNED_KEYWORD_PACKS=1
-# AI 号判定：默认走 Cloudflare Workers AI 的 Cloudflare 自家决策模型 @cf/cloudflare/clef
-#（wrangler 里的 AI binding；本地 dev 直接调需要给 binding 加 "remote": true）。
+# AI 号判定：官方实例默认走 OpenAI 兼容的 HTTP 判定服务（goupiti 中转的 DeepSeek V4.1 Flash），
+# 没配时回落到 Cloudflare Workers AI 的 @cf/cloudflare/clef（本地 dev 直接调需要给 AI binding 加 "remote": true）。
+# HTTP 通道的 base URL / 模型名在 vars 里配；key 只放这里或线上 secret：
+# AI_JUDGE_PROVIDERS=openai-compatible,workers-ai
+# AI_JUDGE_HTTP_BASE_URL=https://goupiti.chendahuang.top/v1
+# AI_JUDGE_HTTP_MODEL=deepseek-v4.1-flash
+# AI_JUDGE_HTTP_API_KEY=<judge-key>
 # 旧 /v1/ai-accounts/check 还要 TikHub 拉回复；缺省时接口返回 503
 TIKHUB_API_KEY=<tikhub-key>
 # 只有 AI_JUDGE_PROVIDERS 里写了 typesafe-direct 才用（TypeSafe 直连备用通道）
