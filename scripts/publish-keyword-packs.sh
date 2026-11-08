@@ -44,6 +44,6 @@ else
   echo "warning: cannot reach $latest_url; skipping remote version check (offline publish)"
 fi
 
-pnpm exec wrangler r2 object put "$bucket/$prefix/official.json" --remote --file community/keyword-packs/official.json --content-type application/json
-pnpm exec wrangler r2 object put "$bucket/keyword-packs/latest.json" --remote --file community/keyword-packs/manifest.json --content-type application/json
+pnpm --filter @feedsieve/community-api exec wrangler r2 object put "$bucket/$prefix/official.json" --remote --file community/keyword-packs/official.json --content-type application/json
+pnpm --filter @feedsieve/community-api exec wrangler r2 object put "$bucket/keyword-packs/latest.json" --remote --file community/keyword-packs/manifest.json --content-type application/json
 echo "published keyword packs v$version to r2://$bucket/keyword-packs/"
