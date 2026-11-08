@@ -1,6 +1,6 @@
 # AMO 上架材料（0.13.1）
 
-2026-11-02 已按本文件提交 **0.13.2**：<https://addons.mozilla.org/zh-CN/firefox/addon/feedsieve-fuluwa/>，状态「等待审核」。slug 为 `feedsieve-fuluwa`，名称为「FeedSieve 福滤娃」。
+2026-11-02 已按本文件提交 **0.13.2**；**0.15.0 已通过审核上线**，2026-11-08 提交 **0.18.0**（附源码包，等待审核）：<https://addons.mozilla.org/zh-CN/firefox/addon/feedsieve-fuluwa/>。slug 为 `feedsieve-fuluwa`，名称为「FeedSieve 福滤娃」。
 
 官方 Firefox 条目使用 Gecko ID `feedsieve-official@feedsieve.win`。AMO 上已有的
 `feedsieve@feedsieve.local` / 0.8.2 条目是第三方转载，`feedsieve@feedsieve.win`

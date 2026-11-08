@@ -76,7 +76,7 @@ Firefox 的 Gecko ID 是官方自有的 `feedsieve-official@feedsieve.win`；AMO
 
 - GitHub Release 的 `vX.Y.Z` 有 `feedsieve-X.Y.Z-chrome.zip`
 - GitHub Actions `verify` 在 tag 对应的 commit 上通过
-- 商店条目状态为「待审核」，审核通过后自动发布
+- Chrome 商店与 AMO 条目状态均为「待审核」或「已通过审核」，通过后自动发布
 - 官网与 README 中的版本相关内容（如截图、量级名称）与新版本一致
 
 ## 约定

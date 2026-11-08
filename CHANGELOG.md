@@ -3,7 +3,7 @@
 本项目所有显著变更都记录在这个文件。格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
 - 每个版本的详细工程记录见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)。
-- 二进制产物见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)；正式用户请从 [Chrome 应用商店](https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph)接收更新。
+- 二进制产物见 [GitHub Releases](https://github.com/realchendahuang/feedsieve/releases)；正式用户请从 [Chrome 应用商店](https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph) 或 [Firefox 附加组件](https://addons.mozilla.org/zh-CN/firefox/addon/feedsieve-fuluwa/) 接收更新。
 
 ## [Unreleased]
 

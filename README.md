@@ -11,6 +11,7 @@
 
 <p align="center">
   <a href="https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph"><img src="https://img.shields.io/chrome-web-store/v/amhdjglnonjaoenddnifpnljgmocfdph?logo=googlechrome&logoColor=white&label=Chrome%20Web%20Store" alt="Chrome Web Store 版本" /></a>
+  <a href="https://addons.mozilla.org/zh-CN/firefox/addon/feedsieve-fuluwa/"><img src="https://img.shields.io/amo/v/feedsieve-fuluwa?logo=firefoxbrowser&logoColor=white&label=Firefox%20Add-ons" alt="Firefox Add-ons 版本" /></a>
   <a href="https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph"><img src="https://img.shields.io/chrome-web-store/users/amhdjglnonjaoenddnifpnljgmocfdph?label=users" alt="商店用户数" /></a>
   <a href="https://github.com/realchendahuang/feedsieve/stargazers"><img src="https://img.shields.io/github/stars/realchendahuang/feedsieve?logo=github&color=gold" alt="GitHub Stars" /></a>
   <a href="https://github.com/realchendahuang/feedsieve/releases"><img src="https://img.shields.io/github/v/release/realchendahuang/feedsieve?logo=github" alt="最新 Release" /></a>
@@ -21,6 +22,8 @@
 
 <p align="center">
   <a href="https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph"><strong>⬇️ Chrome 商店一键安装</strong></a>
+  ·
+  <a href="https://addons.mozilla.org/zh-CN/firefox/addon/feedsieve-fuluwa/"><strong>🦊 Firefox 商店一键安装</strong></a>
   ·
   <a href="https://feedsieve.win"><strong>🌐 官网与公示</strong></a>
   ·
@@ -162,13 +165,13 @@ X 的主页只按时间排帖子，想找一个博主最好的那几条，只能
 
 ## 安装方式
 
-| 安装途径                                  | 说明与步骤                                                                                                                                                                                         |
-| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Chrome 应用商店（推荐）**               | 打开 [Chrome 商店页面](https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph) 点「添加至 Chrome」，自动接收更新                                                      |
-| **Edge / Brave / Arc 等 Chromium 浏览器** | 同上，允许来自其他商店的扩展即可                                                                                                                                                                   |
-| **GitHub Releases**                       | 从 [Releases](https://github.com/realchendahuang/feedsieve/releases) 下载 `feedsieve-*-chrome.zip` 解压 → `chrome://extensions` 打开开发者模式 → 加载已解压的扩展程序                              |
-| **Firefox（AMO，审核中）**               | [官方条目 FeedSieve 福滤娃](https://addons.mozilla.org/zh-CN/firefox/addon/feedsieve-fuluwa/) 已提交 0.13.2，等待 AMO 审核。审核前可从 [Releases](https://github.com/realchendahuang/feedsieve/releases/latest) 下载 `feedsieve-*-firefox.zip`，在 `about:debugging#/runtime/this-firefox` 临时加载。AMO 上现有的 0.8.2 `feedsieve` 条目不是本项目发布，请勿安装；详见 [`docs/FIREFOX.md`](docs/FIREFOX.md) |
-| **从源码构建**                            | 见下方本地开发（Node ≥ 22、pnpm）                                                                                                                                                                  |
+| 安装途径                                  | 说明与步骤                                                                                                                                                                                                                                                                                             |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Chrome 应用商店**                       | 打开 [Chrome 商店页面](https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph) 点「添加至 Chrome」，自动接收更新                                                                                                                                                          |
+| **Firefox 附加组件（AMO）**               | 打开 [Firefox 商店页面](https://addons.mozilla.org/zh-CN/firefox/addon/feedsieve-fuluwa/) 点「添加到 Firefox」，自动接收更新。AMO 上另有第三方转载的 0.8.2 `feedsieve` 条目（GUID `feedsieve@feedsieve.local`），不是本项目发布，请认准「FeedSieve 福滤娃」；详见 [`docs/FIREFOX.md`](docs/FIREFOX.md) |
+| **Edge / Brave / Arc 等 Chromium 浏览器** | 用上面的 Chrome 商店链接，允许来自其他商店的扩展即可                                                                                                                                                                                                                                                   |
+| **离线包（GitHub Releases）**             | Chrome / Chromium：下载 `feedsieve-*-chrome.zip` 解压 → `chrome://extensions` 打开开发者模式 → 加载已解压的扩展程序。Firefox：下载 `feedsieve-*-firefox.zip` → `about:debugging#/runtime/this-firefox` → 临时载入附加组件                                                                              |
+| **从源码构建**                            | 见下方本地开发（Node ≥ 22、pnpm）                                                                                                                                                                                                                                                                      |
 
 ---
 
