@@ -74,8 +74,8 @@ const COPY = {
     expired: '结论已过期',
     mineOnly: '只有你能看到 · 再有一人测到同样结果才公开',
     samples: '样本',
+    samplesWithin: (span: string) => `样本（${span}内）`,
     sampleValue: (n: number, k: number) => `${n} 条 · ${k} 人`,
-    spanLine: (span: string) => `最近 ${span}内的回复`,
     gap: '间隔',
     spread: '长短波动',
     voteAi: '是 AI',
@@ -125,8 +125,8 @@ const COPY = {
     expired: 'Result expired',
     mineOnly: 'Only you can see this until someone else gets the same result',
     samples: 'Replies',
+    samplesWithin: (span: string) => `Replies (last ${span})`,
     sampleValue: (n: number, k: number) => `${n} · ${k} people`,
-    spanLine: (span: string) => `Replies from the last ${span}`,
     gap: 'Gap',
     spread: 'Variety',
     voteAi: 'It’s AI',
@@ -823,7 +823,11 @@ function AiResult({
       <p className="ai-roast">「{value.comment ?? flavor.roast}」</p>
       <div className="ai-stats">
         <div>
-          <span>{c.samples}</span>
+          <span>
+            {value.rhythm?.span
+              ? c.samplesWithin(formatGap(value.rhythm.span, language))
+              : c.samples}
+          </span>
           <b>
             {value.rhythm?.authors
               ? c.sampleValue(value.replyCount, value.rhythm.authors)
@@ -839,9 +843,6 @@ function AiResult({
           <b>{value.rhythm ? spreadLabel(value.rhythm.cv, language) : '—'}</b>
         </div>
       </div>
-      {value.rhythm?.span ? (
-        <p className="row-meta ai-tally">{c.spanLine(formatGap(value.rhythm.span, language))}</p>
-      ) : null}
       {value.mineOnly ? <p className="ai-note">{c.mineOnly}</p> : null}
       <div className="button-row ai-votes">
         {(['ai', 'human'] as const).map((choice) => (
