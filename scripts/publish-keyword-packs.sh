@@ -44,6 +44,8 @@ else
   echo "warning: cannot reach $latest_url; skipping remote version check (offline publish)"
 fi
 
-pnpm --filter @feedsieve/community-api exec wrangler r2 object put "$bucket/$prefix/official.json" --remote --file community/keyword-packs/official.json --content-type application/json
-pnpm --filter @feedsieve/community-api exec wrangler r2 object put "$bucket/keyword-packs/latest.json" --remote --file community/keyword-packs/manifest.json --content-type application/json
+# --filter 的 exec 在 apps/community-api 下执行，文件参数必须用仓库根的绝对路径
+repo_root=$(pwd)
+pnpm --filter @feedsieve/community-api exec wrangler r2 object put "$bucket/$prefix/official.json" --remote --file "$repo_root/community/keyword-packs/official.json" --content-type application/json
+pnpm --filter @feedsieve/community-api exec wrangler r2 object put "$bucket/keyword-packs/latest.json" --remote --file "$repo_root/community/keyword-packs/manifest.json" --content-type application/json
 echo "published keyword packs v$version to r2://$bucket/keyword-packs/"
