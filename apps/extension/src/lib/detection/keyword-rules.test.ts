@@ -12,7 +12,7 @@ import {
   setOfficialKeywordRuleEnabled,
   type KeywordRuleSettings,
 } from './keyword-rules';
-import { BUNDLED_KEYWORD_PACK_CATALOG } from './keyword-packs';
+import { BUNDLED_KEYWORD_PACK_CATALOG, type KeywordPackCatalog } from './keyword-packs';
 
 /** 全量官方规则数（从随包目录直接算，测试里 Node 态已同步装入） */
 const OFFICIAL_RULE_COUNT = BUNDLED_KEYWORD_PACK_CATALOG.packs.reduce(
@@ -199,6 +199,51 @@ describe('本地关键词规则', () => {
     expect(rule?.check({ handle: 'bait', text: 'hot amateur adult content daily' })).toContain(
       '命中官方规则：adult',
     );
+  });
+
+  it('官方短词命中简介不再标黄，正文命中仍保留；长短语和自定义词不受限', () => {
+    // 2026-11-08 线上误标：「自拍」这类 2 字官方词出现在简介的自我描述里被大量点误标。
+    // 用合成词库测试，避免测试依赖真实词库的收录内容。
+    const catalog: KeywordPackCatalog = {
+      schema_version: 1,
+      pack_version: '2026.11.08.1',
+      generated_at: null,
+      packs: [
+        {
+          id: 'adult_gray_traffic',
+          name: { zh: '黄推 / 成人引流', en: 'Adult bait' },
+          description: { zh: '测试词库', en: 'test pack' },
+          source_refs: [],
+          rules: [
+            { id: 'test-short', phrase: '自拍', name: { zh: '自拍', en: '自拍' } },
+            {
+              id: 'test-long',
+              phrase: '主页自取福利',
+              name: { zh: '主页自取福利', en: '主页自取福利' },
+            },
+          ],
+        },
+      ],
+    };
+    const settings: KeywordRuleSettings = {
+      ...DEFAULT_KEYWORD_RULE_SETTINGS,
+      subscribedCategoryIds: ['adult_gray_traffic'],
+      disabledOfficialRuleIds: [],
+      customRules: [{ id: 'custom-selfie', phrase: '自拍', createdAt: 1 }],
+    };
+    const rules = createKeywordHeuristics(settings, catalog);
+    const short = rules.find((rule) => rule.id === 'keyword:official:test-short');
+    const long = rules.find((rule) => rule.id === 'keyword:official:test-long');
+    const custom = rules.find((rule) => rule.id.startsWith('keyword:custom:'));
+
+    // 简介里的短词是普通自我描述：不标
+    expect(short?.check({ handle: 'ball2baby', bio: '喜歡自拍，記錄生活' })).toBeNull();
+    // 正文命中同一短词：保留提示，并透出字段
+    expect(short?.check({ handle: 'bait', text: '今晚发点自拍' })).toContain('自拍 · 正文');
+    // 更长的短语在简介里仍可命中（成句话术的误伤面小）
+    expect(long?.check({ handle: 'bait', bio: '主页自取福利，懂的都懂' })).toContain('· 简介');
+    // 自定义词是用户自己的选择，简介命中照常显示
+    expect(custom?.check({ handle: 'spam', bio: '喜欢自拍' })).toContain('命中你的关键词');
   });
 
   it('官方词同时匹配昵称和账号名，正文为空也能标记', async () => {

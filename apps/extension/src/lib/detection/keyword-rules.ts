@@ -515,6 +515,15 @@ export function activeKeywordRules(
       })),
   ];
 }
+/**
+ * 简介（bio）是账号的自我描述，「自拍」「丝袜」「人妻」这类 ≤2 字的官方词出现在这里
+ * 多半是正常自我介绍；正文/昵称里命中才更接近引流话术。2026-11-08 线上误标数据显示
+ * 简介字段的短词命中是误伤大头（「自拍」被标账号中 59% 被点过误标），因此官方词库的
+ * 短词在简介字段直接跳过。用户自定义词保留原意，不受此限制。
+ */
+const BIO_FIELD_INDEX = 3;
+const BIO_SHORT_PHRASE_MAX_LENGTH = 2;
+
 export function createKeywordHeuristics(
   settings: KeywordRuleSettings,
   catalog: KeywordPackCatalog = BUNDLED_KEYWORD_PACK_CATALOG,
@@ -532,6 +541,15 @@ export function createKeywordHeuristics(
       // 命中字段透出到理由里（简介/正文…），用户第一眼能核对来源。
       const hitIndex = matchAll(input).get(ruleIndex);
       if (hitIndex === undefined) return null;
+      // 官方短词的简介命中不算：bio 里的「自拍/丝袜」是普通自我描述，
+      // 标黄只会制造误伤；正文/昵称/账号命中仍按原逻辑提示。
+      if (
+        hitIndex === BIO_FIELD_INDEX &&
+        rule.source === 'official' &&
+        ruleMatchersForRule(rule).phraseText.length <= BIO_SHORT_PHRASE_MAX_LENGTH
+      ) {
+        return null;
+      }
       const fieldLabel = fieldLabels[hitIndex];
       const base =
         rule.source === 'custom'
