@@ -181,10 +181,29 @@ describe('本地关键词规则', () => {
     expect(rules[1]?.check(input)).toContain('同城上门可约');
   });
 
-  it('英文短语按整词命中：bio 里的 Adulthood 不误标 adult，正文广告仍命中（issue #4）', async () => {
-    const settings = await getKeywordRuleSettings();
-    const rule = createKeywordHeuristics(settings).find(
-      (candidate) => candidate.id === 'keyword:official:adult-gray-traffic-7fdc3e8038e87ff5',
+  it('英文短语按整词命中：bio 里的 Adulthood 不误标 adult，正文广告仍命中（issue #4）', () => {
+    // 「adult」已在 2026-11-08 第二批词库收敛中下线：改用合成词库锁定整词匹配语义，
+    // 不再让回归用例依赖真实词库的收录内容（issue #4 的真实样本仍原样保留）。
+    const catalog: KeywordPackCatalog = {
+      schema_version: 1,
+      pack_version: '2026.11.08.1',
+      generated_at: null,
+      packs: [
+        {
+          id: 'adult_gray_traffic',
+          name: { zh: '黄推 / 成人引流', en: 'Adult bait' },
+          description: { zh: '测试词库', en: 'test pack' },
+          source_refs: [],
+          rules: [{ id: 'test-adult', phrase: 'adult', name: { zh: 'adult', en: 'adult' } }],
+        },
+      ],
+    };
+    const settings: KeywordRuleSettings = {
+      ...DEFAULT_KEYWORD_RULE_SETTINGS,
+      subscribedCategoryIds: ['adult_gray_traffic'],
+    };
+    const rule = createKeywordHeuristics(settings, catalog).find(
+      (candidate) => candidate.id === 'keyword:official:test-adult',
     );
     expect(rule).toBeDefined();
     // @MarcosBL 的真实 bio：Adulthood 含 adult 子串但语义无关
@@ -317,10 +336,11 @@ describe('本地关键词规则', () => {
     expect(cityRule?.check({ handle: 'bait', text: '同城上門服務' })).toContain('同城 + 上门');
     // CJK 补充部首替字（⻔→门 等，CJKRadicals.txt 映射）
     expect(cityRule?.check({ handle: 'bait', text: '同城上\u2ED4服務' })).toContain('同城 + 上门');
-    // 同形异源字（confusables 映射：西里尔 а）
-    const adultRule = heuristics.find(
-      (candidate) => candidate.id === 'keyword:official:adult-gray-traffic-7fdc3e8038e87ff5',
+    // 同形异源字（confusables 映射：西里尔 х→x）。「adult」已下线，改用仍在线的
+    // xiao77 锁定同一条归一化路径，避免测试绑定已删词条。
+    const siteRule = heuristics.find(
+      (candidate) => candidate.id === 'keyword:official:adult-gray-traffic-58c2e555821225d3',
     );
-    expect(adultRule?.check({ handle: 'bait', text: '\u0430dult 看过来' })).toContain('adult');
+    expect(siteRule?.check({ handle: 'bait', text: '\u0445iao77 看过来' })).toContain('xiao77');
   });
 });
