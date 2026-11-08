@@ -7,8 +7,11 @@
 
 ## [Unreleased]
 
+## [0.18.0] — 2026-11-08
+
 ### 新增
 
+- **AI 味报告卡改版**：分享图从 4:5 改成 1080×1080 正方形，锐评收进带档位色强调线的引用块、档位徽章与百分比同一行、字号按内容自适应（短句用大字撑住，长句保三行且不留孤行），底边留白 19 → 53px；X 页面检测卡与扩展弹窗的报告卡同步去掉重复的「AI 味」标签和单独的样本说明行，分享三件事并成一行，检测浮层 576 → 438px、弹窗卡片 270 → 244px。三处统一「样本（…内）」这一种口径。
 - **AI 号广场（[feedsieve.win/ai](https://feedsieve.win/ai)）**：把按公开规则可以公示的 AI / 疑似 AI 账号聚合成一页，讲清楚「为什么判它是 AI」——判定分数与档位、回复节奏指标（中位间隔 / ≤90 秒占比 / 长度变异）、社区 AI 与真人票数、主页公开数据（粉丝、注册时间、蓝V），以及最近几条公开回复的摘要（每条 ≤120 字 + 原帖摘要 + 在 X 上的链接）。支持按 AI 号 / 疑似 / 已进名单筛选、搜索 handle、按名单或分数排序；疑似账号单独标注，不与 AI 号混列。拉黑动作仍由用户自己执行，页面只给复制 handle、打开 X、装扩展这些便利。
 - **结果页同步补全**：`feedsieve.win/ai/账号` 在原有 AI 味报告之外，新增判定依据、主页数据、最近回复与屏蔽引导；只有结论可以公开时才展示分数与样本。
 - **判定时落库回复样本**：新增 `ai_account_samples` 表，判为 AI / 疑似 AI 时保存最多 20 条参与判定的回复（正文 ≤200 字、原帖 ≤80 字、发帖时间与间隔）；重判为真人时删除，证据不足时不保存。上线前已存在的账号用 `scripts/backfill-ai-samples.mjs` 回填。
@@ -31,7 +34,7 @@
 
 ### 工程
 
-- 判定模型多输出一句「模型锐评」：公开结果页与 OG 分享卡优先显示这句（没有时回落到原来的档位评语）；锐评只描述写法/节奏，随判定结果一起缓存（新列 `comment`），扩展弹窗与 X 页面检测卡下一版起也会显示。
+- 判定模型多输出一句「模型锐评」：公开结果页与 OG 分享卡优先显示这句（没有时回落到原来的档位评语）；锐评只描述写法/节奏，随判定结果一起缓存（新列 `comment`），扩展弹窗与 X 页面检测卡从本版起也会显示。
 - 新增 / 改写回归测试 40 余条（全量 1241 条通过），关键修复都做过「回退到旧实现则测试失败」的反向验证。
 - 判定模型网关抽到 `apps/community-api/src/ai-accounts/providers/`：provider 级熔断（`vendor_breaker:workers-ai:<model>`）、按顺序 fallback、`typesafe-direct` 保留为可选备用通道；配套 7 条网关单测（默认模型与是否经网关、第三方模型网关参数、fallback、坏返回、熔断暂停、Clef body、灰区不跨模型混分）。
 - 判定阈值与 AI 味档位先后按两个模型重校准（2026-11-07）：Clef 口径 0.80 / 0.65 / 0.75（20/33、4/210），DeepSeek 口径 0.80 / 0.40 / 0.79（25/33、5/207、疑似 0/207，AUC 0.911，0–100 整数口径）；旧 Jev 口径 18/33、1/212。三套模型分数不可互比。评测脚本 `scripts/eval-ai-accounts.mjs` 新增 `--workers-ai <model>` 与 `--http <base> --model <name>`（OpenAI 兼容 + 并发 + 两套概率口径）。
@@ -669,7 +672,8 @@
 - 首个可用版本：黄框标注（内置名单 + 启发式，带理由）、顺手拉黑、待拉黑列表、一键批量拉黑（持久队列）、一键撤销、本地统计。
 - WXT + React 19 + MV3 最小权限架构；X DOM fixtures 锁定 reader→detector 契约；95 个单元测试；pre-push 本地质量门禁。
 
-[Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.17.0...HEAD
+[Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.18.0...HEAD
+[0.18.0]: https://github.com/realchendahuang/feedsieve/compare/v0.17.2...v0.18.0
 [0.17.0]: https://github.com/realchendahuang/feedsieve/compare/v0.16.2...v0.17.0
 [0.17.1]: https://github.com/realchendahuang/feedsieve/compare/v0.17.0...v0.17.1
 [0.17.2]: https://github.com/realchendahuang/feedsieve/compare/v0.17.1...v0.17.2
