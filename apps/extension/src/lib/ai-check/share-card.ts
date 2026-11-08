@@ -322,28 +322,30 @@ export function drawShareCard(input: ShareCardInput): HTMLCanvasElement {
 
   // 锐评：装进浅底引用块 + 左侧档位色强调线，三行字收成「一个块」，
   // 不再是一串贴在徽章下面的行，视觉上也就没那么糊。单行锐评用矮盒，别撑出空盒子。
-  const roastText = `「${input.comment ?? input.flavor.roast}」`;
-  const roastX = pad + LAYOUT.quotePadX;
-  const roastW = CONTENT_W - LAYOUT.quotePadX - 32;
-  const roast = fitRoast(ctx, roastText, roastW);
-  const quoteH = roast.lines.length > 1 ? LAYOUT.quoteH : LAYOUT.quoteSingleH;
-  // 矮盒在常规高度里居中，单行锐评不会贴住刻度条、也不至于在下半区挖个洞
-  const quoteY = LAYOUT.quoteY + (LAYOUT.quoteH - quoteH) / 2;
+  // 只画模型给的锐评：没有就不画这块，不拿手写文案兜底。
+  if (input.comment) {
+    const roastX = pad + LAYOUT.quotePadX;
+    const roastW = CONTENT_W - LAYOUT.quotePadX - 32;
+    const roast = fitRoast(ctx, `「${input.comment}」`, roastW);
+    const quoteH = roast.lines.length > 1 ? LAYOUT.quoteH : LAYOUT.quoteSingleH;
+    // 矮盒在常规高度里居中，单行锐评不会贴住刻度条、也不至于在下半区挖个洞
+    const quoteY = LAYOUT.quoteY + (LAYOUT.quoteH - quoteH) / 2;
 
-  ctx.fillStyle = 'rgba(255,255,255,0.045)';
-  roundRect(ctx, pad, quoteY, CONTENT_W, quoteH, 26);
-  ctx.fill();
-  ctx.fillStyle = tone.accent;
-  roundRect(ctx, pad + 18, quoteY + 24, 4, quoteH - 48, 2);
-  ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.045)';
+    roundRect(ctx, pad, quoteY, CONTENT_W, quoteH, 26);
+    ctx.fill();
+    ctx.fillStyle = tone.accent;
+    roundRect(ctx, pad + 18, quoteY + 24, 4, quoteH - 48, 2);
+    ctx.fill();
 
-  const blockH = (roast.lines.length - 1) * roast.lineH + roast.size;
-  const blockTop = quoteY + (quoteH - blockH) / 2;
-  ctx.fillStyle = '#ffffff';
-  ctx.font = `600 ${roast.size}px ${FONT}`;
-  roast.lines.forEach((line, i) => {
-    ctx.fillText(line, roastX, blockTop + roast.size * 0.88 + i * roast.lineH);
-  });
+    const blockH = (roast.lines.length - 1) * roast.lineH + roast.size;
+    const blockTop = quoteY + (quoteH - blockH) / 2;
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `600 ${roast.size}px ${FONT}`;
+    roast.lines.forEach((line, i) => {
+      ctx.fillText(line, roastX, blockTop + roast.size * 0.88 + i * roast.lineH);
+    });
+  }
 
   // 统计
   const stats: Array<[string, string]> = [

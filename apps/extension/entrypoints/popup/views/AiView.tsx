@@ -698,13 +698,7 @@ export function AiView({
               ? records.map((record) => {
                   const flavor =
                     record.score !== null && record.verdict !== 'insufficient'
-                      ? flavorOf(
-                          record.score,
-                          record.verdict,
-                          record.rhythm ?? null,
-                          language,
-                          record.handle,
-                        )
+                      ? flavorOf(record.score, record.verdict, language)
                       : null;
                   return (
                     <button
@@ -803,7 +797,7 @@ function AiResult({
 }) {
   const c = COPY[language];
   const verdict = value.verdict as 'ai' | 'suspect' | 'human';
-  const flavor = flavorOf(value.score, verdict, value.rhythm, language, value.handle);
+  const flavor = flavorOf(value.score, verdict, language);
   const color = TONE_COLOR[flavor.tone];
   const votes = value.votes ?? { ai_count: 0, human_count: 0, listed: false };
   return (
@@ -820,7 +814,7 @@ function AiResult({
       <div className="ai-meter">
         <span style={{ left: `${flavor.percent}%` }} />
       </div>
-      <p className="ai-roast">「{value.comment ?? flavor.roast}」</p>
+      {value.comment ? <p className="ai-roast">「{value.comment}」</p> : null}
       <div className="ai-stats">
         <div>
           <span>

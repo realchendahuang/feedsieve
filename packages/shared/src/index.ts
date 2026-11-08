@@ -22,12 +22,9 @@ export {
 } from './training-sample';
 export {
   flavorOf,
-  pickRoast,
-  ROASTS,
   type AiVerdict,
   type Flavor,
   type FlavorTone,
   type Lang,
-  type RoastPool,
   type Rhythm,
 } from './ai-flavor';

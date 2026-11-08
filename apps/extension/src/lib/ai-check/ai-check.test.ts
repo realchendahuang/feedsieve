@@ -9,7 +9,6 @@ import {
   type PageTweet,
 } from './evidence';
 import { flavorOf } from '@feedsieve/shared';
-import { pickRoast, ROASTS } from '@feedsieve/shared';
 import { formatGap } from './share-card';
 
 const EPOCH = 1288834974657;
@@ -146,41 +145,28 @@ describe('节奏', () => {
 });
 
 describe('flavorOf', () => {
-  const calm = { fast: 0.1, short: 0.3, cv: 0.8 };
   it('百分比按 5 取整，分档', () => {
-    expect(flavorOf(0.97, 'ai', calm, 'zh')).toMatchObject({
+    expect(flavorOf(0.97, 'ai', 'zh')).toMatchObject({
       percent: 95,
       tone: 'ai',
       level: 'AI 感爆棚',
     });
-    expect(flavorOf(0.18, 'human', calm, 'zh')).toMatchObject({
+    expect(flavorOf(0.18, 'human', 'zh')).toMatchObject({
       percent: 20,
       tone: 'human',
       level: '活人感爆棚',
     });
-    expect(flavorOf(0.6, 'suspect', calm, 'zh').level).toBe('人机难辨');
+    expect(flavorOf(0.6, 'suspect', 'zh').level).toBe('人机难辨');
   });
-  it('服务端结论优先：节奏判出的 ai 站到 AI 一侧，锐评点出节奏', () => {
-    const f = flavorOf(0.55, 'ai', { fast: 0.8, short: 0, cv: 0.2 }, 'zh');
-    expect(f.tone).toBe('ai');
-    expect(f.roast).toContain('闹钟');
+  it('服务端结论优先：节奏判出的 ai 站到 AI 一侧', () => {
+    expect(flavorOf(0.55, 'ai', 'zh').tone).toBe('ai');
   });
-  it('评语按账号固定抽取，都来自对应档位的评语库', () => {
-    const a = flavorOf(0.97, 'ai', calm, 'zh', 'Alice');
-    expect(flavorOf(0.97, 'ai', calm, 'zh', 'alice').roast).toBe(a.roast);
-    expect(ROASTS.aiMax.zh).toContain(a.roast);
-    const picks = new Set(
-      ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map((h) => pickRoast('humanMax', 'zh', h)),
-    );
-    expect(picks.size).toBeGreaterThan(3);
-    for (const pool of Object.values(ROASTS)) {
-      expect(pool.zh.length).toBeGreaterThanOrEqual(6);
-      expect(pool.en.length).toBeGreaterThanOrEqual(4);
-    }
+  it('不再产出任何评语字段：锐评只来自模型 comment', () => {
+    expect(flavorOf(0.97, 'ai', 'zh')).not.toHaveProperty('roast');
   });
 
   it('英文文案', () => {
-    expect(flavorOf(0.05, 'human', calm, 'en').level).toBe('Certified human');
+    expect(flavorOf(0.05, 'human', 'en').level).toBe('Certified human');
   });
 });
 

@@ -123,9 +123,9 @@ export function AiPublicPage({
                 {flavor.level}
               </span>
             </p>
-            <p className="mt-4 text-lg font-semibold text-ink">
-              「{data.lookup.comment ?? flavor.roast}」
-            </p>
+            {data.lookup.comment ? (
+              <p className="mt-4 text-lg font-semibold text-ink">「{data.lookup.comment}」</p>
+            ) : null}
             <dl className="mt-6 grid grid-cols-3 gap-3 border-t border-line/60 pt-4 text-sm">
               <div>
                 <dt className="text-mist">回复样本</dt>

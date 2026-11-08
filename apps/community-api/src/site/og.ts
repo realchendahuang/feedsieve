@@ -163,7 +163,8 @@ export interface AiOgCard {
   percent?: number;
   tone?: 'ai' | 'mixed' | 'human';
   level?: string;
-  roast?: string;
+  /** 模型锐评；没有就整块不画（不再有手写评语兜底） */
+  comment?: string;
   replyCount?: number;
   aiVotes?: number;
   humanVotes?: number;
@@ -201,12 +202,16 @@ export function aiCardOgSvg(card: AiOgCard): string {
 <text x="462" y="370" font-size="190" font-weight="700" fill="${tone}">${card.percent}<tspan font-size="80">%</tspan></text>
 <rect x="470" y="404" width="${Math.min(640, textW(card.level ?? '', 38) + 56)}" height="64" rx="32" fill="${tone}"/>
 <text x="498" y="448" font-size="38" font-weight="700" fill="#0a0a0a">${esc(card.level ?? '')}</text>
-${wrapLines(`「${card.roast ?? ''}」`, 650, 26, 3)
-  .map(
-    (line, index) =>
-      `<text x="470" y="${508 + index * 30}" font-size="26" fill="${SUBTLE}">${esc(line)}</text>`,
-  )
-  .join('\n')}`
+${
+  card.comment
+    ? wrapLines(`「${card.comment}」`, 650, 26, 3)
+        .map(
+          (line, index) =>
+            `<text x="470" y="${508 + index * 30}" font-size="26" fill="${SUBTLE}">${esc(line)}</text>`,
+        )
+        .join('\n')
+    : ''
+}`
       : card.state === 'human'
         ? `<text x="470" y="200" font-size="30" font-weight="700" fill="${MIST}">社区结论</text>
 <text x="462" y="370" font-size="150" font-weight="700" fill="${tone}">真人</text>

@@ -25,7 +25,9 @@ export const Route = createFileRoute('/_shell/ai/$handle')({
     const handle = data?.handle ?? ctx.params.handle.replace(/^@/, '').toLowerCase();
     const name = data?.displayName || `@${handle}`;
     const description = data?.flavor
-      ? `${name} 的回复 AI 味 ${data.flavor.percent}%：${data.flavor.level}。「${data.flavor.roast}」`
+      ? `${name} 的回复 AI 味 ${data.flavor.percent}%：${data.flavor.level}。${
+          data.lookup.comment ? `「${data.lookup.comment}」` : ''
+        }`
       : `测测 ${name} 的回复有多少 AI 味：福滤娃读最近的公开回复，交给模型判一次。`;
     return pageHead({
       title: data?.flavor ? `${name} 的 AI 味 ${data.flavor.percent}%` : `${name} 的 AI 味检测`,

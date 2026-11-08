@@ -34,7 +34,10 @@ export async function getAiPublic(env: Cloudflare.Env, raw: string): Promise<AiP
   const [lookup, [verdictRow], [profileRow]] = await Promise.all([
     lookupAiAccount(env, handle),
     db
-      .select({ displayName: aiAccountVerdicts.displayName, avatarUrl: aiAccountVerdicts.avatarUrl })
+      .select({
+        displayName: aiAccountVerdicts.displayName,
+        avatarUrl: aiAccountVerdicts.avatarUrl,
+      })
       .from(aiAccountVerdicts)
       .where(eq(aiAccountVerdicts.handle, handle)),
     db
@@ -53,8 +56,11 @@ export async function getAiPublic(env: Cloudflare.Env, raw: string): Promise<AiP
         ? 'pending'
         : 'none';
   const flavor =
-    state === 'public' && lookup.score !== null && lookup.verdict && lookup.verdict !== 'insufficient'
-      ? flavorOf(lookup.score, lookup.verdict, lookup.rhythm, 'zh', handle)
+    state === 'public' &&
+    lookup.score !== null &&
+    lookup.verdict &&
+    lookup.verdict !== 'insufficient'
+      ? flavorOf(lookup.score, lookup.verdict, 'zh')
       : null;
   return {
     handle,

@@ -459,7 +459,7 @@ export function createAiCheck(deps: {
     const k = known.get(handle);
     if (judged(k) && !k.expired) {
       if (k.verdict === 'human') return null;
-      const f = flavorOf(k.score, k.verdict, k.rhythm, deps.getLanguage(), handle);
+      const f = flavorOf(k.score, k.verdict, deps.getLanguage());
       return f.tone === 'human'
         ? null
         : { percent: f.percent, tone: f.tone, listed: !!k.votes?.listed };
@@ -467,7 +467,7 @@ export function createAiCheck(deps: {
     const entry = list.get(handle);
     if (entry) {
       if (entry.score === null) return { percent: -1, tone: 'ai', listed: true };
-      const f = flavorOf(entry.score, 'suspect', null, deps.getLanguage(), handle);
+      const f = flavorOf(entry.score, 'suspect', deps.getLanguage());
       return f.tone === 'human' ? null : { percent: f.percent, tone: f.tone, listed: entry.listed };
     }
     // 本机记录也有有效期：过期结论不再给别人的回复打标
@@ -479,7 +479,7 @@ export function createAiCheck(deps: {
       mine.score !== null &&
       (mine.verdict === 'ai' || mine.verdict === 'suspect')
     ) {
-      const f = flavorOf(mine.score, mine.verdict, mine.rhythm ?? null, deps.getLanguage(), handle);
+      const f = flavorOf(mine.score, mine.verdict, deps.getLanguage());
       return f.tone === 'human' ? null : { percent: f.percent, tone: f.tone, listed: false };
     }
     return null;
@@ -735,7 +735,7 @@ export function createAiCheck(deps: {
     const k = known.get(handle);
     const nodes: Node[] = [document.createTextNode(t().tab)];
     if (judged(k)) {
-      const flavor = flavorOf(k.score, k.verdict, k.rhythm, deps.getLanguage(), handle);
+      const flavor = flavorOf(k.score, k.verdict, deps.getLanguage());
       const pct = el('span', 'fs-ai-tab-pct', `${flavor.percent}%`);
       pct.style.color = TONE_COLOR[flavor.tone];
       nodes.push(pct);
@@ -988,7 +988,7 @@ export function createAiCheck(deps: {
   }): void {
     const lang = deps.getLanguage();
     const text = t();
-    const flavor = flavorOf(input.score, input.verdict, input.rhythm, lang, input.handle);
+    const flavor = flavorOf(input.score, input.verdict, lang);
     const color = TONE_COLOR[flavor.tone];
     const cv = input.rhythm?.cv ?? 0;
     const body = shell(input.handle);
@@ -1013,7 +1013,10 @@ export function createAiCheck(deps: {
       requestAnimationFrame(() => (dot.style.left = `${flavor.percent}%`)),
     );
 
-    body.appendChild(el('div', 'fs-ai-roast', `「${input.comment ?? flavor.roast}」`));
+    // 锐评只来自判定模型；没有就不显示，不用手写池兜底
+    if (input.comment) {
+      body.appendChild(el('div', 'fs-ai-roast', `「${input.comment}」`));
+    }
 
     // 样本范围并进统计标签：不再单独占一行灰色小字
     const stats = el('div', 'fs-ai-stats');
