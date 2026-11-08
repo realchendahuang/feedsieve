@@ -101,4 +101,4 @@ echo "==> SHA-256"
 
 echo ""
 echo "商店包就绪：$ZIP"
-echo "上传前：把 checksum 记入 docs/legacy/RELEASES.md，并确认构建自 v${VERSION} tag。"
+echo "上传前：确认构建自 v${VERSION} tag；校验和随 GitHub Release 附件（*.sha256）发布，无需另记。"
