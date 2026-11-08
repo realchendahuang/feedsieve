@@ -12,12 +12,12 @@ import {
   AlertTriangle,
   Layers,
   Flame,
-  Zap,
   TrendingUp,
   Search,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { CHROME_STORE_URL, GITHUB_URL } from '../site';
+import { CHROME_STORE_URL, FIREFOX_STORE_URL, GITHUB_URL } from '../site';
+import { InstallButtons } from '../components/InstallButtons';
 
 /**
  * 教程页：全平台安装、核心理念、四种实战流派、400发防封安全边界、
@@ -74,7 +74,7 @@ export default function GuidePage() {
         <div className="mt-4 overflow-hidden rounded-2xl border border-line/70 bg-surface shadow-[var(--panel-elev)]">
           <table className="w-full text-left text-sm" data-testid="guide-table">
             <tbody className="divide-y divide-line/50">
-              <GuideRow label="Chrome 应用商店（强烈推荐）">
+              <GuideRow label="Chrome 应用商店">
                 <div className="space-y-1.5">
                   <div className="flex flex-wrap items-center gap-3">
                     <a
@@ -93,6 +93,30 @@ export default function GuidePage() {
                   <p className="text-xs text-mist leading-relaxed">
                     Edge、Brave、Arc、Vivaldi、Opera 等 Chromium 内核浏览器均支持。Edge
                     用户首次打开页面点顶部提示「允许来自其他应用商店的扩展」即可。
+                  </p>
+                </div>
+              </GuideRow>
+
+              <GuideRow label="Firefox 附加组件（AMO）">
+                <div className="space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <a
+                      href={FIREFOX_STORE_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 font-semibold text-gold hover:underline underline-offset-4"
+                    >
+                      <span>点「添加到 Firefox」，享受自动后台更新</span>
+                      <ExternalLink className="size-3.5" />
+                    </a>
+                    <span className="rounded bg-gold-surface px-2 py-0.5 text-xs font-medium text-gold">
+                      官方审核 · 自动同步
+                    </span>
+                  </div>
+                  <p className="text-xs text-mist leading-relaxed">
+                    Firefox 版与 Chrome 版同一套代码（MV3），侧边栏换成原生 sidebar_action。AMO
+                    上另有第三方转载的 0.8.2「feedsieve」条目，不是本项目发布， 请认准「FeedSieve
+                    福滤娃」。
                   </p>
                 </div>
               </GuideRow>
@@ -344,8 +368,9 @@ export default function GuidePage() {
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <GuideCard title="推文上的流速与量级">
             推文右上角的数字是当前每小时浏览数：绿色是平稳，<strong>1K/h</strong> 以上变红，
-            <strong>10K/h</strong> 以上实心红。作者名旁是量级（微光 / 新芽 / 新锐 / 星火 / 人气 / 达人 / 知名 /
-            影响力 / 头部 / 顶流）和粉丝数，悬停能看关注比、注册时间和疑似互关号提示。设置里「流速与量级」可以关掉。
+            <strong>10K/h</strong> 以上实心红。作者名旁是量级（微光 / 新芽 / 新锐 / 星火 / 人气 /
+            达人 / 知名 / 影响力 / 头部 /
+            顶流）和粉丝数，悬停能看关注比、注册时间和疑似互关号提示。设置里「流速与量级」可以关掉。
           </GuideCard>
           <GuideCard title="我刷到的">
             点扩展图标进「热帖」，汇总你最近 2 小时在所有 X 标签页刷到、每小时 1000
@@ -483,10 +508,12 @@ export default function GuidePage() {
                   不拦任何请求；它在页面里只做本地只读识别，不改请求、也不改响应。
                 </p>
                 <p>
-                  那个页面是 X 自己的兜底页：网页外壳里预埋了一块隐藏的报错面板（#ScriptLoadFailure），
+                  那个页面是 X
+                  自己的兜底页：网页外壳里预埋了一块隐藏的报错面板（#ScriptLoadFailure），
                   页尾内联脚本检查 window.__SCRIPTS_LOADED__ 里的 main 标记，只要 X 自己的 main.js /
-                  vendor.js 没加载成功、或 bundle 没执行完，就会显示这块面板。红条那句「隐私类扩展可能导致问题」
-                  是 X 写死的通用文案，不是它检测到了福滤娃。
+                  vendor.js 没加载成功、或 bundle
+                  没执行完，就会显示这块面板。红条那句「隐私类扩展可能导致问题」 是 X
+                  写死的通用文案，不是它检测到了福滤娃。
                 </p>
                 <p>
                   常见真实原因：代理或节点、DNS 把 abs.twimg.com 的脚本挡住；其它广告或隐私扩展、
@@ -502,8 +529,8 @@ export default function GuidePage() {
                   是否加载失败（4xx / 5xx 或 net::ERR_*）；
                 </p>
                 <p>
-                  ③ 在 Console 输入 window.__SCRIPTS_LOADED__，缺 main 或 vendor，
-                  就说明 X 的核心脚本没跑起来；
+                  ③ 在 Console 输入 window.__SCRIPTS_LOADED__，缺 main 或 vendor， 就说明 X
+                  的核心脚本没跑起来；
                 </p>
                 <p>
                   ④ 点一次页面上的「Try again」，看地址栏的 ?failedScript=（会写明哪个脚本失败），
@@ -538,15 +565,11 @@ export default function GuidePage() {
           遇到任何未尽疑问或特殊反馈，欢迎前往 GitHub 社区与全球推友交流。
         </p>
         <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-          <a
-            href={CHROME_STORE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-10 items-center gap-1.5 rounded-full bg-primary px-6 text-xs font-bold text-primary-foreground shadow-md transition-all hover:scale-[1.02] active:scale-98"
-          >
-            <span>一键添加至浏览器</span>
-            <Zap className="size-3.5" />
-          </a>
+          <InstallButtons
+            size="sm"
+            chromeLabel="一键添加至 Chrome"
+            firefoxLabel="一键添加至 Firefox"
+          />
           <Link
             to="/lists/blacklist"
             className="inline-flex h-10 items-center rounded-full bg-surface px-5 text-xs font-semibold text-ink shadow-sm border border-line/70 hover:bg-wash-strong transition-colors"

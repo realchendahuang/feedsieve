@@ -5,7 +5,8 @@ import type { AiSquareData, AiSquareEntry } from '@/ai-accounts/square';
 import { HelpIcon } from '@/site/components/SiteHeader';
 import { toast } from '@/site/components/ui/toast';
 import { ListPageHeader } from '@/site/pages/lists/lists-common';
-import { CHROME_STORE_URL, GITHUB_URL, xProfileUrl } from '@/site/site';
+import { GITHUB_URL, xProfileUrl } from '@/site/site';
+import { StoreLinks } from '@/site/components/InstallButtons';
 import { initialOf } from '@/site/lib/utils';
 
 /** 「AI 号」与「疑似」的语义色：红 / 琥珀（同站点 AI 味报告的 ai / mixed），且始终带文字标签，不只靠颜色。 */
@@ -245,14 +246,7 @@ export function AiSquarePage({ data }: { data: AiSquareData | null }) {
               <Link to="/lists/apply" className="font-semibold text-gold hover:text-gold-deep">
                 误判申诉 →
               </Link>
-              <a
-                href={CHROME_STORE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-mist"
-              >
-                装扩展自动折叠
-              </a>
+              <StoreLinks label="装扩展自动折叠" />
             </p>
           </footer>
         </>

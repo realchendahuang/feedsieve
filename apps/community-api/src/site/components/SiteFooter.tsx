@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
-import { SITE_NAME, GITHUB_URL, CHROME_STORE_URL } from '../site';
+import { SITE_NAME, GITHUB_URL, CHROME_STORE_URL, FIREFOX_STORE_URL } from '../site';
 
 /**
  * 全站统一页脚：现代开发者 3 列布局（品牌定位 / 名单与词库 / 文档与开源）
@@ -72,6 +72,16 @@ export function SiteFooter() {
                   className="transition-colors hover:text-ink inline-flex items-center gap-1"
                 >
                   Chrome 应用商店
+                </a>
+              </li>
+              <li>
+                <a
+                  href={FIREFOX_STORE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="transition-colors hover:text-ink inline-flex items-center gap-1"
+                >
+                  Firefox 附加组件
                 </a>
               </li>
               <li>

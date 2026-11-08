@@ -16,7 +16,8 @@ import {
   Bot,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { CHROME_STORE_URL, GITHUB_URL } from '../site';
+import { GITHUB_URL } from '../site';
+import { InstallButtons } from '../components/InstallButtons';
 import { WeeklyPicks } from './WeeklyPicks';
 
 function GithubIcon({ className = 'size-4' }: { className?: string }) {
@@ -64,15 +65,11 @@ export default function HomePage() {
 
         {/* 核心行动按钮 */}
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3.5">
-          <a
-            href={CHROME_STORE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-12 items-center gap-2 rounded-full bg-primary px-8 text-sm font-bold text-primary-foreground shadow-lg shadow-black/5 transition-all hover:scale-[1.02] hover:opacity-95 active:scale-98"
-          >
-            <span>Chrome 商店一键安装</span>
-            <ArrowRight className="size-4" />
-          </a>
+          <InstallButtons
+            size="lg"
+            chromeLabel="Chrome 商店一键安装"
+            firefoxLabel="Firefox 商店一键安装"
+          />
           <a
             href={GITHUB_URL}
             target="_blank"
@@ -522,7 +519,7 @@ export default function HomePage() {
           />
           <FaqItem
             q="支持哪些浏览器？需要额外注册账号吗？"
-            a="完美支持 Chrome、Edge、Brave、Arc、Vivaldi 以及任何基于 Chromium 内核的现代浏览器。Edge 用户甚至可以直接从 Chrome 应用商店点击添加。装好即用，完全不需要注册任何第三方账号。"
+            a="完美支持 Chrome、Edge、Brave、Arc、Vivaldi 等 Chromium 内核浏览器，以及 Firefox 140+（AMO 官方条目）。两个商店都是官方上架、自动更新，装好即用，完全不需要注册任何第三方账号。"
           />
         </div>
       </section>
@@ -538,15 +535,11 @@ export default function HomePage() {
               装上福滤娃，黄推自动标出，火帖自动收集，打开任意博主主页就能看到他的爆款。
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-              <a
-                href={CHROME_STORE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex h-12 items-center gap-2 rounded-full bg-primary px-8 text-sm font-bold text-primary-foreground shadow-lg transition-all hover:scale-[1.02] hover:opacity-95 active:scale-98"
-              >
-                <span>免费安装扩展</span>
-                <ArrowRight className="size-4" />
-              </a>
+              <InstallButtons
+                size="lg"
+                chromeLabel="免费安装 Chrome 版"
+                firefoxLabel="免费安装 Firefox 版"
+              />
               <Link
                 to="/guide"
                 className="inline-flex h-12 items-center rounded-full bg-surface px-6 text-sm font-semibold text-ink shadow-sm border border-line/70 transition-all hover:bg-wash-strong"

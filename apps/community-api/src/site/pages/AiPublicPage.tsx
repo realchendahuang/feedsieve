@@ -1,9 +1,10 @@
-import { ArrowRight, Copy, ExternalLink } from 'lucide-react';
+import { Copy, ExternalLink } from 'lucide-react';
 import type { AiPublicData } from '@/ai-accounts/public-page';
 import type { AiSquareEntry } from '@/ai-accounts/square';
 import { HelpIcon } from '../components/SiteHeader';
 import { toast } from '../components/ui/toast';
-import { CHROME_STORE_URL, xProfileUrl } from '../site';
+import { xProfileUrl } from '../site';
+import { InstallButtons, StoreLinks } from '../components/InstallButtons';
 import { initialOf } from '../lib/utils';
 
 const TONE = { ai: '#ff4d6d', mixed: '#e09a00', human: '#16b981' } as const;
@@ -191,19 +192,16 @@ export function AiPublicPage({
         )}
 
         <div className="mt-8 flex flex-wrap items-center gap-3">
-          <a
-            href={CHROME_STORE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-6 text-sm font-bold text-primary-foreground transition-all hover:opacity-95"
-          >
-            {data.state === 'contested'
-              ? '装福滤娃，参与投票'
-              : data.state === 'pending'
-                ? '装福滤娃，帮忙确认'
-                : '装福滤娃，测你关注的人'}
-            <ArrowRight className="size-4" />
-          </a>
+          <InstallButtons
+            chromeLabel={
+              data.state === 'contested'
+                ? '装福滤娃，参与投票'
+                : data.state === 'pending'
+                  ? '装福滤娃，帮忙确认'
+                  : '装福滤娃，测你关注的人'
+            }
+            firefoxLabel="装福滤娃（Firefox 版）"
+          />
           {data.state !== 'human' ? (
             <a
               href={`/lists/apply?kind=appeal&handle=${encodeURIComponent(data.handle)}`}
@@ -446,14 +444,9 @@ function BlockGuide({ handle }: { handle: string }) {
           在 X 上打开
           <ExternalLink className="size-3.5" />
         </a>
-        <a
-          href={CHROME_STORE_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex h-9 items-center rounded-full px-4 text-xs font-semibold text-mist transition-colors hover:text-ink"
-        >
-          装福滤娃自动折叠
-        </a>
+        <span className="inline-flex h-9 items-center rounded-full px-4 text-xs text-mist">
+          <StoreLinks label="装福滤娃自动折叠" />
+        </span>
       </div>
     </section>
   );

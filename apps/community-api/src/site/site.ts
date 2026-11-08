@@ -9,11 +9,13 @@ export const GITHUB_URL = 'https://github.com/realchendahuang/feedsieve';
 export const CHROME_STORE_URL =
   'https://chromewebstore.google.com/detail/feedsieve/amhdjglnonjaoenddnifpnljgmocfdph';
 
+/** Firefox 附加组件（AMO）安装页：官方条目，GUID feedsieve-official@feedsieve.win */
+export const FIREFOX_STORE_URL = 'https://addons.mozilla.org/zh-CN/firefox/addon/feedsieve-fuluwa/';
+
 /** 账号 X 主页链接（公示行/榜单行跳转用） */
 export function xProfileUrl(handle: string): string {
   return `https://x.com/${encodeURIComponent(handle)}`;
 }
 
 /** 推荐白名单入册申请（GitHub Issue 表单，维护者手动拉取后入册） */
-export const WHITELIST_ISSUE_URL =
-  `${GITHUB_URL}/issues/new?template=whitelist-request.yml`;
+export const WHITELIST_ISSUE_URL = `${GITHUB_URL}/issues/new?template=whitelist-request.yml`;
