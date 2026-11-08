@@ -80,10 +80,9 @@ const TEXT = {
     collecting: (n: number) => `正在翻 TA 的回复 · 已读 ${n} 条`,
     narrow: (k: number) => `回复只集中在 ${k} 个人身上，至少要回给 ${MIN_AUTHORS} 个不同的人才好判`,
     sampleValue: (n: number, k: number | null) => (k ? `${n} 条 · ${k} 人` : `${n} 条`),
-    spanLine: (span: string) => `最近 ${span}内的回复`,
     judging: '模型正在品鉴…',
-    flavor: 'AI 味',
     samples: '样本',
+    samplesWithin: (span: string) => `样本（${span}内）`,
     gap: '间隔',
     spread: '长短波动',
     voteAi: '是 AI',
@@ -130,10 +129,9 @@ const TEXT = {
     collecting: (n: number) => `Reading replies · ${n} so far`,
     narrow: (k: number) => `Replies only go to ${k} people; need at least ${MIN_AUTHORS}`,
     sampleValue: (n: number, k: number | null) => (k ? `${n} · ${k} people` : String(n)),
-    spanLine: (span: string) => `Replies from the last ${span}`,
     judging: 'The model is tasting…',
-    flavor: 'AI flavor',
     samples: 'Replies',
+    samplesWithin: (span: string) => `Replies (last ${span})`,
     gap: 'Gap',
     spread: 'Variety',
     voteAi: 'It’s AI',
@@ -229,20 +227,25 @@ function ensureStyles(): void {
     @keyframes fs-ai-sweep { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
     .fs-ai-pulse { animation: fs-ai-pulse 1s ease-in-out infinite; }
     @keyframes fs-ai-pulse { 50% { opacity: .45; } }
-    .fs-ai-label { color: rgba(255,255,255,.6); font-size: 13px; font-weight: 600; }
-    .fs-ai-pct { font-size: 64px; font-weight: 900; line-height: 1; letter-spacing: -.02em; margin: 2px 0 10px; }
+    /* 结论行：百分比 + 档位徽章同一行，徽章底边对齐数字基线；
+       档位名太长（英文长档 / 窄面板）时整块换行，不挤着数字。 */
+    .fs-ai-verdict { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 10px; margin: 2px 0 10px; }
+    .fs-ai-pct { font-size: 64px; font-weight: 900; line-height: 1; letter-spacing: -.02em; }
     .fs-ai-pct small { font-size: 28px; font-weight: 800; margin-left: 2px; }
     .fs-ai-meter { position: relative; height: 8px; border-radius: 4px; margin: 0 0 14px;
       background: linear-gradient(90deg,#22d39b,#ffb020,#ff4d6d); }
     .fs-ai-dot { position: absolute; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%;
       background: #fff; box-shadow: 0 0 0 3px #0b0d12; transition: left .9s cubic-bezier(.2,.9,.3,1); }
-    .fs-ai-level { display: inline-block; padding: 4px 12px; border-radius: 9999px; font-weight: 900; color: #0b0d12; font-size: 15px; }
+    .fs-ai-level { display: inline-block; padding: 4px 12px; border-radius: 9999px; font-weight: 900; color: #0b0d12; font-size: 15px;
+      margin-bottom: 8px; }
     .fs-ai-roast { margin: 10px 0 14px; font-size: 15px; font-weight: 600; }
     .fs-ai-stats { display: flex; justify-content: space-between; padding: 10px 0; margin-bottom: 4px;
       border-top: 1px solid rgba(255,255,255,.1); border-bottom: 1px solid rgba(255,255,255,.1); }
     .fs-ai-stats div { display: flex; flex-direction: column; gap: 2px; }
     .fs-ai-stats span { color: rgba(255,255,255,.5); font-size: 12px; }
     .fs-ai-stats b { font-size: 15px; }
+    /* 分享三件事并成一行：复制报告图（主）、下载、分享到 X；后两个按内容宽度，不抢主按钮空间 */
+    .fs-ai-row.fs-ai-share > .fs-ai-ghost { flex: 0 0 auto; width: auto; padding: 0 14px; }
     .fs-ai-tally { margin-top: 10px; color: rgba(255,255,255,.65); font-size: 12px; text-align: center; }
     .fs-ai-toast { margin-top: 10px; text-align: center; font-size: 12px; color: #22d39b; }
     .fs-ai-voted { border-color: #fff !important; background: rgba(255,255,255,.14) !important; }
@@ -990,11 +993,17 @@ export function createAiCheck(deps: {
     const cv = input.rhythm?.cv ?? 0;
     const body = shell(input.handle);
 
-    body.appendChild(el('div', 'fs-ai-label', text.flavor));
+    // 结论行：与分享卡同语法——数字 + 档位徽章并排，不再给「AI 味」小标签和徽章各占一行
+    const verdict = el('div', 'fs-ai-verdict');
     const pct = el('div', 'fs-ai-pct');
     pct.style.color = color;
-    body.appendChild(pct);
+    verdict.appendChild(pct);
     countUp(pct, flavor.percent);
+    const level = el('span', 'fs-ai-level', flavor.level);
+    level.style.background = color;
+    verdict.appendChild(level);
+    body.appendChild(verdict);
+
     const meter = el('div', 'fs-ai-meter');
     const dot = el('div', 'fs-ai-dot');
     dot.style.left = '0%';
@@ -1004,14 +1013,15 @@ export function createAiCheck(deps: {
       requestAnimationFrame(() => (dot.style.left = `${flavor.percent}%`)),
     );
 
-    const level = el('span', 'fs-ai-level', flavor.level);
-    level.style.background = color;
-    body.appendChild(level);
     body.appendChild(el('div', 'fs-ai-roast', `「${input.comment ?? flavor.roast}」`));
 
+    // 样本范围并进统计标签：不再单独占一行灰色小字
     const stats = el('div', 'fs-ai-stats');
     for (const [label, value] of [
-      [text.samples, text.sampleValue(input.replyCount, input.authors ?? null)],
+      [
+        input.spanS ? text.samplesWithin(formatGap(input.spanS, lang)) : text.samples,
+        text.sampleValue(input.replyCount, input.authors ?? null),
+      ],
       [text.gap, formatGap(input.medianGapS, lang)],
       [text.spread, input.rhythm ? spreadLabel(cv, lang) : '—'],
     ] as const) {
@@ -1020,9 +1030,6 @@ export function createAiCheck(deps: {
       stats.appendChild(cell);
     }
     body.appendChild(stats);
-    if (input.spanS) {
-      body.appendChild(el('div', 'fs-ai-tally', text.spanLine(formatGap(input.spanS, lang))));
-    }
     if (input.underReview) body.appendChild(el('div', 'fs-ai-note', text.underReview));
     else if (input.mineOnly) body.appendChild(el('div', 'fs-ai-note', text.mineOnly));
     else if (input.expired) body.appendChild(el('div', 'fs-ai-tally', text.expired));
@@ -1089,7 +1096,8 @@ export function createAiCheck(deps: {
       setTimeout(() => URL.revokeObjectURL(url), 5_000);
       toast(body, text.downloaded);
     };
-    const share = el('div', 'fs-ai-row');
+    // 分享并成一行：复制报告图（主）、下载、分享到 X，省掉一整行按钮
+    const share = el('div', 'fs-ai-row fs-ai-share');
     const copy = el('button', 'fs-ai-primary', text.copy);
     copy.type = 'button';
     copy.addEventListener('click', async () => {
@@ -1104,11 +1112,8 @@ export function createAiCheck(deps: {
     const dl = el('button', 'fs-ai-ghost', text.download);
     dl.type = 'button';
     dl.addEventListener('click', () => void download());
-    share.append(copy, dl);
-    body.appendChild(share);
     const link = el('button', 'fs-ai-ghost', text.shareLink);
     link.type = 'button';
-    link.style.marginTop = '10px';
     link.addEventListener('click', () => {
       // 只写名字不写 @：分享不去通知被测的人
       const name = input.displayName || input.handle;
@@ -1118,7 +1123,8 @@ export function createAiCheck(deps: {
       intent.searchParams.set('url', url);
       window.open(intent.toString(), '_blank', 'noopener');
     });
-    body.appendChild(link);
+    share.append(copy, dl, link);
+    body.appendChild(share);
     if (input.expired) {
       const again = el('button', 'fs-ai-ghost', text.retest);
       again.type = 'button';
