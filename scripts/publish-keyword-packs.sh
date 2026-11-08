@@ -44,6 +44,11 @@ else
   echo "warning: cannot reach $latest_url; skipping remote version check (offline publish)"
 fi
 
+# 多账号环境下 wrangler 非交互模式必须显式指定账号：优先环境变量，否则取本地私有配置
+if [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+  CLOUDFLARE_ACCOUNT_ID=$(grep -o '"account_id"[[:space:]]*:[[:space:]]*"[^"]*"' apps/community-api/wrangler.local.jsonc 2>/dev/null | head -1 | sed -E 's/.*"([^"]+)"$/\1/')
+  export CLOUDFLARE_ACCOUNT_ID
+fi
 # --filter 的 exec 在 apps/community-api 下执行，文件参数必须用仓库根的绝对路径
 repo_root=$(pwd)
 pnpm --filter @feedsieve/community-api exec wrangler r2 object put "$bucket/$prefix/official.json" --remote --file "$repo_root/community/keyword-packs/official.json" --content-type application/json
