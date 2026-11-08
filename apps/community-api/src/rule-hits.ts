@@ -279,8 +279,14 @@ export async function loadRuleFeedback(
       SELECT p.rule_id, max(a.a)::int AS accounts, max(p.n)::int AS nets
       FROM per_day p JOIN accounts a ON a.rule_id = p.rule_id
       GROUP BY p.rule_id`),
-    // 误标只算：同一规则在窗口内确实上报过命中的账号（不能自报一个没命中过的规则来刷），
-    // 并且来自注册满 7 天的安装
+    // 误标票就是用户对这条规则的直接反馈，不再要求「能在 rule_hits 里反查到同规则命中」：
+    // rule_hits 上报有节流、同账号同规则每天只记一条，误标与命中大面积对不上
+    // （生产实测：14 天窗口内 24256 个（规则, 账号）误标只有 2594 个能关联上；「自拍」规则
+    // 262 个误标账号只关联出 36 个），fp_rate 被系统性低估，自动静音因此从未触发。
+    // EXISTS 也挡不住刷子（rule_hits 本身可匿名上报），真正的门槛是下面这些：
+    // 误标只算注册满 muteRescueMinInstallDays 天的安装（新安装刷误标压不倒规则），
+    // 规则 ID 由下方 RULE_ID_RE 过滤（自定义词不上报也不计数），fp_rate 以命中账号数为分母并封顶 1，
+    // 静音还要连续 muteHoldHours 小时满足、每轮最多 muteMaxPerRun 条。
     db.execute<{ rule_id: string; accounts: number; installs: number }>(sql`
       SELECT r.rule_id, count(DISTINCT r.handle)::int AS accounts,
              count(DISTINCT r.installation_id)::int AS installs
@@ -289,10 +295,6 @@ export async function loadRuleFeedback(
       WHERE r.created_at >= ${sinceSec}
         AND r.rule_id IS NOT NULL
         AND i.first_seen_at <= ${matureBefore}
-        AND EXISTS (
-          SELECT 1 FROM ${ruleHits} h
-          WHERE h.handle = r.handle AND h.rule_id = r.rule_id AND h.day >= ${sinceDay}
-        )
       GROUP BY r.rule_id`),
     readRuleMutes(env),
   ]);

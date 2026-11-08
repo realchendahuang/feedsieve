@@ -23,6 +23,7 @@ import {
   readRuleMutes,
   RULE_HIT_POLICY,
   setRuleMute,
+  shouldAutoMute,
 } from '../src/rule-hits';
 import { listingReason } from '../src/lib/listing';
 import { generateSnapshot, getSnapshotFile, SNAPSHOT_PACK } from '../src/snapshot';
@@ -224,7 +225,7 @@ describe('rule feedback', () => {
     expect((await snapshotBody()).muted_rules).toBeUndefined();
   });
 
-  it('ignores false-positive votes from new installs or for accounts the rule never hit', async () => {
+  it('ignores false-positive votes from installs registered less than a week ago', async () => {
     const handles = Array.from(
       { length: RULE_HIT_POLICY.muteMinHitAccounts },
       (_, i) => `acct_${i}`,
@@ -233,11 +234,52 @@ describe('rule feedback', () => {
       [1],
       handles.map((handle) => hit(handle)),
     );
-    // 新安装刷误标、或者给没被这条规则命中过的账号自报这条规则：都不算
+    // 注册不满 7 天的安装刷误标：不算
     for (let i = 0; i < 16; i += 1) await rescue(handles[i]!, `fresh-${i}`, RULE, 1);
-    for (let i = 0; i < 16; i += 1) await rescue(`never_hit_${i}`, `old-${i}`);
     const noisy = (await loadRuleFeedback(env)).find((item) => item.rule_id === RULE)!;
-    expect(noisy.rescue_accounts).toBe(0);
+    expect(noisy).toMatchObject({ hit_accounts: 30, rescue_accounts: 0, rescue_installs: 0 });
+    expect(shouldAutoMute(noisy)).toBe(false);
+  });
+
+  it('counts false positives that rule_hits can no longer link to, and mutes at the threshold', async () => {
+    const handles = Array.from(
+      { length: RULE_HIT_POLICY.muteMinHitAccounts },
+      (_, i) => `acct_${i}`,
+    );
+    await hitsFrom(
+      [1],
+      handles.map((handle) => hit(handle)),
+    );
+    // 上报节流后 rule_hits 里查不到这些账号的命中记录，但误标票本身就是对这条规则的直接反馈。
+    // 误标安装数在 14 天窗口内可能远多于能关联上命中的账号，所以不能再要求反查 rule_hits。
+    const ghosts = Array.from({ length: 40 }, (_, i) => `ghost_${i}`);
+    const vote = async (from: number, to: number) => {
+      for (let i = from; i < to; i += 1) await rescue(ghosts[i]!, `rescue-${i}`);
+    };
+
+    await vote(0, 10); // 安装数够，但 fp_rate = 10/30 < muteFpRate：不静音
+    let noisy = (await loadRuleFeedback(env)).find((item) => item.rule_id === RULE)!;
+    expect(noisy).toMatchObject({ hit_accounts: 30, rescue_accounts: 10, rescue_installs: 10 });
+    expect(noisy.fp_rate).toBeCloseTo(10 / 30, 3);
+    expect(shouldAutoMute(noisy)).toBe(false);
+    expect(await autoMuteNoisyRules(env)).toEqual([]);
+
+    await vote(10, 16); // 16/30 ≥ muteFpRate：命中静音阈值
+    noisy = (await loadRuleFeedback(env)).find((item) => item.rule_id === RULE)!;
+    expect(noisy.fp_rate).toBeCloseTo(16 / 30, 3);
+    expect(shouldAutoMute(noisy)).toBe(true);
+    // 第一次满足先记下，连续满足 6 小时才静音
+    expect(await autoMuteNoisyRules(env)).toEqual([]);
+    expect(
+      await autoMuteNoisyRules(env, Date.now() + RULE_HIT_POLICY.muteHoldHours * 3_600_000),
+    ).toEqual([RULE]);
+    expect((await readRuleMutes(env))[RULE]).toMatchObject({ state: 'muted', by: 'auto' });
+
+    // 误标账号数超过命中账号数（命中上报不全）：fp_rate 封顶 1
+    await vote(16, 40);
+    noisy = (await loadRuleFeedback(env)).find((item) => item.rule_id === RULE)!;
+    expect(noisy).toMatchObject({ rescue_accounts: 40, state: 'muted' });
+    expect(noisy.fp_rate).toBe(1);
   });
 
   it('does not mute on thin evidence', async () => {
