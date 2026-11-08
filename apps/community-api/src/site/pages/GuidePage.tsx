@@ -152,6 +152,18 @@ export default function GuidePage() {
                   <div>
                     4. 点击左上角<strong>「加载已解压的扩展程序」</strong>，选择刚解压的文件夹即可。
                   </div>
+                  <div className="border-t border-line/60 pt-2 text-xs text-mist">
+                    Firefox：下载{' '}
+                    <code className="rounded bg-soft-surface px-1.5 py-0.5 font-mono">
+                      feedsieve-firefox.zip
+                    </code>
+                    ，地址栏打开{' '}
+                    <code className="rounded bg-soft-surface px-1.5 py-0.5 font-mono text-ink">
+                      about:debugging#/runtime/this-firefox
+                    </code>
+                    ，点「临时载入附加组件」选中这个 zip 即可（重启浏览器后需重新载入，长期使用请装
+                    AMO 商店版）。
+                  </div>
                 </div>
               </GuideRow>
 
