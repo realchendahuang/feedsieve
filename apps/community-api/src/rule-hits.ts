@@ -10,6 +10,7 @@
  *      用户的规则命中（或同模板批量号），视为独立佐证，提前上榜；
  *   2. 规则误伤闭环：按规则统计「命中账号数」和「点了误标的账号数」，误伤率高的规则
  *      自动静音（随签名快照下发 muted_rules，扩展不再用它标黄框），维护者可在后台恢复；
+ *      未成年保护词（短语含「幼」/「未成年」）不自动静音，避免把安全词从检测里拿掉；
  *   3. 分类：命中规则所属的分类（如色情引流）参与名单条目的分类推断；
  *   4. 管理端复核队列按命中热度排序。
  *
@@ -343,10 +344,70 @@ export async function loadRuleFeedback(
   );
 }
 
-/** 这条规则该不该自动静音（纯函数）。 */
-export function shouldAutoMute(item: RuleFeedback): boolean {
+/** 未成年保护词：短语含这些词的规则不自动静音（维护者仍可在后台手动静音）。 */
+const MINOR_PROTECTION_WORDS = ['幼', '未成年'] as const;
+
+/** 这个短语是不是未成年保护词（纯函数）。 */
+export function isMinorProtectionPhrase(phrase: string | null | undefined): boolean {
+  return !!phrase && MINOR_PROTECTION_WORDS.some((word) => phrase.includes(word));
+}
+
+/** 官方规则 ID（keyword:official:xxx，可能带 -pyN 拼音变体后缀）→ 词库里的原始规则 ID。 */
+function officialPackRuleId(ruleId: string): string {
+  const prefix = 'keyword:official:';
+  const id = ruleId.startsWith(prefix) ? ruleId.slice(prefix.length) : ruleId;
+  return id.replace(/-py\d+$/, '');
+}
+
+let minorProtectionMemo: { version: string; rules: Map<string, string> } | null = null;
+
+/**
+ * 从当前生效词库（R2：latest.json → 版本化 official.json）读「短语含幼 / 未成年」的官方规则，
+ * 键是词库里的原始规则 ID。词库包按版本不可变，按 pack_version 做模块级 memo。
+ * 已下线规则查不到短语（本来就随词库下线、不在检测里，静音也无副作用）；
+ * 读不到词库返回 null：调用方宁可这一轮不静音，也不能在不知道短语的情况下把未成年保护词静音。
+ */
+async function loadMinorProtectionRules(env: Cloudflare.Env): Promise<Map<string, string> | null> {
+  const bucket = env.KEYWORD_PACKS;
+  if (!bucket) return null;
+  try {
+    const manifestObject = await bucket.get('keyword-packs/latest.json');
+    if (!manifestObject) return null;
+    const manifest = JSON.parse(await manifestObject.text()) as { pack_version?: unknown };
+    const version = typeof manifest.pack_version === 'string' ? manifest.pack_version : '';
+    if (!version) return null;
+    if (minorProtectionMemo?.version === version) return minorProtectionMemo.rules;
+    const packObject = await bucket.get(
+      `keyword-packs/${encodeURIComponent(version)}/official.json`,
+    );
+    if (!packObject) return null;
+    const body = JSON.parse(await packObject.text()) as { packs?: unknown };
+    if (!Array.isArray(body.packs)) return null;
+    const rules = new Map<string, string>();
+    for (const raw of body.packs) {
+      const list = (raw as { rules?: unknown } | null)?.rules;
+      if (!Array.isArray(list)) continue;
+      for (const item of list) {
+        const rule = item as { id?: unknown; phrase?: unknown } | null;
+        if (typeof rule?.id !== 'string' || typeof rule.phrase !== 'string') continue;
+        if (isMinorProtectionPhrase(rule.phrase)) rules.set(rule.id, rule.phrase);
+      }
+    }
+    minorProtectionMemo = { version, rules };
+    return rules;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 这条规则该不该自动静音（纯函数）。phrase 是当前词库里这条规则的短语（查不到传 null）：
+ * 未成年保护词一律不自动静音，留在检测里。
+ */
+export function shouldAutoMute(item: RuleFeedback, phrase?: string | null): boolean {
+  if (item.state !== 'active') return false;
+  if (isMinorProtectionPhrase(phrase)) return false;
   return (
-    item.state === 'active' &&
     item.hit_accounts >= RULE_HIT_POLICY.muteMinHitAccounts &&
     item.rescue_installs >= RULE_HIT_POLICY.muteMinRescueInstalls &&
     item.fp_rate !== null &&
@@ -358,13 +419,21 @@ const RULE_MUTE_PENDING_KEY = 'rule_mute_pending';
 
 /**
  * cron：误伤率超线的规则自动静音。条件要连续满足 muteHoldHours 小时才真正静音（第一次满足先记下），
- * 每轮最多 muteMaxPerRun 条；维护者恢复过的（exempt）不再自动静音。静音随下一版快照下发。
+ * 每轮最多 muteMaxPerRun 条；维护者恢复过的（exempt）不再自动静音；未成年保护词不自动静音。
+ * 读不到当前词库时整轮跳过（不知道短语就不冒险把安全词从检测里拿掉）。静音随下一版快照下发。
  * 返回本轮新静音的规则。
  */
 export async function autoMuteNoisyRules(env: Cloudflare.Env, now = Date.now()): Promise<string[]> {
   const db = getDb(env);
   const feedback = await loadRuleFeedback(env, now);
-  const qualifying = feedback.filter(shouldAutoMute);
+  const minorProtection = await loadMinorProtectionRules(env);
+  if (minorProtection === null) {
+    console.warn('[community-api] rule auto-mute skipped: keyword pack unavailable');
+    return [];
+  }
+  const qualifying = feedback.filter((item) =>
+    shouldAutoMute(item, minorProtection.get(officialPackRuleId(item.rule_id))),
+  );
   const [row] = await db
     .select({ value: meta.value })
     .from(meta)

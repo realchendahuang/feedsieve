@@ -18,6 +18,7 @@ import {
   cleanupRuleHits,
   ingestRuleHits,
   isCorroborated,
+  isMinorProtectionPhrase,
   loadHitSignals,
   loadRuleFeedback,
   readRuleMutes,
@@ -30,6 +31,8 @@ import { generateSnapshot, getSnapshotFile, SNAPSHOT_PACK } from '../src/snapsho
 
 const ORIGIN = 'https://api.example.com';
 const RULE = 'keyword:official:adult-gray-traffic-0123456789abcdef';
+/** RULE 在词库里的原始规则 ID（去 keyword:official: 前缀） */
+const RULE_PACK_ID = RULE.slice('keyword:official:'.length);
 
 function session(n: number): string {
   return `0000000000000000-${String(n).padStart(4, '0')}`;
@@ -180,7 +183,36 @@ describe('rule feedback', () => {
       });
   }
 
+  /** 自动静音按当前词库判定未成年保护词；用例按需写一份最小词库，版本唯一以避开模块级 memo。 */
+  let packSeq = 0;
+  async function seedKeywordPack(rules: Array<{ id: string; phrase: string }>): Promise<void> {
+    const bucket = env.KEYWORD_PACKS;
+    if (!bucket) throw new Error('KEYWORD_PACKS binding missing');
+    packSeq += 1;
+    const version = `test.2026.11.08.${packSeq}`;
+    await bucket.put(
+      'keyword-packs/latest.json',
+      JSON.stringify({ schema_version: 1, pack_version: version }),
+    );
+    await bucket.put(
+      `keyword-packs/${version}/official.json`,
+      JSON.stringify({
+        schema_version: 1,
+        pack_version: version,
+        packs: [
+          {
+            id: 'adult_gray_traffic',
+            name: { zh: '色情引流', en: 'Adult gray traffic' },
+            rules,
+          },
+        ],
+      }),
+    );
+  }
+
   it('measures how often a rule is marked as a false positive and mutes noisy rules', async () => {
+    // 词库里这条规则不是未成年保护词：数值过线就可以自动静音
+    await seedKeywordPack([{ id: RULE_PACK_ID, phrase: '测试短语' }]);
     const handles = Array.from(
       { length: RULE_HIT_POLICY.muteMinHitAccounts },
       (_, i) => `acct_${i}`,
@@ -252,6 +284,7 @@ describe('rule feedback', () => {
     );
     // 上报节流后 rule_hits 里查不到这些账号的命中记录，但误标票本身就是对这条规则的直接反馈。
     // 误标安装数在 14 天窗口内可能远多于能关联上命中的账号，所以不能再要求反查 rule_hits。
+    await seedKeywordPack([{ id: RULE_PACK_ID, phrase: '测试短语' }]);
     const ghosts = Array.from({ length: 40 }, (_, i) => `ghost_${i}`);
     const vote = async (from: number, to: number) => {
       for (let i = from; i < to; i += 1) await rescue(ghosts[i]!, `rescue-${i}`);
@@ -282,7 +315,77 @@ describe('rule feedback', () => {
     expect(noisy.fp_rate).toBe(1);
   });
 
+  it('never auto-mutes minor-protection keywords even above every numeric threshold', async () => {
+    const handles = Array.from(
+      { length: RULE_HIT_POLICY.muteMinHitAccounts },
+      (_, i) => `acct_${i}`,
+    );
+    await hitsFrom(
+      [1],
+      handles.map((handle) => hit(handle)),
+    );
+    for (let i = 0; i < 16; i += 1) await rescue(handles[i]!, `install-${i}`);
+    // 词库里这条规则是「幼女」：数值全部过线也不自动静音（维护者仍可手动静音）
+    await seedKeywordPack([{ id: RULE_PACK_ID, phrase: '幼女' }]);
+
+    const noisy = (await loadRuleFeedback(env)).find((item) => item.rule_id === RULE)!;
+    expect(noisy).toMatchObject({ rescue_accounts: 16, rescue_installs: 16 });
+    // 纯函数口径：同样的数值，非安全词可静音，安全词不静音
+    expect(shouldAutoMute(noisy, '嫖娼')).toBe(true);
+    expect(shouldAutoMute(noisy, '幼女')).toBe(false);
+    expect(isMinorProtectionPhrase('幼女')).toBe(true);
+    expect(isMinorProtectionPhrase('未成年')).toBe(true);
+    expect(isMinorProtectionPhrase('美幼')).toBe(true);
+    expect(isMinorProtectionPhrase('嫖娼')).toBe(false);
+
+    expect(await autoMuteNoisyRules(env)).toEqual([]);
+    expect(
+      await autoMuteNoisyRules(env, Date.now() + RULE_HIT_POLICY.muteHoldHours * 3_600_000),
+    ).toEqual([]);
+    expect((await readRuleMutes(env))[RULE]).toBeUndefined();
+    expect((await loadRuleFeedback(env)).find((item) => item.rule_id === RULE)?.state).toBe(
+      'active',
+    );
+  });
+
+  it('applies the minor-protection exemption to pinyin variants of the rule', async () => {
+    const variant = `${RULE}-py1`;
+    const handles = Array.from({ length: RULE_HIT_POLICY.muteMinHitAccounts }, (_, i) => `py_${i}`);
+    await hitsFrom(
+      [1],
+      handles.map((handle) => hit(handle, { rule_id: variant })),
+    );
+    for (let i = 0; i < 16; i += 1) await rescue(handles[i]!, `py-install-${i}`, variant);
+    // 拼音变体在 rule_hits 里是 `<词库 ID>-pyN`：豁免要按词库原始 ID 判定
+    await seedKeywordPack([{ id: RULE_PACK_ID, phrase: '幼女' }]);
+    expect(await autoMuteNoisyRules(env)).toEqual([]);
+    expect(
+      await autoMuteNoisyRules(env, Date.now() + RULE_HIT_POLICY.muteHoldHours * 3_600_000),
+    ).toEqual([]);
+    expect((await readRuleMutes(env))[variant]).toBeUndefined();
+  });
+
+  it('skips auto-mute when the current keyword pack cannot be read', async () => {
+    const handles = Array.from(
+      { length: RULE_HIT_POLICY.muteMinHitAccounts },
+      (_, i) => `acct_${i}`,
+    );
+    await hitsFrom(
+      [1],
+      handles.map((handle) => hit(handle)),
+    );
+    for (let i = 0; i < 16; i += 1) await rescue(handles[i]!, `install-${i}`);
+    // 不知道当前短语就不静音：宁可这一轮不收敛，也不能把安全词从检测里拿掉
+    await env.KEYWORD_PACKS?.delete('keyword-packs/latest.json');
+    expect(await autoMuteNoisyRules(env)).toEqual([]);
+    expect(
+      await autoMuteNoisyRules(env, Date.now() + 2 * RULE_HIT_POLICY.muteHoldHours * 3_600_000),
+    ).toEqual([]);
+    expect((await readRuleMutes(env))[RULE]).toBeUndefined();
+  });
+
   it('does not mute on thin evidence', async () => {
+    await seedKeywordPack([{ id: RULE_PACK_ID, phrase: '测试短语' }]);
     await hitsFrom([1], [hit('only_one')]);
     await rescue('only_one', 'install-1');
     expect(await autoMuteNoisyRules(env)).toEqual([]);
