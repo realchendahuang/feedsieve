@@ -5,6 +5,7 @@
  */
 import { getDb } from '../src/db/client';
 import {
+  aiAccountAudits,
   aiAccountSamples,
   aiAccountVerdicts,
   aiAccountVotes,
@@ -91,6 +92,30 @@ async function seedProfile(handle: string): Promise<void> {
     });
 }
 
+/** 种一条维护者审计收录（AI 号广场的第三个来源）。 */
+async function seedAudit(
+  handle: string,
+  extra: {
+    category?: string;
+    note?: string;
+    evidencePostId?: string | null;
+    active?: number;
+    updatedAt?: number;
+  } = {},
+): Promise<void> {
+  await getDb(env)
+    .insert(aiAccountAudits)
+    .values({
+      handle,
+      category: extra.category ?? 'ai_slop',
+      note: extra.note ?? '维护者审计收录：模板化 AI 回复，逐条核对后收录。',
+      evidencePostId: extra.evidencePostId ?? '2111625358101635562',
+      active: extra.active ?? 1,
+      createdAt: NOW_S - DAY,
+      updatedAt: extra.updatedAt ?? NOW_S - DAY,
+    });
+}
+
 /** 种一条回复样本（source 默认 judge，和扩展上报落库一致）。 */
 async function seedSample(
   handle: string,
@@ -121,6 +146,7 @@ async function seedSample(
 beforeEach(async () => {
   const db = getDb(env);
   await Promise.all([
+    db.delete(aiAccountAudits),
     db.delete(aiAccountSamples),
     db.delete(aiAccountVerdicts),
     db.delete(aiAccountVotes),
@@ -150,7 +176,7 @@ describe('AI 号广场：可公示范围', () => {
     const byHandle = new Map(data.entries.map((entry) => [entry.handle, entry]));
     expect(byHandle.get('aibot')).toMatchObject({ kind: 'ai', score: 0.93 });
     expect(byHandle.get('suspectbot')).toMatchObject({ kind: 'suspect', score: 0.51 });
-    expect(data.counts).toEqual({ all: 2, ai: 1, suspect: 1, listed: 0 });
+    expect(data.counts).toEqual({ all: 2, ai: 1, suspect: 1, audit: 0, listed: 0 });
   });
 
   it('未确认、过期、判为真人的判定不算可公示', async () => {
@@ -256,10 +282,7 @@ describe('AI 号广场：回复样本', () => {
     });
 
     const entry = await getAiSquareDetail(env, 'bot', NOW);
-    expect(entry?.samples.map((sample) => sample.tweetId)).toEqual([
-      'newer-no-posted-at',
-      'older',
-    ]);
+    expect(entry?.samples.map((sample) => sample.tweetId)).toEqual(['newer-no-posted-at', 'older']);
   });
 
   it('正文按码点截断到 120，附原帖摘要、间隔与 X 链接', async () => {
@@ -298,5 +321,95 @@ describe('AI 号广场：回复样本', () => {
 
     const data = await listAiSquare(env, NOW);
     expect(data.entries).toEqual([]);
+  });
+});
+
+describe('AI 号广场：维护者审计收录', () => {
+  it('没有模型判定/社区票的审计条目也能进广场，且单独计数', async () => {
+    await seedAudit('auditedbot', {
+      category: 'ai_slop',
+      note: '2026-10 审计收录：同一分钟给 5 人回同句式俏皮话。',
+      evidencePostId: '2111625358101635562',
+    });
+
+    const data = await listAiSquare(env, NOW);
+    expect(data.entries).toHaveLength(1);
+    expect(data.entries[0]).toMatchObject({
+      handle: 'auditedbot',
+      kind: 'ai',
+      origin: 'maintainer',
+      score: null,
+      listed: false,
+      votes: { ai_count: 0, human_count: 0 },
+      rhythm: null,
+      samples: [],
+      audit: {
+        category: 'ai_slop',
+        note: '2026-10 审计收录：同一分钟给 5 人回同句式俏皮话。',
+        evidencePostIds: ['2111625358101635562'],
+      },
+    });
+    // 审计条目不混进「AI 号」统计，单独一栏
+    expect(data.counts).toEqual({ all: 1, ai: 0, suspect: 0, audit: 1, listed: 0 });
+  });
+
+  it('已有模型判定的账号只合并审计说明，不重复出条目也不覆盖分数', async () => {
+    await seedVerdict('mergedbot', 'ai', { score: 0.88 });
+    await seedAudit('mergedbot', { category: 'bot_spam', note: '审计说明：模板化回复。' });
+
+    const data = await listAiSquare(env, NOW);
+    expect(data.entries).toHaveLength(1);
+    expect(data.entries[0]).toMatchObject({
+      handle: 'mergedbot',
+      origin: 'model',
+      score: 0.88,
+      audit: { category: 'bot_spam', note: '审计说明：模板化回复。' },
+    });
+    expect(data.counts).toEqual({ all: 1, ai: 1, suspect: 0, audit: 1, listed: 0 });
+  });
+
+  it('社区已认定真人的账号即使有审计收录也不进广场', async () => {
+    await seedVotes('humanbyvotes', 0, 3);
+    await seedAudit('humanbyvotes');
+
+    const data = await listAiSquare(env, NOW);
+    expect(data.entries).toEqual([]);
+    expect(await getAiSquareDetail(env, 'humanbyvotes', NOW)).toBeNull();
+  });
+
+  it('未过期的已确认 human 判定同样挡掉审计条目（过期后不挡）', async () => {
+    await seedVerdict('humanverdict2', 'human');
+    await seedAudit('humanverdict2');
+    expect((await listAiSquare(env, NOW)).entries).toEqual([]);
+
+    // 判定过期后不再算「已公开认定真人」，审计条目恢复展示
+    await seedVerdict('humanverdict2', 'human', { expiresAt: NOW_S - 1 }).catch(() => undefined);
+    await getDb(env)
+      .update(aiAccountVerdicts)
+      .set({ expiresAt: NOW_S - 1 });
+    expect((await listAiSquare(env, NOW)).entries.map((entry) => entry.handle)).toEqual([
+      'humanverdict2',
+    ]);
+  });
+
+  it('审计条目的详情页可查，带审计说明与主页画像（没画像时 null）', async () => {
+    await seedAudit('auditdetail', { category: 'adult_gray_traffic', note: '色情引流模板号。' });
+    await seedProfile('auditdetail');
+
+    const entry = await getAiSquareDetail(env, '@AuditDetail', NOW);
+    expect(entry).toMatchObject({
+      handle: 'auditdetail',
+      origin: 'maintainer',
+      audit: { category: 'adult_gray_traffic', note: '色情引流模板号。' },
+      profile: { followers: 1234 },
+    });
+    expect(await getAiSquareDetail(env, 'nobody-audit', NOW)).toBeNull();
+  });
+
+  it('active=0 的审计条目不下发', async () => {
+    await seedAudit('retiredaudit', { active: 0 });
+
+    expect((await listAiSquare(env, NOW)).entries).toEqual([]);
+    expect(await getAiSquareDetail(env, 'retiredaudit', NOW)).toBeNull();
   });
 });

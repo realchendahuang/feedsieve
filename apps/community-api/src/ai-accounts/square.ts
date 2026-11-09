@@ -24,6 +24,16 @@ const VIEW_TEXT_CHARS = 120;
 
 export type SquareKind = 'ai' | 'suspect';
 
+/** 条目来源：模型判定 / 社区投票 / 维护者审计收录 */
+export type SquareOrigin = 'model' | 'community' | 'maintainer';
+
+/** 维护者审计收录的公开说明（合并到模型/社区条目上时也带） */
+export interface AiSquareAudit {
+  category: string;
+  note: string;
+  evidencePostIds: string[];
+}
+
 export interface AiSampleView {
   tweetId: string;
   /** 已截断到 120 码点 */
@@ -40,6 +50,10 @@ export interface AiSquareEntry {
   displayName: string | null;
   avatarUrl: string | null;
   kind: SquareKind;
+  /** 条目的权威来源；maintainer = 维护者审计收录（没有模型分与互动指标） */
+  origin: SquareOrigin;
+  /** 维护者审计收录信息；没有就是 null */
+  audit: AiSquareAudit | null;
   /** 0–1；社区投票入名单但没有模型分时为 null */
   score: number | null;
   listed: boolean;
@@ -76,6 +90,8 @@ export interface AiSquareCounts {
   all: number;
   ai: number;
   suspect: number;
+  /** 带维护者审计收录信息的账号数（含与模型/社区条目合并的） */
+  audit: number;
   listed: number;
 }
 
@@ -114,6 +130,21 @@ type SampleRow = {
   text: string;
   posted_at: number | string | null;
   gap_seconds: number | string | null;
+};
+
+type AuditRow = {
+  handle: string;
+  category: string;
+  note: string;
+  evidence_post_id: string | null;
+  updated_at: number | string;
+  display_name: string | null;
+  avatar_url: string | null;
+  followers: number | string | null;
+  following_count: number | string | null;
+  tweets: number | string | null;
+  joined_at: number | string | null;
+  verified: number | null;
 };
 
 /** postgres.js 的 bigint 可能回字符串，统一转成 number；NULL 保持 null */
@@ -242,8 +273,103 @@ async function loadSamples(
   return out;
 }
 
+function toAuditPayload(row: AuditRow): AiSquareAudit {
+  return {
+    category: row.category,
+    note: row.note,
+    evidencePostIds: row.evidence_post_id ? [row.evidence_post_id] : [],
+  };
+}
+
+/**
+ * 取维护者审计收录行（不取样本）。
+ *
+ * 与模型/社区结论的优先级：账号一旦有「更权威的相反结论」，审计条目就不再展示——
+ * - 社区真人票 ≥ 3 且不落后（含争议持平）；
+ * - 未过期的已确认 human 判定。
+ * 白名单 / 社区抢救名单（verified）由调用方在数据链路外排除（见 snapshot 的优先级口径），
+ * 这里不重复实现；本表本身只放已核对过、不与这些名单冲突的账号。
+ */
+async function loadAuditRows(
+  env: Cloudflare.Env,
+  nowS: number,
+  handles?: readonly string[],
+): Promise<AuditRow[]> {
+  const handleFilter =
+    handles && handles.length
+      ? sql` and a.handle in (${sql.join(
+          handles.map((h) => sql`${h}`),
+          sql`, `,
+        )})`
+      : sql``;
+  const result = await getDb(env).execute<AuditRow>(sql`
+    select a.handle, a.category, a.note, a.evidence_post_id, a.updated_at,
+           p.display_name, p.avatar_url, p.followers, p.following_count,
+           p.tweets, p.joined_at, p.verified
+    from ai_account_audits a
+    left join profile_accounts p on p.handle = a.handle
+    where a.active = 1
+      and not exists (
+        select 1 from (
+          select count(*) filter (where vote = 'human') as human,
+                 count(*) filter (where vote = 'ai') as ai
+          from ai_account_votes q
+          where q.handle = a.handle
+        ) t
+        where t.human >= ${AI_LIST_MIN_VOTES} and t.human >= t.ai
+      )
+      and not exists (
+        select 1 from ai_account_verdicts v
+        where v.handle = a.handle
+          and v.verdict = 'human'
+          and v.confirmed = 1
+          and v.expires_at > ${nowS}
+      )${handleFilter}
+    order by a.handle collate "C"
+  `);
+  return rowsOf<AuditRow>(result);
+}
+
+/** 只有维护者审计收录、没有模型判定/社区票的条目 */
+function toAuditEntry(row: AuditRow): AiSquareEntry {
+  const hasProfile =
+    row.followers != null ||
+    row.following_count != null ||
+    row.tweets != null ||
+    row.joined_at != null;
+  const updatedAt = num(row.updated_at);
+  return {
+    handle: row.handle,
+    displayName: row.display_name,
+    avatarUrl: row.avatar_url,
+    kind: 'ai',
+    origin: 'maintainer',
+    audit: toAuditPayload(row),
+    score: null,
+    listed: false,
+    votes: { ai_count: 0, human_count: 0 },
+    rhythm: null,
+    replyCount: 0,
+    blueVerified: row.verified == null ? null : row.verified === 1,
+    judgedAt: updatedAt,
+    expiresAt: null,
+    profile: hasProfile
+      ? {
+          followers: num(row.followers),
+          following: num(row.following_count),
+          tweets: num(row.tweets),
+          joinedAt: num(row.joined_at),
+          verified: row.verified == null ? null : row.verified === 1,
+        }
+      : null,
+    samples: [],
+  };
+}
+
 function toEntry(row: PublicRow, samples: AiSampleView[]): AiSquareEntry {
   const rhythm = parseRhythm(row.rhythm);
+  // 有未过期模型判定 → model；只有社区票（无模型分）→ community；审计条目走 toAuditEntry
+  const origin: SquareOrigin = row.verdict ? 'model' : 'community';
   const hasProfile =
     row.followers != null ||
     row.following_count != null ||
@@ -254,6 +380,8 @@ function toEntry(row: PublicRow, samples: AiSampleView[]): AiSquareEntry {
     displayName: row.display_name,
     avatarUrl: row.avatar_url,
     kind: row.verdict === 'suspect' ? 'suspect' : 'ai',
+    origin,
+    audit: null,
     score: row.score == null ? null : Number(row.score),
     listed: Boolean(row.listed),
     votes: { ai_count: num(row.ai_count) ?? 0, human_count: num(row.human_count) ?? 0 },
@@ -296,31 +424,42 @@ function compareEntries(a: AiSquareEntry, b: AiSquareEntry): number {
   return a.handle < b.handle ? -1 : a.handle > b.handle ? 1 : 0;
 }
 
-/** 广场列表：一次取全部可公示账号（当前量级 < 200，不分页） */
-export async function listAiSquare(
-  env: Cloudflare.Env,
-  now = Date.now(),
-): Promise<AiSquareData> {
+/** 广场列表：一次取全部可公示账号（当前量级 < 400，不分页） */
+export async function listAiSquare(env: Cloudflare.Env, now = Date.now()): Promise<AiSquareData> {
   const nowS = Math.floor(now / 1000);
-  const rows = await loadPublicRows(env, nowS);
+  const [rows, audits] = await Promise.all([loadPublicRows(env, nowS), loadAuditRows(env, nowS)]);
   const samples = await loadSamples(
     env,
     rows.map((r) => r.handle),
     LIST_SAMPLES,
   );
-  const entries = rows
-    .map((row) => toEntry(row, samples.get(row.handle) ?? []))
-    .sort(compareEntries);
+  // 维护者审计条目：与模型/社区条目同 handle 时只补审计说明（不覆盖更权威的分数与票数），
+  // 否则作为独立条目展示。
+  const auditByHandle = new Map(audits.map((audit) => [audit.handle, audit] as const));
+  const entries = rows.map((row) => {
+    const entry = toEntry(row, samples.get(row.handle) ?? []);
+    const audit = auditByHandle.get(row.handle);
+    if (audit) entry.audit = toAuditPayload(audit);
+    return entry;
+  });
+  const listedHandles = new Set(entries.map((entry) => entry.handle));
+  for (const audit of audits) {
+    if (listedHandles.has(audit.handle)) continue;
+    entries.push(toAuditEntry(audit));
+  }
+  entries.sort(compareEntries);
   const counts: AiSquareCounts = {
     all: entries.length,
-    ai: entries.filter((e) => e.kind === 'ai').length,
+    // 「AI 号」统计只算模型判定/社区票，维护者审计单独计数，避免把人工结论算成模型结论
+    ai: entries.filter((e) => e.kind === 'ai' && e.origin !== 'maintainer').length,
     suspect: entries.filter((e) => e.kind === 'suspect').length,
+    audit: entries.filter((e) => e.audit != null).length,
     listed: entries.filter((e) => e.listed).length,
   };
   return { generatedAt: nowS, counts, entries };
 }
 
-/** 单人详情：广场口径的完整条目（样本取最近 12 条）；不可公示返回 null */
+/** 单人详情：广场口径的完整条目（样本取最近 12 条）；不可展示返回 null */
 export async function getAiSquareDetail(
   env: Cloudflare.Env,
   rawHandle: string,
@@ -329,9 +468,18 @@ export async function getAiSquareDetail(
   const handle = rawHandle.trim().replace(/^@/, '').toLowerCase();
   if (!HANDLE.test(handle)) return null;
   const nowS = Math.floor(now / 1000);
-  const rows = await loadPublicRows(env, nowS, [handle]);
+  const [rows, audits] = await Promise.all([
+    loadPublicRows(env, nowS, [handle]),
+    loadAuditRows(env, nowS, [handle]),
+  ]);
   const row = rows[0];
-  if (!row) return null;
-  const samples = await loadSamples(env, [row.handle], DETAIL_SAMPLES);
-  return toEntry(row, samples.get(row.handle) ?? []);
+  const audit = audits[0];
+  if (row) {
+    const samples = await loadSamples(env, [row.handle], DETAIL_SAMPLES);
+    const entry = toEntry(row, samples.get(row.handle) ?? []);
+    if (audit) entry.audit = toAuditPayload(audit);
+    return entry;
+  }
+  if (!audit) return null;
+  return toAuditEntry(audit);
 }

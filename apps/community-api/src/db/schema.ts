@@ -764,6 +764,38 @@ export const aiAccountSamples = pgTable(
   ],
 );
 
+/**
+ * 维护者审计收录的 AI 号（AI 号广场的第三个来源，与模型判定 / 社区投票并列）。
+ *
+ * 来源是人工审计（例如公开的「X 机器人回复审计表」）：维护者逐条核对后录入，
+ * 广场展示「维护者审计」来源的分类与说明。刻意与 ai_account_verdicts 分表：
+ * 这里没有模型分数、互动指标和回复样本，只有公开的审计理由与证据帖，
+ * 不把人工结论伪装成模型判定，也不影响扩展的 AI 味标记口径。
+ */
+export const aiAccountAudits = pgTable(
+  'ai_account_audits',
+  {
+    /** 小写 handle */
+    handle: text('handle').primaryKey(),
+    /** 公开分类，词表同举报分类（@feedsieve/shared CATEGORIES） */
+    category: text('category').notNull(),
+    /** 公开说明：为什么把它收录为 AI 号（4–240 字，展示在广场与详情页） */
+    note: text('note').notNull(),
+    /** 公开证据推文 ID（回复链接里的 status ID，可选） */
+    evidencePostId: text('evidence_post_id'),
+    /** 1 = 生效；0 = 撤下 */
+    active: flag('active'),
+    /** 秒 */
+    createdAt: ts('created_at').notNull(),
+    /** 秒 */
+    updatedAt: ts('updated_at').notNull(),
+  },
+  (t) => [
+    index('idx_ai_account_audits_active').on(t.active, t.updatedAt.desc(), t.handle),
+    check('ck_ai_account_audits_active', sql`${t.active} in (0, 1)`),
+  ],
+);
+
 // ---------------------------------------------------------------------------
 // 快照、杂项（旧 D1 的 seasons 表属于已删除的排位赛，没有迁过来）
 // ---------------------------------------------------------------------------

@@ -1,7 +1,8 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
 import { Copy, ExternalLink } from 'lucide-react';
-import type { AiSquareData, AiSquareEntry } from '@/ai-accounts/square';
+import { categoryLabel } from '@feedsieve/shared';
+import type { AiSquareAudit, AiSquareData, AiSquareEntry } from '@/ai-accounts/square';
 import { HelpIcon } from '@/site/components/SiteHeader';
 import { toast } from '@/site/components/ui/toast';
 import { ListPageHeader } from '@/site/pages/lists/lists-common';
@@ -19,6 +20,7 @@ const FILTERS = [
   { key: 'all', label: '全部' },
   { key: 'ai', label: 'AI 号' },
   { key: 'suspect', label: '疑似 AI' },
+  { key: 'audit', label: '维护者审计' },
   { key: 'listed', label: '已进名单' },
 ] as const;
 type FilterKey = (typeof FILTERS)[number]['key'];
@@ -111,7 +113,9 @@ export function AiSquarePage({ data }: { data: AiSquareData | null }) {
   const rows = useMemo(() => {
     if (!data) return [];
     let list = data.entries;
-    if (filter === 'ai' || filter === 'suspect') list = list.filter((e) => e.kind === filter);
+    if (filter === 'ai') list = list.filter((e) => e.kind === 'ai' && e.origin !== 'maintainer');
+    else if (filter === 'suspect') list = list.filter((e) => e.kind === 'suspect');
+    else if (filter === 'audit') list = list.filter((e) => e.audit != null);
     else if (filter === 'listed') list = list.filter((e) => e.listed);
     const q = query.trim().toLowerCase().replace(/^@/, '');
     if (q) {
@@ -134,9 +138,9 @@ export function AiSquarePage({ data }: { data: AiSquareData | null }) {
         title="AI 号广场"
         aside={
           <HelpIcon ariaLabel="AI 号广场说明">
-            收录社区投票与模型判定共同确认的 AI / 疑似 AI 账号，按公共名单与分数排序。
+            收录社区投票、模型判定与维护者审计收录的 AI / 疑似 AI 账号，按公共名单与分数排序。
             <br />
-            内容来自这些账号的公开回复，仅供「是否值得屏蔽」参考，不构成事实认定；误判可申诉。
+            内容来自这些账号的公开回复与维护者审计说明，仅供「是否值得屏蔽」参考，不构成事实认定；误判可申诉。
             <br />
             <a
               href={`${GITHUB_URL}/blob/main/DISCLAIMER.md`}
@@ -154,10 +158,11 @@ export function AiSquarePage({ data }: { data: AiSquareData | null }) {
         <p className="mt-10 text-center text-mist">广场数据加载失败，请稍后刷新</p>
       ) : (
         <>
-          <div className="mt-6 grid gap-3 sm:grid-cols-4">
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
             <StatCard label="总数" value={counts?.all ?? 0} />
             <StatCard label="AI 号" value={counts?.ai ?? 0} tone={KIND.ai.color} />
             <StatCard label="疑似" value={counts?.suspect ?? 0} tone={KIND.suspect.color} />
+            <StatCard label="维护者审计" value={counts?.audit ?? 0} tone="var(--gold)" />
             <StatCard label="已进公共名单" value={counts?.listed ?? 0} />
           </div>
 
@@ -241,7 +246,9 @@ export function AiSquarePage({ data }: { data: AiSquareData | null }) {
           )}
 
           <footer className="mt-10 flex flex-col gap-2 border-t border-line/60 pt-5 text-xs text-fog sm:flex-row sm:items-center sm:justify-between">
-            <p>内容来自被判定账号的公开回复，仅供「是否值得屏蔽」参考，不构成事实认定。</p>
+            <p>
+              内容来自被判定账号的公开回复或维护者的公开审计，仅供「是否值得屏蔽」参考，不构成事实认定。
+            </p>
             <p className="flex shrink-0 items-center gap-3">
               <Link to="/lists/apply" className="font-semibold text-gold hover:text-gold-deep">
                 误判申诉 →
@@ -275,8 +282,50 @@ function EmptyState({ title, hint }: { title: string; hint: ReactNode }) {
   );
 }
 
+/** 维护者审计说明：分类 + 公开理由 + 证据帖。合并到模型条目上时用 compact 形态。 */
+function AuditInfo({ audit, compact = false }: { audit: AiSquareAudit; compact?: boolean }) {
+  const evidence = audit.evidencePostIds[0];
+  return (
+    <div
+      className={compact ? 'mt-3 rounded-[var(--radius-sm)] bg-[var(--wash)] px-3 py-2' : 'mt-4'}
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="rounded-full bg-gold-surface px-2.5 py-0.5 text-[11px] font-bold text-gold">
+          维护者审计
+        </span>
+        <span className="rounded-full bg-[var(--wash-strong)] px-2 py-0.5 text-[11px] font-semibold text-mist">
+          {categoryLabel(audit.category)}
+        </span>
+      </div>
+      <p
+        className={
+          compact
+            ? 'mt-2 line-clamp-2 text-xs leading-relaxed text-mist'
+            : 'mt-2 line-clamp-3 text-xs leading-relaxed text-mist'
+        }
+      >
+        {audit.note}
+      </p>
+      {evidence ? (
+        <a
+          href={`https://x.com/i/status/${evidence}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-gold hover:text-gold-deep"
+        >
+          查看证据帖
+          <ExternalLink className="size-3" />
+        </a>
+      ) : null}
+    </div>
+  );
+}
+
 function SquareCard({ entry, now }: { entry: AiSquareEntry; now: number }) {
   const kind = KIND[entry.kind];
+  // 维护者审计收录的条目没有模型结论，用金色区别于 AI 号红 / 疑似琥珀
+  const tone = entry.origin === 'maintainer' ? 'var(--gold)' : kind.color;
+  const badge = entry.origin === 'maintainer' ? '维护者审计' : kind.label;
   const name = entry.displayName || `@${entry.handle}`;
   const avatar = avatarUrlOf(entry);
   // 与 flavorOf 同口径：百分比按 5 取整，避免同一账号各页数字不一致
@@ -294,12 +343,12 @@ function SquareCard({ entry, now }: { entry: AiSquareEntry; now: number }) {
             alt=""
             loading="lazy"
             className="size-11 shrink-0 rounded-full object-cover"
-            style={{ boxShadow: `0 0 0 2px ${kind.color}` }}
+            style={{ boxShadow: `0 0 0 2px ${tone}` }}
           />
         ) : (
           <span
             className="grid size-11 shrink-0 place-items-center rounded-full bg-[var(--wash-strong)] text-lg font-bold text-ink"
-            style={{ boxShadow: `0 0 0 2px ${kind.color}` }}
+            style={{ boxShadow: `0 0 0 2px ${tone}` }}
           >
             {initialOf(name)}
           </span>
@@ -330,11 +379,11 @@ function SquareCard({ entry, now }: { entry: AiSquareEntry; now: number }) {
         <span
           className="shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold"
           style={{
-            color: kind.color,
-            background: `color-mix(in srgb, ${kind.color} 14%, transparent)`,
+            color: tone,
+            background: `color-mix(in srgb, ${tone} 14%, transparent)`,
           }}
         >
-          {kind.label}
+          {badge}
         </span>
       </div>
 
@@ -352,6 +401,9 @@ function SquareCard({ entry, now }: { entry: AiSquareEntry; now: number }) {
           <span className="ml-1 text-xs text-mist">AI 味</span>
           {entry.listed ? <ListedChip /> : null}
         </div>
+      ) : entry.origin === 'maintainer' && entry.audit ? (
+        // 维护者审计收录：没有模型分数，直接给分类 + 公开理由 + 证据帖
+        <AuditInfo audit={entry.audit} />
       ) : (
         // 没有模型分数的账号不参与分数视觉：明确写出「社区投票入名单」，避免读成 0 分
         <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -368,13 +420,15 @@ function SquareCard({ entry, now }: { entry: AiSquareEntry; now: number }) {
         </div>
       )}
 
+      {entry.audit && percent != null ? <AuditInfo audit={entry.audit} compact /> : null}
+
       {rhythm ? (
         <div className="mt-3 flex flex-wrap gap-1.5">
           <Chip>中位间隔 {fmtGap(rhythm.medianGap)}</Chip>
           <Chip>快回复 {fmtPct(rhythm.fast)}</Chip>
           <Chip>长度变异 {rhythm.cv.toFixed(2)}</Chip>
         </div>
-      ) : (
+      ) : entry.origin === 'maintainer' ? null : (
         <p className="mt-3 text-xs text-fog">暂无互动指标</p>
       )}
 
@@ -389,7 +443,7 @@ function SquareCard({ entry, now }: { entry: AiSquareEntry; now: number }) {
             {latest.gapSeconds != null ? ` · 间隔 ${fmtGap(latest.gapSeconds)}` : ''}
           </p>
         </div>
-      ) : (
+      ) : entry.origin === 'maintainer' ? null : (
         <p className="mt-3 text-xs text-fog">暂无回复样本</p>
       )}
 

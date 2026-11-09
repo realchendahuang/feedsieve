@@ -1,6 +1,7 @@
 import { Copy, ExternalLink } from 'lucide-react';
+import { categoryLabel } from '@feedsieve/shared';
 import type { AiPublicData } from '@/ai-accounts/public-page';
-import type { AiSquareEntry } from '@/ai-accounts/square';
+import type { AiSquareAudit, AiSquareEntry } from '@/ai-accounts/square';
 import { HelpIcon } from '../components/SiteHeader';
 import { toast } from '../components/ui/toast';
 import { xProfileUrl } from '../site';
@@ -36,6 +37,91 @@ export function AiPublicPage({
     return (
       <main className="mx-auto max-w-3xl px-[clamp(18px,2.2vw,34px)] pb-16 pt-12 text-center">
         <p className="text-mist">账号格式不对</p>
+      </main>
+    );
+  }
+  const audit = detail?.audit ?? null;
+  // 只有维护者审计收录、且没有更权威的公开结论（模型/社区）时，整页走审计口径
+  const maintainerOnly =
+    audit != null &&
+    data.state !== 'public' &&
+    data.state !== 'human' &&
+    data.state !== 'contested';
+  if (maintainerOnly && audit) {
+    const auditName = detail?.displayName || data.displayName || `@${data.handle}`;
+    const auditAvatar = detail?.avatarUrl ?? data.avatarUrl;
+    const evidence = audit.evidencePostIds[0];
+    return (
+      <main className="mx-auto max-w-3xl px-[clamp(18px,2.2vw,34px)] pb-16 pt-10">
+        <section className="rounded-[var(--radius)] bg-surface p-[clamp(20px,4vw,40px)] shadow-[var(--panel-elev)]">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-bold text-gold">维护者审计收录</p>
+            <span className="rounded-full bg-[var(--wash-strong)] px-2.5 py-0.5 text-[11px] font-bold text-mist">
+              {categoryLabel(audit.category)}
+            </span>
+          </div>
+          <div className="mt-5 flex items-center gap-4">
+            {auditAvatar ? (
+              <img
+                src={auditAvatar.replace(/_(normal|bigger|mini|x96)(\.[a-z]+)$/i, '_200x200$2')}
+                alt=""
+                className="size-16 rounded-full object-cover ring-[3px] ring-gold/40"
+              />
+            ) : (
+              <span className="grid size-16 place-items-center rounded-full bg-wash-strong text-2xl font-bold text-ink ring-[3px] ring-gold/40">
+                {initialOf(auditName)}
+              </span>
+            )}
+            <div className="min-w-0">
+              <h1 className="truncate text-2xl font-bold tracking-tight text-ink">{auditName}</h1>
+              <a
+                href={xProfileUrl(data.handle)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-sm text-mist hover:text-ink"
+              >
+                @{data.handle}
+                <ExternalLink className="size-3.5" />
+              </a>
+            </div>
+          </div>
+
+          <p className="mt-8 text-sm font-semibold text-mist">为什么收录</p>
+          <p className="mt-2 text-lg leading-relaxed text-ink">{audit.note}</p>
+          {evidence ? (
+            <a
+              href={`https://x.com/i/status/${evidence}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-gold hover:text-gold-deep"
+            >
+              查看证据帖
+              <ExternalLink className="size-3.5" />
+            </a>
+          ) : null}
+          {detail?.judgedAt ? (
+            <p className="mt-4 text-xs text-fog">收录时间 {dayString(detail.judgedAt)}</p>
+          ) : null}
+
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <InstallButtons
+              chromeLabel="装福滤娃，自动折叠 AI 回复"
+              firefoxLabel="装福滤娃（Firefox 版）"
+            />
+            <a
+              href={`/lists/apply?kind=appeal&handle=${encodeURIComponent(data.handle)}`}
+              className="inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold text-mist hover:text-ink"
+            >
+              这是我的账号，我要申诉
+            </a>
+          </div>
+        </section>
+
+        <BlockGuide handle={data.handle} />
+
+        <p className="mt-4 text-center text-xs text-fog">
+          以上内容来自维护者审计收录，仅供「是否值得屏蔽」参考，不构成事实认定；认为误判可申诉。
+        </p>
       </main>
     );
   }
@@ -217,6 +303,7 @@ export function AiPublicPage({
         <>
           <EvidenceSection entry={evidence} kind={kind} />
           <SamplesSection entry={evidence} />
+          {audit ? <AuditPanel audit={audit} /> : null}
           <BlockGuide handle={data.handle} />
         </>
       ) : null}
@@ -412,6 +499,37 @@ function SamplesSection({ entry }: { entry: AiSquareEntry }) {
           })}
         </ul>
       )}
+    </section>
+  );
+}
+
+/** 维护者审计说明：合并到模型/社区条目上时，补一段公开的审计理由与证据帖。 */
+function AuditPanel({ audit }: { audit: AiSquareAudit }) {
+  const evidence = audit.evidencePostIds[0];
+  return (
+    <section className="mt-4 rounded-[var(--radius)] bg-surface p-6 shadow-[var(--panel-elev)]">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-base font-bold text-ink">维护者审计收录</h2>
+        <span className="rounded-full bg-[var(--wash-strong)] px-2.5 py-0.5 text-[11px] font-bold text-mist">
+          {categoryLabel(audit.category)}
+        </span>
+        <HelpIcon ariaLabel="维护者审计说明">
+          这条补充说明来自维护者的公开审计：逐条核对账号的公开回复后收录，理由与证据帖公开可查。
+          不构成事实认定，认为误判可申诉。
+        </HelpIcon>
+      </div>
+      <p className="mt-3 leading-relaxed text-ink">{audit.note}</p>
+      {evidence ? (
+        <a
+          href={`https://x.com/i/status/${evidence}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-gold hover:text-gold-deep"
+        >
+          查看证据帖
+          <ExternalLink className="size-3.5" />
+        </a>
+      ) : null}
     </section>
   );
 }

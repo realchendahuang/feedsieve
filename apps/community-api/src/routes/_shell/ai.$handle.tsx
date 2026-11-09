@@ -22,8 +22,24 @@ export const Route = createFileRoute('/_shell/ai/$handle')({
   head: (ctx) => {
     const loaded = ctx.loaderData as PageLoaderData | undefined;
     const data = loaded?.data;
+    const audit = loaded?.detail?.audit ?? null;
     const handle = data?.handle ?? ctx.params.handle.replace(/^@/, '').toLowerCase();
-    const name = data?.displayName || `@${handle}`;
+    const name = loaded?.detail?.displayName || data?.displayName || `@${handle}`;
+    // 只有维护者审计收录、没有可公示结论：标题和描述按审计口径，别让分享链接读成「AI 味检测」
+    if (
+      audit &&
+      data &&
+      data.state !== 'public' &&
+      data.state !== 'human' &&
+      data.state !== 'contested'
+    ) {
+      return pageHead({
+        title: `${name} · 维护者审计收录`,
+        description: `维护者审计收录的 AI 回复机器人：${audit.note.slice(0, 80)}`,
+        path: `/ai/${handle}`,
+        noindex: true,
+      });
+    }
     const description = data?.flavor
       ? `${name} 的回复 AI 味 ${data.flavor.percent}%：${data.flavor.level}。${
           data.lookup.comment ? `「${data.lookup.comment}」` : ''
