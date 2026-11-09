@@ -4,7 +4,7 @@
  *
  * 给外部 AI Agent / 脚本用的入口：把 Markdown 转成 X 文章编辑器（Draft.js）认的
  * HTML，顺带给出标题、纯文本和本地图片占位符清单。真正的粘贴、插图仍由 Agent
- * 在浏览器里完成，流程见 skills/feedsieve-article/SKILL.md。
+ * 在浏览器里完成（先装扩展，再在 X 编辑器里原生粘贴，扩展会接管排版）。
  *
  * 用法：
  *   node scripts/article-format.mjs article.md           # JSON：title / html / text / images

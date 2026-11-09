@@ -48,7 +48,7 @@ scripts/release.sh 0.12.2 --dry-run
 ## 3. 发布到 Chrome 应用商店
 
 扩展对外安装以 Chrome 应用商店为主。上传与送审需要维护者本机的商店登录态，
-不在仓库脚本内；维护者按 `feedsieve-release` skill 操作：
+不在仓库脚本内，手动在开发者后台操作：
 
 1. 若上一版还在审核，先撤销审核
 2. 上传 `apps/extension/.output/feedsieve-X.Y.Z-chrome.zip`

@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 # FeedSieve 发版：版本号 → CHANGELOG 校验 → 商店级构建审计 → 提交打标 → GitHub Release。
 # Chrome Web Store 的上传与送审不在本脚本内（需要浏览器登录态），
-# 维护者按项目级 skill `.agents/skills/feedsieve-release` 完成。
+# 由维护者手动完成。
 #
 # 用法：
 #   scripts/release.sh 0.12.3
@@ -147,4 +147,4 @@ gh release create "$TAG" $ASSETS --title "$TAG" --notes-file "$NOTES"
 
 echo
 echo "GitHub Release 完成：$TAG"
-echo "下一步：按 feedsieve-release skill 上传 $ZIP 到 Chrome Web Store 并提交审核。"
+echo "下一步：上传 $ZIP 到 Chrome Web Store 并提交审核。"
