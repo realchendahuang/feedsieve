@@ -288,21 +288,25 @@ ${bigText('还没人测', 64)}`;
       : '';
 
   // 底部数据条：有多少画多少
-  const cells: string[] = [];
+  const statsData: Array<[string, string]> = [];
   const sampleLabel = card.sampleSpan ? `样本（最近 ${fmtGap(card.sampleSpan)}内）` : '样本';
   const sampleValue = card.replyCount
     ? `${card.replyCount} 条${card.sampleAuthors ? ` · ${card.sampleAuthors} 人` : ''}`
     : '';
-  if (sampleValue) cells.push(statCell(PAD, sampleLabel, sampleValue));
-  if (card.medianGap != null)
-    cells.push(statCell(335, '回复间隔', `中位 ${fmtGap(card.medianGap)}`));
-  if (card.cv != null) cells.push(statCell(590, '长短波动', spreadText(card.cv)));
+  if (sampleValue) statsData.push([sampleLabel, sampleValue]);
+  if (card.medianGap != null) statsData.push(['回复间隔', `中位 ${fmtGap(card.medianGap)}`]);
+  if (card.cv != null) statsData.push(['长短波动', spreadText(card.cv)]);
   if ((card.aiVotes ?? 0) + (card.humanVotes ?? 0) > 0) {
-    cells.push(statCell(845, '社区投票', `AI ${card.aiVotes ?? 0} · 真人 ${card.humanVotes ?? 0}`));
+    statsData.push(['社区投票', `AI ${card.aiVotes ?? 0} · 真人 ${card.humanVotes ?? 0}`]);
   }
-  const stats = cells.length
+  // 有几格就均分几列：公开结论通常 4 格，真人 / 争议中只剩票数一格时也不会挤在最右边
+  const stats = statsData.length
     ? `<rect x="${PAD}" y="452" width="${CONTENT_W}" height="1" fill="${LINE}"/>
-${cells.join('\n')}`
+${statsData
+  .map(([label, value], index) =>
+    statCell(PAD + Math.round((CONTENT_W / statsData.length) * index), label, value),
+  )
+  .join('\n')}`
     : '';
 
   // 右上角：判定时间（UTC 日期，和扩展分享卡同口径）
