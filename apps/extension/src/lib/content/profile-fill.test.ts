@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   PROFILE_FILL_COOLDOWN_MS,
   PROFILE_FILL_MAX_MS,
+  PROFILE_FILL_STOP_CLASS,
   createProfileFill,
   isProfilePath,
 } from './profile-fill';
@@ -66,6 +67,73 @@ describe('profile-fill', () => {
     const result = await fill.fill('alice');
     expect(result.stopped).toBe('user');
     expect(sleep).toHaveBeenCalledTimes(1);
+  });
+
+  it('补全期间页面上常驻停止按钮，点一下就能停', async () => {
+    history.replaceState(null, '', '/alice');
+    addArticles(1);
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    const labels: string[] = [];
+    const sleep = vi.fn(async () => {
+      labels.push(document.querySelector(`.${PROFILE_FILL_STOP_CLASS}`)?.textContent ?? '');
+      // 第二拍点停止：面板可能已经关了，页面上这个按钮是唯一入口
+      if (sleep.mock.calls.length === 2) {
+        document.querySelector<HTMLButtonElement>(`.${PROFILE_FILL_STOP_CLASS}`)!.click();
+      }
+      addArticles(1);
+    });
+    const fill = createProfileFill({ sleep });
+    const result = await fill.fill('alice');
+    expect(result.stopped).toBe('user');
+    expect(labels[0]).toContain('停止补全');
+    // 停下后按钮跟着撤掉，不在页面上留死按钮
+    expect(document.querySelector(`.${PROFILE_FILL_STOP_CLASS}`)).toBeNull();
+  });
+
+  it('停止按钮显示本轮已经收进多少条，语言跟随界面', async () => {
+    history.replaceState(null, '', '/alice');
+    addArticles(1);
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    // 第一次 sleep 加载两条后被看到，第二次 sleep 挂住，测试此时检查按钮再点停止
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let call = 0;
+    const sleep = vi.fn(async () => {
+      call += 1;
+      if (call === 1) addArticles(2);
+      else await gate;
+    });
+    const fill = createProfileFill({ sleep, getLanguage: () => 'en' });
+    const running = fill.fill('alice');
+    await vi.waitFor(() => {
+      expect(document.querySelector(`.${PROFILE_FILL_STOP_CLASS}`)?.textContent).toBe(
+        'Stop completing+2',
+      );
+    });
+    fill.stop();
+    release();
+    expect((await running).stopped).toBe('user');
+    expect(document.querySelector(`.${PROFILE_FILL_STOP_CLASS}`)).toBeNull();
+  });
+
+  it('status 报告是否在跑、跑到哪一条', async () => {
+    history.replaceState(null, '', '/alice');
+    addArticles(1);
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    const statuses: Array<{ running: boolean; handle: string | null; added: number }> = [];
+    const fill = createProfileFill({
+      sleep: async () => addArticles(1),
+      onStatus: (status) => statuses.push(status),
+    });
+    expect(fill.status()).toMatchObject({ running: false, handle: null, last: null });
+    void fill.fill('alice');
+    await vi.waitFor(() => expect(statuses.some((s) => s.running)).toBe(true));
+    expect(fill.status()).toMatchObject({ running: true, handle: 'alice' });
+    fill.stop();
+    await vi.waitFor(() => expect(fill.status().running).toBe(false));
+    expect(fill.status().last?.stopped).toBe('user');
   });
 
   it('不在这个博主的主页时不滚动', async () => {

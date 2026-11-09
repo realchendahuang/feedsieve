@@ -234,6 +234,34 @@ export function ensureStyles(): void {
     .fs-profile-line:hover .fs-profile-key { text-decoration: underline; }
     .fs-profile-line .fs-profile-key { color: rgb(15, 20, 25); font-weight: 700; }
     .fs-profile-line > span + span::before { content: '·'; margin-right: 6px; color: rgb(83, 100, 113); }
+    /* 补全进行中的页面停止按钮：面板关掉后用户仍能停下自动滚动。
+       固定在右下角，不参与 X 布局；深色胶囊在亮暗主题下都可读。 */
+    .fs-fill-stop {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      z-index: 2147483000;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 36px;
+      padding: 0 16px;
+      border: 0;
+      border-radius: 999px;
+      background: rgba(15, 20, 25, 0.92);
+      color: #fff;
+      font: 600 13px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.32);
+    }
+    .fs-fill-stop:hover:not(:disabled) { background: rgba(15, 20, 25, 1); }
+    .fs-fill-stop:disabled { opacity: 0.6; cursor: default; }
+    .fs-fill-stop-count {
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.16);
+      font-variant-numeric: tabular-nums;
+    }
     /* 高级搜索入口：塞进搜索胶囊内部（input 自然让位）。X 的搜索栏是
        fixed + align-items:center，普通文档流元素会把整条搜索栏顶出视口。 */
     .fs-search-trigger {

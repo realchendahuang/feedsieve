@@ -15,10 +15,22 @@ type MessageListener = (message: unknown) => unknown;
 let listeners: MessageListener[];
 let startPersistentQueue: ReturnType<typeof vi.fn>;
 let filterEnabled: boolean;
+let profileEnabled: boolean;
+let profileFill: {
+  fill: ReturnType<typeof vi.fn>;
+  stop: ReturnType<typeof vi.fn>;
+  status: ReturnType<typeof vi.fn>;
+};
 
 beforeEach(() => {
   listeners = [];
   filterEnabled = true;
+  profileEnabled = true;
+  profileFill = {
+    fill: vi.fn(async () => ({ ok: true, added: 2, stopped: 'stagnant' })),
+    stop: vi.fn(),
+    status: vi.fn(() => ({ running: true, handle: 'alice', added: 4, last: null })),
+  };
   vi.stubGlobal('browser', {
     runtime: {
       onMessage: {
@@ -47,8 +59,9 @@ beforeEach(() => {
     followingSync: {} as never,
     startPersistentQueue: startPersistentQueue as never,
     runManualSpamBlock: vi.fn() as never,
-    profileFill: {} as never,
+    profileFill: profileFill as never,
     isFilterEnabled: () => filterEnabled,
+    isProfileEnabled: () => profileEnabled,
   });
 });
 
@@ -59,6 +72,36 @@ async function send(message: unknown): Promise<unknown> {
   }
   return undefined;
 }
+
+describe('feedsieve:profile-fill', () => {
+  it('开始 / 停止 / 查询状态三条消息各走各的入口', async () => {
+    expect(await send({ type: 'feedsieve:profile-fill', handle: 'Alice' })).toEqual({
+      ok: true,
+      added: 2,
+      stopped: 'stagnant',
+    });
+    expect(profileFill.fill).toHaveBeenCalledWith('alice');
+    expect(await send({ type: 'feedsieve:profile-fill-stop' })).toEqual({ ok: true });
+    expect(profileFill.stop).toHaveBeenCalledTimes(1);
+    // 面板重开时用它与页面对账，恢复「停止」与收尾提示
+    expect(await send({ type: 'feedsieve:profile-fill-status' })).toEqual({
+      running: true,
+      handle: 'alice',
+      added: 4,
+      last: null,
+    });
+  });
+
+  it('主页模块关闭时不再启动补全，状态也查不到', async () => {
+    profileEnabled = false;
+    expect(await send({ type: 'feedsieve:profile-fill', handle: 'alice' })).toEqual({
+      ok: false,
+      code: 'module-disabled',
+    });
+    expect(profileFill.fill).not.toHaveBeenCalled();
+    expect(await send({ type: 'feedsieve:profile-fill-status' })).toBeNull();
+  });
+});
 
 describe('feedsieve:ai-block-start', () => {
   it('降噪模块全关时拒绝入队（module-disabled）', async () => {

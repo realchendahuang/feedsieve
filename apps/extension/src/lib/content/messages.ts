@@ -109,6 +109,10 @@ export function registerContentMessageHandlers(deps: {
       profileFill.stop();
       return Promise.resolve({ ok: true });
     }
+    // 面板重开 / 换标签页后对账：这一轮还在跑的话，图标恢复成「停止」
+    if (type === 'feedsieve:profile-fill-status') {
+      return Promise.resolve(profileOn() ? profileFill.status() : null);
+    }
     if (type === 'feedsieve:following-sync-start') {
       if (!filterOn()) return Promise.resolve({ status: 'error', error: 'module-disabled' });
       return followingSync.start();

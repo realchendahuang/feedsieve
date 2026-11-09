@@ -32,6 +32,7 @@ import { drawProfileShareCard, pickSharePosts } from '../../../src/lib/insight/s
 import { canvasToBlob } from '../../../src/lib/share/canvas-kit';
 import { INSIGHT_COPY } from '../../../src/lib/insight/copy';
 import { INSIGHT_READ_MESSAGE } from '../../../src/lib/insight/read-tracker';
+import { PROFILE_FILL_UPDATED_MESSAGE } from '../../../src/lib/content/profile-fill';
 import {
   PROFILE_UPDATED_MESSAGE,
   type CatalogEntry,
@@ -62,6 +63,8 @@ import { useListPosition } from './use-list-position';
 
 const PAGE_SIZE = 20;
 const UPDATE_DEBOUNCE_MS = 500;
+/** 补全状态兜底查询的间隔：广播正常时只为不漏掉结束，不靠它推进度。 */
+const FILL_STATUS_POLL_MS = 3_000;
 /** 「几分钟前」和刚发帖子的估算倍数随时间变化：每分钟重算一次。 */
 const CLOCK_MS = 60_000;
 const SORT_KEY = 'profileSortV1';
@@ -80,6 +83,10 @@ interface ProfileViewProps {
   sendToXPage: (message: { type: string; postId?: string; handle?: string }) => Promise<unknown>;
   onOpenSettings: () => void;
 }
+
+/** 内容脚本对补全消息的响应（profile-fill.ts 的 ProfileFillResult）。 */
+type FillReply =
+  { ok?: boolean; added?: number; stopped?: string; retryAfterMs?: number } | null | undefined;
 
 /** 当前标签页的博主：切到别的页面（帖子详情、首页）时保留上一个，面板不闪。 */
 function useActiveHandle(): string | null {
@@ -444,6 +451,10 @@ export default function ProfileView({
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [visited, setVisited] = useState<Set<string>>(() => new Set());
   const [fillingHandle, setFillingHandle] = useState<string | null>(null);
+  /** 这一轮是不是本面板发起的：是的话响应由 fillProfile 自己接收，轮询不插手。 */
+  const fillOwnedRef = useRef(false);
+  /** 轮询里观察到、但还没收尾的那一轮（面板重开 / 中途切回时）。 */
+  const watchedFillRef = useRef<string | null>(null);
   /** 只有还停在这个博主的主页时才显示「停止」：切到别的标签页就发不到原来那轮了 */
   const filling = fillingHandle !== null && fillingHandle === handle;
   const sentinelRef = useRef<HTMLLIElement | null>(null);
@@ -601,34 +612,9 @@ export default function ProfileView({
 
   const numberText = (value: number): string => formatCount(value, language);
 
-  /** 用户点「补全」：慢慢向下滚，让 X 自己加载更多帖子；再点一次停止。 */
-  async function fillProfile(): Promise<void> {
-    if (!handle) return;
-    if (filling) {
-      await sendToXPage({ type: 'feedsieve:profile-fill-stop' }).catch(() => undefined);
-      return;
-    }
-    setFillingHandle(handle);
-    notify(t.profileFillRunning);
-    const beforeCount = entry ? Object.keys(entry.posts).length : 0;
-    try {
-      const result = (await sendToXPage({
-        type: 'feedsieve:profile-fill',
-        handle,
-      })) as {
-        ok?: boolean;
-        added?: number;
-        stopped?: string;
-        retryAfterMs?: number;
-      } | null;
-      const next = await load(handle);
-      setEntry(next);
-      setNow(Date.now());
-      // 用本地库的前后差值：滚动时看到的别人帖子（引用、转推）不算补全
-      const added = Math.max(
-        0,
-        (next ? Object.keys(next.posts).length : beforeCount) - beforeCount,
-      );
+  /** 补全一轮的收尾提示：本面板发起的和面板重开后对账的共用同一套口径。 */
+  const reportFillOutcome = useCallback(
+    (result: FillReply, added: number): void => {
       if (result?.ok) {
         if (added > 0) notify(t.profileFillDone(added));
         else if (result.stopped === 'stagnant') notify(t.profileFillEnd);
@@ -645,9 +631,91 @@ export default function ProfileView({
       } else {
         notify(t.profileFillFailed);
       }
+    },
+    [notify, t],
+  );
+
+  /**
+   * 补全状态对账：面板关掉再打开、切到别的栏目再回来时，页面上的滚动可能还在跑。
+   * 内容脚本广播开始 / 进度 / 结束，这里按博主认领；广播漏掉时靠定时查询兜底，
+   * 免得面板一直停在「停止」。
+   */
+  useEffect(() => {
+    if (!handle) return;
+    let active = true;
+    const apply = (status: unknown): void => {
+      const next = status as { running?: unknown; handle?: unknown; last?: FillReply } | null;
+      if (!active) return;
+      if (next?.running === true && next.handle === handle) {
+        // 本面板发起的轮次由 fillProfile 自己收尾，这里不重复接管
+        if (fillOwnedRef.current) return;
+        watchedFillRef.current = handle;
+        setFillingHandle(handle);
+        return;
+      }
+      // 已经不在跑了：换过博主、标签页关了、页面重载时都走这里，别让图标一直停在「停止」
+      if (watchedFillRef.current !== handle || fillOwnedRef.current) return;
+      watchedFillRef.current = null;
+      setFillingHandle((current) => (current === handle ? null : current));
+      // 同一博主的收尾广播：按最后一轮结果给提示；状态查不到时只收起图标
+      if (next?.handle !== handle) return;
+      void load(handle).then((entryNext) => {
+        if (!active) return;
+        setEntry(entryNext);
+        setNow(Date.now());
+      });
+      const last = next.last ?? null;
+      reportFillOutcome(last, last?.added ?? 0);
+    };
+    const query = (): void => {
+      void sendToXPage({ type: 'feedsieve:profile-fill-status' })
+        .then(apply)
+        .catch(() => undefined);
+    };
+    query();
+    const timer = window.setInterval(query, FILL_STATUS_POLL_MS);
+    const onMessage = (message: unknown): void => {
+      const msg = message as { type?: string; status?: unknown } | null;
+      if (msg?.type === PROFILE_FILL_UPDATED_MESSAGE) apply(msg.status);
+    };
+    browser.runtime.onMessage.addListener(onMessage);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      browser.runtime.onMessage.removeListener(onMessage);
+    };
+  }, [handle, load, reportFillOutcome, sendToXPage]);
+
+  /** 用户点「补全」：慢慢向下滚，让 X 自己加载更多帖子；再点一次停止。 */
+  async function fillProfile(): Promise<void> {
+    if (!handle) return;
+    if (filling) {
+      await sendToXPage({ type: 'feedsieve:profile-fill-stop' }).catch(() => undefined);
+      return;
+    }
+    fillOwnedRef.current = true;
+    setFillingHandle(handle);
+    notify(t.profileFillRunning);
+    const beforeCount = entry ? Object.keys(entry.posts).length : 0;
+    try {
+      const result = (await sendToXPage({
+        type: 'feedsieve:profile-fill',
+        handle,
+      })) as FillReply;
+      const next = await load(handle);
+      setEntry(next);
+      setNow(Date.now());
+      // 用本地库的前后差值：滚动时看到的别人帖子（引用、转推）不算补全
+      const added = Math.max(
+        0,
+        (next ? Object.keys(next.posts).length : beforeCount) - beforeCount,
+      );
+      reportFillOutcome(result, added);
     } catch {
       notify(t.profileFillFailed);
     } finally {
+      fillOwnedRef.current = false;
+      watchedFillRef.current = null;
       setFillingHandle((current) => (current === handle ? null : current));
     }
   }

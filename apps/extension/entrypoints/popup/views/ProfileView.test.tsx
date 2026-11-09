@@ -26,6 +26,8 @@ let updatedListeners: Array<
 >;
 let clipboard: string | null;
 let sessionStored: Record<string, unknown>;
+/** 面板注册的 runtime 消息监听：补全的状态广播靠它们送达。 */
+let runtimeListeners: Array<(message: unknown) => void>;
 
 function post(id: string, views: number, extra: Record<string, unknown> = {}) {
   return {
@@ -78,6 +80,7 @@ beforeEach(() => {
   entry = typical();
   clipboard = null;
   updatedListeners = [];
+  runtimeListeners = [];
   sessionStored = {};
   tabsCreate = vi.fn().mockResolvedValue({ id: 9 });
   const stored: Record<string, unknown> = {};
@@ -109,7 +112,10 @@ beforeEach(() => {
             ? { ok: true, added: 3, stopped: 'limit' }
             : null,
       ),
-      onMessage: { addListener: vi.fn(), removeListener: vi.fn() },
+      onMessage: {
+        addListener: (fn: (typeof runtimeListeners)[number]) => runtimeListeners.push(fn),
+        removeListener: vi.fn(),
+      },
     },
   });
   Object.defineProperty(navigator, 'clipboard', {
@@ -122,15 +128,18 @@ afterEach(() => {
   for (const root of mounted.splice(0)) act(() => root.unmount());
 });
 
-async function render() {
+async function render(options: { fillStatus?: unknown } = {}) {
   const el = document.createElement('div');
   el.className = 'popup-content';
   document.body.append(el);
   const root = ReactDOM.createRoot(el);
   mounted.push(root);
   const notify = vi.fn();
-  const sendToXPage = vi.fn(
-    async (): Promise<unknown> => ({ ok: true, added: 3, stopped: 'limit' }),
+  const sendToXPage = vi.fn(async (message: { type: string }): Promise<unknown> =>
+    // 面板打开时会先对账一次补全状态；默认没有在跑的轮次
+    message.type === 'feedsieve:profile-fill-status'
+      ? (options.fillStatus ?? null)
+      : { ok: true, added: 3, stopped: 'limit' },
   );
   await act(async () => {
     root.render(
@@ -205,6 +214,43 @@ describe('ProfileView', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
     expect(notify).toHaveBeenCalledWith('已停止补全');
+  });
+
+  it('recovers the stop button when the panel reopens during a running fill', async () => {
+    const { el, sendToXPage } = await render({
+      fillStatus: { running: true, handle: 'alice', added: 6, last: null },
+    });
+    const stop = el.querySelector<HTMLButtonElement>('button[aria-label="停止补全"]');
+    expect(stop).not.toBeNull();
+    await act(async () => {
+      stop!.click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(sendToXPage).toHaveBeenCalledWith({ type: 'feedsieve:profile-fill-stop' });
+  });
+
+  it('reports the outcome of a fill that finished after the panel reopened', async () => {
+    const { el, notify } = await render({
+      fillStatus: { running: true, handle: 'alice', added: 6, last: null },
+    });
+    expect(el.querySelector('button[aria-label="停止补全"]')).not.toBeNull();
+    // 面板开着时这一轮滚到底了：内容脚本广播结束 + 上一轮结果
+    await act(async () => {
+      for (const listener of runtimeListeners) {
+        listener({
+          type: 'feedsieve:profile-fill-updated',
+          status: {
+            running: false,
+            handle: 'alice',
+            added: 6,
+            last: { ok: true, added: 6, stopped: 'stagnant' },
+          },
+        });
+      }
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(el.querySelector('button[aria-label="停止补全"]')).toBeNull();
+    expect(notify).toHaveBeenCalledWith('补全了 6 条');
   });
 
   it('shows the account, the baseline and outliers first', async () => {
@@ -331,12 +377,7 @@ describe('ProfileView', () => {
       b.getAttribute('aria-label'),
     );
     // 没数据时更需要「补全」：滚动加载是这里唯一的自救入口；齿轮始终在
-    expect(labels).toEqual([
-      '补全这个博主',
-      '在 X 搜高赞帖',
-      '用 Google 搜他的帖子',
-      '阅人设置',
-    ]);
+    expect(labels).toEqual(['补全这个博主', '在 X 搜高赞帖', '用 Google 搜他的帖子', '阅人设置']);
     // 没有赤裸裸的大按钮
     expect(el.querySelector('.secondary-button')).toBeNull();
   });

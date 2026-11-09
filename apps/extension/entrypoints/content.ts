@@ -39,7 +39,7 @@ import { createProfileInsight } from '../src/lib/insight/profile-insight';
 import { createShareMenu } from '../src/lib/insight/share-menu';
 import { createCleanUi } from '../src/lib/content/clean-ui';
 import { createPageTicker } from '../src/lib/content/page-ticker';
-import { createProfileFill } from '../src/lib/content/profile-fill';
+import { createProfileFill, PROFILE_FILL_UPDATED_MESSAGE } from '../src/lib/content/profile-fill';
 import { createSearchAssist } from '../src/lib/content/search-assist';
 import { registerMuteMessageHandlers } from '../src/lib/content/mute-messages';
 import {
@@ -261,8 +261,14 @@ export default defineContentScript({
     // 界面净化（过滤 › 过滤设置 › 界面净化）：默认关闭，只改 X 自己的外观
     const cleanUi = createCleanUi();
     cleanUi.start();
-    // 主页补全：用户点工具条图标后才慢慢往下滚，模拟人滑动的节奏
-    const profileFill = createProfileFill();
+    // 主页补全：用户点工具条图标后才慢慢往下滚，模拟人滑动的节奏。
+    // 状态广播给扩展页：面板关掉再打开也能看到进度和「停止」。
+    const profileFill = createProfileFill({
+      getLanguage: () => state.uiLanguage,
+      onStatus: (status) => {
+        void send({ type: PROFILE_FILL_UPDATED_MESSAGE, status }).catch(() => {});
+      },
+    });
     insight.listenHover();
     scanWiring.processOne = scan.scanOne;
     scanWiring.flushBadges = badges.flushPendingBadges;
@@ -431,6 +437,7 @@ export default defineContentScript({
         } else {
           profileInsight.stop();
           searchAssist.stop();
+          profileFill.stop();
         }
       }
       if (previous.write !== next.write) {
