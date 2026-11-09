@@ -165,14 +165,50 @@ export interface AiOgCard {
   level?: string;
   /** 模型锐评；没有就整块不画（不再有手写评语兜底） */
   comment?: string;
+  /** 参与判定的回复条数 */
   replyCount?: number;
+  /** 这批复覆盖了几个不同的人 */
+  sampleAuthors?: number | null;
+  /** 样本跨度（秒）：卡面写成「样本（最近 46 分钟内）」 */
+  sampleSpan?: number | null;
+  /** 回复间隔中位数（秒） */
+  medianGap?: number | null;
+  /** 长度变异系数：决定「长短波动 大 / 中 / 小」 */
+  cv?: number | null;
+  /** 判定时间（Unix 秒），写进右上角日期 */
+  judgedAt?: number | null;
   aiVotes?: number;
   humanVotes?: number;
 }
 
 const AI_TONE = { ai: '#ff4d6d', mixed: '#ffb020', human: '#22d39b' } as const;
 
-/** AI 味结果页 OG 卡：头像 + 名字 + @id，右侧大百分比 + 档位 + 锐评；没有公开结论时给邀请确认的文案 */
+/** 秒 → 中文时长（与扩展端的 formatGap 同口径） */
+function fmtGap(seconds: number): string {
+  if (seconds < 90) return `${Math.round(seconds)} 秒`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes} 分钟`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 48) return `${hours} 小时`;
+  return `${Math.round(hours / 24)} 天`;
+}
+
+/** 长度变异系数 → 长短波动档位 */
+function spreadText(cv: number): string {
+  return cv >= 0.6 ? '大' : cv >= 0.35 ? '中' : '小';
+}
+
+/** 底部数据条的一格：小标签 + 大数值 */
+function statCell(x: number, label: string, value: string): string {
+  return `<text x="${x}" y="500" font-size="22" fill="${MIST}">${esc(label)}</text>
+<text x="${x}" y="540" font-size="30" font-weight="700" fill="${INK}">${esc(value)}</text>`;
+}
+
+/**
+ * AI 味结果页 OG 卡：卡面结构与产品内的检测卡对齐——左上账号、右上判定与分数、
+ * 左下模型锐评、底部一整行判定依据（样本窗口 / 条数与人数 / 回复间隔 / 长短波动 / 社区票数）。
+ * 所有数字都来自库里已有的判定记录，没有的字段就整格不画。
+ */
 export function aiCardOgSvg(card: AiOgCard): string {
   const tone =
     card.state === 'human'
@@ -185,67 +221,108 @@ export function aiCardOgSvg(card: AiOgCard): string {
   const name = card.displayName?.trim() || `@${card.handle}`;
   const initial = esc([...name.replace(/^@/, '')][0]?.toUpperCase() ?? '?');
   const avatar = card.avatar
-    ? `<clipPath id="aiav"><circle cx="190" cy="250" r="110"/></clipPath>
-<image x="80" y="140" width="220" height="220" clip-path="url(#aiav)" preserveAspectRatio="xMidYMid slice" href="${card.avatar}"/>`
-    : `<circle cx="190" cy="250" r="110" fill="#1f2430"/>
-<text x="190" y="285" font-size="96" font-weight="700" fill="${INK}" text-anchor="middle">${initial}</text>`;
-  const ring = `<circle cx="190" cy="250" r="118" fill="none" stroke="${tone}" stroke-width="8"/>`;
+    ? `<clipPath id="aiav"><circle cx="126" cy="200" r="54"/></clipPath>
+<image x="72" y="146" width="108" height="108" clip-path="url(#aiav)" preserveAspectRatio="xMidYMid slice" href="${card.avatar}"/>`
+    : `<circle cx="126" cy="200" r="54" fill="#1f2430"/>
+<text x="126" y="218" font-size="48" font-weight="700" fill="${INK}" text-anchor="middle">${initial}</text>`;
+  const ring = `<circle cx="126" cy="200" r="60" fill="none" stroke="${tone}" stroke-width="5"/>`;
   // 没有昵称时名字就是 @id，不重复写第二行
-  const nameBlock = `<text x="80" y="430" font-size="44" font-weight="700" fill="${INK}">${esc(truncate(name, 440, 44))}</text>${
+  const nameBlock = `<text x="204" y="196" font-size="40" font-weight="700" fill="${INK}">${esc(truncate(name, 470, 40))}</text>${
     card.displayName?.trim()
-      ? `\n<text x="80" y="478" font-size="30" fill="${MIST}">@${esc(card.handle)}</text>`
+      ? `\n<text x="204" y="236" font-size="24" fill="${MIST}">@${esc(card.handle)}</text>`
       : ''
   }`;
-  const right =
-    card.state === 'public' && card.percent !== undefined
-      ? `<text x="470" y="200" font-size="30" font-weight="700" fill="${MIST}">AI 味</text>
-<text x="462" y="370" font-size="190" font-weight="700" fill="${tone}">${card.percent}<tspan font-size="80">%</tspan></text>
-<rect x="470" y="404" width="${Math.min(640, textW(card.level ?? '', 38) + 56)}" height="64" rx="32" fill="${tone}"/>
-<text x="498" y="448" font-size="38" font-weight="700" fill="#0a0a0a">${esc(card.level ?? '')}</text>
-${
-  card.comment
-    ? wrapLines(`「${card.comment}」`, 650, 26, 3)
+
+  // 右上：判定结论（分数 + 档位，或社区投票的结论）
+  const bigText = (text: string, size: number) =>
+    `<text x="694" y="330" font-size="${size}" font-weight="700" fill="${tone}">${esc(text)}</text>`;
+  let verdictBlock: string;
+  if (card.state === 'public' && card.percent !== undefined) {
+    verdictBlock = `<text x="700" y="176" font-size="24" font-weight="700" fill="${MIST}">AI 味</text>
+${bigText(String(card.percent), 150).replace('</text>', `<tspan font-size="62">%</tspan></text>`)}
+<rect x="700" y="352" width="${Math.min(400, textW(card.level ?? '', 30) + 48)}" height="58" rx="29" fill="${tone}"/>
+<text x="724" y="392" font-size="30" font-weight="700" fill="#0a0a0a">${esc(card.level ?? '')}</text>
+<rect x="700" y="428" width="420" height="8" rx="4" fill="url(#aibar)"/>
+<circle cx="${700 + Math.round((420 * (card.percent ?? 0)) / 100)}" cy="432" r="11" fill="#f7f7f5"/>`;
+  } else if (card.state === 'human') {
+    verdictBlock = `<text x="700" y="176" font-size="24" font-weight="700" fill="${MIST}">社区结论</text>
+${bigText('真人', 118)}`;
+  } else if (card.state === 'contested') {
+    verdictBlock = `<text x="700" y="176" font-size="24" font-weight="700" fill="${MIST}">社区投票</text>
+${bigText('争议中', 96)}`;
+  } else if (card.state === 'public') {
+    verdictBlock = `<text x="700" y="176" font-size="24" font-weight="700" fill="${MIST}">社区结论</text>
+${bigText('AI', 150)}`;
+  } else if (card.state === 'pending') {
+    verdictBlock = `<text x="700" y="176" font-size="24" font-weight="700" fill="${MIST}">社区结论</text>
+${bigText('待复核', 96)}`;
+  } else {
+    verdictBlock = `<text x="700" y="176" font-size="24" font-weight="700" fill="${MIST}">AI 味检测</text>
+${bigText('还没人测', 64)}`;
+  }
+
+  // 左下：模型锐评（没有就换成一句状态说明，不编评语）
+  const hint =
+    card.state === 'human'
+      ? '社区投票认为这是真人，不是 AI 号'
+      : card.state === 'contested'
+        ? '两边票数接近，继续投票决定'
+        : card.state === 'pending'
+          ? '再有一位用户测到同样的结果就公开'
+          : card.state === 'none'
+            ? '装上福滤娃，测测 TA 的回复有多少 AI 味'
+            : '';
+  const quote = card.comment
+    ? wrapLines(`「${card.comment}」`, 580, 28, 3)
         .map(
-          (line, index) =>
-            `<text x="470" y="${508 + index * 30}" font-size="26" fill="${SUBTLE}">${esc(line)}</text>`,
+          (line, index, lines) =>
+            `${
+              index === 0
+                ? `<rect x="${PAD}" y="306" width="4" height="${lines.length * 40}" rx="2" fill="${tone}"/>\n`
+                : ''
+            }<text x="${PAD + 18}" y="${330 + index * 40}" font-size="28" fill="${SUBTLE}">${esc(line)}</text>`,
         )
         .join('\n')
-    : ''
-}`
-      : card.state === 'human'
-        ? `<text x="470" y="200" font-size="30" font-weight="700" fill="${MIST}">社区结论</text>
-<text x="462" y="370" font-size="150" font-weight="700" fill="${tone}">真人</text>
-<text x="470" y="448" font-size="30" fill="${MIST}">AI ${card.aiVotes ?? 0} 票 · 真人 ${card.humanVotes ?? 0} 票</text>
-<text x="470" y="526" font-size="30" fill="${SUBTLE}">社区投票认为这是真人，不是 AI 号</text>`
-        : card.state === 'contested'
-          ? `<text x="470" y="200" font-size="30" font-weight="700" fill="${MIST}">社区投票</text>
-<text x="462" y="370" font-size="110" font-weight="700" fill="${tone}">争议中</text>
-<text x="470" y="448" font-size="30" fill="${MIST}">AI ${card.aiVotes ?? 0} 票 · 真人 ${card.humanVotes ?? 0} 票</text>
-<text x="470" y="526" font-size="30" fill="${SUBTLE}">两边票数接近，继续投票决定</text>`
-          : card.state === 'public'
-            ? `<text x="470" y="200" font-size="30" font-weight="700" fill="${MIST}">社区结论</text>
-<text x="462" y="370" font-size="150" font-weight="700" fill="${tone}">AI</text>
-<text x="470" y="448" font-size="30" fill="${MIST}">AI ${card.aiVotes ?? 0} 票 · 真人 ${card.humanVotes ?? 0} 票</text>
-<text x="470" y="526" font-size="30" fill="${SUBTLE}">还没有可公开的判定分数</text>`
-            : `<text x="470" y="250" font-size="54" font-weight="700" fill="${INK}">${
-                card.state === 'pending' ? '已有人测过 · 待确认' : '还没人测过'
-              }</text>
-<text x="470" y="318" font-size="30" fill="${MIST}">${
-                card.state === 'pending'
-                  ? '再有一位用户测到同样的结果就公开'
-                  : '装上福滤娃，测测 TA 的回复有多少 AI 味'
-              }</text>`;
+    : hint
+      ? `<text x="${PAD}" y="356" font-size="28" fill="${MIST}">${esc(truncate(hint, 580, 28))}</text>`
+      : '';
+
+  // 底部数据条：有多少画多少
+  const cells: string[] = [];
+  const sampleLabel = card.sampleSpan ? `样本（最近 ${fmtGap(card.sampleSpan)}内）` : '样本';
+  const sampleValue = card.replyCount
+    ? `${card.replyCount} 条${card.sampleAuthors ? ` · ${card.sampleAuthors} 人` : ''}`
+    : '';
+  if (sampleValue) cells.push(statCell(PAD, sampleLabel, sampleValue));
+  if (card.medianGap != null)
+    cells.push(statCell(335, '回复间隔', `中位 ${fmtGap(card.medianGap)}`));
+  if (card.cv != null) cells.push(statCell(590, '长短波动', spreadText(card.cv)));
+  if ((card.aiVotes ?? 0) + (card.humanVotes ?? 0) > 0) {
+    cells.push(statCell(845, '社区投票', `AI ${card.aiVotes ?? 0} · 真人 ${card.humanVotes ?? 0}`));
+  }
+  const stats = cells.length
+    ? `<rect x="${PAD}" y="452" width="${CONTENT_W}" height="1" fill="${LINE}"/>
+${cells.join('\n')}`
+    : '';
+
+  // 右上角：判定时间（UTC 日期，和扩展分享卡同口径）
+  const date = card.judgedAt ? new Date(card.judgedAt * 1000).toISOString().slice(0, 10) : '';
+
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_W}" height="${OG_H}" viewBox="0 0 ${OG_W} ${OG_H}" role="img" aria-label="${esc(name)} 的 AI 味 · 福滤娃 FeedSieve">
 <g font-family="${FONT}">
 <rect width="${OG_W}" height="${OG_H}" fill="#0a0a0a"/>
+<linearGradient id="aibar" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#22d39b"/><stop offset="0.5" stop-color="#ffb020"/><stop offset="1" stop-color="#ff4d6d"/></linearGradient>
 <radialGradient id="aiglow"><stop offset="0" stop-color="${tone}" stop-opacity="0.22"/><stop offset="1" stop-color="${tone}" stop-opacity="0"/></radialGradient>
 <circle cx="900" cy="120" r="560" fill="url(#aiglow)"/>
 <rect x="0.75" y="0.75" width="${OG_W - 1.5}" height="${OG_H - 1.5}" rx="24" fill="none" stroke="${LINE}" stroke-width="1.5"/>
-<text x="80" y="92" font-size="30" font-weight="700" fill="${tone}">AI 味检测报告</text>
+<text x="${PAD}" y="92" font-size="30" font-weight="700" fill="${tone}">AI 味检测报告</text>
+${date ? `<text x="${OG_W - PAD}" y="92" font-size="24" fill="${MIST}" text-anchor="end">${date}</text>` : ''}
 ${avatar}
 ${ring}
 ${nameBlock}
-${right}
+${verdictBlock}
+${quote}
+${stats}
 ${footer(card.replyCount ? `根据最近 ${card.replyCount} 条公开回复 · 模型判定与锐评可能有误差 · 仅供娱乐参考` : '模型根据公开回复判定与锐评，可能有误差，仅供娱乐参考')}
 </g>
 </svg>`;

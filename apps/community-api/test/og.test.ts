@@ -31,9 +31,49 @@ describe('OG 锐评折行', () => {
       comment:
         '每条都是先肯定再补一句泛化建议，跨十二个人用同一副骨架，工整得像模板工厂流水线出来的。',
     });
-    expect(svg).toContain('font-size="26"');
+    expect(svg).toContain('font-size="28"');
     expect(svg).not.toContain('undefined');
-    // 两行锐评 = 两条 26px 文本
-    expect((svg.match(/font-size="26"/g) ?? []).length).toBeGreaterThanOrEqual(1);
+    expect((svg.match(/font-size="28"/g) ?? []).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('判定依据用库里已有的字段：样本窗口 / 条数人数 / 间隔 / 长短波动 / 票数', () => {
+    const svg = aiCardOgSvg({
+      handle: 'demo',
+      displayName: 'Demo',
+      avatar: null,
+      state: 'public',
+      percent: 95,
+      tone: 'ai',
+      level: 'AI 感爆棚',
+      replyCount: 10,
+      sampleAuthors: 17,
+      sampleSpan: 2760,
+      medianGap: 120,
+      cv: 0.72,
+      judgedAt: 1794194980,
+      aiVotes: 4,
+      humanVotes: 1,
+    });
+    expect(svg).toContain('样本（最近 46 分钟内）');
+    expect(svg).toContain('10 条 · 17 人');
+    expect(svg).toContain('中位 2 分钟');
+    expect(svg).toContain('长短波动');
+    expect(svg).toContain('社区投票');
+    expect(svg).toContain('AI 4 · 真人 1');
+    expect(svg).toContain('2026-11-09');
+    // 没有锐评就不画「」引语，也不出现占位空白
+    expect(svg).not.toContain('「');
+  });
+
+  it('没判定数据的账号不画数据条', () => {
+    const svg = aiCardOgSvg({
+      handle: 'nobody',
+      displayName: null,
+      avatar: null,
+      state: 'none',
+    });
+    expect(svg).toContain('还没人测');
+    expect(svg).not.toContain('社区投票');
+    expect(svg).not.toContain('undefined');
   });
 });

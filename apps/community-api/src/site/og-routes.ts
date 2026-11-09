@@ -37,6 +37,7 @@ export async function handleOg(
     if (aiCard) {
       const data = await getAiPublic(env, aiCard[1]!);
       if (!data) return null;
+      const rhythm = data.lookup.rhythm;
       const svg = aiCardOgSvg({
         handle: data.handle,
         displayName: data.displayName,
@@ -44,13 +45,19 @@ export async function handleOg(
         state: data.state,
         aiVotes: data.lookup.votes.ai_count,
         humanVotes: data.lookup.votes.human_count,
+        // 判定依据：库里已有的字段全画上去（没有的整格不画）
+        replyCount: data.lookup.reply_count,
+        sampleAuthors: rhythm?.authors ?? null,
+        sampleSpan: rhythm?.span ?? null,
+        medianGap: rhythm?.median_gap ?? null,
+        cv: rhythm?.cv ?? null,
+        judgedAt: data.lookup.judged_at,
         ...(data.flavor
           ? {
               percent: data.flavor.percent,
               tone: data.flavor.tone,
               level: data.flavor.level,
               comment: data.lookup.comment ?? undefined,
-              replyCount: data.lookup.reply_count,
             }
           : {}),
       });
