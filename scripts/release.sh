@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 # FeedSieve 发版：版本号 → CHANGELOG 校验 → 商店级构建审计 → 提交打标 → GitHub Release。
 # Chrome Web Store 的上传与送审不在本脚本内（需要浏览器登录态），
-# 维护者按全局 skill `feedsieve-release` 完成。
+# 维护者按项目级 skill `.agents/skills/feedsieve-release` 完成。
 #
 # 用法：
 #   scripts/release.sh 0.12.3
