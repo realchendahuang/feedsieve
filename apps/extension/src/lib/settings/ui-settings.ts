@@ -18,6 +18,8 @@ export interface UiSettings {
   hideWhoToFollow: boolean;
   /** 隐藏时间线里的付费推广 */
   hidePromoted: boolean;
+  /** 隐藏帖子右上角给作者本人看的「推广」按钮 */
+  hidePromoteButton: boolean;
   /** 隐藏左侧导航的 Grok */
   hideGrok: boolean;
   /** 评论区里只为回复位买蓝 V、没有实质内容的回复降低不透明度 */
@@ -32,6 +34,7 @@ export const DEFAULT_UI_SETTINGS: UiSettings = {
   hideTrends: true,
   hideWhoToFollow: true,
   hidePromoted: true,
+  hidePromoteButton: true,
   hideGrok: true,
   dimPremiumReplies: true,
   systemFont: true,
@@ -45,6 +48,7 @@ export function normalizeUiSettings(raw: unknown): UiSettings {
     hideTrends: value.hideTrends !== false,
     hideWhoToFollow: value.hideWhoToFollow !== false,
     hidePromoted: value.hidePromoted !== false,
+    hidePromoteButton: value.hidePromoteButton !== false,
     hideGrok: value.hideGrok !== false,
     dimPremiumReplies: value.dimPremiumReplies !== false,
     systemFont: value.systemFont !== false,

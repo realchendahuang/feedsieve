@@ -5,6 +5,7 @@ import {
   createCleanUi,
   isFollowingTab,
   isForYouTab,
+  isPromoteButton,
   isPromotedArticle,
   isThinPremiumReply,
   isWhoToFollowHeading,
@@ -112,6 +113,14 @@ function tweet(options: {
     );
   }
   return el;
+}
+
+/** X 给作者本人看的「推广」按钮：没有 data-testid / aria-label，只有 button 里的一行文案。 */
+function promoteButton(label = '推广'): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.setAttribute('role', 'button');
+  button.innerHTML = `<div><span><span>${label}</span></span></div>`;
+  return button;
 }
 
 describe('clean-ui 选择器', () => {
@@ -240,6 +249,66 @@ describe('clean-ui 选择器', () => {
     withMenu.insertAdjacentHTML('beforeend', '<div role="menu"><div><span>推广</span></div></div>');
     expect(isPromotedArticle(withMenu)).toBe(false);
     expect(isPromotedArticle(document.createElement('article'))).toBe(false);
+  });
+
+  it('认出帖子右上角的「推广」按钮，正文、菜单里的同名文字不算', () => {
+    expect(isPromoteButton(promoteButton('推广'))).toBe(true);
+    expect(isPromoteButton(promoteButton('Promote'))).toBe(true);
+    // 正文里的「推广」是用户写的内容
+    const article = tweet({ text: '推广' });
+    expect(isPromoteButton(article.querySelector('[data-testid="tweetText"]')!)).toBe(false);
+    // 下拉菜单里的同名按钮是 X 的操作项，不是帖子上的推广入口
+    const menu = document.createElement('div');
+    menu.setAttribute('role', 'menu');
+    menu.append(promoteButton('推广'));
+    expect(isPromoteButton(menu.querySelector('button')!)).toBe(false);
+    // 不是按钮的同名文字（比如推广帖的标签）
+    const label = document.createElement('span');
+    label.textContent = '推广';
+    expect(isPromoteButton(label)).toBe(false);
+  });
+
+  it('隐藏「推广」按钮只标记按钮本身，菜单里的同名项不动', async () => {
+    vi.useFakeTimers();
+    stubBrowser();
+    window.history.pushState({}, '', '/someone/status/2119635077470777768');
+    const article = tweet({ text: '一条正常的帖子', statusId: '2119635077470777768' });
+    const promote = promoteButton();
+    article.querySelector('[data-testid="User-Name"]')!.after(promote);
+    article.insertAdjacentHTML('beforeend', '<div role="menu"></div>');
+    article.querySelector('[role="menu"]')!.append(promoteButton());
+    document.body.append(article);
+    const clean = createCleanUi();
+    clean.start();
+    try {
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(promote.getAttribute('data-fs-clean')).toBe('promote-btn');
+      const menuButton = article.querySelector('[role="menu"] button')!;
+      expect(menuButton.hasAttribute('data-fs-clean')).toBe(false);
+      expect(document.documentElement.hasAttribute('data-fs-clean-promote-btn')).toBe(true);
+      const css = document.getElementById('feedsieve-clean-ui-styles')?.textContent ?? '';
+      expect(css).toContain('[data-fs-clean="promote-btn"]');
+    } finally {
+      clean.stop();
+    }
+  });
+
+  it('关掉隐藏「推广」按钮后不再标记，页面属性也不留', async () => {
+    vi.useFakeTimers();
+    stubBrowser({ hidePromoteButton: false });
+    const article = tweet({ text: '一条正常的帖子' });
+    const promote = promoteButton();
+    article.querySelector('[data-testid="User-Name"]')!.after(promote);
+    document.body.append(article);
+    const clean = createCleanUi();
+    clean.start();
+    try {
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(promote.hasAttribute('data-fs-clean')).toBe(false);
+      expect(document.documentElement.hasAttribute('data-fs-clean-promote-btn')).toBe(false);
+    } finally {
+      clean.stop();
+    }
   });
 
   it('隐藏付费推广只藏整条推广帖，不碰视频/GIF 的容器标记', async () => {

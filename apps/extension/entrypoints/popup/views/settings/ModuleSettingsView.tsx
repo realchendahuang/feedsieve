@@ -464,6 +464,14 @@ export default function ModuleSettingsView({
                 onChange={(enabled) => void updateUi('hidePromoted', enabled)}
               />
             </Row>
+            <Row label={t.cleanPromoteButton} hint={t.cleanPromoteButtonHint}>
+              <Toggle
+                checked={ui?.hidePromoteButton ?? true}
+                disabled={!ui?.cleanUi}
+                label={t.cleanPromoteButton}
+                onChange={(enabled) => void updateUi('hidePromoteButton', enabled)}
+              />
+            </Row>
             <Row label={t.cleanGrok} hint={t.cleanGrokHint}>
               <Toggle
                 checked={ui?.hideGrok ?? true}

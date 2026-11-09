@@ -19,6 +19,8 @@ const FOLLOWING = ['正在关注', 'Following'];
 const WHO_TO_FOLLOW = ['推荐关注', 'Who to follow'];
 /** X 给付费推广帖打的标签（贴在作者名那一行，取代发布时间） */
 const PROMOTED_LABELS = new Set(['推广', 'Promoted']);
+/** 帖子右上角「推广」按钮的文案：X 给作者本人看的 Promote 入口（2026-11-09 真机确认） */
+const PROMOTE_BUTTON_LABELS = new Set(['推广', 'Promote']);
 /** 正文少于这么多字的蓝标回复，按「只为回复位买蓝 V」处理 */
 export const PREMIUM_REPLY_MAX_CHARS = 20;
 const SCAN_DEBOUNCE_MS = 400;
@@ -37,6 +39,9 @@ const CLEAN_UI_CSS = `
   /* 推广帖整条隐藏：标记由 isPromotedArticle() 认「推广」标签后打上。
      别改成隐藏 X 自己的容器标记，那些标记常被普通内容复用（见文件头注释）。 */
   html[data-fs-clean-promoted] article[data-fs-clean="promoted"] { display: none !important; }
+  /* 帖子右上角的「推广」按钮：X 只给作者本人看，认文案打标记。
+     这个按钮没有 data-testid / aria-label，不能按 X 的 class 找。 */
+  html[data-fs-clean-promote-btn] [data-fs-clean="promote-btn"] { display: none !important; }
   html[data-fs-clean-grok] [data-fs-clean="grok"] { display: none !important; }
   html[data-fs-clean-foryou] [data-fs-clean="foryou"] { display: none !important; }
   html[data-fs-clean-trends] [data-fs-clean="trends"] { display: none !important; }
@@ -166,6 +171,26 @@ export function isPromotedArticle(article: Element): boolean {
   return false;
 }
 
+/**
+ * 帖子右上角的「推广」按钮（X 给作者本人看的 Promote 入口，点了进广告投放）。
+ *
+ * 这个按钮没有 data-testid / aria-label，只能认文案：中文「推广」、英文「Promote」。
+ * 只认按钮本身；正文、引用卡片、下拉菜单里出现同样的字样不算——那要么是用户
+ * 写的内容，要么是 X 的菜单项。
+ */
+export function isPromoteButton(el: Element): boolean {
+  if (!el.matches('button, [role="button"]')) return false;
+  if (!PROMOTE_BUTTON_LABELS.has(textOf(el))) return false;
+  if (
+    el.closest(
+      '[data-testid="tweetText"], [data-testid="card.wrapper"], [role="menu"], [data-testid="Dropdown"]',
+    )
+  ) {
+    return false;
+  }
+  return true;
+}
+
 export function createCleanUi() {
   let settings: UiSettings | null = null;
   let observer: MutationObserver | null = null;
@@ -212,6 +237,7 @@ export function createCleanUi() {
     const on = next.cleanUi;
     root.toggleAttribute('data-fs-clean-font', on && next.systemFont);
     root.toggleAttribute('data-fs-clean-promoted', on && next.hidePromoted);
+    root.toggleAttribute('data-fs-clean-promote-btn', on && next.hidePromoteButton);
     root.toggleAttribute('data-fs-clean-grok', on && next.hideGrok);
     root.toggleAttribute('data-fs-clean-foryou', on && next.hideForYou);
     root.toggleAttribute('data-fs-clean-trends', on && next.hideTrends);
@@ -293,6 +319,16 @@ export function createCleanUi() {
       }
     }
 
+    if (settings.hidePromoteButton) {
+      // 按钮挂在帖子头部右侧，和 Grok、浏览速度同一行；只藏按钮本身。
+      // 不限定详情页：X 以后在时间线里给作者显示时也一起处理。
+      for (const article of document.querySelectorAll(tweetSelectors.article)) {
+        for (const el of article.querySelectorAll('button, [role="button"]')) {
+          if (isPromoteButton(el)) mark(el, 'promote-btn');
+        }
+      }
+    }
+
     if (settings.dimPremiumReplies) {
       const focalId = focalStatusId();
       // 只在详情页淡化回复：主帖是用户自己点进来的，不能压暗
@@ -356,6 +392,7 @@ export function createCleanUi() {
     for (const flag of [
       'data-fs-clean-font',
       'data-fs-clean-promoted',
+      'data-fs-clean-promote-btn',
       'data-fs-clean-grok',
       'data-fs-clean-foryou',
       'data-fs-clean-trends',
