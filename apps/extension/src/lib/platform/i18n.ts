@@ -368,7 +368,7 @@ export const UI_COPY = {
       '评论区里的 AI 标签、折叠条，以及回复旁的检测按钮。关闭后 X 页面上不再出现；弹窗「伪人」页仍可手动检测。',
     moduleClean: '界面净化',
     moduleCleanHint:
-      '隐藏「为你推荐」、趋势、推荐关注、付费推广、帖子上的「推广」按钮和 Grok，并把字体换成中文更清楚的系统字体。默认关闭，打开后下面的净化项才生效；只改外观，不动内容。',
+      '隐藏「为你推荐」、趋势、推荐关注、付费推广、帖子上的「推广」按钮和 Grok，并把字体换成中文更清楚的系统字体。总开关和下面的细项默认全部关闭，打开总开关后还要按需勾选；只改外观，不动内容。',
     cleanForYou: '隐藏「为你推荐」',
     cleanForYouHint: '隐藏首页的「为你推荐」标签页，并停在「正在关注」。',
     cleanTrends: '隐藏趋势',
@@ -813,7 +813,7 @@ export const UI_COPY = {
       'AI pills, fold bars, and the check button next to replies on X. Turning this off removes them from the page; the AI tab in the popup still runs manual checks.',
     moduleClean: 'Cleaner UI',
     moduleCleanHint:
-      'Hides For You, trends, who to follow, promoted posts, the Promote button on your own posts and Grok, and switches to a system font that renders Chinese properly. Off by default; the options below only take effect when this is on. Appearance only.',
+      'Hides For You, trends, who to follow, promoted posts, the Promote button on your own posts and Grok, and switches to a system font that renders Chinese properly. Everything is off by default; turn this on, then pick the items you want below. Appearance only.',
     cleanForYou: 'Hide “For You”',
     cleanForYouHint: 'Hides the For You tab on home and stays on Following.',
     cleanTrends: 'Hide trends',

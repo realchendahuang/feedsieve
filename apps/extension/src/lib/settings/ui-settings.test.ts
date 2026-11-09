@@ -6,6 +6,8 @@ import {
   normalizeUiSettings,
   setUiSettings,
   subscribeUiSettings,
+  UI_SETTINGS_KEY,
+  UI_SETTINGS_VERSION,
 } from './ui-settings';
 
 let stored: Record<string, unknown>;
@@ -37,13 +39,15 @@ beforeEach(() => {
 });
 
 describe('ui-settings', () => {
-  it('总开关默认关，细项默认开；只有明确写 false 才关', () => {
+  it('总开关和细项都默认关；只有明确写 true 才开', () => {
     expect(normalizeUiSettings(undefined)).toEqual(DEFAULT_UI_SETTINGS);
     expect(normalizeUiSettings({ cleanUi: 'yes' })).toEqual(DEFAULT_UI_SETTINGS);
-    expect(normalizeUiSettings({ cleanUi: true, hideTrends: false })).toEqual({
+    // 老版本存的脏值 / 字符串不会把细项打开
+    expect(normalizeUiSettings({ hideTrends: 'true', hideGrok: 1 })).toEqual(DEFAULT_UI_SETTINGS);
+    expect(normalizeUiSettings({ cleanUi: true, hideTrends: true })).toEqual({
       ...DEFAULT_UI_SETTINGS,
       cleanUi: true,
-      hideTrends: false,
+      hideTrends: true,
     });
   });
 
@@ -54,6 +58,35 @@ describe('ui-settings', () => {
     await setUiSettings({ systemFont: false });
     expect((await getUiSettings()).systemFont).toBe(false);
     expect((await getUiSettings()).cleanUi).toBe(true);
+  });
+
+  it('旧版存储没有版本号：细项一律按新默认关闭，只保留总开关', async () => {
+    stored[UI_SETTINGS_KEY] = {
+      cleanUi: true,
+      hideTrends: true,
+      hidePromoted: true,
+      hideGrok: true,
+      systemFont: true,
+    };
+    expect(await getUiSettings()).toEqual({ ...DEFAULT_UI_SETTINGS, cleanUi: true });
+  });
+
+  it('旧数据上保存新选择：保留本次勾选，其余按新默认关闭', async () => {
+    stored[UI_SETTINGS_KEY] = { cleanUi: true, hideTrends: true, hidePromoted: true };
+    const next = await setUiSettings({ hidePromoteButton: true });
+    expect(next).toEqual({ ...DEFAULT_UI_SETTINGS, cleanUi: true, hidePromoteButton: true });
+    expect((await getUiSettings()).hidePromoteButton).toBe(true);
+  });
+
+  it('保存时写入存储版本号，新版数据读回保留勾选', async () => {
+    await setUiSettings({ cleanUi: true, hideGrok: true });
+    expect(stored[UI_SETTINGS_KEY]).toMatchObject({
+      v: UI_SETTINGS_VERSION,
+      cleanUi: true,
+      hideGrok: true,
+      hideTrends: false,
+    });
+    expect((await getUiSettings()).hideGrok).toBe(true);
   });
 
   it('订阅只认本键，取消后不再回调', () => {

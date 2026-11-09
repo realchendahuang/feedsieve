@@ -434,7 +434,7 @@ export default function ModuleSettingsView({
           <section className="group">
             <Row label={t.cleanForYou} hint={t.cleanForYouHint}>
               <Toggle
-                checked={ui?.hideForYou ?? true}
+                checked={ui?.hideForYou ?? false}
                 disabled={!ui?.cleanUi}
                 label={t.cleanForYou}
                 onChange={(enabled) => void updateUi('hideForYou', enabled)}
@@ -442,7 +442,7 @@ export default function ModuleSettingsView({
             </Row>
             <Row label={t.cleanTrends} hint={t.cleanTrendsHint}>
               <Toggle
-                checked={ui?.hideTrends ?? true}
+                checked={ui?.hideTrends ?? false}
                 disabled={!ui?.cleanUi}
                 label={t.cleanTrends}
                 onChange={(enabled) => void updateUi('hideTrends', enabled)}
@@ -450,7 +450,7 @@ export default function ModuleSettingsView({
             </Row>
             <Row label={t.cleanWhoToFollow} hint={t.cleanWhoToFollowHint}>
               <Toggle
-                checked={ui?.hideWhoToFollow ?? true}
+                checked={ui?.hideWhoToFollow ?? false}
                 disabled={!ui?.cleanUi}
                 label={t.cleanWhoToFollow}
                 onChange={(enabled) => void updateUi('hideWhoToFollow', enabled)}
@@ -458,7 +458,7 @@ export default function ModuleSettingsView({
             </Row>
             <Row label={t.cleanPromoted} hint={t.cleanPromotedHint}>
               <Toggle
-                checked={ui?.hidePromoted ?? true}
+                checked={ui?.hidePromoted ?? false}
                 disabled={!ui?.cleanUi}
                 label={t.cleanPromoted}
                 onChange={(enabled) => void updateUi('hidePromoted', enabled)}
@@ -466,7 +466,7 @@ export default function ModuleSettingsView({
             </Row>
             <Row label={t.cleanPromoteButton} hint={t.cleanPromoteButtonHint}>
               <Toggle
-                checked={ui?.hidePromoteButton ?? true}
+                checked={ui?.hidePromoteButton ?? false}
                 disabled={!ui?.cleanUi}
                 label={t.cleanPromoteButton}
                 onChange={(enabled) => void updateUi('hidePromoteButton', enabled)}
@@ -474,7 +474,7 @@ export default function ModuleSettingsView({
             </Row>
             <Row label={t.cleanGrok} hint={t.cleanGrokHint}>
               <Toggle
-                checked={ui?.hideGrok ?? true}
+                checked={ui?.hideGrok ?? false}
                 disabled={!ui?.cleanUi}
                 label={t.cleanGrok}
                 onChange={(enabled) => void updateUi('hideGrok', enabled)}
@@ -482,7 +482,7 @@ export default function ModuleSettingsView({
             </Row>
             <Row label={t.cleanPremiumReplies} hint={t.cleanPremiumRepliesHint}>
               <Toggle
-                checked={ui?.dimPremiumReplies ?? true}
+                checked={ui?.dimPremiumReplies ?? false}
                 disabled={!ui?.cleanUi}
                 label={t.cleanPremiumReplies}
                 onChange={(enabled) => void updateUi('dimPremiumReplies', enabled)}
@@ -490,7 +490,7 @@ export default function ModuleSettingsView({
             </Row>
             <Row label={t.cleanFont} hint={t.cleanFontHint}>
               <Toggle
-                checked={ui?.systemFont ?? true}
+                checked={ui?.systemFont ?? false}
                 disabled={!ui?.cleanUi}
                 label={t.cleanFont}
                 onChange={(enabled) => void updateUi('systemFont', enabled)}

@@ -21,7 +21,24 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/** 模拟设置已读完：界面净化打开，其余用默认值（含隐藏付费推广），并返回 storage 变更监听器。 */
+/**
+ * 界面净化全部打开：扫描类用例的基线。
+ * 线上默认值是全部关闭（用户不勾选就不该有东西消失），这里显式打开来测各净化逻辑。
+ */
+const UI_ALL_ON: UiSettings = {
+  ...DEFAULT_UI_SETTINGS,
+  cleanUi: true,
+  hideForYou: true,
+  hideTrends: true,
+  hideWhoToFollow: true,
+  hidePromoted: true,
+  hidePromoteButton: true,
+  hideGrok: true,
+  dimPremiumReplies: true,
+  systemFont: true,
+};
+
+/** 模拟设置已读完：界面净化全部打开（真实用户逐项勾选后的状态），并返回 storage 变更监听器。 */
 function stubBrowser(
   overrides: Partial<UiSettings> = {},
 ): Array<(changes: Record<string, unknown>, area: string) => void> {
@@ -30,7 +47,7 @@ function stubBrowser(
     storage: {
       local: {
         get: vi.fn(async () => ({
-          uiSettingsV1: { ...DEFAULT_UI_SETTINGS, cleanUi: true, ...overrides },
+          uiSettingsV1: { ...UI_ALL_ON, v: 2, ...overrides },
         })),
         set: vi.fn(async () => undefined),
       },
@@ -49,7 +66,7 @@ function pushSettings(
   settings: Partial<UiSettings>,
 ): void {
   for (const listener of listeners) {
-    listener({ uiSettingsV1: { newValue: { ...DEFAULT_UI_SETTINGS, ...settings } } }, 'local');
+    listener({ uiSettingsV1: { newValue: { ...UI_ALL_ON, v: 2, ...settings } } }, 'local');
   }
 }
 
@@ -555,7 +572,7 @@ describe('clean-ui 选择器', () => {
       storage: {
         local: {
           get: vi.fn(async () => ({
-            uiSettingsV1: { ...DEFAULT_UI_SETTINGS, cleanUi: true },
+            uiSettingsV1: { ...UI_ALL_ON, v: 2 },
           })),
           set: vi.fn(async () => undefined),
         },
@@ -580,7 +597,7 @@ describe('clean-ui 选择器', () => {
 
     // stop 之后才送达的 storage 变化（比如读设置有延迟）不能再把页面改回去
     for (const listener of listeners) {
-      listener({ uiSettingsV1: { newValue: { ...DEFAULT_UI_SETTINGS, cleanUi: true } } }, 'local');
+      listener({ uiSettingsV1: { newValue: { ...UI_ALL_ON, v: 2 } } }, 'local');
     }
     await vi.advanceTimersByTimeAsync(2_000);
     expect(document.getElementById('feedsieve-clean-ui-styles')).toBeNull();
