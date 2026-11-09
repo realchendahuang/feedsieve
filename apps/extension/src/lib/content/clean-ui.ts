@@ -269,6 +269,20 @@ export function createCleanUi() {
       for (const link of document.querySelectorAll('nav a[href="/i/grok"]')) {
         mark(link, 'grok');
       }
+      // 帖子头部的 Grok 操作按钮：X 只挂 aria-label（中文「Grok 操作」），没有
+      // data-testid，只能按 aria-label 认。正文、引用卡片和菜单里的同名字样不碰。
+      for (const button of document.querySelectorAll(
+        `${tweetSelectors.article} button[aria-label*="Grok"]`,
+      )) {
+        if (
+          button.closest(
+            '[data-testid="tweetText"], [data-testid="card.wrapper"], [role="menu"], [data-testid="Dropdown"]',
+          )
+        ) {
+          continue;
+        }
+        mark(button, 'grok');
+      }
     }
 
     if (settings.hideForYou) {

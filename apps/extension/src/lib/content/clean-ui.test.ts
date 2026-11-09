@@ -442,6 +442,36 @@ describe('clean-ui 选择器', () => {
     }
   });
 
+  it('隐藏 Grok 也藏帖子头部的 Grok 操作按钮，正文和菜单里的同名内容不动', async () => {
+    vi.useFakeTimers();
+    stubBrowser();
+    const article = tweet({ text: '一条正常的帖子' });
+    article
+      .querySelector('[data-testid="User-Name"]')!
+      .insertAdjacentHTML(
+        'afterend',
+        '<button id="grok-btn" aria-label="Grok 操作"><svg></svg></button>' +
+          '<button id="grok-btn-en" aria-label="Grok actions"><svg></svg></button>',
+      );
+    article.insertAdjacentHTML(
+      'beforeend',
+      '<div role="menu"><button id="menu-grok-btn" aria-label="Grok 操作"></button></div>',
+    );
+    document.body.append(article);
+    const clean = createCleanUi();
+    clean.start();
+    try {
+      await vi.advanceTimersByTimeAsync(2_000);
+      // 帖子头部的 Grok 按钮按 aria-label 认（中英文界面都覆盖），和导航入口同一个标记
+      expect(document.querySelector('#grok-btn')!.getAttribute('data-fs-clean')).toBe('grok');
+      expect(document.querySelector('#grok-btn-en')!.getAttribute('data-fs-clean')).toBe('grok');
+      // 下拉菜单里的同名按钮是操作菜单，不跟着藏
+      expect(document.querySelector('#menu-grok-btn')!.hasAttribute('data-fs-clean')).toBe(false);
+    } finally {
+      clean.stop();
+    }
+  });
+
   it('界面净化关着时不观察 DOM；打开才 observe，关掉和 stop 后 disconnect', async () => {
     vi.useFakeTimers();
     const FakeObserver = fakeObserverClass();

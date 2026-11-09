@@ -380,7 +380,7 @@ export const UI_COPY = {
     cleanPromoteButton: '隐藏「推广」按钮',
     cleanPromoteButtonHint: '隐藏帖子右上角给作者本人看的「推广」按钮。',
     cleanGrok: '隐藏 Grok',
-    cleanGrokHint: '隐藏左侧导航里的 Grok 入口。',
+    cleanGrokHint: '隐藏左侧导航和帖子上的 Grok 入口。',
     cleanPremiumReplies: '淡化纯回复位蓝标',
     cleanPremiumRepliesHint:
       '评论区里蓝标作者、正文很短的回复降低不透明度，减少「只为回复位买蓝 V」的干扰。',
@@ -825,7 +825,7 @@ export const UI_COPY = {
     cleanPromoteButton: 'Hide the Promote button',
     cleanPromoteButtonHint: 'Hides the Promote button X shows on your own posts.',
     cleanGrok: 'Hide Grok',
-    cleanGrokHint: 'Hides the Grok entry in the left navigation.',
+    cleanGrokHint: 'Hides Grok entries in the left navigation and on posts.',
     cleanPremiumReplies: 'Dim thin verified replies',
     cleanPremiumRepliesHint:
       'Reduces opacity of short replies by verified accounts, so “bought a blue check for the reply slot” accounts stand out less.',
