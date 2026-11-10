@@ -357,11 +357,9 @@ it('打开「标记已关注账号」后，已关注账号也打标；个人白�
 
 it('模块总开关关掉后撤掉标签和检测入口，重新打开就恢复', async () => {
   history.replaceState(null, '', '/op/status/900');
-  document.body.innerHTML = [
-    tweet('op', '900'),
-    tweet('farm', '901'),
-    tweet('other', '902'),
-  ].join('');
+  document.body.innerHTML = [tweet('op', '900'), tweet('farm', '901'), tweet('other', '902')].join(
+    '',
+  );
   let enabled = false;
   (globalThis as unknown as { browser: unknown }).browser = {
     runtime: { onMessage: { addListener: vi.fn(), removeListener: vi.fn() } },
@@ -454,6 +452,80 @@ describe('通知页的 AI 图标', () => {
     expect(articles[1]!.querySelector('[data-fs-action="ai"]')).not.toBeNull();
     expect(articles[2]!.querySelector('[data-fs-action="ai"]')).toBeNull();
     expect(articles[3]!.querySelector('[data-fs-action="ai"]')).toBeNull();
+    ai.stop();
+  });
+});
+
+describe('从帖子点开的卡片：填入回复框', () => {
+  it('有结论时带「填入回复框」；从 Tab 打开的没有', async () => {
+    const remote = {
+      handle: 'known',
+      verdict: 'ai',
+      score: 0.8,
+      reply_count: 10,
+      rhythm: null,
+      judged_at: 1,
+      expires_at: 9e12,
+      expired: false,
+      public: true,
+      votes: { ai_count: 1, human_count: 0, listed: false },
+    };
+    const { ai, tick } = setup(
+      '/op/status/520',
+      [tweet('op', '520'), tweet('known', '521')].join(''),
+      { remote, myVote: null, mine: null },
+    );
+    tick();
+    const button = document
+      .querySelectorAll('article')[1]!
+      .querySelector('[data-fs-action="ai"]') as HTMLButtonElement;
+    button.click();
+    await vi.waitFor(() =>
+      expect(document.querySelector('#fs-ai-panel .fs-ai-level')).not.toBeNull(),
+    );
+    const fill = [...document.querySelectorAll('#fs-ai-panel button')].find(
+      (b) => b.textContent === '填入回复框',
+    );
+    expect(fill).not.toBeUndefined();
+    // 面板上必须明确写着发送仍由用户点，不能让人以为扩展会替发
+    expect((fill as HTMLButtonElement).title).toContain('你点「回复」');
+    ai.stop();
+  });
+
+  it('主页 Tab 打开的卡片不出现「填入回复框」（没有具体帖子可回）', async () => {
+    const { ai, tick } = setup(
+      '/Alice',
+      `<div data-testid="primaryColumn"><nav><div role="tablist">
+      <div role="presentation"><a role="tab" aria-selected="true" href="/Alice"><div><span>帖子</span></div></a></div>
+      <div role="presentation"><a role="tab" aria-selected="false" href="/Alice/with_replies"><div><span>回复</span></div></a></div>
+    </div></nav></div>`,
+      {
+        remote: {
+          handle: 'alice',
+          verdict: 'ai',
+          score: 0.93,
+          reply_count: 12,
+          rhythm: null,
+          judged_at: 1,
+          expires_at: 9e12,
+          expired: false,
+          public: true,
+          votes: { ai_count: 2, human_count: 0, listed: false },
+        },
+        myVote: null,
+        mine: null,
+      },
+    );
+    tick();
+    await vi.waitFor(() =>
+      expect(document.querySelector('[data-fs-ai-tab]')?.textContent).toBe('AI 味95%'),
+    );
+    (document.querySelector('[data-fs-ai-tab] a') as HTMLAnchorElement).click();
+    expect(document.querySelector('#fs-ai-panel .fs-ai-level')).not.toBeNull();
+    const fill = [...document.querySelectorAll('#fs-ai-panel button')].find(
+      (b) => b.textContent === '填入回复框',
+    );
+    expect(fill).toBeUndefined();
     ai.stop();
   });
 });

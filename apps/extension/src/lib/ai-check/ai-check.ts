@@ -32,6 +32,7 @@ import {
 import { flavorOf, type Lang } from '@feedsieve/shared';
 import { canvasToBlob, loadAvatar } from '../share/canvas-kit';
 import { drawShareCard, formatGap, spreadLabel } from './share-card';
+import { fillReplyComposer } from '../compose/reply-composer';
 import {
   AI_JUDGE_MESSAGE,
   AI_LIST_KEY,
@@ -94,6 +95,16 @@ const TEXT = {
     download: '下载',
     copied: '已复制，去发帖粘贴',
     downloaded: '已下载',
+    fillReply: '填入回复框',
+    fillReplyTip: '打开这条帖子的回复框并放上报告图；发不发出仍由你点「回复」',
+    filling: '正在填入…',
+    filled: '已填入回复框，图片传完再点「回复」',
+    fillFailed: {
+      no_article: '这条帖子已不在页面上，滚回去再试',
+      no_reply_button: '没找到回复按钮',
+      no_editor: '回复框没打开',
+      upload_timeout: '图片没传上去，先点「复制报告图」手动粘贴',
+    },
     retry: '重试',
     close: '关闭',
     cached: '近期已有人测过',
@@ -143,6 +154,16 @@ const TEXT = {
     download: 'Download',
     copied: 'Copied. Paste it into a post',
     downloaded: 'Downloaded',
+    fillReply: 'Fill reply box',
+    fillReplyTip: 'Opens this post’s reply box with the image attached. You still press Reply',
+    filling: 'Filling…',
+    filled: 'Image attached. Press Reply when it finishes uploading',
+    fillFailed: {
+      no_article: 'This post scrolled away. Find it again and retry',
+      no_reply_button: 'Reply button not found',
+      no_editor: 'The reply box did not open',
+      upload_timeout: 'Upload failed. Use Copy image and paste it yourself',
+    },
     retry: 'Retry',
     close: 'Close',
     cached: 'Checked recently by someone',
@@ -335,6 +356,8 @@ export function createAiCheck(deps: {
 }) {
   let running: { handle: string; token: number } | null = null;
   let panelHandle: string | null = null;
+  /** 卡片是从哪条帖子点开的：报告卡上的「填入回复框」要回到这条帖子的回复框 */
+  let panelPost: { handle: string; postId: string } | null = null;
   /** 卡片打开时的页面地址：离开这个页面才收起（详情页、主页都能开卡片） */
   let panelPath: string | null = null;
   let token = 0;
@@ -657,7 +680,7 @@ export function createAiCheck(deps: {
           pill.addEventListener('click', (event) => {
             event.preventDefault();
             event.stopPropagation();
-            void openFor(handle);
+            void openFor(handle, item.postId ?? undefined);
           });
           nameRow?.appendChild(pill);
         }
@@ -694,7 +717,7 @@ export function createAiCheck(deps: {
           btn.addEventListener('click', (event) => {
             event.preventDefault();
             event.stopPropagation();
-            void openFor(handle);
+            void openFor(handle, item.postId ?? undefined);
           });
           // 插到 @handle 前面：紧挨作者名，不放到行末被时间和徽标挤开
           entryRow.insertBefore(btn, entryRow.firstChild);
@@ -712,10 +735,15 @@ export function createAiCheck(deps: {
     void deps.send({ type: 'feedsieve:open-tab', url }).catch(() => undefined);
   }
 
-  async function openFor(handle: string): Promise<void> {
+  /**
+   * 点机器人图标 / 标签：有结论直接出报告，没有就去这个人的回复页测。
+   * postId 是点开卡片的那条帖子，报告卡上的「填入回复框」要用它回到原帖；
+   * 从 Tab / 弹窗打开的没有这条上下文，那一行按钮就不出现。
+   */
+  async function openFor(handle: string, postId?: string): Promise<void> {
     const k = known.has(handle) ? known.get(handle) : await lookup(handle);
     if (judged(k) && !k.expired) {
-      showKnown(handle, k);
+      showKnown(handle, k, postId);
       return;
     }
     openInNewTab(handle, false);
@@ -849,7 +877,7 @@ export function createAiCheck(deps: {
     return undefined;
   }
 
-  function showKnown(handle: string, k: Judged): void {
+  function showKnown(handle: string, k: Judged, postId?: string): void {
     showResult({
       handle,
       displayName: displayNameOn(handle),
@@ -867,6 +895,7 @@ export function createAiCheck(deps: {
       mineOnly: k.mineOnly,
       underReview: k.underReview,
       comment: k.comment,
+      postId,
     });
   }
 
@@ -879,6 +908,7 @@ export function createAiCheck(deps: {
     token += 1;
     running = null;
     panelHandle = null;
+    panelPost = null;
     panelPath = null;
     activeCollector = null;
     panel()?.remove();
@@ -985,6 +1015,8 @@ export function createAiCheck(deps: {
     underReview?: boolean;
     /** 模型锐评；没有就用本地档位评语 */
     comment?: string | null;
+    /** 从时间线某条帖子点开的：给它一个「填入回复框」，从 Tab / 弹窗打开的没有 */
+    postId?: string;
   }): void {
     const lang = deps.getLanguage();
     const text = t();
@@ -992,6 +1024,10 @@ export function createAiCheck(deps: {
     const color = TONE_COLOR[flavor.tone];
     const cv = input.rhythm?.cv ?? 0;
     const body = shell(input.handle);
+    // 进度态重画面板时不会再带 postId：同一个人沿用上一次记下的原帖，
+    // 换了账号就作废（否则 Tab 开的卡片会继承另一个人的帖子）
+    const postId = input.postId ?? (panelPost?.handle === input.handle ? panelPost.postId : null);
+    if (input.postId) panelPost = { handle: input.handle, postId: input.postId };
 
     // 结论行：与分享卡同语法——数字 + 档位徽章并排，不再给「AI 味」小标签和徽章各占一行
     const verdict = el('div', 'fs-ai-verdict');
@@ -1128,6 +1164,31 @@ export function createAiCheck(deps: {
     });
     share.append(copy, dl, link);
     body.appendChild(share);
+
+    // 从某条帖子点开的卡片：多一个「填入回复框」。只把图放进 X 的回复框，
+    // 发不发出仍由用户点「回复」——扩展不替用户公开发言（见 reply-composer.ts）。
+    if (postId) {
+      const fill = el('button', 'fs-ai-primary', text.fillReply);
+      fill.type = 'button';
+      // 只给 title：aria-label 会盖掉可见文字，读屏念出来的和看到的对不上
+      fill.title = text.fillReplyTip;
+      fill.style.marginTop = '10px';
+      fill.addEventListener('click', async () => {
+        if (fill.disabled) return;
+        fill.disabled = true;
+        fill.textContent = text.filling;
+        const blob = await canvasToBlob(await card());
+        const outcome = await fillReplyComposer({
+          postId,
+          blob,
+          filename: `ai-flavor-${input.handle}.png`,
+        });
+        fill.disabled = false;
+        fill.textContent = text.fillReply;
+        toast(body, outcome.ok ? text.filled : text.fillFailed[outcome.reason]);
+      });
+      body.appendChild(fill);
+    }
     if (input.expired) {
       const again = el('button', 'fs-ai-ghost', text.retest);
       again.type = 'button';
