@@ -17,12 +17,28 @@ export type FillReplyReason = 'no_article' | 'no_reply_button' | 'no_editor' | '
 
 export type FillReplyOutcome = { ok: true } | { ok: false; reason: FillReplyReason };
 
-/** 推文框正文（多段串推是 tweetTextarea_0 / _1 …） */
-const EDITOR_SELECTOR = '[data-testid^="tweetTextarea_"]';
-/** 回复框里的媒体预览区：粘贴/选择文件成功后 X 会往里放 img */
+/**
+ * 推文框正文（多段串推是 tweetTextarea_0 / _1 …）。
+ *
+ * 必须带 contenteditable：真实 X 上同一个前缀还挂着 `tweetTextarea_0_label`、
+ * `tweetTextarea_0RichTextInputContainer` 两个不可编辑的容器（2026-11-11 在
+ * 真实回复框里核实），光按前缀匹配会拿到壳子，focus / paste 全落空。
+ */
+const EDITOR_SELECTOR = '[data-testid^="tweetTextarea_"][contenteditable="true"]';
+/**
+ * 附件预览区。实测它**不是常驻节点**：只有上传成功后才被 X 插进 DOM
+ * （2026-11-11 真实回复框：塞文件前 0 个 attachments，6 秒后出现 1 个并带 img）。
+ * 所以「出现 attachments」本身就是最可靠的成功信号。
+ */
 const ATTACHMENT_SELECTOR = '[data-testid="attachments"] img';
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/**
+ * 等文件入口的时限。X 的文件入口和编辑器几乎同时挂上（实测差 0ms，但可能落后一拍），
+ * 给一点余量就够；等太久等于把「没有文件入口、该走粘贴」的常见路径也拖慢。
+ */
+const INPUT_WAIT_MS = 1_200;
 
 async function waitFor<T>(
   probe: () => T | null | undefined | false,
@@ -176,9 +192,20 @@ export async function fillReplyComposer(options: FillReplyOptions): Promise<Fill
   const before = countAttachments(host);
   const attached = () => countAttachments(host) > before;
 
+  // 编辑器先渲染、文件入口随后才挂上（真实 X 上观察到两者可能差一拍）。
+  // 等到编辑器就往下走会漏掉 fileInput，直接掉进兜底分支。
+  // 只给这段一个短时限：文件入口没等到的常态就是该走粘贴兜底，不能在这里耗满 10 秒。
+  const input = await waitFor(() => imageInput(host), Math.min(waitMs, INPUT_WAIT_MS), wait);
+
   // 有 X 自己的文件入口就先走它（媒体按钮背后就是它，最接近原生行为）。
   // 两条路都试会在上传慢时塞进两张图，所以只挑一条。
-  const input = imageInput(host);
+  // 真实 X 上这条路已经实测能触发上传并长出 attachments（2026-11-11）。
+  if (input) {
+    if (!attachViaInput(input, file)) return { ok: false, reason: 'upload_timeout' };
+    return (await waitFor(attached, waitMs, wait))
+      ? { ok: true }
+      : { ok: false, reason: 'upload_timeout' };
+  }
   if (input) {
     if (!attachViaInput(input, file)) return { ok: false, reason: 'upload_timeout' };
     return (await waitFor(attached, waitMs, wait))

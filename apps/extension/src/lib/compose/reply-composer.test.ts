@@ -26,10 +26,16 @@ function openDialog(mount: () => void, withEditor = true, withFileInput = true) 
   const dialog = document.createElement('div');
   dialog.setAttribute('role', 'dialog');
   if (withEditor) {
+    // 真实 X 还挂着两个不可编辑的同前缀容器（2026-11-11 核实），必须一起造出来
+    const label = document.createElement('div');
+    label.dataset.testid = 'tweetTextarea_0_label';
+    const container = document.createElement('div');
+    container.dataset.testid = 'tweetTextarea_0RichTextInputContainer';
     const editor = document.createElement('div');
     editor.dataset.testid = 'tweetTextarea_0';
+    editor.setAttribute('role', 'textbox');
     editor.contentEditable = 'true';
-    dialog.appendChild(editor);
+    dialog.append(label, container, editor);
   }
   const attachments = document.createElement('div');
   attachments.dataset.testid = 'attachments';
@@ -172,6 +178,60 @@ it('详情页的回复框是内联的（没有 dialog）：不新开节点也能
   expect(outcome).toEqual({ ok: true });
   expect(attachments.querySelectorAll('img')).toHaveLength(1);
   expect(sidebar.querySelector('[data-testid="attachments"]')).toBeNull();
+});
+
+it('不把 tweetTextarea_0_label / RichTextInputContainer 这类壳子当成正文框', async () => {
+  document.body.appendChild(tweet('930'));
+  let focused = '';
+  document.querySelector('[data-testid="reply"]')!.addEventListener('click', () => {
+    const { dialog } = openDialog(() => undefined, true, false);
+    dialog
+      .querySelectorAll('[data-testid^="tweetTextarea_"]')
+      .forEach((n) =>
+        n.addEventListener('focus', () => (focused = n.getAttribute('data-testid')!)),
+      );
+  });
+  await fillReplyComposer({
+    postId: '930',
+    blob: new Blob(['x'], { type: 'image/png' }),
+    wait: noWait,
+    waitMs: 1,
+  });
+  // 只有真正可编辑的那个节点会被 focus，壳子不会
+  expect(focused).toBe('tweetTextarea_0');
+});
+
+it('fileInput 比编辑器晚渲染时也会等它，不掉进兜底分支', async () => {
+  document.body.appendChild(tweet('940'));
+  document.querySelector('[data-testid="reply"]')!.addEventListener('click', () => {
+    // 先只造编辑器，文件入口 120ms 后才挂上（真实 X 的一拍延迟）
+    const dialog = document.createElement('div');
+    dialog.setAttribute('role', 'dialog');
+    const editor = document.createElement('div');
+    editor.dataset.testid = 'tweetTextarea_0';
+    editor.contentEditable = 'true';
+    const attachments = document.createElement('div');
+    attachments.dataset.testid = 'attachments';
+    dialog.append(editor, attachments);
+    document.body.appendChild(dialog);
+    setTimeout(() => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.dataset.testid = 'fileInput';
+      input.addEventListener('change', () => {
+        attachments.appendChild(document.createElement('img'));
+      });
+      dialog.appendChild(input);
+    }, 120);
+  });
+
+  const outcome = await fillReplyComposer({
+    postId: '940',
+    blob: new Blob(['x'], { type: 'image/png' }),
+    waitMs: 2_000,
+  });
+
+  expect(outcome).toEqual({ ok: true });
 });
 
 it('findArticle 按帖子 ID 找，且能跟上 X 换节点', () => {
