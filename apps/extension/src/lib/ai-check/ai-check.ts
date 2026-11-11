@@ -103,6 +103,7 @@ const TEXT = {
       no_article: '这条帖子已不在页面上，滚回去再试',
       no_reply_button: '没找到回复按钮',
       no_editor: '回复框没打开',
+      draft_not_empty: '回复框里已经有内容了，没动它',
       upload_timeout: '图片没传上去，先点「复制报告图」手动粘贴',
     },
     retry: '重试',
@@ -162,6 +163,7 @@ const TEXT = {
       no_article: 'This post scrolled away. Find it again and retry',
       no_reply_button: 'Reply button not found',
       no_editor: 'The reply box did not open',
+      draft_not_empty: 'The reply box already has text. Left it untouched',
       upload_timeout: 'Upload failed. Use Copy image and paste it yourself',
     },
     retry: 'Retry',
@@ -1186,15 +1188,21 @@ export function createAiCheck(deps: {
         if (fill.disabled) return;
         fill.disabled = true;
         fill.textContent = text.filling;
-        const blob = await canvasToBlob(await card());
-        const outcome = await fillReplyComposer({
-          postId,
-          blob,
-          filename: `ai-flavor-${input.handle}.png`,
-        });
-        fill.disabled = false;
-        fill.textContent = text.fillReply;
-        toast(body, outcome.ok ? text.filled : text.fillFailed[outcome.reason]);
+        try {
+          const blob = await canvasToBlob(await card());
+          const outcome = await fillReplyComposer({
+            postId,
+            blob,
+            filename: `ai-flavor-${input.handle}.png`,
+          });
+          toast(body, outcome.ok ? text.filled : text.fillFailed[outcome.reason]);
+        } catch {
+          // 出图或填框抛错也必须把按钮还回去，否则会一直停在「正在填入…」
+          toast(body, text.fillFailed.upload_timeout);
+        } finally {
+          fill.disabled = false;
+          fill.textContent = text.fillReply;
+        }
       });
       body.appendChild(fill);
     }

@@ -11,9 +11,10 @@
  * 并派发 change（媒体按钮背后的同一个入口）。
  */
 
-import { tweetSelectors } from '@feedsieve/x-adapter';
+import { QUOTE_CARD_SELECTOR, tweetSelectors } from '@feedsieve/x-adapter';
 
-export type FillReplyReason = 'no_article' | 'no_reply_button' | 'no_editor' | 'upload_timeout';
+export type FillReplyReason =
+  'no_article' | 'no_reply_button' | 'no_editor' | 'draft_not_empty' | 'upload_timeout';
 
 export type FillReplyOutcome = { ok: true } | { ok: false; reason: FillReplyReason };
 
@@ -57,7 +58,15 @@ async function waitFor<T>(
 /** 按帖子 ID 找时间线 / 详情页里的那一条（X 重渲染会换节点，所以每次现找）。 */
 export function findArticle(postId: string): HTMLElement | null {
   for (const article of document.querySelectorAll<HTMLElement>(tweetSelectors.article)) {
-    if (article.querySelector(`a[href*="/status/${postId}"]`)) return article;
+    // 只看这条帖子自己的时间戳链接：引用卡片里也带着被引帖的 /status/ 链接，
+    // 光按 href 子串匹配会把「引用了这条帖子的那条帖子」也认成目标，
+    // 于是图被贴到错误的帖子下面（引用卡片本身也有 [data-testid=reply]）。
+    const own = [...article.querySelectorAll('a[href*="/status/"]')].some(
+      (anchor) =>
+        !anchor.closest(QUOTE_CARD_SELECTOR) &&
+        (anchor.getAttribute('href') ?? '').includes(`/status/${postId}`),
+    );
+    if (own) return article;
   }
   return null;
 }
@@ -75,13 +84,16 @@ function imageInput(host: ParentNode): HTMLInputElement | null {
 
 /**
  * 回复框的宿主：详情页里是内联展开（没有 dialog），其它地方是弹窗。
- * 往上找到第一个带附件区或文件入口的祖先，找不到就退到编辑器本身——
- * 绝不能退到 document，否则会抓到侧栏主发帖框的 file input。
+ * 往上找到第一个带附件区或文件入口的祖先，找不到就退到编辑器本身。
+ *
+ * 走到 body 必须停：整页里装着侧栏「发帖」框的同款 file input，继续往上
+ * 一定会命中它，那样图就会贴进用户正在写的**新帖草稿**而不是回复框。
  */
 function locateHost(editor: HTMLElement): ParentNode {
   const dialog = editor.closest('[role="dialog"]');
   if (dialog) return dialog;
   for (let node = editor.parentElement; node; node = node.parentElement) {
+    if (node === document.body || node === document.documentElement) break;
     if (
       node.querySelector('[data-testid="attachments"]') ||
       node.querySelector('input[type="file"]')
@@ -90,6 +102,11 @@ function locateHost(editor: HTMLElement): ParentNode {
     }
   }
   return editor;
+}
+
+/** 回复框里已经有正文：绝不往上叠图，也不碰用户正在写的内容。 */
+function draftIsEmpty(editor: HTMLElement): boolean {
+  return (editor.textContent ?? '').trim() === '';
 }
 
 function makeFile(blob: Blob, filename: string): File {
@@ -162,6 +179,7 @@ export async function fillReplyComposer(options: FillReplyOptions): Promise<Fill
   const dialogsBefore = new Set(document.querySelectorAll('[role="dialog"]'));
   replyButton.click();
 
+  const cell = article.closest('[data-testid="cellInnerDiv"]');
   const editor = await waitFor(
     () => {
       const fresh = [...document.querySelectorAll<HTMLElement>(EDITOR_SELECTOR)].filter(
@@ -170,15 +188,19 @@ export async function fillReplyComposer(options: FillReplyOptions): Promise<Fill
       const freshDialog = [...document.querySelectorAll('[role="dialog"]')].find(
         (node) => !dialogsBefore.has(node),
       );
-      const opened = freshDialog?.querySelector<HTMLElement>(EDITOR_SELECTOR) ?? fresh[0] ?? null;
+      const opened = freshDialog?.querySelector<HTMLElement>(EDITOR_SELECTOR) ?? null;
       if (opened) return opened;
+      // 没有新弹窗时只认「新出现、且长在这条帖子里」的编辑器：
+      // 页面别处（侧栏发帖框、别的帖子）新挂上的编辑器不能算数。
+      const scoped = cell
+        ? fresh.find((node) => cell.contains(node))
+        : fresh.find((node) => node.closest('[role="dialog"]') !== null);
+      if (scoped) return scoped;
       // 详情页的回复框是内联展开的，而且可能本来就开着：点一下只是把焦点还给它。
       // 这时不会有新节点，用这条帖子自己（或它所在的格子里）的编辑器顶上。
       return (
         article.querySelector<HTMLElement>(EDITOR_SELECTOR) ??
-        article
-          .closest('[data-testid="cellInnerDiv"]')
-          ?.querySelector<HTMLElement>(EDITOR_SELECTOR) ??
+        cell?.querySelector<HTMLElement>(EDITOR_SELECTOR) ??
         null
       );
     },
@@ -187,10 +209,17 @@ export async function fillReplyComposer(options: FillReplyOptions): Promise<Fill
   );
   if (!editor) return { ok: false, reason: 'no_editor' };
 
+  // 用户（或 X 的草稿恢复）已经在框里写了字：停手。图叠上去会和正文混在一起，
+  // 粘贴兜底还可能在光标处插入，等于改用户正在写的东西。
+  if (!draftIsEmpty(editor)) return { ok: false, reason: 'draft_not_empty' };
+
   const host = locateHost(editor);
+  // 判断「图有没有上去」的范围要单独算：attachments 是插在编辑器**旁边**的兄弟节点，
+  // 宿主退回编辑器本身时，在 editor 里面找永远找不到。
+  const scope = editor.closest('[role="dialog"]') ?? cell ?? host;
   const file = makeFile(options.blob, options.filename ?? 'ai-flavor.png');
-  const before = countAttachments(host);
-  const attached = () => countAttachments(host) > before;
+  const before = countAttachments(scope);
+  const attached = () => countAttachments(scope) > before;
 
   // 编辑器先渲染、文件入口随后才挂上（真实 X 上观察到两者可能差一拍）。
   // 等到编辑器就往下走会漏掉 fileInput，直接掉进兜底分支。
@@ -200,12 +229,6 @@ export async function fillReplyComposer(options: FillReplyOptions): Promise<Fill
   // 有 X 自己的文件入口就先走它（媒体按钮背后就是它，最接近原生行为）。
   // 两条路都试会在上传慢时塞进两张图，所以只挑一条。
   // 真实 X 上这条路已经实测能触发上传并长出 attachments（2026-11-11）。
-  if (input) {
-    if (!attachViaInput(input, file)) return { ok: false, reason: 'upload_timeout' };
-    return (await waitFor(attached, waitMs, wait))
-      ? { ok: true }
-      : { ok: false, reason: 'upload_timeout' };
-  }
   if (input) {
     if (!attachViaInput(input, file)) return { ok: false, reason: 'upload_timeout' };
     return (await waitFor(attached, waitMs, wait))

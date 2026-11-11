@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { beforeEach, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { fillReplyComposer, findArticle } from './reply-composer';
 
 const noWait = async () => {};
@@ -241,4 +241,111 @@ it('findArticle 按帖子 ID 找，且能跟上 X 换节点', () => {
   expect(findArticle('910')).toBeNull();
   document.body.appendChild(tweet('911'));
   expect(findArticle('911')).not.toBeNull();
+});
+
+describe('安全性：绝不误伤用户已有内容或别的输入框', () => {
+  it('回复框里已有正文时拒绝操作，不叠图、不改字', async () => {
+    document.body.appendChild(tweet('950'));
+    const article = document.querySelector('article')!;
+    const inline = document.createElement('div');
+    inline.innerHTML = `
+      <div data-testid="tweetTextarea_0" contenteditable="true">我正在写的内容</div>
+      <div data-testid="attachments"></div>
+      <input type="file" data-testid="fileInput" />`;
+    article.appendChild(inline);
+    inline.querySelector('input')!.addEventListener('change', () => {
+      inline
+        .querySelector('[data-testid="attachments"]')!
+        .appendChild(document.createElement('img'));
+    });
+
+    const outcome = await fillReplyComposer({
+      postId: '950',
+      blob: new Blob(['x'], { type: 'image/png' }),
+      wait: noWait,
+    });
+
+    expect(outcome).toEqual({ ok: false, reason: 'draft_not_empty' });
+    expect(inline.querySelector('[data-testid="tweetTextarea_0"]')!.textContent).toBe(
+      '我正在写的内容',
+    );
+    expect(inline.querySelectorAll('[data-testid="attachments"] img')).toHaveLength(0);
+  });
+
+  it('引用卡片里的 /status/ 链接不会让别的帖子被认成目标', async () => {
+    // 这条帖子引用了 960：它自带被引帖的 status 链接，但目标应该是 960 那条本身
+    const quoting = document.createElement('article');
+    quoting.dataset.testid = 'tweet';
+    quoting.innerHTML = `
+      <div data-testid="User-Name"><a href="/quoter">Quoter</a></div>
+      <div data-testid="tweetText">看这个</div>
+      <div role="link"><a href="/target/status/960"><time>2h</time></a></div>
+      <div role="group"><button data-testid="reply">reply</button></div>`;
+    document.body.appendChild(quoting);
+
+    const target = tweet('960');
+    document.body.appendChild(target);
+
+    expect(findArticle('960')).toBe(target);
+  });
+
+  it('不会把侧栏发帖框的 file input 当成回复框宿主', async () => {
+    // 侧栏有个一直开着的发帖框
+    const sidebar = document.createElement('div');
+    sidebar.innerHTML = `<div data-testid="tweetTextarea_0" contenteditable="true"></div>
+      <input type="file" data-testid="fileInput" />`;
+    document.body.appendChild(sidebar);
+
+    document.body.appendChild(tweet('970'));
+    const article = document.querySelector('article')!;
+    // 回复框是内联的，且**没有**自己的 file input（模拟没有文件入口的情况）
+    const inline = document.createElement('div');
+    inline.innerHTML = `<div data-testid="tweetTextarea_1" contenteditable="true"></div>`;
+    article.appendChild(inline);
+
+    let pasted = 0;
+    inline.querySelector('[data-testid="tweetTextarea_1"]')!.addEventListener('paste', () => {
+      pasted += 1;
+    });
+
+    await fillReplyComposer({
+      postId: '970',
+      blob: new Blob(['x'], { type: 'image/png' }),
+      wait: noWait,
+      waitMs: 1,
+    });
+
+    // 走的是粘贴兜底，说明没误用侧栏那个 input；侧栏内容也没被碰
+    expect(pasted).toBe(1);
+    expect(sidebar.querySelector('[data-testid="tweetTextarea_0"]')!.textContent).toBe('');
+  });
+});
+
+it('宿主退回编辑器本身时，也能在兄弟节点里发现上传成功的 attachments', async () => {
+  document.body.appendChild(tweet('980'));
+  const article = document.querySelector('article')!;
+  // 极简回复框：编辑器和附件区是兄弟，没有 file input
+  const inline = document.createElement('div');
+  inline.innerHTML = `
+    <div data-testid="tweetTextarea_0" contenteditable="true"></div>
+    <div data-testid="attachments"></div>`;
+  const editor = inline.querySelector('[data-testid="tweetTextarea_0"]')!;
+  editor.addEventListener('paste', () => {
+    setTimeout(
+      () =>
+        inline
+          .querySelector('[data-testid="attachments"]')!
+          .appendChild(document.createElement('img')),
+      30,
+    );
+  });
+  article.appendChild(inline);
+
+  const outcome = await fillReplyComposer({
+    postId: '980',
+    blob: new Blob(['x'], { type: 'image/png' }),
+    waitMs: 2_000,
+  });
+
+  expect(outcome).toEqual({ ok: true });
 });
