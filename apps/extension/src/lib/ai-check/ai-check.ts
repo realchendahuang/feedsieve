@@ -728,11 +728,20 @@ export function createAiCheck(deps: {
     }
   }
 
-  /** 点机器人图标 / 标签：有结论直接出报告，没有就去这个人的回复页测 */
-  /** 在他的回复页开测：新标签打开，不动当前页（用户可能正在看评论或详情）。 */
-  function openInNewTab(handle: string, force: boolean): void {
-    const url = `https://x.com/${handle}/with_replies?fs_ai=${handle}${force ? '&force=1' : ''}`;
-    void deps.send({ type: 'feedsieve:open-tab', url }).catch(() => undefined);
+  /**
+   * 在他的回复页开测：新标签打开，不动当前页（用户可能正在看评论或详情）。
+   *
+   * postId 一起带过去：检测是跳到另一个标签页做完的，不带着它就丢了「这条卡片是从哪条
+   * 帖子点开的」这个上下文，测完的新卡片上就不会出现「填入回复框」（用户第一次实测
+   * 正是卡在这里）。
+   */
+  function openInNewTab(handle: string, force: boolean, postId?: string): void {
+    const params = new URLSearchParams({ fs_ai: handle });
+    if (force) params.set('force', '1');
+    if (postId) params.set('fs_post', postId);
+    void deps
+      .send({ type: 'feedsieve:open-tab', url: `https://x.com/${handle}/with_replies?${params}` })
+      .catch(() => undefined);
   }
 
   /**
@@ -746,7 +755,7 @@ export function createAiCheck(deps: {
       showKnown(handle, k, postId);
       return;
     }
-    openInNewTab(handle, false);
+    openInNewTab(handle, false, postId);
   }
 
   // ---- 入口一：主页 Tab 栏的「AI 味」Tab ----
@@ -1202,11 +1211,14 @@ export function createAiCheck(deps: {
     void deps.send({ type: AI_OUTCOME_MESSAGE, outcome }).catch(() => undefined);
   }
 
-  async function run(handle: string, force = false): Promise<void> {
+  async function run(handle: string, force = false, postId?: string): Promise<void> {
     if (running?.handle === handle) return;
     const my = ++token;
     running = { handle, token: my };
     stopRequested = false;
+    // 这次检测是被哪条帖子点开的（跨标签页由 fs_post 带过来）。先记下来，
+    // 后面 showResult 才能给新卡片挂上「填入回复框」。
+    if (postId) panelPost = { handle, postId };
     const alive = () =>
       !stopped && token === my && profileFromPath(location.pathname)?.handle === handle;
 
@@ -1485,11 +1497,13 @@ export function createAiCheck(deps: {
     const autoFromUrl = params.get('fs_ai')?.toLowerCase();
     if (autoFromUrl && autoFromUrl === profile.handle) {
       const force = params.get('force') === '1';
+      const postId = params.get('fs_post') ?? undefined;
       params.delete('fs_ai');
       params.delete('force');
+      params.delete('fs_post');
       const qs = params.toString();
       history.replaceState(null, '', location.pathname + (qs ? `?${qs}` : ''));
-      void run(profile.handle, force);
+      void run(profile.handle, force, postId);
       return;
     }
     const auto = sessionStorage.getItem(AUTOSTART_KEY);

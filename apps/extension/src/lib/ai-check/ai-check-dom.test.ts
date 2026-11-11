@@ -529,3 +529,59 @@ describe('从帖子点开的卡片：填入回复框', () => {
     ai.stop();
   });
 });
+
+describe('检测跳转到新标签页时保留原帖上下文', () => {
+  it('点未测过的账号：新标签 URL 带上那条帖子的 ID，测完才能挂「填入回复框」', async () => {
+    const { ai, tick, send } = setup(
+      '/op/status/530',
+      [tweet('op', '530'), tweet('stranger', '531')].join(''),
+      { remote: null, myVote: null, mine: null },
+    );
+    tick();
+    await new Promise((r) => setTimeout(r, 0));
+    const button = document
+      .querySelectorAll('article')[1]!
+      .querySelector('[data-fs-action="ai"]') as HTMLButtonElement;
+    button.click();
+    await vi.waitFor(() => {
+      const call = send.mock.calls.find(
+        ([m]) => (m as { type?: string }).type === 'feedsieve:open-tab',
+      );
+      expect(call).toBeTruthy();
+      const url = new URL((call![0] as { url: string }).url);
+      expect(url.searchParams.get('fs_ai')).toBe('stranger');
+      // 关键：帖子 ID 要一起带过去，否则检测在新标签页做完后卡片上没有回帖入口
+      expect(url.searchParams.get('fs_post')).toBe('531');
+    });
+    ai.stop();
+  });
+
+  it('回复页带 fs_post 自动开测后，结论卡上出现「填入回复框」', async () => {
+    const send = vi.fn(async (msg: unknown) => {
+      const type = (msg as { type?: string }).type;
+      if (type === 'feedsieve:ai-lookup') return { remote: null, myVote: null, mine: null };
+      return null;
+    });
+    history.replaceState(null, '', '/stranger/with_replies?fs_ai=stranger&fs_post=531');
+    document.body.innerHTML = tweet('stranger', '531');
+    (globalThis as unknown as { browser: unknown }).browser = {
+      runtime: {
+        onMessage: { addListener: vi.fn(), removeListener: vi.fn() },
+        sendMessage: vi.fn(),
+      },
+      storage: {
+        onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+        local: { get: vi.fn(async () => ({})) },
+      },
+    };
+    const ai = createAiCheck({
+      getLanguage: () => 'zh',
+      getSelfHandle: () => 'me',
+      send,
+    });
+    ai.start();
+    // 自动开测会先读页面；这里只验证地址参数被消费掉，不再残留 fs_post
+    await vi.waitFor(() => expect(location.search).not.toContain('fs_post'));
+    ai.stop();
+  });
+});
