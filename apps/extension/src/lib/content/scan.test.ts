@@ -8,6 +8,7 @@ import { createBadges } from './badges';
 import { createManualActions } from './manual-actions';
 import { createContentState, MARK_ATTRIBUTE } from './page-state';
 import { createScan } from './scan';
+import { REDESIGN_TWEET_HTML } from '../../../../../fixtures/x/timeline/redesign';
 
 // 随包名单在测试里永不落地：避免 createScan 启动时触发 controller.reset() + 全页重扫，
 // 打乱用例里的 dirty / 快照状态。
@@ -104,6 +105,32 @@ afterEach(() => {
 });
 
 describe('scanOne：X 重渲染后的装饰自愈', () => {
+  it('fullRescan restores the manual action on the captured redesign without testids', async () => {
+    const ctx = setup();
+    document.body.innerHTML = REDESIGN_TWEET_HTML;
+    const article = document.querySelector('article')!;
+    ctx.controller.fullRescan();
+    await vi.advanceTimersByTimeAsync(SCAN_DEBOUNCE_MS);
+    expect(article.querySelectorAll('[data-fs-manual-action]')).toHaveLength(1);
+    expect(article.querySelector('[role="group"] [data-fs-manual-action]')).not.toBeNull();
+    ctx.controller.fullRescan();
+    await vi.advanceTimersByTimeAsync(SCAN_DEBOUNCE_MS);
+    expect(article.querySelectorAll('[data-fs-manual-action]')).toHaveLength(1);
+    ctx.controller.dispose();
+  });
+
+  it('detects and marks a captured redesign post through the production scan path', async () => {
+    const ctx = setup({ communityHandles: ['sample_user'] });
+    document.body.innerHTML = REDESIGN_TWEET_HTML;
+    const article = document.querySelector('article')!;
+    ctx.controller.fullRescan();
+    await vi.advanceTimersByTimeAsync(SCAN_DEBOUNCE_MS);
+    expect(article.hasAttribute(MARK_ATTRIBUTE)).toBe(true);
+    expect(article.querySelectorAll('.fs-badge')).toHaveLength(1);
+    expect(vi.mocked(recordDetection)).toHaveBeenCalledTimes(1);
+    ctx.controller.dispose();
+  });
+
   it('徽章被 X 冲掉后，下一轮扫描把黄框徽章补回来（不重复计新命中）', async () => {
     const ctx = setup({ communityHandles: ['spam_bot'] });
     const { cell, article } = tweet({

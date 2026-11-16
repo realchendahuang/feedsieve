@@ -93,7 +93,8 @@ export function createActionSlot(group: Element, kind: string, label: string): A
         if (attr.name === 'id' || attr.name === 'href' || attr.name.startsWith('aria-')) {
           node.removeAttribute(attr.name);
         }
-        if (attr.name === 'data-testid') node.removeAttribute(attr.name);
+        if (['data-testid', 'data-engagement-action', 'data-slot'].includes(attr.name))
+          node.removeAttribute(attr.name);
       }
     }
     nativeSvg.replaceWith(holder);

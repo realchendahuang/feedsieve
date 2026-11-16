@@ -7,6 +7,7 @@ import {
   type PendingBadge,
   type ScanCallbacks,
 } from './page-scan-controller';
+import { REDESIGN_TWEET_HTML } from '../../../../../fixtures/x/timeline/redesign';
 
 /** X 的 article 选择器（selectors.ts 同源，保证测试构造的 DOM 真的会被扫描）。 */
 function tweetArticle(): Element {
@@ -60,6 +61,16 @@ afterEach(() => {
 });
 
 describe('PageScanController', () => {
+  it('observes a redesign post inserted after startup', async () => {
+    const ctx = setup();
+    ctx.controller.observe(document.body);
+    document.body.insertAdjacentHTML('beforeend', REDESIGN_TWEET_HTML);
+    await vi.advanceTimersByTimeAsync(SCAN_DEBOUNCE_MS + 1);
+    expect(ctx.processed.map((entry) => entry.article)).toEqual([
+      document.querySelector('article'),
+    ]);
+    ctx.controller.dispose();
+  });
   it('family evidence invalidates only the affected author and requeues unchanged text', async () => {
     const ctx = setup();
     const first = tweetArticle();
