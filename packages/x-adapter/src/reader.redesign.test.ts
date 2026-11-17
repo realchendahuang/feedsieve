@@ -123,4 +123,45 @@ describe('2026-11 X redesign without data-testid', () => {
     const matched = [...document.querySelectorAll(menuSelectors.dropdown)].map((n) => n.id);
     expect(matched).toEqual(['xds', 'aria']);
   });
+
+  it('recognizes redesigned detail-page focal tweet where permalink sits below body and header is stacked', () => {
+    document.body.innerHTML = `
+      <article class="flex flex-col gap-3">
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <a href="/focal_author"><div class="x-avatar"><img src="https://pbs.twimg.com/profile_images/1/focal.jpg" /></div></a>
+            <div class="flex flex-col">
+              <div><a href="/focal_author"><div class="font-bold">Focal Name</div></a></div>
+              <div><a href="/focal_author"><span>@focal_author</span></a></div>
+            </div>
+          </div>
+          <div class="flex items-center gap-1">
+            <button data-slot="xds-menu-trigger" aria-label="更多"></button>
+          </div>
+        </div>
+        <div class="text-body whitespace-pre-wrap wrap-anywhere"><span>Main focal post body.</span></div>
+        <div role="link">
+          <a href="/quoted_user/status/1800000000000000002">2h</a>
+          <div class="whitespace-pre-wrap wrap-anywhere"><span>Quoted text should not leak</span></div>
+        </div>
+        <div class="meta-row">
+          <a href="/focal_author/status/1800000000000000777">上午5:25 · 2026年11月15日</a>
+          <a href="/focal_author/status/1800000000000000777/analytics">10K 查看</a>
+        </div>
+        <div role="group">
+          <div data-engagement-action="unlike"><button aria-label="取消点赞"></button></div>
+        </div>
+      </article>`;
+    const article = document.querySelector(tweetSelectors.article)!;
+    expect(article).not.toBeNull();
+    expect(extractFeedItem(article, 'reply')).toEqual({
+      source: 'x',
+      postId: '1800000000000000777',
+      author: { handle: 'focal_author', displayName: 'Focal Name' },
+      text: 'Main focal post body.',
+      links: [],
+      context: 'reply',
+    });
+    expect(findTweetAvatarImg(article)?.getAttribute('src')).toContain('focal.jpg');
+  });
 });

@@ -41,26 +41,97 @@ function extractPostId(article: Element): string | undefined {
   return undefined;
 }
 
+function postAuthorHandle(article: Element, postId: string | undefined): string | null {
+  if (!postId) return null;
+  for (const link of article.querySelectorAll<HTMLAnchorElement>(tweetSelectors.statusLink)) {
+    if (isQuotedContent(link, article) || statusId(link) !== postId) continue;
+    const handle = extractHandleFromPath(link.getAttribute('href') ?? '');
+    if (handle && /^[a-z0-9_]{1,15}$/i.test(handle)) return handle.toLowerCase();
+  }
+  return null;
+}
+
+/**
+ * 详情页主帖无 data-testid 时，时间戳在正文下方而不是头部 .x-middot-group 内：
+ * 要求本帖固定链接的作者 handle 与头部（非头像、非正文）的昵称链接和 @handle 同时吻合。
+ */
+function findFocalAuthorArea(article: Element, postId: string | undefined): Element | null {
+  const handle = postAuthorHandle(article, postId);
+  if (!handle) return null;
+  const expectedPath = `/${handle}`;
+  const atHandle = `@${handle}`;
+  const headerLinks = [...article.querySelectorAll<HTMLAnchorElement>(tweetSelectors.profileLink)].filter(
+    (link) => {
+      if (isQuotedContent(link, article) || link.closest(tweetSelectors.text)) return false;
+      if (link.querySelector('img, .x-avatar')) return false;
+      try {
+        const pathname = new URL(link.getAttribute('href') ?? '', location.origin).pathname;
+        return pathname.replace(/\/+$/, '').toLowerCase() === expectedPath;
+      } catch {
+        return false;
+      }
+    },
+  );
+  const nameLink = headerLinks.find((link) => {
+    const text = visibleText(link).trim().toLowerCase();
+    return text.length > 0 && !text.includes(atHandle);
+  });
+  if (!nameLink) return null;
+  const handleLink = headerLinks.find(
+    (link) => link !== nameLink && visibleText(link).trim().toLowerCase() === atHandle,
+  );
+  const handleSpan =
+    handleLink ??
+    [...article.querySelectorAll('span, div')].find(
+      (el) =>
+        el.childElementCount === 0 &&
+        !isQuotedContent(el, article) &&
+        !el.closest(tweetSelectors.text) &&
+        (el.textContent ?? '').trim().toLowerCase() === atHandle,
+    );
+  if (!handleSpan) return null;
+  for (
+    let node: Element | null = nameLink.parentElement;
+    node && node !== article;
+    node = node.parentElement
+  ) {
+    if (
+      node.querySelector(
+        `img, .x-avatar, ${tweetSelectors.statusLink}, ${tweetSelectors.actionGroup}`,
+      )
+    ) {
+      return null;
+    }
+    if (node.contains(handleSpan)) return node;
+  }
+  return null;
+}
+
 /** 新版作者区需同时有本帖固定链接及相同 handle 的用户链接；缺失时安全跳过。 */
 export function findTweetAuthorArea(article: Element): Element | null {
   const postId = extractPostId(article);
-  for (const area of article.querySelectorAll(tweetSelectors.authorNameArea)) {
-    if (isQuotedContent(area, article)) continue;
-    if (area.matches(tweetSelectors.legacyNameArea)) return area;
-    for (const link of area.querySelectorAll<HTMLAnchorElement>(tweetSelectors.statusLink)) {
-      if (statusId(link) !== postId) continue;
-      const match = /^\/([a-z0-9_]{1,15})\/status\/\d+\/?$/i.exec(link.pathname);
-      if (!match) continue;
-      const path = `/${match[1]!.toLowerCase()}`;
-      if (
-        [...area.querySelectorAll<HTMLAnchorElement>(tweetSelectors.profileLink)].some(
-          (anchor) => anchor.pathname.replace(/\/+$/, '').toLowerCase() === path,
+  const candidates = [...article.querySelectorAll(tweetSelectors.authorNameArea)].filter(
+    (area) => !isQuotedContent(area, article),
+  );
+  if (candidates.length > 0) {
+    for (const area of candidates) {
+      if (area.matches(tweetSelectors.legacyNameArea)) return area;
+      for (const link of area.querySelectorAll<HTMLAnchorElement>(tweetSelectors.statusLink)) {
+        if (statusId(link) !== postId) continue;
+        const match = /^\/([a-z0-9_]{1,15})\/status\/\d+\/?$/i.exec(link.pathname);
+        if (!match) continue;
+        const path = `/${match[1]!.toLowerCase()}`;
+        if (
+          [...area.querySelectorAll<HTMLAnchorElement>(tweetSelectors.profileLink)].some(
+            (anchor) => anchor.pathname.replace(/\/+$/, '').toLowerCase() === path,
+          )
         )
-      )
-        return area;
+          return area;
+      }
     }
+    return null;
   }
-  return null;
+  return findFocalAuthorArea(article, postId);
 }
 
 function authorAnchor(article: Element): HTMLAnchorElement | null {
@@ -68,10 +139,14 @@ function authorAnchor(article: Element): HTMLAnchorElement | null {
   if (!area) return null;
   if (area.matches(tweetSelectors.legacyNameArea))
     return area.querySelector(tweetSelectors.profileLink);
+  const postId = extractPostId(article);
   const permalink = [...area.querySelectorAll<HTMLAnchorElement>(tweetSelectors.statusLink)].find(
-    (anchor) => statusId(anchor) === extractPostId(article),
+    (anchor) => statusId(anchor) === postId,
   );
-  const handle = permalink ? extractHandleFromPath(permalink.pathname) : null;
+  const handle = permalink
+    ? extractHandleFromPath(permalink.pathname)
+    : postAuthorHandle(article, postId);
+  if (!handle) return null;
   return (
     [...area.querySelectorAll<HTMLAnchorElement>(tweetSelectors.profileLink)].find(
       (anchor) => anchor.pathname.replace(/\/+$/, '').toLowerCase() === `/${handle}`,
@@ -198,9 +273,25 @@ export function findTweetOwnTextElements(
 ): Element[] {
   const out: Element[] = [];
   const nameArea = findTweetAuthorArea(article);
+  const isFocalRedesigned =
+    !!nameArea &&
+    !nameArea.matches(tweetSelectors.legacyNameArea) &&
+    !nameArea.matches('.x-middot-group');
   for (const textEl of article.querySelectorAll(tweetSelectors.text)) {
-    if (!textEl.matches(tweetSelectors.legacyText) && !textEl.parentElement?.contains(nameArea))
-      continue;
+    if (!textEl.matches(tweetSelectors.legacyText)) {
+      if (isFocalRedesigned) {
+        if (
+          nameArea.contains(textEl) ||
+          textEl.closest(
+            'a, [role="link"], [role="group"], [role="menu"], [data-slot="xds-menu-content"], [data-slot="xds-context-menu-trigger"], [data-testid="card.wrapper"], aside, blockquote',
+          )
+        ) {
+          continue;
+        }
+      } else if (!textEl.parentElement?.contains(nameArea)) {
+        continue;
+      }
+    }
     if (!isQuotedContent(textEl, article) && !isInsideQuotedPost(textEl, article, postId)) {
       out.push(textEl);
     }

@@ -11,7 +11,7 @@
 export const tweetSelectors = {
   /** 旧版 testid；新版用语义动作标记确认 article 是推文，避免扫描普通文章或长文阅读容器。 */
   article:
-    'article:not([data-testid="twitterArticleReadView"]):is([data-testid="tweet"], :has([data-engagement-action="like"]))',
+    'article:not([data-testid="twitterArticleReadView"]):is([data-testid="tweet"], :has([data-engagement-action="like"], [data-engagement-action="unlike"]))',
   /** 时间线格子（article 的外层 cell）。标注边框打在这层，绝不进 article 内部破坏其 grid 布局。 */
   timelineCell: 'div[data-testid="cellInnerDiv"]',
   /** 作者头像容器（旧版 testid；新版由 reader 按本帖作者链接定位）。 */
@@ -32,7 +32,7 @@ export const tweetSelectors = {
    * 找 like/unlike 按钮后再 closest([role=group])。
    */
   actionAnchor:
-    ':is([data-testid="like"], [data-testid="unlike"], [data-engagement-action="like"])',
+    ':is([data-testid="like"], [data-testid="unlike"], [data-engagement-action="like"], [data-engagement-action="unlike"])',
   actionGroup: '[role="group"]',
   engagementAction: '[data-engagement-action]',
   statusLink: 'a[href*="/status/"]',
