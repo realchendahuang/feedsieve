@@ -25,13 +25,15 @@ export type FillReplyOutcome = { ok: true } | { ok: false; reason: FillReplyReas
  * `tweetTextarea_0RichTextInputContainer` 两个不可编辑的容器（2026-11-11 在
  * 真实回复框里核实），光按前缀匹配会拿到壳子，focus / paste 全落空。
  */
-const EDITOR_SELECTOR = '[data-testid^="tweetTextarea_"][contenteditable="true"]';
+const EDITOR_SELECTOR =
+  ':is([data-testid^="tweetTextarea_"], [role="textbox"])[contenteditable="true"]';
 /**
  * 附件预览区。实测它**不是常驻节点**：只有上传成功后才被 X 插进 DOM
  * （2026-11-11 真实回复框：塞文件前 0 个 attachments，6 秒后出现 1 个并带 img）。
- * 所以「出现 attachments」本身就是最可靠的成功信号。
+ * 无 data-testid 的新版回复框同时兼容刚挂载的 blob 预览图或媒体 CDN 预览图。
  */
-const ATTACHMENT_SELECTOR = '[data-testid="attachments"] img';
+const ATTACHMENT_SELECTOR =
+  '[data-testid="attachments"] img, img[src^="blob:"], img[src*="pbs.twimg.com/media/"]';
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -93,7 +95,9 @@ export function findArticle(postId: string): HTMLElement | null {
 }
 
 function countAttachments(root: ParentNode): number {
-  return root.querySelectorAll(ATTACHMENT_SELECTOR).length;
+  return [...root.querySelectorAll(ATTACHMENT_SELECTOR)].filter(
+    (img) => !img.closest('[data-testid="Tweet-User-Avatar"], .x-avatar'),
+  ).length;
 }
 
 function imageInput(host: ParentNode): HTMLInputElement | null {
@@ -211,11 +215,15 @@ export async function fillReplyComposer(options: FillReplyOptions): Promise<Fill
       );
       const opened = freshDialog?.querySelector<HTMLElement>(EDITOR_SELECTOR) ?? null;
       if (opened) return opened;
-      // 没有新弹窗时只认「新出现、且长在这条帖子里」的编辑器：
-      // 页面别处（侧栏发帖框、别的帖子）新挂上的编辑器不能算数。
+      // 没有新弹窗时只认「新出现、且不在侧栏/导航里」的内联回复编辑器：
+      // 页面上原本就挂着的侧栏发帖框已在 editorsBefore 里排除。
       const scoped = cell
         ? fresh.find((node) => cell.contains(node))
-        : fresh.find((node) => node.closest('[role="dialog"]') !== null);
+        : fresh.find(
+            (node) =>
+              node.closest('[role="dialog"]') !== null ||
+              !node.closest('aside, nav, [data-testid="sidebarColumn"]'),
+          );
       if (scoped) return scoped;
       // 详情页的回复框是内联展开的，而且可能本来就开着：点一下只是把焦点还给它。
       // 这时不会有新节点，用这条帖子自己（或它所在的格子里）的编辑器顶上。
@@ -237,7 +245,10 @@ export async function fillReplyComposer(options: FillReplyOptions): Promise<Fill
   const host = locateHost(editor);
   // 判断「图有没有上去」的范围要单独算：attachments 是插在编辑器**旁边**的兄弟节点，
   // 宿主退回编辑器本身时，在 editor 里面找永远找不到。
-  const scope = editor.closest('[role="dialog"]') ?? cell ?? host;
+  const scope =
+    editor.closest('[role="dialog"]') ??
+    cell ??
+    (host !== editor ? host : (editor.parentElement ?? editor));
   const file = makeFile(options.blob, options.filename ?? 'ai-flavor.png');
   const before = countAttachments(scope);
   const attached = () => countAttachments(scope) > before;

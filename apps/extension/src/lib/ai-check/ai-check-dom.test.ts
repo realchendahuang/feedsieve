@@ -594,7 +594,7 @@ it('无 data-testid 新版 X 结构在 scope=blue 时也能识别认证标记并
     undefined,
     {
       aiListV1: { at: Date.now(), entries: [['sample_user', 0.92, 1]] },
-      aiSettingsV1: { mode: 'mark', scope: 'blue', markFollowing: false },
+      aiCheckSettingsV1: { mode: 'mark', scope: 'blue', markFollowing: false },
     },
   );
   tick();
@@ -602,5 +602,64 @@ it('无 data-testid 新版 X 结构在 scope=blue 时也能识别认证标记并
   tick();
   const mark = document.querySelector('.x-middot-group .fs-ai-mark');
   expect(mark?.textContent ?? '').toContain('AI 味');
+  ai.stop();
+});
+
+it('无 cellInnerDiv 的新版 X 在 mode=fold 下仍能折叠 AI 回复、点开且不冒泡触发外层跳转', async () => {
+  const cardClicked = vi.fn();
+  const { ai, tick } = setup(
+    '/op/status/1800000000000000000',
+    `<div role="link" id="outer-card">${REDESIGN_TWEET_HTML}</div>`,
+    undefined,
+    {
+      aiListV1: { at: Date.now(), entries: [['sample_user', 0.92, 1]] },
+      aiCheckSettingsV1: { mode: 'fold', scope: 'all', markFollowing: false },
+    },
+  );
+  document.getElementById('outer-card')!.addEventListener('click', cardClicked);
+  tick();
+  await new Promise((r) => setTimeout(r, 0));
+  tick();
+  const article = document.querySelector('article')!;
+  expect(article.getAttribute('data-fs-ai-fold')).toBe('1');
+  const foldbar = article.querySelector<HTMLElement>('.fs-ai-foldbar')!;
+  expect(foldbar).not.toBeNull();
+  foldbar.click();
+  expect(cardClicked).not.toHaveBeenCalled();
+  foldbar.querySelector<HTMLButtonElement>('button')!.click();
+  expect(article.hasAttribute('data-fs-ai-fold')).toBe(false);
+  expect(cardClicked).not.toHaveBeenCalled();
+  ai.stop();
+});
+
+it('无 primaryColumn 的新版主页仍能挂载「AI 味」Tab 且不把自己克隆的 Tab 当回复页链接', async () => {
+  const { ai, tick } = setup(
+    '/Alice',
+    `<main><nav><div role="tablist">
+      <div role="presentation"><a role="tab" aria-selected="true" href="/Alice"><span>帖子</span></a></div>
+      <div role="presentation"><a role="tab" aria-selected="false" href="/Alice/with_replies"><span>回复</span></a></div>
+    </div></nav></main>`,
+    {
+      remote: {
+        handle: 'alice',
+        verdict: 'ai',
+        score: 0.93,
+        reply_count: 12,
+        rhythm: null,
+        judged_at: 1,
+        expires_at: 9e12,
+        expired: false,
+        public: true,
+        votes: { ai_count: 2, human_count: 0, listed: false },
+      },
+      myVote: null,
+      mine: null,
+    },
+  );
+  tick();
+  await vi.waitFor(() =>
+    expect(document.querySelector('[data-fs-ai-tab]')?.textContent).toBe('AI 味95%'),
+  );
+  expect(document.querySelectorAll('[data-fs-ai-tab]')).toHaveLength(1);
   ai.stop();
 });

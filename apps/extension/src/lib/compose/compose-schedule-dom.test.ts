@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
+  createComposeSchedule,
   fillScheduleFields,
   findScheduleFields,
   readScheduleFields,
@@ -88,6 +89,31 @@ describe('X 安排表下拉框', () => {
     expect(roundUp5(new Date(2026, 10, 1, 9, 5).getTime())).toBe(
       new Date(2026, 10, 1, 9, 5).getTime(),
     );
+  });
+
+  it('安排表弹窗无 scheduledConfirmationPrimaryAction testid 时，仍按五个下拉框识别并挂载快捷栏', async () => {
+    vi.stubGlobal('browser', {
+      storage: {
+        local: {
+          get: vi.fn(async () => ({})),
+          set: vi.fn(async () => undefined),
+        },
+        onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+      },
+      runtime: { onMessage: { addListener: vi.fn(), removeListener: vi.fn() } },
+    });
+    const dialog = scheduleDialog();
+    dialog.insertAdjacentHTML('beforeend', '<button type="button">确认</button>');
+    const helper = createComposeSchedule({
+      getLanguage: () => 'zh',
+      getAccount: () => 'me',
+      now: () => new Date(2026, 10, 1, 0, 0).getTime(),
+    });
+    helper.start();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(dialog.querySelector('[data-fs-sched-bar]')).not.toBeNull();
+    helper.stop();
+    vi.unstubAllGlobals();
   });
 });
 

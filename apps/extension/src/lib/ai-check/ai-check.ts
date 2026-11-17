@@ -15,6 +15,7 @@ import {
   contextFromPath,
   extractFeedItem,
   findTweetAuthorArea,
+  findTweetAvatarImg,
   profileFromPath,
   tweetSelectors,
 } from '@feedsieve/x-adapter';
@@ -532,9 +533,7 @@ export function createAiCheck(deps: {
 
   function isBlue(article: Element): boolean {
     const area = findTweetAuthorArea(article);
-    return !!area?.querySelector(
-      '[data-testid="icon-verified"], [aria-label="认证账号"], [aria-label="Verified account"]',
-    );
+    return !!area?.querySelector(tweetSelectors.verifiedBadge);
   }
 
   function inScope(article: Element): boolean {
@@ -568,7 +567,12 @@ export function createAiCheck(deps: {
   function nameRowOf(article: Element): Element | null {
     const area = findTweetAuthorArea(article);
     if (!area) return null;
-    const rows = [...area.children];
+    const rows = [...area.children].filter(
+      (child) =>
+        !child.classList.contains('fs-tier') &&
+        !child.classList.contains('fs-ai-mark') &&
+        !child.classList.contains('fs-ai-entry'),
+    );
     return rows[rows.length - 1] ?? area;
   }
 
@@ -581,6 +585,9 @@ export function createAiCheck(deps: {
   ): void {
     cell.querySelectorAll(':scope > .fs-ai-foldbar').forEach((b) => b.remove());
     const bar = el('div', 'fs-ai-foldbar');
+    bar.addEventListener('click', (event) => {
+      event.stopPropagation();
+    });
     bar.appendChild(
       el(
         'span',
@@ -664,14 +671,14 @@ export function createAiCheck(deps: {
       const mark =
         protectedAccount || settings.mode === 'off' || !inScope(article) ? null : markFor(handle);
       const markKey = mark ? `${handle}:${mark.percent}:${mark.tone}:${settings.mode}` : '-';
-      const cell = article.closest(tweetSelectors.timelineCell);
+      const foldHost = article.closest(tweetSelectors.timelineCell) ?? article;
       if (article.getAttribute(MARK_ATTR) !== markKey) {
         article.setAttribute(MARK_ATTR, markKey);
         article.querySelectorAll('.fs-ai-mark').forEach((m) => m.remove());
         if (mark) article.setAttribute(TONE_ATTR, mark.tone);
         else article.removeAttribute(TONE_ATTR);
-        cell?.removeAttribute(FOLD_ATTR);
-        cell?.querySelectorAll(':scope > .fs-ai-foldbar').forEach((b) => b.remove());
+        foldHost.removeAttribute(FOLD_ATTR);
+        foldHost.querySelectorAll(':scope > .fs-ai-foldbar').forEach((b) => b.remove());
         if (mark) {
           const nameRow = nameRowOf(article);
           const label = mark.percent < 0 ? t().markListed : t().mark(mark.percent);
@@ -694,15 +701,13 @@ export function createAiCheck(deps: {
       // 用户只能刷新。每轮都校验一次：该折的补回折叠条，不该折的连同属性一起清掉。
       const shouldFold =
         !!mark && settings.mode === 'fold' && !isFocal && !unfolded.has(item.postId);
-      if (cell) {
-        if (shouldFold) {
-          if (!cell.hasAttribute(FOLD_ATTR) || !cell.querySelector(':scope > .fs-ai-foldbar')) {
-            mountFoldBar(cell, item.postId, item.author.displayName || `@${handle}`, mark);
-          }
-        } else if (cell.hasAttribute(FOLD_ATTR)) {
-          cell.removeAttribute(FOLD_ATTR);
-          cell.querySelectorAll(':scope > .fs-ai-foldbar').forEach((b) => b.remove());
+      if (shouldFold) {
+        if (!foldHost.hasAttribute(FOLD_ATTR) || !foldHost.querySelector(':scope > .fs-ai-foldbar')) {
+          mountFoldBar(foldHost, item.postId, item.author.displayName || `@${handle}`, mark);
         }
+      } else if (foldHost.hasAttribute(FOLD_ATTR)) {
+        foldHost.removeAttribute(FOLD_ATTR);
+        foldHost.querySelectorAll(':scope > .fs-ai-foldbar').forEach((b) => b.remove());
       }
 
       // 入口：没有结论时在作者名后面挂一个灰色机器人；有结论就让位给 AI 味标签。
@@ -764,10 +769,17 @@ export function createAiCheck(deps: {
 
   // ---- 入口一：主页 Tab 栏的「AI 味」Tab ----
   function repliesTab(handle: string): HTMLAnchorElement | null {
-    for (const a of document.querySelectorAll<HTMLAnchorElement>(
-      '[data-testid="primaryColumn"] a[role="tab"]',
-    )) {
-      if (a.getAttribute('href')?.toLowerCase() === `/${handle}/with_replies`) return a;
+    const target = `/${handle.toLowerCase()}/with_replies`;
+    const root = document.querySelector('[data-testid="primaryColumn"]') ?? document;
+    for (const a of root.querySelectorAll<HTMLAnchorElement>('[role="tablist"] a[role="tab"], a[role="tab"]')) {
+      if (a.hasAttribute(TAB_ATTR) || a.closest(`[${TAB_ATTR}]`)) continue;
+      let pathname: string;
+      try {
+        pathname = new URL(a.getAttribute('href') ?? '', location.origin).pathname;
+      } catch {
+        continue;
+      }
+      if (pathname.replace(/\/+$/, '').toLowerCase() === target) return a;
     }
     return null;
   }
@@ -859,17 +871,21 @@ export function createAiCheck(deps: {
   /** 页面上这个人的头像地址：主页头部的大头像，或者 TA 某条帖子旁边的头像 */
   function avatarOnPage(handle: string): string | null {
     for (const a of document.querySelectorAll<HTMLAnchorElement>('a[href$="/photo"]')) {
-      if (a.getAttribute('href')?.toLowerCase() === `/${handle}/photo`) {
+      let pathname = '';
+      try {
+        pathname = new URL(a.getAttribute('href') ?? '', location.origin).pathname;
+      } catch {
+        continue;
+      }
+      if (pathname.toLowerCase() === `/${handle.toLowerCase()}/photo`) {
         const src = a.querySelector('img')?.src;
         if (src) return src;
       }
     }
     for (const article of document.querySelectorAll(tweetSelectors.article)) {
       const item = extractFeedItem(article, 'other');
-      if (item?.author.handle.toLowerCase() !== handle) continue;
-      const src = article.querySelector<HTMLImageElement>(
-        '[data-testid="Tweet-User-Avatar"] img',
-      )?.src;
+      if (item?.author.handle.toLowerCase() !== handle.toLowerCase()) continue;
+      const src = findTweetAvatarImg(article)?.src;
       if (src) return src;
     }
     return null;

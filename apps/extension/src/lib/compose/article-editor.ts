@@ -23,8 +23,10 @@ import { articleToMarkdown } from './article-export';
 import { insertLocalImages, readImageSlots } from './article-images';
 import { saveBackup } from './schedule-store';
 
-const EDITOR_SELECTOR = '[data-testid="composer"]';
-const TITLE_SELECTOR = 'textarea[name="文章标题"], [data-testid="twitter-article-title"] textarea';
+const EDITOR_SELECTOR =
+  ':is([data-testid="composer"], .DraftEditor-editorContainer [contenteditable="true"], [role="textbox"][contenteditable="true"])';
+const TITLE_SELECTOR =
+  'textarea[name="文章标题"], textarea[name="Article title"], [data-testid="twitter-article-title"] textarea';
 const PANEL_ID = 'feedsieve-article-panel';
 const STYLE_ID = 'feedsieve-article-styles';
 const TOAST_ID = 'feedsieve-article-toast';

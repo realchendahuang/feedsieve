@@ -47,7 +47,29 @@ export const SCHEDULED_LIST_PATH = '/compose/post/unsent/scheduled';
 const BAR_ATTR = 'data-fs-sched-bar';
 const STYLE_ID = 'feedsieve-compose-styles';
 const CONFIRM_SELECTOR = '[data-testid="scheduledConfirmationPrimaryAction"]';
-const SCHEDULE_OPTION_SELECTOR = '[data-testid="scheduleOption"]';
+const SCHEDULE_OPTION_SELECTOR =
+  ':is([data-testid="scheduleOption"], button[aria-label="预排期帖子"], button[aria-label="Schedule post"])';
+const CONFIRM_LABELS = new Set(['确认', 'Confirm', '更新', 'Update']);
+
+function findScheduleDialog(): Element | null {
+  const legacy = document.querySelector(CONFIRM_SELECTOR)?.closest('[role="dialog"]');
+  if (legacy) return legacy;
+  for (const dialog of document.querySelectorAll('[role="dialog"]')) {
+    if (findScheduleFields(dialog)) return dialog;
+  }
+  return null;
+}
+
+function findConfirmHit(target: Element | null): Element | null {
+  if (!target) return null;
+  const legacy = target.closest(CONFIRM_SELECTOR);
+  if (legacy) return legacy;
+  const button = target.closest('button, [role="button"]');
+  if (!button || button.closest(`[${BAR_ATTR}]`)) return null;
+  if (!CONFIRM_LABELS.has((button.textContent ?? '').trim())) return null;
+  const dialog = button.closest('[role="dialog"]');
+  return dialog && findScheduleFields(dialog) ? button : null;
+}
 const MINUTE_MS = 60_000;
 /** 本页刚确认过、还没出现在已排期列表里的时间，记这么久 */
 const SESSION_USED_TTL_MS = 30 * MINUTE_MS;
@@ -340,8 +362,7 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
   }
 
   function scan(): void {
-    const confirm = document.querySelector(CONFIRM_SELECTOR);
-    const dialog = confirm?.closest('[role="dialog"]');
+    const dialog = findScheduleDialog();
     if (!dialog) {
       releasePendingAssignment();
       return;
@@ -363,8 +384,7 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
   /** 打开 X 的「安排表」，等它出来后填当前节奏里的下一条。 */
   function openWithSlot(option?: HTMLElement | null): void {
     const target = option ?? document.querySelector<HTMLElement>(SCHEDULE_OPTION_SELECTOR);
-    const confirm = document.querySelector(CONFIRM_SELECTOR);
-    const dialog = confirm?.closest('[role="dialog"]');
+    const dialog = findScheduleDialog();
     const at = nextSlot();
     if (dialog && findScheduleFields(dialog)) {
       if (at !== null) void fill(dialog, at, true);
@@ -496,7 +516,7 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
   }
 
   function onClick(event: MouseEvent): void {
-    const confirm = (event.target as Element | null)?.closest?.(CONFIRM_SELECTOR);
+    const confirm = findConfirmHit(event.target as Element | null);
     if (!confirm) return;
     const dialog = confirm.closest('[role="dialog"]');
     const at = dialog ? dialogTime(dialog) : null;
@@ -515,7 +535,7 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
     if (!settings.composeHelper || !event.altKey || event.metaKey || event.ctrlKey) return;
     if (event.code !== 'KeyN') return;
     const option = document.querySelector<HTMLElement>(SCHEDULE_OPTION_SELECTOR);
-    const inDialog = document.querySelector(CONFIRM_SELECTOR);
+    const inDialog = findScheduleDialog();
     if (!option && !inDialog) return;
     event.preventDefault();
     event.stopPropagation();

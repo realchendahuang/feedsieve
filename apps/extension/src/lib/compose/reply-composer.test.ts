@@ -373,3 +373,37 @@ it('适配无 data-testid 且外层带 role=link 的新版 X 推文结构', asyn
   expect(outcome).toEqual({ ok: true });
   expect(upload.names).toEqual(['ai-flavor.png']);
 });
+
+it('回复弹窗本身也无 tweetTextarea / attachments 等 testid 时，靠 role=textbox 与预览图同样能填入', async () => {
+  document.body.innerHTML = `<div role="link">${REDESIGN_TWEET_HTML}</div>`;
+  const article = document.querySelector('article')!;
+  const replyLink = article.querySelector<HTMLAnchorElement>('[data-engagement-action="reply"] a')!;
+  const names: string[] = [];
+  replyLink.addEventListener('click', (event) => {
+    event.preventDefault();
+    const dialog = document.createElement('div');
+    dialog.setAttribute('role', 'dialog');
+    dialog.innerHTML = `
+      <div role="textbox" contenteditable="true"></div>
+      <div class="preview-slot"></div>
+      <input type="file" accept="image/jpeg,image/png,image/webp" />`;
+    dialog.querySelector('input')!.addEventListener('change', (ev) => {
+      const file = (ev.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      names.push(file.name);
+      const img = document.createElement('img');
+      img.src = 'blob:https://x.com/preview-1';
+      dialog.querySelector('.preview-slot')!.appendChild(img);
+    });
+    document.body.appendChild(dialog);
+  });
+
+  const outcome = await fillReplyComposer({
+    postId: '1800000000000000001',
+    blob: new Blob(['x'], { type: 'image/png' }),
+    wait: noWait,
+  });
+
+  expect(outcome).toEqual({ ok: true });
+  expect(names).toEqual(['ai-flavor.png']);
+});
