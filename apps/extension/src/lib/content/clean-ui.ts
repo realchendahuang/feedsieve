@@ -9,7 +9,13 @@
  * 包推文里的视频/GIF 播放器，隐藏它等于把所有视频和 GIF 一起藏掉。认不准的标记
  * 就别拿来当判据，宁可改成认文案再打自己的标记。
  */
-import { tweetSelectors } from '@feedsieve/x-adapter';
+import {
+  findTweetAuthorArea,
+  findTweetOwnTextElements,
+  menuSelectors,
+  QUOTE_CARD_SELECTOR,
+  tweetSelectors,
+} from '@feedsieve/x-adapter';
 import { getUiSettings, subscribeUiSettings, type UiSettings } from '../settings/ui-settings';
 
 const STYLE_ID = 'feedsieve-clean-ui-styles';
@@ -17,6 +23,15 @@ const MARK_ATTR = 'data-fs-clean';
 const FOR_YOU = ['为你推荐', 'For you'];
 const FOLLOWING = ['正在关注', 'Following'];
 const WHO_TO_FOLLOW = ['推荐关注', 'Who to follow'];
+const TRENDS_HEADINGS = new Set([
+  '当前趋势',
+  '有什么新鲜事',
+  'What’s happening',
+  "What's happening",
+  'Trending',
+]);
+/** 新版无 data-testid 时间线里，帖子右上角 Grok 按钮的无障碍文案（2026-11-16 现场样本确认） */
+const GROK_POST_LABELS = new Set(['解释这个帖子', 'Explain this post']);
 /** X 给付费推广帖打的标签（贴在作者名那一行，取代发布时间） */
 const PROMOTED_LABELS = new Set(['推广', 'Promoted']);
 /** 帖子右上角「推广」按钮的文案：X 给作者本人看的 Promote 入口（2026-11-09 真机确认） */
@@ -48,7 +63,8 @@ const CLEAN_UI_CSS = `
   html[data-fs-clean-follow] [data-fs-clean="follow"] { display: none !important; }
   /* 只淡化真正的推文：页面里还有别的 <article>（长文卡片、模块容器），
      那些不是推文，不该被压暗。 */
-  html[data-fs-clean-premium] article[data-testid="tweet"][data-fs-clean="premium"] {
+  html[data-fs-clean-premium] article[data-testid="tweet"][data-fs-clean="premium"],
+  html[data-fs-clean-premium] article:not([data-testid="twitterArticleReadView"]):has([data-engagement-action="like"], [data-engagement-action="unlike"])[data-fs-clean="premium"] {
     opacity: .38 !important;
     transition: opacity .15s ease;
   }
@@ -129,6 +145,15 @@ export function isFocalTweet(article: Element, focalId: string | null = focalSta
   return false;
 }
 
+function isQuoted(element: Element, article: Element): boolean {
+  for (let node: Element | null = element; node && node !== article; node = node.parentElement) {
+    if (node.tagName === 'ARTICLE') return true;
+    if (node.matches(QUOTE_CARD_SELECTOR) && node.querySelector(tweetSelectors.statusLink))
+      return true;
+  }
+  return false;
+}
+
 /**
  * 只对评论区（详情页）里蓝标作者、正文很短的回复降透明度。
  * 主帖由 isFocalTweet 按 status id 认，不靠 DOM 顺序；不是推文的 <article> 不碰。
@@ -140,11 +165,15 @@ export function isThinPremiumReply(
 ): boolean {
   if (!article.matches(tweetSelectors.article)) return false;
   if (isFocalTweet(article, focalId)) return false;
-  const name = article.querySelector('[data-testid="User-Name"]');
-  const text = article.querySelector('[data-testid="tweetText"]');
-  if (!name || !text) return false;
-  if (!name.querySelector('[data-testid="icon-verified"]')) return false;
-  return textOf(text).length < PREMIUM_REPLY_MAX_CHARS;
+  const name = findTweetAuthorArea(article);
+  const texts = findTweetOwnTextElements(article);
+  if (!name || texts.length === 0) return false;
+  if (!name.querySelector(tweetSelectors.verifiedBadge)) return false;
+  const combined = texts
+    .map((el) => textOf(el))
+    .filter(Boolean)
+    .join(' ');
+  return combined.length < PREMIUM_REPLY_MAX_CHARS;
 }
 
 /**
@@ -155,17 +184,23 @@ export function isThinPremiumReply(
  * 那个标记连推文里的视频/GIF 播放器一起包着，隐藏它会在时间线上留下空白媒体框。
  */
 export function isPromotedArticle(article: Element): boolean {
-  if (!article.querySelector('[data-testid="User-Name"]')) return false;
+  if (
+    !article.querySelector('[data-testid="User-Name"]') &&
+    !article.matches(tweetSelectors.article)
+  ) {
+    return false;
+  }
   for (const el of article.querySelectorAll('span')) {
     if (el.childElementCount > 0) continue;
     if (!PROMOTED_LABELS.has(textOf(el))) continue;
     if (el.closest('[data-testid="User-Name"]')) continue;
-    if (el.closest('[data-testid="tweetText"]')) continue;
+    if (el.closest(tweetSelectors.text)) continue;
     if (el.closest('[data-testid="card.wrapper"]')) continue;
+    if (isQuoted(el, article)) continue;
     // 下拉菜单里的「推广 / 推广此帖」是操作文案，不是帖子的推广标签
-    if (el.closest('[role="menu"], [data-testid="Dropdown"]')) continue;
-    // 话题、提及、正文里的链接都是 <a>，里面的「推广」是用户写的内容
-    if (el.closest('a')) continue;
+    if (el.closest(`[role="menu"], ${menuSelectors.dropdown}`)) continue;
+    // 话题、提及、正文里的链接都是 <a>；作者自己的「推广」按钮是 button，都不是广告标签
+    if (el.closest('a, button, [role="button"]')) continue;
     return true;
   }
   return false;
@@ -181,9 +216,11 @@ export function isPromotedArticle(article: Element): boolean {
 export function isPromoteButton(el: Element): boolean {
   if (!el.matches('button, [role="button"]')) return false;
   if (!PROMOTE_BUTTON_LABELS.has(textOf(el))) return false;
+  const article = el.closest('article');
+  if (article && isQuoted(el, article)) return false;
   if (
     el.closest(
-      '[data-testid="tweetText"], [data-testid="card.wrapper"], [role="menu"], [data-testid="Dropdown"]',
+      `${tweetSelectors.text}, [data-testid="card.wrapper"], [role="menu"], ${menuSelectors.dropdown}`,
     )
   ) {
     return false;
@@ -269,25 +306,28 @@ export function createCleanUi() {
       for (const link of document.querySelectorAll('nav a[href="/i/grok"]')) {
         mark(link, 'grok');
       }
-      // 帖子头部的 Grok 操作按钮：X 只挂 aria-label（中文「Grok 操作」），没有
-      // data-testid，只能按 aria-label 认。正文、引用卡片和菜单里的同名字样不碰。
-      for (const button of document.querySelectorAll(
-        `${tweetSelectors.article} button[aria-label*="Grok"]`,
-      )) {
-        if (
-          button.closest(
-            '[data-testid="tweetText"], [data-testid="card.wrapper"], [role="menu"], [data-testid="Dropdown"]',
-          )
-        ) {
-          continue;
+      // 帖子头部的 Grok 操作按钮：旧版挂 aria-label="Grok 操作"，新版挂 aria-label="解释这个帖子"。
+      // 正文、引用卡片、底部动作栏和菜单里的同名字样不碰。
+      for (const article of document.querySelectorAll(tweetSelectors.article)) {
+        for (const button of article.querySelectorAll('button[aria-label]')) {
+          const label = button.getAttribute('aria-label') ?? '';
+          if (!label.includes('Grok') && !GROK_POST_LABELS.has(label)) continue;
+          if (isQuoted(button, article)) continue;
+          if (
+            button.closest(
+              `${tweetSelectors.text}, [data-testid="card.wrapper"], ${tweetSelectors.actionGroup}, [role="menu"], ${menuSelectors.dropdown}`,
+            )
+          ) {
+            continue;
+          }
+          mark(button, 'grok');
         }
-        mark(button, 'grok');
       }
     }
 
     if (settings.hideForYou) {
       const tabs = [
-        ...document.querySelectorAll('#ScrollSnap-List div[role="tab"], [role="tablist"] div[role="tab"]'),
+        ...document.querySelectorAll('#ScrollSnap-List [role="tab"], [role="tablist"] [role="tab"]'),
       ];
       const forYou = tabs.find(isForYouTab) ?? null;
       const following = tabs.find(isFollowingTab) ?? null;
@@ -307,20 +347,39 @@ export function createCleanUi() {
       // 设置文案是「隐藏右侧栏的趋势模块」，就只动侧栏：探索页主栏也有一模一样的
       // [data-testid="trend"]，跟着 section[role=region] 上溯会把主页内容整块藏掉。
       const sidebar = document.querySelector('[data-testid="sidebarColumn"]');
-      for (const trend of sidebar?.querySelectorAll('[data-testid="trend"]') ?? []) {
-        // 趋势模块的根是包含它的 section[role=region]；不能上溯到 sidebarColumn，
-        // 那一层把搜索框和所有侧栏模块都包在一起。
-        mark(trend.closest('section[role="region"]') ?? trend.parentElement, 'trends');
+      if (sidebar) {
+        for (const trend of sidebar.querySelectorAll('[data-testid="trend"]')) {
+          mark(trend.closest('section[role="region"]') ?? trend.parentElement, 'trends');
+        }
+      } else if (!/^\/(explore|search|i\/trends)(?:[/?#]|$)/.test(location.pathname)) {
+        for (const region of document.querySelectorAll(
+          'aside section[role="region"], aside[role="complementary"]',
+        )) {
+          if (region.querySelector('article')) continue;
+          const hasTrendHeading = [
+            ...region.querySelectorAll('h1, h2, h3, [role="heading"]'),
+          ].some((h) => TRENDS_HEADINGS.has(textOf(h)));
+          if (hasTrendHeading) mark(region, 'trends');
+        }
       }
     }
 
     if (settings.hideWhoToFollow) {
-      const headings = document.querySelectorAll(
-        '[data-testid="sidebarColumn"] h2, [data-testid="sidebarColumn"] [role="heading"]',
-      );
-      for (const heading of headings) {
-        if (!isWhoToFollowHeading(heading)) continue;
-        mark(whoToFollowCard(heading) ?? moduleRoot(heading), 'follow');
+      const sidebar = document.querySelector('[data-testid="sidebarColumn"]');
+      if (sidebar) {
+        const headings = sidebar.querySelectorAll('h2, [role="heading"]');
+        for (const heading of headings) {
+          if (!isWhoToFollowHeading(heading)) continue;
+          mark(whoToFollowCard(heading) ?? moduleRoot(heading), 'follow');
+        }
+      } else {
+        for (const aside of document.querySelectorAll('aside[role="complementary"], aside')) {
+          if (aside.querySelector('article')) continue;
+          const hasHeading = [...aside.querySelectorAll('h1, h2, h3, [role="heading"]')].some(
+            isWhoToFollowHeading,
+          );
+          if (hasHeading) mark(aside, 'follow');
+        }
       }
     }
 
@@ -352,6 +411,7 @@ export function createCleanUi() {
         // 宁可不生效，也不能靠顺序猜、把主帖当回复一起压暗。
         if (tweets.some((article) => isFocalTweet(article, focalId))) {
           for (const article of tweets) {
+            if (article.getAttribute(MARK_ATTR) === 'promoted') continue;
             if (isThinPremiumReply(article, focalId)) mark(article, 'premium');
           }
         }

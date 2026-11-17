@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { REDESIGN_TWEET_HTML } from '../../../../../fixtures/x/timeline/redesign';
 import { DEFAULT_UI_SETTINGS, type UiSettings } from '../settings/ui-settings';
 import {
   createCleanUi,
@@ -602,5 +603,47 @@ describe('clean-ui 选择器', () => {
     await vi.advanceTimersByTimeAsync(2_000);
     expect(document.getElementById('feedsieve-clean-ui-styles')).toBeNull();
     expect(document.querySelector('a')?.hasAttribute('data-fs-clean')).toBe(false);
+  });
+
+  it('无 data-testid 的新版 X：蓝标短回复淡化、Grok「解释这个帖子」按钮隐藏、自己的推广按钮不误当推广帖', async () => {
+    vi.useFakeTimers();
+    stubBrowser({ hidePromoteButton: false });
+    window.history.pushState({}, '', '/focal_op/status/1800000000000000000');
+    const focalHtml = REDESIGN_TWEET_HTML.replaceAll('sample_user', 'focal_op').replaceAll(
+      '1800000000000000001',
+      '1800000000000000000',
+    );
+    const shortReplyHtml = REDESIGN_TWEET_HTML.replace('Sample post body.', '同意');
+    const promotedAdHtml = REDESIGN_TWEET_HTML.replaceAll('sample_user', 'ad_user').replace(
+      '<span><a class="x-link" href="/ad_user/status/1800000000000000001">1小时</a></span>',
+      '<span>推广</span>',
+    );
+    document.body.innerHTML = `
+      <div id="main">${focalHtml}${shortReplyHtml}${promotedAdHtml}</div>
+      <aside role="complementary" id="wtf"><h2 role="heading">推荐关注</h2></aside>
+      <aside><section role="region" id="trends-sec"><h2 role="heading">有什么新鲜事</h2></section></aside>`;
+    const articles = [...document.querySelectorAll('article')];
+    // 作者自己的帖子里带一个「推广」按钮，hidePromoted 不能把整条帖子当广告藏掉
+    articles[0]!.querySelector('.flex.shrink-0.items-center.gap-1')!.append(promoteButton('推广'));
+
+    const clean = createCleanUi();
+    clean.start();
+    try {
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(articles[0]!.hasAttribute('data-fs-clean')).toBe(false);
+      expect(articles[1]!.getAttribute('data-fs-clean')).toBe('premium');
+      expect(articles[2]!.getAttribute('data-fs-clean')).toBe('promoted');
+      // 新版右上角 Grok 按钮（aria-label="解释这个帖子"）被识别并标记
+      expect(
+        articles[1]!
+          .querySelector('button[aria-label="解释这个帖子"]')!
+          .getAttribute('data-fs-clean'),
+      ).toBe('grok');
+      // 无 sidebarColumn 时侧栏推荐关注与趋势仍能按语义容器隐藏
+      expect(document.getElementById('wtf')!.getAttribute('data-fs-clean')).toBe('follow');
+      expect(document.getElementById('trends-sec')!.getAttribute('data-fs-clean')).toBe('trends');
+    } finally {
+      clean.stop();
+    }
   });
 });

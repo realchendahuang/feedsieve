@@ -293,6 +293,15 @@ function findSearchForm(): HTMLFormElement | null {
   return null;
 }
 
+function findSearchSlot(form: HTMLFormElement): HTMLElement | null {
+  return (
+    form.querySelector<HTMLElement>(SEARCH_LABEL_SELECTOR) ??
+    form.querySelector<HTMLElement>('label') ??
+    form.querySelector<HTMLInputElement>('input')?.parentElement ??
+    null
+  );
+}
+
 function slidersIcon(): SVGSVGElement {
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(SVG_NS, 'svg');
@@ -892,7 +901,7 @@ export function createSearchAssist(deps: SearchAssistDeps): SearchAssist {
       return;
     }
     const form = findSearchForm();
-    const label = form?.querySelector<HTMLElement>(SEARCH_LABEL_SELECTOR);
+    const label = form ? findSearchSlot(form) : null;
     if (!form || !label) {
       closeDialog();
       trigger?.remove();
