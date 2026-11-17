@@ -68,7 +68,9 @@ export function createManualActions(deps: {
     button.classList.add('fs-manual-mark');
     button.setAttribute('data-fs-manual-action', 'true');
     setManualState(slot, 'idle');
-    button.addEventListener('click', () => {
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
       if (button.disabled) return;
       const current = manualEvidence.get(button);
       if (!current) return;

@@ -1,8 +1,13 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { REDESIGN_TWEET_HTML } from '../../../fixtures/x/timeline/redesign';
-import { extractFeedItem, extractTweetIdentity, extractTweetTime } from './reader';
-import { tweetSelectors } from './selectors/selectors';
+import {
+  extractFeedItem,
+  extractTweetIdentity,
+  extractTweetTime,
+  findTweetAvatarImg,
+} from './reader';
+import { menuSelectors, tweetSelectors } from './selectors/selectors';
 
 function render(): Element {
   document.body.innerHTML = REDESIGN_TWEET_HTML;
@@ -78,5 +83,44 @@ describe('2026-11 X redesign without data-testid', () => {
       .setAttribute('href', '/different_user/status/1800000000000000001');
     expect(extractFeedItem(article)).toBeNull();
     expect(extractTweetIdentity(article)).toBeNull();
+  });
+
+  it('excludes X Article read-view <article> even when it embeds tweets with like actions', () => {
+    document.body.innerHTML = `
+      <article data-testid="tweet" id="outer">
+        <div data-testid="User-Name"><a href="/author">Author</a></div>
+        <a href="/author/status/1900000000000000001"><time datetime="2026-11-17T00:00:00Z">1h</time></a>
+        <article data-testid="twitterArticleReadView" id="readview">
+          ${REDESIGN_TWEET_HTML}
+        </article>
+        <div role="group"><button data-testid="like">1</button></div>
+      </article>`;
+    const matched = [...document.querySelectorAll(tweetSelectors.article)].map((n) => n.id || 'embedded');
+    expect(matched).toEqual(['outer', 'embedded']);
+  });
+
+  it('finds own author avatar on redesign without Tweet-User-Avatar and ignores quote/emoji imgs', () => {
+    const article = render();
+    article
+      .querySelector('.x-avatar')!
+      .insertAdjacentHTML('beforeend', '<img src="https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png" />');
+    article
+      .querySelector('.whitespace-pre-wrap')!
+      .insertAdjacentHTML('beforeend', '<img alt="🌸" src="https://abs-0.twimg.com/emoji/v2/svg/1f338.svg" />');
+    const quote = document.createElement('div');
+    quote.setAttribute('role', 'link');
+    quote.innerHTML = `
+      <a href="/other"><img src="https://pbs.twimg.com/profile_images/1/quoted.jpg" /></a>
+      <a href="/other/status/1800000000000000009">1h</a>`;
+    article.prepend(quote);
+    expect(findTweetAvatarImg(article)?.getAttribute('src')).toContain('default_profile_images');
+  });
+
+  it('matches XDS and semantic role=menu dropdowns without data-testid="Dropdown"', () => {
+    document.body.innerHTML = `
+      <div data-slot="xds-menu-content" id="xds"><div role="menuitem">Share</div></div>
+      <div role="menu" id="aria"><div role="menuitem">Copy</div></div>`;
+    const matched = [...document.querySelectorAll(menuSelectors.dropdown)].map((n) => n.id);
+    expect(matched).toEqual(['xds', 'aria']);
   });
 });

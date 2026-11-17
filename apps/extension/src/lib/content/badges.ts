@@ -112,6 +112,11 @@ export function createBadges(deps: {
 
     const badge = document.createElement('div');
     badge.className = 'fs-badge';
+    // 新版 X 时间线没有 cellInnerDiv，徽章会直接挂在 <div role="link"> 内部的 article 上：
+    // 必须拦截冒泡，否则点「拉黑 / 误标？/ 抢救 / 公示」会触发外层卡片跳转进推文详情页。
+    badge.addEventListener('click', (event) => {
+      event.stopPropagation();
+    });
 
     const label = document.createElement('span');
     label.className = 'fs-reason';
@@ -130,7 +135,9 @@ export function createBadges(deps: {
     blockBtn.textContent = state.uiLanguage === 'zh' ? '拉黑' : 'Block';
     blockBtn.title =
       state.uiLanguage === 'zh' ? '福滤娃 · 拉黑此账号' : 'FeedSieve · Block this account';
-    blockBtn.addEventListener('click', () => {
+    blockBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
       // 计票口径与批量路径唯一共享：见 communityVoteForDetection
       const communityVote = communityVoteForDetection(detection.source, detection.ruleId);
       void runBlockNow(
@@ -156,7 +163,9 @@ export function createBadges(deps: {
       state.uiLanguage === 'zh'
         ? '加入个人白名单，并提交这条规则的误标反馈'
         : 'Add to your allowlist and report this rule as a false positive';
-    allowBtn.addEventListener('click', () => {
+    allowBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
       void (async () => {
         const sample = createTrainingSample(detection.handle, 'false-positive', {
           ...evidence,
@@ -194,7 +203,9 @@ export function createBadges(deps: {
               state.uiLanguage === 'zh'
                 ? '向社区投票：这个标注可能误伤了'
                 : 'Vote to community: this mark may be a false positive';
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (event) => {
+              event.preventDefault();
+              event.stopPropagation();
               void (async () => {
                 btn.disabled = true;
                 btn.textContent = '…';
@@ -235,6 +246,9 @@ export function createBadges(deps: {
             link.target = '_blank';
             link.rel = 'noopener noreferrer';
             link.textContent = state.uiLanguage === 'zh' ? '公示' : 'Cases';
+            link.addEventListener('click', (event) => {
+              event.stopPropagation();
+            });
             return link;
           })()
         : null;

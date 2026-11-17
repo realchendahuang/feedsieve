@@ -6,6 +6,8 @@
  * 节点，只用属性/CSS 隐藏，并在布局变化前后锁定实际滚动容器的位置。
  */
 
+import { extractTweetIdentity, tweetSelectors } from '@feedsieve/x-adapter';
+
 /** X cell 已被 FeedSieve 隐藏；由 content script 的注入样式折叠高度。 */
 export const HIDDEN_TWEET_CELL_ATTRIBUTE = 'data-fs-hidden';
 
@@ -19,7 +21,12 @@ export function cancelPendingHides(): void {
 
 /** 从格子里读这条推文的 status id；读不到返回 null（例如纯卡片）。 */
 function postIdOf(cell: Element): string | null {
-  // 先认时间戳那条链接：引用帖里也有 /status/ 链接，按文档顺序可能先撞上别人的 id
+  const article = cell.matches(tweetSelectors.article)
+    ? cell
+    : cell.querySelector(tweetSelectors.article);
+  const identityId = article ? extractTweetIdentity(article)?.postId : undefined;
+  if (identityId) return identityId;
+  // 兜底：先认时间戳那条链接；引用帖里也有 /status/ 链接，按文档顺序可能先撞上别人的 id
   const anchor =
     cell.querySelector('time')?.closest('a') ?? cell.querySelector('a[href*="/status/"]');
   const href = anchor?.getAttribute('href') ?? '';

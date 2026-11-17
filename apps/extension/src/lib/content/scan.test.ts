@@ -8,6 +8,7 @@ import { createBadges } from './badges';
 import { createManualActions } from './manual-actions';
 import { createContentState, MARK_ATTRIBUTE } from './page-state';
 import { createScan } from './scan';
+import { HIDDEN_TWEET_CELL_ATTRIBUTE, hideCellsSoon } from '../platform/remove-tweets';
 import { REDESIGN_TWEET_HTML } from '../../../../../fixtures/x/timeline/redesign';
 
 // 随包名单在测试里永不落地：避免 createScan 启动时触发 controller.reset() + 全页重扫，
@@ -203,5 +204,41 @@ describe('scanOne：X 重渲染后的装饰自愈', () => {
 
     expect(cell.hasAttribute(MARK_ATTRIBUTE)).toBe(false);
     expect(cell.querySelectorAll('.fs-badge')).toHaveLength(0);
+  });
+
+  it('新版无 cellInnerDiv 时点击黄框徽章或手动拉黑按钮不会冒泡触发外层 role=link 卡片跳转', async () => {
+    const ctx = setup({ communityHandles: ['sample_user'] });
+    document.body.innerHTML = `<div role="link" id="card">${REDESIGN_TWEET_HTML}</div>`;
+    const card = document.querySelector<HTMLElement>('#card')!;
+    const cardClicked = vi.fn();
+    card.addEventListener('click', cardClicked);
+
+    ctx.controller.fullRescan();
+    await vi.advanceTimersByTimeAsync(SCAN_DEBOUNCE_MS);
+    card.querySelector<HTMLButtonElement>('.fs-block-now')!.click();
+    expect(cardClicked).not.toHaveBeenCalled();
+
+    // 普通账号的手动拉黑入口点击同样不能冒泡到外层卡片
+    document.body.innerHTML = `<div role="link" id="card2">${REDESIGN_TWEET_HTML.replaceAll('sample_user', 'clean_user')}</div>`;
+    const card2 = document.querySelector<HTMLElement>('#card2')!;
+    card2.addEventListener('click', cardClicked);
+    ctx.controller.fullRescan();
+    await vi.advanceTimersByTimeAsync(SCAN_DEBOUNCE_MS);
+    card2.querySelector<HTMLButtonElement>('[data-fs-manual-action]')!.click();
+    expect(cardClicked).not.toHaveBeenCalled();
+    ctx.controller.dispose();
+  });
+
+  it('新版无 time 元素且含前置引用帖时，隐藏推文记录的是本帖 postId 而非引用帖 id', async () => {
+    document.body.innerHTML = REDESIGN_TWEET_HTML;
+    const article = document.querySelector('article')!;
+    const quote = document.createElement('div');
+    quote.setAttribute('role', 'link');
+    quote.innerHTML = '<a href="/quoted/status/1800000000000000999">2h</a>';
+    article.prepend(quote);
+
+    hideCellsSoon([article], 0);
+    await vi.advanceTimersByTimeAsync(10);
+    expect(article.getAttribute(HIDDEN_TWEET_CELL_ATTRIBUTE)).toBe('1800000000000000001');
   });
 });

@@ -12,7 +12,7 @@
  * - 同一个博主 3 分钟内只能补全一次（防连点，也防对同一个主页反复刷分页请求）；
  * - 页面在后台时不滚也不查（后台定时器被节流，容易看起来像脚本），切回前台再继续。
  */
-import { tweetSelectors } from '@feedsieve/x-adapter';
+import { extractTweetIdentity, tweetSelectors } from '@feedsieve/x-adapter';
 import type { UiLanguage } from '../platform/i18n';
 
 /** 保险丝：一轮最多滚 10 分钟。到底由下面的 stagnant 判断，不靠这个数。 */
@@ -67,9 +67,10 @@ export function isProfilePath(path: string, handle: string): boolean {
 export function collectPostIds(): Set<string> {
   const ids = new Set<string>();
   for (const article of document.querySelectorAll(tweetSelectors.article)) {
-    const href = article.querySelector('a[href*="/status/"]')?.getAttribute('href');
-    const match = href?.match(/\/status\/(\d+)/);
-    if (match) ids.add(match[1]!);
+    const id =
+      extractTweetIdentity(article)?.postId ??
+      article.querySelector('a[href*="/status/"]')?.getAttribute('href')?.match(/\/status\/(\d+)/)?.[1];
+    if (id) ids.add(id);
   }
   return ids;
 }

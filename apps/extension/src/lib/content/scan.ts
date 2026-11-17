@@ -14,6 +14,7 @@ import { toHandleSet, type DetectAuthor } from '@feedsieve/detector';
 import {
   contextFromPath,
   extractFeedItem,
+  findTweetAvatarImg,
   tweetSelectors,
 } from '@feedsieve/x-adapter';
 import { runDetectionPipeline } from '../detection/detection-pipeline';
@@ -160,8 +161,8 @@ export function createScan(deps: {
     const bio = state.bioCache.get(handle);
     const facts = deps.authorFacts?.(handle);
     // X 的默认头像不在 pbs.twimg.com，接口数据里会被消毒掉，只能从页面上看
-    const defaultAvatar = !!element.querySelector(
-      '[data-testid="Tweet-User-Avatar"] img[src*="default_profile_images"]',
+    const defaultAvatar = (findTweetAvatarImg(element)?.getAttribute('src') ?? '').includes(
+      'default_profile_images',
     );
     // revision 快照：虚拟列表复用同一 article 时跳过已标注过的输入；
     // 作者数据晚到（第一次扫描时还没有）也要重扫一次，新注册小号规则才有机会看到

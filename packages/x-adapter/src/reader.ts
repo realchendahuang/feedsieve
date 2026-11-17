@@ -95,6 +95,32 @@ export function findTweetMenuButton(article: Element): Element | null {
   );
 }
 
+/** 本帖作者头像 img（排除引用帖与正文里的表情/配图）。 */
+export function findTweetAvatarImg(article: Element): HTMLImageElement | null {
+  const legacy = [...article.querySelectorAll<HTMLImageElement>(`${tweetSelectors.avatarContainer} img`)].find(
+    (img) => !isQuotedContent(img, article),
+  );
+  if (legacy) return legacy;
+  const anchor = authorAnchor(article);
+  const handle = anchor ? extractHandleFromPath(anchor.pathname) : null;
+  if (!handle) return null;
+  const nameArea = findTweetAuthorArea(article);
+  const expectedPath = `/${handle.toLowerCase()}`;
+  for (const link of article.querySelectorAll<HTMLAnchorElement>(tweetSelectors.profileLink)) {
+    if (isQuotedContent(link, article) || nameArea?.contains(link)) continue;
+    let pathname: string;
+    try {
+      pathname = new URL(link.getAttribute('href') ?? '', location.origin).pathname;
+    } catch {
+      continue;
+    }
+    if (pathname.replace(/\/+$/, '').toLowerCase() !== expectedPath) continue;
+    const img = link.querySelector<HTMLImageElement>('img');
+    if (img) return img;
+  }
+  return null;
+}
+
 /**
  * 收集元素的可见文本。
  * X 把 emoji 渲染成 <img alt="🌸">，textContent 会整段漏掉，导致依赖
@@ -166,17 +192,28 @@ function isInsideQuotedPost(element: Element, article: Element, articlePostId?: 
   return false;
 }
 
-function extractOwnText(article: Element, postId?: string): string {
-  const parts: string[] = [];
+export function findTweetOwnTextElements(
+  article: Element,
+  postId: string | undefined = extractPostId(article),
+): Element[] {
+  const out: Element[] = [];
   const nameArea = findTweetAuthorArea(article);
   for (const textEl of article.querySelectorAll(tweetSelectors.text)) {
     if (!textEl.matches(tweetSelectors.legacyText) && !textEl.parentElement?.contains(nameArea))
       continue;
     if (!isQuotedContent(textEl, article) && !isInsideQuotedPost(textEl, article, postId)) {
-      const text = visibleText(textEl);
-      if (text) {
-        parts.push(text);
-      }
+      out.push(textEl);
+    }
+  }
+  return out;
+}
+
+function extractOwnText(article: Element, postId?: string): string {
+  const parts: string[] = [];
+  for (const textEl of findTweetOwnTextElements(article, postId)) {
+    const text = visibleText(textEl);
+    if (text) {
+      parts.push(text);
     }
   }
   return parts.join(' ');
