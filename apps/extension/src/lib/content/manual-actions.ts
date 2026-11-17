@@ -5,7 +5,7 @@
  * - runBlockNow：徽章「拉黑」按钮的完整反馈链路
  */
 
-import { tweetSelectors } from '@feedsieve/x-adapter';
+import { findTweetActionGroup } from '@feedsieve/x-adapter';
 import { removeAllowed } from '../community/allowlist';
 import { removeFollowingAccount } from '../community/following-allowlist';
 import { syncLocalLabels } from '../community/contribute';
@@ -54,8 +54,7 @@ export function createManualActions(deps: {
       manualEvidence.set(existing, { handle, evidence });
       return;
     }
-    const actionAnchor = article.querySelector(tweetSelectors.actionAnchor);
-    const actionGroup = actionAnchor?.closest(tweetSelectors.actionGroup);
+    const actionGroup = findTweetActionGroup(article);
     if (!actionGroup) return;
 
     const title =

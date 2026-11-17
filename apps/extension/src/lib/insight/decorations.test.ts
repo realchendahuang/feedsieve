@@ -2,6 +2,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createInsightDecorations } from './decorations';
 import { createTweetStatsStore } from './tweet-stats';
+import { REDESIGN_TWEET_HTML } from '../../../../../fixtures/x/timeline/redesign';
+import { extractFeedItem } from '@feedsieve/x-adapter';
 
 const HOUR = 60 * 60 * 1000;
 const NOW = Date.UTC(2026, 9, 29, 12);
@@ -39,6 +41,28 @@ describe('createInsightDecorations', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
     history.replaceState(null, '', '/');
+  });
+
+  it('renders velocity and author tier on the captured redesign without testids', () => {
+    const { store, decorations } = setup();
+    document.body.innerHTML = REDESIGN_TWEET_HTML;
+    const article = document.querySelector('article')!;
+    store.recordAuthor({ handle: 'sample_user', followers: 32_000 });
+    store.recordTweet(
+      { postId: '1800000000000000001', handle: 'sample_user', createdAt: NOW - HOUR, views: 5_000 },
+      NOW,
+    );
+    const item = extractFeedItem(article);
+    expect(item).not.toBeNull();
+    decorations.decorate(article, item!);
+    expect(article.querySelector('.fs-velocity')?.getAttribute('data-fs-place')).toBe('top');
+    expect(article.querySelector('.fs-tier')?.textContent).toBe('32K');
+    decorations.decorate(article, item!);
+    expect(article.querySelectorAll('.fs-velocity')).toHaveLength(1);
+    // Re-reading decorated headers must not include the tier as part of the author name/body.
+    expect(extractFeedItem(article)?.author.displayName).toBe('Sample Author');
+    expect(extractFeedItem(article)?.text).toBe('Sample post body.');
+    decorations.dispose();
   });
 
   it('puts the velocity pill left of the top-right buttons and the tier at the end of the handle row', () => {

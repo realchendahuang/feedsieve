@@ -2,6 +2,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createShareMenu, isShareButton, SHARE_ITEM_ATTRIBUTE } from './share-menu';
 import { scrollToPost } from './locate';
+import { REDESIGN_TWEET_HTML } from '../../../../../fixtures/x/timeline/redesign';
+
+describe('redesign action classification', () => {
+  it('recognizes only share, not like/repost/bookmark or analytics, without testids', () => {
+    document.body.innerHTML = REDESIGN_TWEET_HTML;
+    const article = document.querySelector('article')!;
+    for (const button of article.querySelectorAll('[role="group"] button, [role="group"] a')) {
+      expect(isShareButton(button)).toBe(button.getAttribute('data-engagement-action') === 'share');
+    }
+    document.body.replaceChildren();
+  });
+});
 
 // 结构仿 2026-10-30 真机：动作栏里分享按钮没有 data-testid；菜单是 Dropdown 里的 menuitem
 function renderTweet(handle: string, postId: string): HTMLElement {

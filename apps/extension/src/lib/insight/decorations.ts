@@ -30,7 +30,9 @@ import {
 } from '@feedsieve/metrics';
 import {
   extractTweetIdentity,
-  menuSelectors,
+  findTweetActionGroup,
+  findTweetAuthorArea,
+  findTweetMenuButton,
   profileFromPath,
   tweetSelectors,
 } from '@feedsieve/x-adapter';
@@ -197,7 +199,7 @@ interface VelocitySlot {
  * 找不到 ... 按钮时退回动作栏末尾。
  */
 function velocitySlot(article: Element): VelocitySlot | null {
-  const caret = article.querySelector(menuSelectors.caretButton);
+  const caret = findTweetMenuButton(article);
   let node: Element | null = caret?.parentElement ?? null;
   while (node && node !== article) {
     const kids = [...node.children].filter(
@@ -207,9 +209,7 @@ function velocitySlot(article: Element): VelocitySlot | null {
     if (kids.length >= 2) return { parent: node, before: kids[0] ?? null, place: 'top' };
     node = node.parentElement;
   }
-  const actionGroup = article
-    .querySelector(tweetSelectors.actionAnchor)
-    ?.closest(tweetSelectors.actionGroup);
+  const actionGroup = findTweetActionGroup(article);
   return actionGroup ? { parent: actionGroup, before: null, place: 'bar' } : null;
 }
 
@@ -403,7 +403,7 @@ export function createInsightDecorations(deps: {
   }
 
   function decorateTier(article: Element, handle: string) {
-    const nameArea = article.querySelector(tweetSelectors.authorNameArea);
+    const nameArea = findTweetAuthorArea(article);
     const existing = nameArea?.querySelector<HTMLElement>(`[${TIER_ATTR}]`);
     const author = enabled ? store.author(handle) : undefined;
     const tier = accountTier(author?.followers);

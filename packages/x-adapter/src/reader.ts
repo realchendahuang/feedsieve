@@ -1,6 +1,6 @@
 import type { FeedContext, FeedItem } from './types';
 import { extractHandleFromPath } from './handle';
-import { QUOTE_CARD_SELECTOR, tweetSelectors } from './selectors/selectors';
+import { menuSelectors, QUOTE_CARD_SELECTOR, tweetSelectors } from './selectors/selectors';
 
 const POST_ID_RE = /\/status\/(\d+)/;
 
@@ -8,24 +8,91 @@ function statusId(anchor: Element): string | undefined {
   return POST_ID_RE.exec(anchor.getAttribute('href') ?? '')?.[1];
 }
 
+/** 只检查 article 内部：新版时间线的可点击外壳也有 role=link，不能视作引用卡。 */
+function isQuotedContent(element: Element, article: Element): boolean {
+  for (let node: Element | null = element; node && node !== article; node = node.parentElement) {
+    if (node.tagName === 'ARTICLE') return true;
+    if (node.matches(QUOTE_CARD_SELECTOR) && node.querySelector(tweetSelectors.statusLink))
+      return true;
+  }
+  return false;
+}
+
 /**
  * 本推文 id。优先级：
  * 1. 包着 <time> 的时间戳链接，且不在引用卡片里（X 每条推文的固定结构）；
- * 2. 引用卡片之外的第一个 /status/ 链接；
- * 3. 任意第一个 /status/ 链接（旧行为兜底）。
+ * 2. 引用卡片之外的固定链接（新版时间戳是纯文本，不再有 time 元素）；
+ * 3. 引用卡片之外的第一个 /status/ 链接。
  *
  * 不能直接取第一个链接：详情页主推文引用了带图帖子时，DOM 里最先出现的是
  * 被引用帖子的图片链接（/other/status/<引用帖>/photo/1），2026-10-30 真机发现。
  */
 function extractPostId(article: Element): string | undefined {
-  const anchors = [...article.querySelectorAll('a[href*="/status/"]')];
-  const outsideQuote = anchors.filter((anchor) => !anchor.closest(QUOTE_CARD_SELECTOR));
+  const anchors = [...article.querySelectorAll(tweetSelectors.statusLink)];
+  const outsideQuote = anchors.filter((anchor) => !isQuotedContent(anchor, article));
   const timestamp = outsideQuote.find((anchor) => anchor.querySelector('time'));
-  for (const anchor of [timestamp, ...outsideQuote, ...anchors]) {
+  const permalink = outsideQuote.find((anchor) =>
+    /\/status\/\d+\/?(?:[?#].*)?$/.test(anchor.getAttribute('href') ?? ''),
+  );
+  for (const anchor of [timestamp, permalink, ...outsideQuote]) {
     const id = anchor ? statusId(anchor) : undefined;
     if (id) return id;
   }
   return undefined;
+}
+
+/** 新版作者区需同时有本帖固定链接及相同 handle 的用户链接；缺失时安全跳过。 */
+export function findTweetAuthorArea(article: Element): Element | null {
+  const postId = extractPostId(article);
+  for (const area of article.querySelectorAll(tweetSelectors.authorNameArea)) {
+    if (isQuotedContent(area, article)) continue;
+    if (area.matches(tweetSelectors.legacyNameArea)) return area;
+    for (const link of area.querySelectorAll<HTMLAnchorElement>(tweetSelectors.statusLink)) {
+      if (statusId(link) !== postId) continue;
+      const match = /^\/([a-z0-9_]{1,15})\/status\/\d+\/?$/i.exec(link.pathname);
+      if (!match) continue;
+      const path = `/${match[1]!.toLowerCase()}`;
+      if (
+        [...area.querySelectorAll<HTMLAnchorElement>(tweetSelectors.profileLink)].some(
+          (anchor) => anchor.pathname.replace(/\/+$/, '').toLowerCase() === path,
+        )
+      )
+        return area;
+    }
+  }
+  return null;
+}
+
+function authorAnchor(article: Element): HTMLAnchorElement | null {
+  const area = findTweetAuthorArea(article);
+  if (!area) return null;
+  if (area.matches(tweetSelectors.legacyNameArea))
+    return area.querySelector(tweetSelectors.profileLink);
+  const permalink = [...area.querySelectorAll<HTMLAnchorElement>(tweetSelectors.statusLink)].find(
+    (anchor) => statusId(anchor) === extractPostId(article),
+  );
+  const handle = permalink ? extractHandleFromPath(permalink.pathname) : null;
+  return (
+    [...area.querySelectorAll<HTMLAnchorElement>(tweetSelectors.profileLink)].find(
+      (anchor) => anchor.pathname.replace(/\/+$/, '').toLowerCase() === `/${handle}`,
+    ) ?? null
+  );
+}
+
+/** 动作 / 菜单必须属于本帖，不能落在嵌套引用帖上。 */
+export function findTweetActionGroup(article: Element): Element | null {
+  for (const anchor of article.querySelectorAll(tweetSelectors.actionAnchor)) {
+    if (!isQuotedContent(anchor, article)) return anchor.closest(tweetSelectors.actionGroup);
+  }
+  return null;
+}
+
+export function findTweetMenuButton(article: Element): Element | null {
+  return (
+    [...article.querySelectorAll(menuSelectors.caretButton)].find(
+      (button) => !isQuotedContent(button, article),
+    ) ?? null
+  );
 }
 
 /**
@@ -101,8 +168,11 @@ function isInsideQuotedPost(element: Element, article: Element, articlePostId?: 
 
 function extractOwnText(article: Element, postId?: string): string {
   const parts: string[] = [];
+  const nameArea = findTweetAuthorArea(article);
   for (const textEl of article.querySelectorAll(tweetSelectors.text)) {
-    if (!isInsideQuotedPost(textEl, article, postId)) {
+    if (!textEl.matches(tweetSelectors.legacyText) && !textEl.parentElement?.contains(nameArea))
+      continue;
+    if (!isQuotedContent(textEl, article) && !isInsideQuotedPost(textEl, article, postId)) {
       const text = visibleText(textEl);
       if (text) {
         parts.push(text);
@@ -131,7 +201,7 @@ function extractExternalLinks(article: Element, postId?: string): FeedItem['link
     if (url.hostname === 'x.com' || url.hostname === 'twitter.com') {
       continue;
     }
-    if (isInsideQuotedPost(anchor, article, postId)) {
+    if (isQuotedContent(anchor, article) || isInsideQuotedPost(anchor, article, postId)) {
       continue;
     }
     if (!links.has(url.href)) {
@@ -159,8 +229,8 @@ function extractExternalLinks(article: Element, postId?: string): FeedItem['link
 export function extractTweetIdentity(
   article: Element,
 ): { postId?: string; author: { handle: string } } | null {
-  const authorAnchor = article.querySelector<HTMLAnchorElement>(tweetSelectors.authorLink);
-  const handle = authorAnchor ? extractHandleFromPath(authorAnchor.pathname) : null;
+  const anchor = authorAnchor(article);
+  const handle = anchor ? extractHandleFromPath(anchor.pathname) : null;
   if (!handle) return null;
   const postId = extractPostId(article);
   return { ...(postId ? { postId } : {}), author: { handle } };
@@ -169,7 +239,7 @@ export function extractTweetIdentity(
 /** 本推文的发布时间（Unix 毫秒）：取引用卡片之外的 <time datetime>。 */
 export function extractTweetTime(article: Element): number | undefined {
   for (const time of article.querySelectorAll('time[datetime]')) {
-    if (time.closest(QUOTE_CARD_SELECTOR)) continue;
+    if (isQuotedContent(time, article)) continue;
     const ms = Date.parse(time.getAttribute('datetime') ?? '');
     if (Number.isFinite(ms)) return ms;
   }
@@ -177,13 +247,13 @@ export function extractTweetTime(article: Element): number | undefined {
 }
 
 export function extractFeedItem(article: Element, context: FeedContext = 'other'): FeedItem | null {
-  const authorAnchor = article.querySelector<HTMLAnchorElement>(tweetSelectors.authorLink);
-  const handle = authorAnchor ? extractHandleFromPath(authorAnchor.pathname) : null;
+  const anchor = authorAnchor(article);
+  const handle = anchor ? extractHandleFromPath(anchor.pathname) : null;
   if (!handle) {
     return null;
   }
 
-  const nameArea = article.querySelector(tweetSelectors.authorNameArea);
+  const nameArea = findTweetAuthorArea(article);
   const postId = extractPostId(article);
 
   return {

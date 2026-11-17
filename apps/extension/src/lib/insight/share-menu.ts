@@ -42,6 +42,11 @@ export function isShareButton(button: Element): boolean {
   // 我们自己注入的按钮同样没有 X 的 data-testid：不先排除，点「AI 检查」「拉黑」
   // 也会去等分享菜单，把 Markdown 项塞进随后出现的任意 Dropdown。
   if (button.closest(OWN_ACTION_SELECTOR)) return false;
+  const engagement = button.closest(tweetSelectors.engagementAction);
+  if (engagement) return engagement.getAttribute('data-engagement-action') === 'share';
+  // 新版 analytics 等没有 action 标记，但也不是分享；不能再套用旧版的排除法。
+  if (button.closest(tweetSelectors.actionGroup)?.querySelector(tweetSelectors.engagementAction))
+    return false;
   const testId = button.getAttribute('data-testid');
   return !testId || !(KNOWN_ACTION_TEST_IDS as readonly string[]).includes(testId);
 }
