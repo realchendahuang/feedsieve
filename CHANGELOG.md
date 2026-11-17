@@ -7,6 +7,17 @@
 
 ## [Unreleased]
 
+## [0.19.1] — 2026-11-18
+
+### 修复
+
+- **全面补齐新版 X（无 `data-testid` / `cellInnerDiv` / `<time>`）下的各功能兼容**：
+  - **详情页主帖识别**：详情页主帖采用竖排作者头部、时间戳位于正文下方而非 `.x-middot-group` 内时，按本帖固定链接作者与头部昵称 / `@handle` 双重校验提取身份与正文，恢复详情页评论区 AI 图标判断、主帖过滤与数据装饰，同时支持已点赞推文（`data-engagement-action="unlike"`）持续扫描。
+  - **动作栏拉黑按钮不再复制出双按钮**：新版 X 将书签与分享包在同一右侧容器内，手动拉黑入口改为下钻提取单颗纯图标按钮并用独立容器包裹，修复复制出重复图标或点击区错位的问题。
+  - **卡片点击防误跳转与头像 / 隐藏 ID 归属**：无 `cellInnerDiv` 时，点黄框「拉黑 / 误标？/ 抢救 / 公示」、手动拉黑或 AI 折叠条不再冒泡触发外层卡片跳进推文详情页；恢复默认头像识别，修复无 `<time>` 且含前置引用帖时隐藏推文与主页补全误记引用帖 ID 的问题。
+  - **AI 味折叠、主页 Tab 与填入回复框兜底**：无 `cellInnerDiv` 时 AI 回复自动折叠（`mode=fold`）回退挂在 `article` 上；无 `primaryColumn` 时个人主页照常挂载「AI 味」Tab；报告图读取新版头像；回复框填入、排期安排表与文章编辑器补充无 `data-testid` 时的语义选择器兜底。
+  - **界面净化、主页人气行、高级搜索与分享菜单**：淡化蓝标短回复支持新版推文选择器与认证无障碍标签（且不覆盖推广帖隐藏状态）；隐藏付费推广兼容无 `User-Name` 结构并排除作者本人的「推广」按钮防误藏自帖；隐藏 Grok 覆盖新版帖子右上角「解释这个帖子 / Explain this post」按钮；无 `sidebarColumn` / `SearchBox` / `UserProfileHeader_Items` 时侧栏趋势、推荐关注、高级搜索入口与主页人气行回退语义容器识别；分享菜单兼容新版 XDS 弹层，并在无 `<time>` 时从 Snowflake ID 还原发帖日期。
+
 ## [0.19.0] — 2026-11-17
 
 ### 修复
@@ -710,7 +721,8 @@
 - 首个可用版本：黄框标注（内置名单 + 启发式，带理由）、顺手拉黑、待拉黑列表、一键批量拉黑（持久队列）、一键撤销、本地统计。
 - WXT + React 19 + MV3 最小权限架构；X DOM fixtures 锁定 reader→detector 契约；95 个单元测试；pre-push 本地质量门禁。
 
-[Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.19.0...HEAD
+[Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.19.1...HEAD
+[0.19.1]: https://github.com/realchendahuang/feedsieve/compare/v0.19.0...v0.19.1
 [0.19.0]: https://github.com/realchendahuang/feedsieve/compare/v0.18.1...v0.19.0
 [0.18.1]: https://github.com/realchendahuang/feedsieve/compare/v0.18.0...v0.18.1
 [0.18.0]: https://github.com/realchendahuang/feedsieve/compare/v0.17.2...v0.18.0
