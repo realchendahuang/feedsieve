@@ -55,16 +55,37 @@ async function waitFor<T>(
   }
 }
 
+const POST_ID_RE = /\/status\/(\d+)/;
+
+function isQuoted(element: Element, article: Element): boolean {
+  for (let node: Element | null = element; node && node !== article; node = node.parentElement) {
+    if (node.tagName === 'ARTICLE') return true;
+    if (node.matches(QUOTE_CARD_SELECTOR) && node.querySelector(tweetSelectors.statusLink)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function findReplyButton(article: Element): HTMLElement | null {
+  for (const node of article.querySelectorAll<HTMLElement>(
+    '[data-testid="reply"], [data-engagement-action="reply"] a, [data-engagement-action="reply"] button, button[data-engagement-action="reply"], a[data-engagement-action="reply"]',
+  )) {
+    if (!isQuoted(node, article)) return node;
+  }
+  return null;
+}
+
 /** 按帖子 ID 找时间线 / 详情页里的那一条（X 重渲染会换节点，所以每次现找）。 */
 export function findArticle(postId: string): HTMLElement | null {
   for (const article of document.querySelectorAll<HTMLElement>(tweetSelectors.article)) {
     // 只看这条帖子自己的时间戳链接：引用卡片里也带着被引帖的 /status/ 链接，
     // 光按 href 子串匹配会把「引用了这条帖子的那条帖子」也认成目标，
     // 于是图被贴到错误的帖子下面（引用卡片本身也有 [data-testid=reply]）。
-    const own = [...article.querySelectorAll('a[href*="/status/"]')].some(
+    const own = [...article.querySelectorAll(tweetSelectors.statusLink)].some(
       (anchor) =>
-        !anchor.closest(QUOTE_CARD_SELECTOR) &&
-        (anchor.getAttribute('href') ?? '').includes(`/status/${postId}`),
+        !isQuoted(anchor, article) &&
+        POST_ID_RE.exec(anchor.getAttribute('href') ?? '')?.[1] === postId,
     );
     if (own) return article;
   }
@@ -171,7 +192,7 @@ export async function fillReplyComposer(options: FillReplyOptions): Promise<Fill
   const waitMs = options.waitMs ?? 10_000;
   const article = findArticle(options.postId);
   if (!article) return { ok: false, reason: 'no_article' };
-  const replyButton = article.querySelector<HTMLElement>('[data-testid="reply"]');
+  const replyButton = findReplyButton(article);
   if (!replyButton) return { ok: false, reason: 'no_reply_button' };
 
   // 点之前先把现有编辑器 / 对话框记下来：点完出现的那一个才是这条帖子的回复框

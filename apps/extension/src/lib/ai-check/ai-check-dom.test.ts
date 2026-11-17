@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { REDESIGN_TWEET_HTML } from '../../../../../fixtures/x/timeline/redesign';
 import { createAiCheck } from './ai-check';
 
 function tweet(handle: string, postId: string): string {
@@ -584,4 +585,22 @@ describe('检测跳转到新标签页时保留原帖上下文', () => {
     await vi.waitFor(() => expect(location.search).not.toContain('fs_post'));
     ai.stop();
   });
+});
+
+it('无 data-testid 新版 X 结构在 scope=blue 时也能识别认证标记并挂出 AI 味标签', async () => {
+  const { ai, tick } = setup(
+    '/op/status/1800000000000000000',
+    `<div role="link">${REDESIGN_TWEET_HTML}</div>`,
+    undefined,
+    {
+      aiListV1: { at: Date.now(), entries: [['sample_user', 0.92, 1]] },
+      aiSettingsV1: { mode: 'mark', scope: 'blue', markFollowing: false },
+    },
+  );
+  tick();
+  await new Promise((r) => setTimeout(r, 0));
+  tick();
+  const mark = document.querySelector('.x-middot-group .fs-ai-mark');
+  expect(mark?.textContent ?? '').toContain('AI 味');
+  ai.stop();
 });

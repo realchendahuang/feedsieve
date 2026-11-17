@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest';
+import { REDESIGN_TWEET_HTML } from '../../../../../fixtures/x/timeline/redesign';
 import { fillReplyComposer, findArticle } from './reply-composer';
 
 const noWait = async () => {};
@@ -348,4 +349,27 @@ it('宿主退回编辑器本身时，也能在兄弟节点里发现上传成功�
   });
 
   expect(outcome).toEqual({ ok: true });
+});
+
+it('适配无 data-testid 且外层带 role=link 的新版 X 推文结构', async () => {
+  document.body.innerHTML = `<div role="link">${REDESIGN_TWEET_HTML}</div>`;
+  const article = document.querySelector('article')!;
+  expect(findArticle('1800000000000000001')).toBe(article);
+
+  let upload = { names: [] as string[] };
+  const replyLink = article.querySelector<HTMLAnchorElement>('[data-engagement-action="reply"] a')!;
+  replyLink.addEventListener('click', (event) => {
+    event.preventDefault();
+    const { dialog } = openDialog(() => undefined);
+    upload = fakeUpload(dialog);
+  });
+
+  const outcome = await fillReplyComposer({
+    postId: '1800000000000000001',
+    blob: new Blob(['x'], { type: 'image/png' }),
+    wait: noWait,
+  });
+
+  expect(outcome).toEqual({ ok: true });
+  expect(upload.names).toEqual(['ai-flavor.png']);
 });

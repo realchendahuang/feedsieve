@@ -14,6 +14,7 @@
 import {
   contextFromPath,
   extractFeedItem,
+  findTweetAuthorArea,
   profileFromPath,
   tweetSelectors,
 } from '@feedsieve/x-adapter';
@@ -530,8 +531,9 @@ export function createAiCheck(deps: {
   }
 
   function isBlue(article: Element): boolean {
-    return !!article.querySelector(
-      `${tweetSelectors.authorNameArea} [data-testid="icon-verified"]`,
+    const area = findTweetAuthorArea(article);
+    return !!area?.querySelector(
+      '[data-testid="icon-verified"], [aria-label="认证账号"], [aria-label="Verified account"]',
     );
   }
 
@@ -549,7 +551,7 @@ export function createAiCheck(deps: {
 
   /** 通知页的回复卡片在 User-Name 后面有一行「回复 @你 / Replying to @you」 */
   function hasReplyContext(article: Element): boolean {
-    const name = article.querySelector(tweetSelectors.authorNameArea);
+    const name = findTweetAuthorArea(article);
     if (!name) return false;
     const text = (article.textContent ?? '').replace(/\s+/g, ' ');
     const nameText = (name.textContent ?? '').replace(/\s+/g, ' ');
@@ -564,7 +566,7 @@ export function createAiCheck(deps: {
    * 直接挂会让「AI 味 85%」把「★1.8K」吞进按钮里。
    */
   function nameRowOf(article: Element): Element | null {
-    const area = article.querySelector(tweetSelectors.authorNameArea);
+    const area = findTweetAuthorArea(article);
     if (!area) return null;
     const rows = [...area.children];
     return rows[rows.length - 1] ?? area;
