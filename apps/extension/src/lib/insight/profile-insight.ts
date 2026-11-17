@@ -103,15 +103,44 @@ export function createProfileInsight(deps: {
     for (const line of document.querySelectorAll(`.${PROFILE_LINE_CLASS}`)) line.remove();
   }
 
+  /** 找资料卡锚点：优先旧版 data-testid；新版无 testid 时回退到资料卡底部的关注/粉丝链接行。 */
+  function findHeaderAnchor(targetHandle: string): Element | null {
+    for (const selector of profileSelectors.headerAnchors) {
+      const node = document.querySelector(selector);
+      if (node) return node;
+    }
+    const lower = targetHandle.toLowerCase();
+    const followingPath = `/${lower}/following`;
+    const followerPaths = new Set([`/${lower}/followers`, `/${lower}/verified_followers`]);
+    const links = [...document.querySelectorAll<HTMLAnchorElement>('a[href^="/"]')].filter(
+      (anchor) =>
+        !anchor.closest('article, [role="tablist"], nav, aside, [data-testid="sidebarColumn"]'),
+    );
+    const followingLink = links.find(
+      (anchor) => anchor.pathname.replace(/\/+$/, '').toLowerCase() === followingPath,
+    );
+    const followerLink = links.find((anchor) =>
+      followerPaths.has(anchor.pathname.replace(/\/+$/, '').toLowerCase()),
+    );
+    if (!followingLink || !followerLink) return null;
+    for (
+      let node: Element | null = followingLink.parentElement;
+      node && node !== document.body;
+      node = node.parentElement
+    ) {
+      if (node.querySelector('[role="tablist"], article, nav, aside')) break;
+      if (node.contains(followerLink)) return node;
+    }
+    return null;
+  }
+
   /** 资料卡下的那一行：不存在就插，位置不对就挪，内容变了才改。 */
   function ensureLine(): void {
     if (!summary || !deps.isEnabled() || profileFromPath(getPath())?.handle !== summary.handle) {
       removeLine();
       return;
     }
-    const anchor = profileSelectors.headerAnchors
-      .map((selector) => document.querySelector(selector))
-      .find((node): node is Element => node !== null);
+    const anchor = findHeaderAnchor(summary.handle);
     if (!anchor?.parentElement) return;
     let line = document.querySelector<HTMLButtonElement>(`.${PROFILE_LINE_CLASS}`);
     if (!line || line.previousElementSibling !== anchor) {

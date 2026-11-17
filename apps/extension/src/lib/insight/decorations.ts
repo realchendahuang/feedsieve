@@ -218,7 +218,12 @@ function velocitySlot(article: Element): VelocitySlot | null {
  * 首页这一行是「@handle · 4小时」，详情页是「@handle」（作者名区域在详情页竖排）。
  */
 function handleRow(nameArea: Element): Element | null {
-  const rows = [...nameArea.children].filter((child) => !child.classList.contains(TIER_CLASS));
+  const rows = [...nameArea.children].filter(
+    (child) =>
+      !child.classList.contains(TIER_CLASS) &&
+      !child.classList.contains('fs-ai-mark') &&
+      !child.classList.contains('fs-ai-entry'),
+  );
   return rows[rows.length - 1] ?? null;
 }
 

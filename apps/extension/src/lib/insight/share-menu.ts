@@ -29,6 +29,13 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
  * 这些按钮没有 X 的 data-testid，不排除的话会被当成分享按钮。
  */
 const OWN_ACTION_SELECTOR = `[${ACTION_SLOT_ATTR}], [data-fs-manual-action], .fs-velocity`;
+const TWITTER_EPOCH = 1288834974657n;
+
+function snowflakeTimeOf(postId: string | undefined): number | undefined {
+  if (!postId || !/^\d{1,20}$/.test(postId)) return undefined;
+  const ms = Number((BigInt(postId) >> 22n) + TWITTER_EPOCH);
+  return ms > Number(TWITTER_EPOCH) ? ms : undefined;
+}
 /** Markdown 标志（M↓）。 */
 const MARKDOWN_ICON =
   'M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm2 3v8h2v-5l2 3 2-3v5h2V8H9.5L8 10.5 6.5 8H5zm11 0v4h-2l3 4 3-4h-2V8h-2z';
@@ -54,7 +61,7 @@ export function isShareButton(button: Element): boolean {
 function readTweet(article: Element): MarkdownTweet | null {
   const item = extractFeedItem(article);
   if (!item) return null;
-  const createdAt = extractTweetTime(article);
+  const createdAt = extractTweetTime(article) ?? snowflakeTimeOf(item.postId);
   return {
     handle: item.author.handle,
     ...(item.author.displayName ? { displayName: item.author.displayName } : {}),
@@ -127,6 +134,8 @@ export function createShareMenu(deps: {
 
   function buildItem(template: Element, label: string, iconPath: string, onClick: () => void) {
     const item = template.cloneNode(true) as HTMLElement;
+    item.removeAttribute('id');
+    item.querySelectorAll('[id]').forEach((node) => node.removeAttribute('id'));
     item.setAttribute(SHARE_ITEM_ATTRIBUTE, '');
     const svg = item.querySelector('svg');
     if (svg) {
@@ -195,7 +204,9 @@ export function createShareMenu(deps: {
         stopWaiting();
         return true;
       }
-      const dropdown = document.querySelector(menuSelectors.dropdown);
+      const dropdown = [...document.querySelectorAll(menuSelectors.dropdown)].find((node) =>
+        node.querySelector(menuSelectors.menuItem),
+      );
       if (!dropdown || !pendingArticle) return false;
       inject(dropdown, pendingArticle);
       stopWaiting();

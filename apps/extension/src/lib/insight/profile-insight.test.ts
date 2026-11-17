@@ -160,6 +160,29 @@ describe('profile line', () => {
       ),
     ).toEqual(['Rising', '32K followers', '6 posts collected']);
   });
+
+  it('falls back to the following/followers row on redesigned profiles without data-testid', async () => {
+    document.body.innerHTML = `
+      <nav><a href="/alice/following">Nav Following</a></nav>
+      <div class="profile-shell">
+        <div class="header-card">
+          <div>Alice @alice</div>
+          <div>Creator bio</div>
+          <div id="follow-row">
+            <a href="/Alice/following"><span>1,600</span> 正在关注</a>
+            <a href="/Alice/verified_followers"><span>32K</span> 关注者</a>
+          </div>
+        </div>
+        <div role="tablist"><a role="tab" href="/Alice">帖子</a></div>
+      </div>`;
+    const { insight } = setup();
+    insight.start();
+    await vi.advanceTimersByTimeAsync(1_600);
+    const line = document.querySelector<HTMLButtonElement>(`.${PROFILE_LINE_CLASS}`)!;
+    expect(line).not.toBeNull();
+    expect(line.previousElementSibling?.id).toBe('follow-row');
+    insight.stop();
+  });
 });
 
 describe('multiple badge', () => {

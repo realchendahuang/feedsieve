@@ -180,6 +180,40 @@ describe('createShareMenu', () => {
     expect(dropdown.querySelector(`[${SHARE_ITEM_ATTRIBUTE}]`)).toBeNull();
     menu.dispose();
   });
+
+  it('新版无 data-testid 与无 time 元素时：支持 XDS 菜单注入、去重 id 并从 Snowflake 还原日期', async () => {
+    document.body.innerHTML = REDESIGN_TWEET_HTML;
+    const menu = createShareMenu({ getLanguage: () => 'zh' });
+    menu.listen();
+    const shareBtn = document.querySelector<HTMLElement>(
+      '[data-engagement-action="share"]',
+    )!;
+    shareBtn.click();
+
+    const xdsMenu = document.createElement('div');
+    xdsMenu.setAttribute('data-slot', 'xds-menu-content');
+    xdsMenu.innerHTML = `
+      <div role="menuitem" id="radix-item-1" class="xds-item">
+        <svg id="radix-icon-1"><path d="native"></path></svg>
+        <span id="radix-label-1">复制链接</span>
+      </div>`;
+    document.body.appendChild(xdsMenu);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const injected = xdsMenu.querySelector<HTMLElement>(`[${SHARE_ITEM_ATTRIBUTE}]`)!;
+    expect(injected).not.toBeNull();
+    expect(injected.hasAttribute('id')).toBe(false);
+    expect(injected.querySelector('[id]')).toBeNull();
+    injected.click();
+    await Promise.resolve();
+
+    const md = writeText.mock.calls[0]![0] as string;
+    expect(md).toContain('**Sample Author** (@sample_user)');
+    expect(md).toContain('Sample post body.');
+    // 1800000000000000001 的 Snowflake 时间是 2024-06-10
+    expect(md).toContain('2024-06-10');
+    menu.dispose();
+  });
 });
 
 describe('scrollToPost', () => {
