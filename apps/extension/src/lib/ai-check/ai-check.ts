@@ -702,7 +702,10 @@ export function createAiCheck(deps: {
       const shouldFold =
         !!mark && settings.mode === 'fold' && !isFocal && !unfolded.has(item.postId);
       if (shouldFold) {
-        if (!foldHost.hasAttribute(FOLD_ATTR) || !foldHost.querySelector(':scope > .fs-ai-foldbar')) {
+        if (
+          !foldHost.hasAttribute(FOLD_ATTR) ||
+          !foldHost.querySelector(':scope > .fs-ai-foldbar')
+        ) {
           mountFoldBar(foldHost, item.postId, item.author.displayName || `@${handle}`, mark);
         }
       } else if (foldHost.hasAttribute(FOLD_ATTR)) {
@@ -771,7 +774,9 @@ export function createAiCheck(deps: {
   function repliesTab(handle: string): HTMLAnchorElement | null {
     const target = `/${handle.toLowerCase()}/with_replies`;
     const root = document.querySelector('[data-testid="primaryColumn"]') ?? document;
-    for (const a of root.querySelectorAll<HTMLAnchorElement>('[role="tablist"] a[role="tab"], a[role="tab"]')) {
+    for (const a of root.querySelectorAll<HTMLAnchorElement>(
+      '[role="tablist"] a[role="tab"], a[role="tab"]',
+    )) {
       if (a.hasAttribute(TAB_ATTR) || a.closest(`[${TAB_ATTR}]`)) continue;
       let pathname: string;
       try {
@@ -871,7 +876,7 @@ export function createAiCheck(deps: {
   /** 页面上这个人的头像地址：主页头部的大头像，或者 TA 某条帖子旁边的头像 */
   function avatarOnPage(handle: string): string | null {
     for (const a of document.querySelectorAll<HTMLAnchorElement>('a[href$="/photo"]')) {
-      let pathname = '';
+      let pathname: string;
       try {
         pathname = new URL(a.getAttribute('href') ?? '', location.origin).pathname;
       } catch {

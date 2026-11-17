@@ -365,7 +365,9 @@ describe('clean-ui 选择器', () => {
       await vi.advanceTimersByTimeAsync(2_000);
       expect(document.querySelector('#side')!.getAttribute('data-fs-clean')).toBe('trends');
       expect(
-        document.querySelector('[data-testid="primaryColumn"] section')!.hasAttribute('data-fs-clean'),
+        document
+          .querySelector('[data-testid="primaryColumn"] section')!
+          .hasAttribute('data-fs-clean'),
       ).toBe(false);
     } finally {
       clean.stop();

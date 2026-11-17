@@ -72,8 +72,7 @@ const COPY = {
     insertImages: (n: number) => `Insert images (${n})`,
     imageInserting: 'Inserting images…',
     imageInserted: (n: number) => `Inserted ${n} image${n > 1 ? 's' : ''}`,
-    imageInsertedLeft: (n: number, left: number) =>
-      `Inserted ${n}; ${left} still to insert`,
+    imageInsertedLeft: (n: number, left: number) => `Inserted ${n}; ${left} still to insert`,
     imageInsertFailed: 'Image insert failed; insert manually or undo',
   },
 } as const;
@@ -351,7 +350,8 @@ export function createArticleHelper(deps: ArticleHelperDeps) {
     toast(copy().imageInserting);
     const result = await insertLocalImages({ host: editorEl, files, slots }).catch(() => null);
     if (!result || result.inserted === 0) toast(copy().imageInsertFailed);
-    else if (result.remaining > 0) toast(copy().imageInsertedLeft(result.inserted, result.remaining));
+    else if (result.remaining > 0)
+      toast(copy().imageInsertedLeft(result.inserted, result.remaining));
     else toast(copy().imageInserted(result.inserted));
     scheduleRender();
   }
@@ -459,9 +459,11 @@ export function createArticleHelper(deps: ArticleHelperDeps) {
       button.title = c.insertImages(imageSlots.length);
       button.setAttribute('aria-label', c.insertImages(imageSlots.length));
       button.innerHTML = ICONS.image;
-      button.append(Object.assign(document.createElement('span'), {
-        textContent: c.insertImages(imageSlots.length),
-      }));
+      button.append(
+        Object.assign(document.createElement('span'), {
+          textContent: c.insertImages(imageSlots.length),
+        }),
+      );
       button.addEventListener('click', insertImagesFromPicker);
       row.append(button);
       panel.replaceChildren(head, row, list);

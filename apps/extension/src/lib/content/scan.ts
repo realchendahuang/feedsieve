@@ -25,7 +25,11 @@ import {
   type PendingBadge,
 } from '../detection/page-scan-controller';
 import { getBundledEntries } from '../community/community-store';
-import { HIDDEN_TWEET_CELL_ATTRIBUTE, hiddenForOtherPost, hideCellsSoon } from '../platform/remove-tweets';
+import {
+  HIDDEN_TWEET_CELL_ATTRIBUTE,
+  hiddenForOtherPost,
+  hideCellsSoon,
+} from '../platform/remove-tweets';
 import { MARK_ATTRIBUTE, type ContentState } from './page-state';
 import { markedForOtherPost, type Badges } from './badges';
 import type { BlockedFold } from './blocked-fold';
@@ -56,7 +60,6 @@ export function createScan(deps: {
   onRuleHit?: (hit: RuleHitItem) => void;
   /** 过滤模块总开关：关掉后不检测、不挂手动拉黑入口；流速装饰仍由 hot 模块控制。 */
   isFilterEnabled?: () => boolean;
-
 }) {
   const { state, controller, fold, badges, manual, insight } = deps;
   const { markCell } = badges;

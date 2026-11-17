@@ -60,18 +60,18 @@ function findFocalAuthorArea(article: Element, postId: string | undefined): Elem
   if (!handle) return null;
   const expectedPath = `/${handle}`;
   const atHandle = `@${handle}`;
-  const headerLinks = [...article.querySelectorAll<HTMLAnchorElement>(tweetSelectors.profileLink)].filter(
-    (link) => {
-      if (isQuotedContent(link, article) || link.closest(tweetSelectors.text)) return false;
-      if (link.querySelector('img, .x-avatar')) return false;
-      try {
-        const pathname = new URL(link.getAttribute('href') ?? '', location.origin).pathname;
-        return pathname.replace(/\/+$/, '').toLowerCase() === expectedPath;
-      } catch {
-        return false;
-      }
-    },
-  );
+  const headerLinks = [
+    ...article.querySelectorAll<HTMLAnchorElement>(tweetSelectors.profileLink),
+  ].filter((link) => {
+    if (isQuotedContent(link, article) || link.closest(tweetSelectors.text)) return false;
+    if (link.querySelector('img, .x-avatar')) return false;
+    try {
+      const pathname = new URL(link.getAttribute('href') ?? '', location.origin).pathname;
+      return pathname.replace(/\/+$/, '').toLowerCase() === expectedPath;
+    } catch {
+      return false;
+    }
+  });
   const nameLink = headerLinks.find((link) => {
     const text = visibleText(link).trim().toLowerCase();
     return text.length > 0 && !text.includes(atHandle);
@@ -172,9 +172,9 @@ export function findTweetMenuButton(article: Element): Element | null {
 
 /** 本帖作者头像 img（排除引用帖与正文里的表情/配图）。 */
 export function findTweetAvatarImg(article: Element): HTMLImageElement | null {
-  const legacy = [...article.querySelectorAll<HTMLImageElement>(`${tweetSelectors.avatarContainer} img`)].find(
-    (img) => !isQuotedContent(img, article),
-  );
+  const legacy = [
+    ...article.querySelectorAll<HTMLImageElement>(`${tweetSelectors.avatarContainer} img`),
+  ].find((img) => !isQuotedContent(img, article));
   if (legacy) return legacy;
   const anchor = authorAnchor(article);
   const handle = anchor ? extractHandleFromPath(anchor.pathname) : null;

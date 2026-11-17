@@ -219,8 +219,7 @@ describe('搜索框高级搜索弹窗', () => {
     create({ opened, tabs, path: '/' });
     open();
 
-    const button = (selector: string) =>
-      dialog().querySelector<HTMLButtonElement>(selector)!;
+    const button = (selector: string) => dialog().querySelector<HTMLButtonElement>(selector)!;
     expect(button('.fs-adv-go').disabled).toBe(true);
     expect(button('.fs-adv-google').disabled).toBe(true);
 
@@ -249,9 +248,7 @@ describe('搜索框高级搜索弹窗', () => {
     expect(document.activeElement).toBe(first);
 
     first.focus();
-    root.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true }),
-    );
+    root.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true }));
     expect(document.activeElement).toBe(last);
   });
 

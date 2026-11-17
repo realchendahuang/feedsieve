@@ -69,7 +69,10 @@ export function collectPostIds(): Set<string> {
   for (const article of document.querySelectorAll(tweetSelectors.article)) {
     const id =
       extractTweetIdentity(article)?.postId ??
-      article.querySelector('a[href*="/status/"]')?.getAttribute('href')?.match(/\/status\/(\d+)/)?.[1];
+      article
+        .querySelector('a[href*="/status/"]')
+        ?.getAttribute('href')
+        ?.match(/\/status\/(\d+)/)?.[1];
     if (id) ids.add(id);
   }
   return ids;

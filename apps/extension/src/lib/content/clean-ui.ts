@@ -327,7 +327,9 @@ export function createCleanUi() {
 
     if (settings.hideForYou) {
       const tabs = [
-        ...document.querySelectorAll('#ScrollSnap-List [role="tab"], [role="tablist"] [role="tab"]'),
+        ...document.querySelectorAll(
+          '#ScrollSnap-List [role="tab"], [role="tablist"] [role="tab"]',
+        ),
       ];
       const forYou = tabs.find(isForYouTab) ?? null;
       const following = tabs.find(isFollowingTab) ?? null;
@@ -356,9 +358,9 @@ export function createCleanUi() {
           'aside section[role="region"], aside[role="complementary"]',
         )) {
           if (region.querySelector('article')) continue;
-          const hasTrendHeading = [
-            ...region.querySelectorAll('h1, h2, h3, [role="heading"]'),
-          ].some((h) => TRENDS_HEADINGS.has(textOf(h)));
+          const hasTrendHeading = [...region.querySelectorAll('h1, h2, h3, [role="heading"]')].some(
+            (h) => TRENDS_HEADINGS.has(textOf(h)),
+          );
           if (hasTrendHeading) mark(region, 'trends');
         }
       }
@@ -385,7 +387,9 @@ export function createCleanUi() {
 
     if (settings.hidePromoted) {
       // 详情页的主帖是用户自己点进来的，藏掉等于把整页清空：只处理时间线里的推广帖
-      const focal = /\/status\/\d+/.test(location.pathname) ? document.querySelector('article') : null;
+      const focal = /\/status\/\d+/.test(location.pathname)
+        ? document.querySelector('article')
+        : null;
       for (const article of document.querySelectorAll('article')) {
         if (article === focal) continue;
         if (isPromotedArticle(article)) mark(article, 'promoted');

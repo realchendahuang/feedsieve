@@ -61,13 +61,30 @@ export function actionIcon(name: keyof typeof ACTION_ICONS): SVGSVGElement {
   return svg;
 }
 
+function singleButtonTemplate(candidate: Element): Element | null {
+  if (/\d/.test(candidate.textContent ?? '')) return null;
+  const buttons = candidate.matches('button')
+    ? [candidate as HTMLButtonElement]
+    : [...candidate.querySelectorAll('button')];
+  if (buttons.length === 1) {
+    return buttons[0]!.querySelector('svg') ? candidate : null;
+  }
+  if (buttons.length > 1) {
+    for (const sub of [...candidate.children].reverse()) {
+      const hit = singleButtonTemplate(sub);
+      if (hit) return hit;
+    }
+  }
+  return null;
+}
+
 function nativeTemplate(group: Element): Element | null {
   const children = [...group.children].filter((c) => !c.hasAttribute(ACTION_SLOT_ATTR));
   for (const child of children.reverse()) {
-    // 不复制带数字的（回复 / 转发 / 点赞 / 浏览），复制分享 / 收藏这类纯图标的
-    if (!child.querySelector('svg') || !child.querySelector('button')) continue;
-    if (/\d/.test(child.textContent ?? '')) continue;
-    return child;
+    // 不复制带数字的（回复 / 转发 / 点赞 / 浏览），复制分享 / 收藏这类单颗纯图标按钮；
+    // 新版 X 把书签与分享包在同一个右侧 flex 容器里，需下钻取单颗按钮，不能整组复制出两颗按钮。
+    const hit = singleButtonTemplate(child);
+    if (hit) return hit;
   }
   return null;
 }
@@ -84,9 +101,14 @@ export function createActionSlot(group: Element, kind: string, label: string): A
   const nativeButton = native?.matches('button')
     ? (native as HTMLButtonElement)
     : native?.querySelector('button');
-  const nativeSvg = native?.querySelector('svg');
+  const nativeSvg = nativeButton?.querySelector('svg');
   if (native && nativeButton && nativeSvg) {
-    root = native;
+    if (native === nativeButton) {
+      root = document.createElement('div');
+      root.appendChild(native);
+    } else {
+      root = native;
+    }
     button = nativeButton;
     for (const node of [root, ...root.querySelectorAll('*')]) {
       for (const attr of [...node.attributes]) {

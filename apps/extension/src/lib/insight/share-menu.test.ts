@@ -185,9 +185,7 @@ describe('createShareMenu', () => {
     document.body.innerHTML = REDESIGN_TWEET_HTML;
     const menu = createShareMenu({ getLanguage: () => 'zh' });
     menu.listen();
-    const shareBtn = document.querySelector<HTMLElement>(
-      '[data-engagement-action="share"]',
-    )!;
+    const shareBtn = document.querySelector<HTMLElement>('[data-engagement-action="share"]')!;
     shareBtn.click();
 
     const xdsMenu = document.createElement('div');

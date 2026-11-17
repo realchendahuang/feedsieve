@@ -435,9 +435,9 @@ export function createSearchAssist(deps: SearchAssistDeps): SearchAssist {
   function hasWords(): boolean {
     return Boolean(
       prefs.allWords.trim() ||
-        prefs.exactPhrase.trim() ||
-        prefs.anyWords.trim() ||
-        prefs.hashtags.trim(),
+      prefs.exactPhrase.trim() ||
+      prefs.anyWords.trim() ||
+      prefs.hashtags.trim(),
     );
   }
 
@@ -670,9 +670,7 @@ export function createSearchAssist(deps: SearchAssistDeps): SearchAssist {
       }
       if (event.key !== 'Tab') return;
       const focusables = [
-        ...dialog.querySelectorAll<HTMLElement>(
-          'button, input, select, textarea, [tabindex="0"]',
-        ),
+        ...dialog.querySelectorAll<HTMLElement>('button, input, select, textarea, [tabindex="0"]'),
       ].filter((el) => !(el as HTMLButtonElement).disabled);
       if (focusables.length === 0) return;
       const first = focusables[0]!;
@@ -728,12 +726,8 @@ export function createSearchAssist(deps: SearchAssistDeps): SearchAssist {
           placeholder: c.placeholders.hashtags,
           onInput: (value) => setPref('hashtags', value),
         }),
-        selectField(
-          fields.language,
-          'language',
-          prefs.language,
-          c.langs,
-          (value) => setPref('language', value),
+        selectField(fields.language, 'language', prefs.language, c.langs, (value) =>
+          setPref('language', value),
         ),
       ]),
       section(c.sections.people.title, c.sections.people.help, [
@@ -765,71 +759,84 @@ export function createSearchAssist(deps: SearchAssistDeps): SearchAssist {
           onInput: (value) => setPref('until', value),
         }),
       ]),
-      section(c.sections.engagement.title, c.sections.engagement.help, [
-        textField(fields.minReplies, 'minReplies', prefs.minReplies, {
-          inputMode: 'numeric',
-          onInput: (value) => setPref('minReplies', value),
-        }),
-        textField(fields.minRetweets, 'minRetweets', prefs.minRetweets, {
-          inputMode: 'numeric',
-          onInput: (value) => setPref('minRetweets', value),
-        }),
-        textField(fields.minLikes, 'minLikes', prefs.minLikes, {
-          inputMode: 'numeric',
-          onInput: (value) => setPref('minLikes', value),
-        }),
-      ], 3),
-      section(c.sections.filters.title, c.sections.filters.help, [
-        selectField(
-          fields.content,
-          'content',
-          prefs.content,
-          [
-            ['any', c.content.any],
-            ['images', c.content.images],
-            ['videos', c.content.videos],
-            ['native_video', c.content.native_video],
-            ['media', c.content.media],
-            ['links', c.content.links],
-            ['quote', c.content.quote],
-          ],
-          (value) => setPref('content', value as SearchContent),
-        ),
-        selectField(
-          fields.replies,
-          'replies',
-          prefs.replies,
-          [
-            ['any', c.replies.any],
-            ['exclude', c.replies.exclude],
-            ['only', c.replies.only],
-          ],
-          (value) => setPref('replies', value as RepliesMode),
-        ),
-        selectField(
-          fields.sort,
-          'sort',
-          prefs.sort,
-          [
-            ['top', c.sort.top],
-            ['live', c.sort.live],
-          ],
-          (value) => setPref('sort', value as SearchSort),
-        ),
-        (() => {
-          const checks = document.createElement('div');
-          checks.className = 'fs-adv-check-row fs-adv-field-wide';
-          checks.append(
-            checkField(fields.excludeRetweets, 'excludeRetweets', prefs.excludeRetweets, (value) =>
-              setPref('excludeRetweets', value),
-            ),
-            checkField(fields.verifiedOnly, 'verifiedOnly', prefs.verifiedOnly, (value) =>
-              setPref('verifiedOnly', value),
-            ),
-          );
-          return checks;
-        })(),
-      ], 3),
+      section(
+        c.sections.engagement.title,
+        c.sections.engagement.help,
+        [
+          textField(fields.minReplies, 'minReplies', prefs.minReplies, {
+            inputMode: 'numeric',
+            onInput: (value) => setPref('minReplies', value),
+          }),
+          textField(fields.minRetweets, 'minRetweets', prefs.minRetweets, {
+            inputMode: 'numeric',
+            onInput: (value) => setPref('minRetweets', value),
+          }),
+          textField(fields.minLikes, 'minLikes', prefs.minLikes, {
+            inputMode: 'numeric',
+            onInput: (value) => setPref('minLikes', value),
+          }),
+        ],
+        3,
+      ),
+      section(
+        c.sections.filters.title,
+        c.sections.filters.help,
+        [
+          selectField(
+            fields.content,
+            'content',
+            prefs.content,
+            [
+              ['any', c.content.any],
+              ['images', c.content.images],
+              ['videos', c.content.videos],
+              ['native_video', c.content.native_video],
+              ['media', c.content.media],
+              ['links', c.content.links],
+              ['quote', c.content.quote],
+            ],
+            (value) => setPref('content', value as SearchContent),
+          ),
+          selectField(
+            fields.replies,
+            'replies',
+            prefs.replies,
+            [
+              ['any', c.replies.any],
+              ['exclude', c.replies.exclude],
+              ['only', c.replies.only],
+            ],
+            (value) => setPref('replies', value as RepliesMode),
+          ),
+          selectField(
+            fields.sort,
+            'sort',
+            prefs.sort,
+            [
+              ['top', c.sort.top],
+              ['live', c.sort.live],
+            ],
+            (value) => setPref('sort', value as SearchSort),
+          ),
+          (() => {
+            const checks = document.createElement('div');
+            checks.className = 'fs-adv-check-row fs-adv-field-wide';
+            checks.append(
+              checkField(
+                fields.excludeRetweets,
+                'excludeRetweets',
+                prefs.excludeRetweets,
+                (value) => setPref('excludeRetweets', value),
+              ),
+              checkField(fields.verifiedOnly, 'verifiedOnly', prefs.verifiedOnly, (value) =>
+                setPref('verifiedOnly', value),
+              ),
+            );
+            return checks;
+          })(),
+        ],
+        3,
+      ),
       section(c.sections.location.title, c.sections.location.help, [
         textField(fields.near, 'near', prefs.near, {
           placeholder: c.placeholders.near,

@@ -95,7 +95,9 @@ describe('2026-11 X redesign without data-testid', () => {
         </article>
         <div role="group"><button data-testid="like">1</button></div>
       </article>`;
-    const matched = [...document.querySelectorAll(tweetSelectors.article)].map((n) => n.id || 'embedded');
+    const matched = [...document.querySelectorAll(tweetSelectors.article)].map(
+      (n) => n.id || 'embedded',
+    );
     expect(matched).toEqual(['outer', 'embedded']);
   });
 
@@ -103,10 +105,16 @@ describe('2026-11 X redesign without data-testid', () => {
     const article = render();
     article
       .querySelector('.x-avatar')!
-      .insertAdjacentHTML('beforeend', '<img src="https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png" />');
+      .insertAdjacentHTML(
+        'beforeend',
+        '<img src="https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png" />',
+      );
     article
       .querySelector('.whitespace-pre-wrap')!
-      .insertAdjacentHTML('beforeend', '<img alt="🌸" src="https://abs-0.twimg.com/emoji/v2/svg/1f338.svg" />');
+      .insertAdjacentHTML(
+        'beforeend',
+        '<img alt="🌸" src="https://abs-0.twimg.com/emoji/v2/svg/1f338.svg" />',
+      );
     const quote = document.createElement('div');
     quote.setAttribute('role', 'link');
     quote.innerHTML = `
