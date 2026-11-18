@@ -29,9 +29,6 @@ Firefox 版通过 `browser_specific_settings.gecko.data_collection_permissions` 
 **1. 社区名单同步（无你的任何数据）**
 扩展从官方 API `api.feedsieve.win` 下载社区名单快照（黑名单与验证正常白名单，JSON，经 SHA-256 校验与发布者签名验证），最多每 30 分钟检查一次；有新版本时优先只下载两版之间的增量，套在本机已验证的旧版上，重建出的全文必须与签名清单里的 SHA-256 一致，否则改下载全量。该请求不包含你的任何个人数据。
 
-**1.1 周刊最新一期（无你的任何数据）**
-打开扩展的「周刊」标签时，会请求 `feedsieve.win/weekly/api/public/latest-issue` 获取最新一期（期号、标题、条数、期页地址），并从 `feedsieve.win/weekly/og/` 加载这一期的封面图。这些请求不包含安装 ID、X 账号或其他个人数据；不打开该标签就不会请求。
-
 **1.2 X 原生静音词（首次写入前确认）**
 只在 x.com 页面打开「静音」页时，扩展才通过 x.com 网页端自己使用的接口读取你 X 账号里的静音词，并只保存为本机镜像；不在 x.com 页面打开弹窗时不读取、不写入。第一次添加词时会先弹一次确认，确认后每次添加/删除都直接写进你的 X 账号。请求直接发往 x.com，携带该次操作需要的登录态（`ct0`、web bearer、`x-client-transaction-id`）和词条本身，不经过 FeedSieve 服务器。词条只存在你的 X 账号设置里（X 可见，并同步到手机 App）和本机镜像缓存中；本机镜像只用于展示，不参与匹配，也不折叠推文。删除时仍会发一次删除请求，避免手机端继续命中静音词。每次只写一条，遇到限流会停，不做批量写入。
 
@@ -124,9 +121,6 @@ Firefox 版通过 `browser_specific_settings.gecko.data_collection_permissions` 
 
 **1. Community list sync (contains none of your data)**
 The extension downloads the community snapshot (JSON, SHA-256 and publisher-signature verified) from the official API `api.feedsieve.win`, checking at most every 30 minutes. When a new version exists it first fetches only the changes between the two versions and applies them to the verified local copy; the rebuilt file must match the SHA-256 in the signed manifest, otherwise the full file is downloaded. No personal data is included in this request.
-
-**1.1 Latest Weekly issue (contains none of your data)**
-Opening the extension's Weekly tab requests `feedsieve.win/weekly/api/public/latest-issue` for the latest issue (number, title, post count, issue URL) and loads that issue's cover from `feedsieve.win/weekly/og/`. These requests contain no installation ID, X account or other personal data, and are not made unless you open that tab.
 
 **1.2 Native muted-word sync (optional, off by default)**
 When “Sync to X” is on, FeedSieve reads, adds and removes the muted words you confirmed through the same endpoints X's own web settings page uses. Requests go directly to x.com and carry the session material needed for that action (`ct0`, web bearer, `x-client-transaction-id`) plus the word itself; they never pass through a FeedSieve server. Written words are stored in your X account settings, visible to X and synced to the mobile app. Turning sync off stops list reads and new writes; deleting a word that was already synced still sends one delete request so the mobile app stops muting it. One word per action; it stops on rate limits and never writes in batches.

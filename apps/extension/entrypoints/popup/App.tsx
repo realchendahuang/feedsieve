@@ -56,14 +56,6 @@ const WriteView = lazy(() =>
   import('./views/WriteView').then((module) => ({ default: module.WriteView })),
 );
 const CleanView = lazy(() => import('./views/CleanView'));
-const WeeklyView = lazy(() => import('./views/WeeklyView'));
-
-/**
- * 拾穗还没准备好：先不挂入口，链接里的 `?view=weekly` 也落到淘金。
- * 视图、样式和测试都留着，准备好了把这里改回 true 就恢复。
- * 标成 boolean 是为了让编译器别把后面的分支当死代码删掉。
- */
-const WEEKLY_ENABLED: boolean = false;
 const MuteView = lazy(() => import('./views/MuteView'));
 const GlobalView = lazy(() => import('./views/settings/GlobalView'));
 const ModuleSettingsView = lazy(() => import('./views/settings/ModuleSettingsView'));
@@ -81,10 +73,10 @@ import {
 
 /**
  * 顶部栏目：功能模块各占一格，同组的模块（水军 / 伪人）合并成「降噪」一格，
- * 组内用二级 tab 切换；「禁语」也挂在「降噪」下。最后是常驻的「拾穗」和「设置」。
+ * 组内用二级 tab 切换；「禁语」也挂在「降噪」下。最后是常驻的「调校（设置）」。
  * tab 是否出现由模块总开关决定，顺序由 MODULES / MODULE_GROUPS 注册表决定。
  */
-type PopupView = ModuleId | 'global' | 'weekly' | 'mute';
+type PopupView = ModuleId | 'global' | 'mute';
 /** 顶栏 tab 的 id：分组 tab（降噪）不对应单个模块。 */
 type TopTabId = PopupView | 'noise';
 
@@ -124,8 +116,7 @@ function initialRoute(): InitialRoute {
     case 'write':
       return { view: 'write', page: 'global', moduleSettingsOpen: null };
     case 'weekly':
-      if (!WEEKLY_ENABLED) return { view: 'hot', page: 'global', moduleSettingsOpen: null };
-      return { view: 'weekly', page: 'global', moduleSettingsOpen: null };
+      return { view: 'hot', page: 'global', moduleSettingsOpen: null };
     case 'mute':
       return { view: 'mute', page: 'global', moduleSettingsOpen: null };
     case 'lists':
@@ -584,8 +575,7 @@ export default function App() {
       title: module.titleKey ? t[module.titleKey] : t[module.labelKey],
     });
   }
-  // 拾穗与调校都是常驻入口，不属于模块开关；拾穗内容还没准备好，先不挂
-  if (WEEKLY_ENABLED) tabs.push({ id: 'weekly', label: t.weeklyNav, title: t.weeklyTabTitle });
+  // 调校（设置）为常驻入口，不属于模块开关
   tabs.push({ id: 'global', label: t.globalNav, title: t.globalTabTitle });
 
   // 降噪下的二级 tab：组内模块按 MODULE_GROUPS 的顺序，关键词永远最后
@@ -646,8 +636,8 @@ export default function App() {
               key={tab.id}
               type="button"
               className={`${activeTab === tab.id ? 'is-active' : ''}${
-                tab.id === 'weekly' ? ' nav-weekly' : ''
-              }${tab.id === 'global' ? ' nav-settings' : ''}`.trim()}
+                tab.id === 'global' ? ' nav-settings' : ''
+              }`.trim()}
               aria-label={tab.id === 'global' ? `${tab.label}，${t.settings}` : undefined}
               aria-current={activeTab === tab.id ? 'page' : undefined}
               title={tab.title}
@@ -755,7 +745,6 @@ export default function App() {
           {viewReady && effectiveView === 'mute' ? (
             <MuteView language={language} notify={notify} sendToXPage={sendToXPage} />
           ) : null}
-          {viewReady && effectiveView === 'weekly' ? <WeeklyView language={language} /> : null}
           {viewReady &&
           effectiveModuleSettingsOpen &&
           effectiveView === effectiveModuleSettingsOpen ? (
