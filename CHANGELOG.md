@@ -7,6 +7,16 @@
 
 ## [Unreleased]
 
+## [0.19.2] — 2026-11-18
+
+### 修复
+
+- **补齐新版 X 详情页、推广帖与右侧栏净化的边界兼容**：
+  - **详情页主帖昵称表情 / 机构徽章与非正文隔离**：主帖竖排头部识别改为精确排除头像链接与容器，放行昵称 Twemoji 与机构附属徽章；提取本帖正文时排除按钮、投票选项与时间戳下方的社区备注，防止非作者正文串入检测。
+  - **无时间戳链接的推广帖恢复检测与拉黑**：新版时间线推广帖去掉状态时间戳链接后，按昵称与 `@handle` 成对校验恢复作者与正文提取，未开启「隐藏付费推广」时仍可正常标黄与手动拉黑。
+  - **新版详情页内联回复框填入、评论区入口锚点与主页昵称兜底**：「填入回复框」支持无 `cellInnerDiv` 时位于 `article` 之外的内联回复框，并在聚焦挂载 `fileInput` 后重算宿主容器，不误触侧栏输入框；评论区 AI 检测入口改为锚定首行 `@handle` 前，不再落入时间戳容器；无 `UserName` `data-testid` 的个人主页补充页面标题兜底读取昵称。
+  - **界面净化不误藏共用侧栏搜索框，详情页非首条推广主帖照常豁免**：无 `sidebarColumn` 且右侧栏共用单个外层 `<aside>` 时，隐藏趋势与推荐关注仅作用于不含搜索框、地标和其它模块标题的单卡片容器，不再连坐顶部搜索框或相邻模块；详情页隐藏付费推广优先按本帖 status id / 回复动作 id 豁免主帖并排除引用卡，兼容前置父帖或插播广告的线程详情页。
+
 ## [0.19.1] — 2026-11-18
 
 ### 修复
@@ -722,6 +732,7 @@
 - WXT + React 19 + MV3 最小权限架构；X DOM fixtures 锁定 reader→detector 契约；95 个单元测试；pre-push 本地质量门禁。
 
 [Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.19.1...HEAD
+[0.19.2]: https://github.com/realchendahuang/feedsieve/compare/v0.19.1...v0.19.2
 [0.19.1]: https://github.com/realchendahuang/feedsieve/compare/v0.19.0...v0.19.1
 [0.19.0]: https://github.com/realchendahuang/feedsieve/compare/v0.18.1...v0.19.0
 [0.18.1]: https://github.com/realchendahuang/feedsieve/compare/v0.18.0...v0.18.1
