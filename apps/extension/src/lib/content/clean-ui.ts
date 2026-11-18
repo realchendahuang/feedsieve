@@ -10,6 +10,8 @@
  * 就别拿来当判据，宁可改成认文案再打自己的标记。
  */
 import {
+  extractHandleFromPath,
+  extractTweetIdentity,
   findTweetAuthorArea,
   findTweetOwnTextElements,
   menuSelectors,
@@ -32,8 +34,8 @@ const TRENDS_PREFIXES = [
   'Trending',
 ];
 const TRENDS_HEADINGS = new Set(TRENDS_PREFIXES);
-const SIDEBAR_SEARCH_SELECTOR =
-  'form[role="search"], [role="search"], [data-testid="SearchBox_Search_Input"], input[type="search"]';
+const SIDEBAR_NON_CARD_SELECTOR =
+  'form, [role="search"], [role="radiogroup"], [data-testid="SearchBox_Search_Input"], input, select, textarea, a[href*="/tos"], a[href*="/privacy"], a[href*="/i/premium_sign_up"], a[href*="/i/verified-choose"]';
 const SIDEBAR_HEADING_SELECTOR = 'h1, h2, h3, [role="heading"]';
 /** 新版无 data-testid 时间线里，帖子右上角 Grok 按钮的无障碍文案（2026-11-16 现场样本确认） */
 const GROK_POST_LABELS = new Set(['解释这个帖子', 'Explain this post']);
@@ -109,8 +111,8 @@ function isSingleSidebarCard(
   ) {
     return false;
   }
-  // 侧栏顶部的搜索框没有可见文字，会被包裹层吞进来：见到搜索框就说明这一层不是单模块卡片
-  if (node.matches(SIDEBAR_SEARCH_SELECTOR) || node.querySelector(SIDEBAR_SEARCH_SELECTOR)) {
+  // 侧栏搜索框、筛选单选组、Premium 引导和页脚链接绝不会出现在趋势或推荐关注卡片内：见到即停止上溯
+  if (node.matches(SIDEBAR_NON_CARD_SELECTOR) || node.querySelector(SIDEBAR_NON_CARD_SELECTOR)) {
     return false;
   }
   for (const landmark of node.querySelectorAll('section, aside')) {
@@ -139,18 +141,7 @@ function climbSidebarCard(
     best = node;
     node = node.parentElement;
   }
-  if (best && best !== heading) return best;
-  const fallbackAside = heading.closest('aside[role="complementary"]');
-  if (
-    fallbackAside &&
-    !fallbackAside.querySelector('article, main, nav, header, footer') &&
-    !fallbackAside.querySelector(SIDEBAR_SEARCH_SELECTOR) &&
-    [...fallbackAside.querySelectorAll('section, aside')].every((el) => el.contains(heading)) &&
-    [...fallbackAside.querySelectorAll(SIDEBAR_HEADING_SELECTOR)].every(isOwnHeading)
-  ) {
-    return fallbackAside;
-  }
-  return null;
+  return best && best !== heading ? best : null;
 }
 
 /**
@@ -205,6 +196,54 @@ function isQuoted(element: Element, article: Element): boolean {
   return false;
 }
 
+function isEmbeddedOrBodyNode(element: Element, article: Element): boolean {
+  if (isQuoted(element, article)) return true;
+  for (let node: Element | null = element; node && node !== article; node = node.parentElement) {
+    if (
+      node.matches(
+        `${tweetSelectors.text}, [data-testid="card.wrapper"], [data-testid="birdwatch-pivot"], [role="link"], [role="radiogroup"], blockquote`,
+      )
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function ownPostIdOf(article: Element): string | null {
+  const identityId = extractTweetIdentity(article)?.postId;
+  if (identityId) return identityId;
+  const ownStatusLinks = [...article.querySelectorAll('a[href*="/status/"]')].filter(
+    (link) => !isEmbeddedOrBodyNode(link, article),
+  );
+  const timestamp = ownStatusLinks.find((link) => link.querySelector('time'));
+  const permalink = ownStatusLinks.find((link) =>
+    /\/status\/\d+\/?(?:[?#].*)?$/.test(link.getAttribute('href') ?? ''),
+  );
+  for (const link of [timestamp, permalink, ...ownStatusLinks]) {
+    const id = link ? statusIdOf(link.getAttribute('href') ?? '') : null;
+    if (id) return id;
+  }
+  for (const link of article.querySelectorAll(
+    '[data-engagement-action="reply"] a[href*="in_reply_to="]',
+  )) {
+    if (isEmbeddedOrBodyNode(link, article)) continue;
+    const id = IN_REPLY_TO_ID.exec(link.getAttribute('href') ?? '')?.[1] ?? null;
+    if (id) return id;
+  }
+  return null;
+}
+
+function articleAuthorHandle(article: Element): string | null {
+  const identityHandle = extractTweetIdentity(article)?.author.handle;
+  if (identityHandle) return identityHandle.toLowerCase();
+  const legacyLink = article.querySelector<HTMLAnchorElement>(
+    '[data-testid="User-Name"] a[href^="/"]',
+  );
+  const handle = legacyLink ? extractHandleFromPath(legacyLink.getAttribute('href') ?? '') : null;
+  return handle ? handle.toLowerCase() : null;
+}
+
 /**
  * 这条推文是不是 URL 指向的主帖。
  *
@@ -219,16 +258,11 @@ export function isFocalTweet(
   options?: { includeQuoted?: boolean },
 ): boolean {
   if (!focalId) return false;
+  if (ownPostIdOf(article) === focalId) return true;
   const includeQuoted = options?.includeQuoted ?? true;
+  if (!includeQuoted) return false;
   for (const link of article.querySelectorAll('a[href*="/status/"]')) {
-    if (!includeQuoted && isQuoted(link, article)) continue;
     if (statusIdOf(link.getAttribute('href') ?? '') === focalId) return true;
-  }
-  for (const link of article.querySelectorAll(
-    '[data-engagement-action="reply"] a[href*="in_reply_to="]',
-  )) {
-    if (isQuoted(link, article)) continue;
-    if (IN_REPLY_TO_ID.exec(link.getAttribute('href') ?? '')?.[1] === focalId) return true;
   }
   return false;
 }
@@ -273,9 +307,7 @@ export function isPromotedArticle(article: Element): boolean {
     if (el.childElementCount > 0) continue;
     if (!PROMOTED_LABELS.has(textOf(el))) continue;
     if (el.closest('[data-testid="User-Name"]')) continue;
-    if (el.closest(tweetSelectors.text)) continue;
-    if (el.closest('[data-testid="card.wrapper"]')) continue;
-    if (isQuoted(el, article)) continue;
+    if (isEmbeddedOrBodyNode(el, article)) continue;
     // 下拉菜单里的「推广 / 推广此帖」是操作文案，不是帖子的推广标签
     if (el.closest(`[role="menu"], ${menuSelectors.dropdown}`)) continue;
     // 话题、提及、正文里的链接都是 <a>；作者自己的「推广」按钮是 button，都不是广告标签
@@ -440,11 +472,12 @@ export function createCleanUi() {
             mark(trendsCard(heading), 'trends');
           }
         }
-      } else if (!/^\/(explore|search|i\/trends)(?:[/?#]|$)/.test(location.pathname)) {
+      } else {
         for (const heading of document.querySelectorAll(
           'aside h1, aside h2, aside h3, aside [role="heading"]',
         )) {
-          if (!isTrendHeading(heading)) continue;
+          if (!isTrendHeading(heading) || heading.closest('[data-testid="primaryColumn"], article'))
+            continue;
           mark(trendsCard(heading), 'trends');
         }
       }
@@ -456,30 +489,42 @@ export function createCleanUi() {
         ? sidebar.querySelectorAll(SIDEBAR_HEADING_SELECTOR)
         : document.querySelectorAll('aside h1, aside h2, aside h3, aside [role="heading"]');
       for (const heading of headings) {
-        if (!isWhoToFollowHeading(heading)) continue;
+        if (
+          !isWhoToFollowHeading(heading) ||
+          heading.closest('[data-testid="primaryColumn"], article')
+        ) {
+          continue;
+        }
         mark(whoToFollowCard(heading), 'follow');
       }
     }
 
     if (settings.hidePromoted) {
       // 详情页的主帖是用户自己点进来的，藏掉等于把整页清空：优先按 URL 的 status id
-      // 认主帖（兼容前面渲染了父帖、置顶帖或广告的线程详情页）；若推广主帖自身不带状态链接
-      // 导致全页都认不出主帖，再回退豁免首条推文 article。
+      // 认主帖（兼容前面渲染了父帖、置顶帖或广告的线程详情页）；若旧版推广主帖完全不带
+      // 本帖状态 id，排除已知属于其它 id 的推文后优先匹配 URL 作者 handle 的推文豁免。
       const focalId = focalStatusId();
+      const focalHandle = focalId ? extractHandleFromPath(location.pathname) : null;
       const articles = [...document.querySelectorAll('article')];
       const isOwnFocal = (article: Element) =>
         isFocalTweet(article, focalId, { includeQuoted: false });
       const hasMatchedFocal = focalId !== null && articles.some(isOwnFocal);
-      const fallbackFocal =
-        focalId !== null && !hasMatchedFocal
-          ? (articles.find(
-              (article) =>
-                article.matches(tweetSelectors.article) ||
-                Boolean(article.querySelector('[data-testid="User-Name"]')),
-            ) ??
-            articles[0] ??
-            null)
-          : null;
+      let fallbackFocal: Element | null = null;
+      if (focalId !== null && !hasMatchedFocal) {
+        const statusless = articles.filter((article) => ownPostIdOf(article) === null);
+        const tweetCandidates = statusless.filter(
+          (article) =>
+            article.matches(tweetSelectors.article) ||
+            Boolean(article.querySelector('[data-testid="User-Name"]')),
+        );
+        const pool = tweetCandidates.length > 0 ? tweetCandidates : statusless;
+        fallbackFocal =
+          (focalHandle
+            ? pool.find((article) => articleAuthorHandle(article) === focalHandle)
+            : undefined) ??
+          pool[0] ??
+          null;
+      }
       for (const article of articles) {
         if (hasMatchedFocal ? isOwnFocal(article) : article === fallbackFocal) continue;
         if (isPromotedArticle(article)) mark(article, 'promoted');

@@ -711,18 +711,20 @@ describe('clean-ui 选择器', () => {
     }
   });
 
-  it('详情页主帖不排在首条 article 时：hidePromoted 按 isFocalTweet 豁免真主帖，前置广告与引用主帖的推广回复照常隐藏', async () => {
+  it('详情页主帖不排在首条 article 时：hidePromoted 按 isFocalTweet 豁免真主帖，前置广告与引用/正文提及主帖的推广回复照常隐藏', async () => {
     vi.useFakeTimers();
     stubBrowser();
     window.history.pushState({}, '', '/focal_op/status/1800000000000000222');
 
     const parentPost = tweet({ statusId: '1800000000000000111', text: '父帖正文' });
-    // 新版推广主帖：没有 /status/ 时间戳链接，仅底部动作栏回复链接带 in_reply_to=主帖id
+    // 新版推广主帖：去掉全部 /status/ 链接（含时间戳、配图、查看次数），仅底部动作栏回复链接带 in_reply_to=主帖id
     const promotedFocalHtml = REDESIGN_TWEET_HTML.replaceAll('sample_user', 'focal_op')
       .replace(
         '<span><a class="x-link" href="/focal_op/status/1800000000000000001">1小时</a></span>',
         '<span>推广</span>',
       )
+      .replaceAll('/focal_op/status/1800000000000000001/photo/1', '#')
+      .replaceAll('/focal_op/status/1800000000000000001/analytics', '#')
       .replaceAll('1800000000000000001', '1800000000000000222');
     // 引用了主帖状态链接的推广回复：不能因引用卡内含主帖链接而被误判为主帖豁免
     const quotingPromotedReply = tweet({
@@ -738,13 +740,27 @@ describe('clean-ui 选择器', () => {
       'beforeend',
       '<div role="link"><a href="/focal_op/status/1800000000000000222">引用主帖</a></div>',
     );
+    // 正文里直接贴了主帖 /status/ 链接的推广回复：同样不是主帖本身，必须照常隐藏
+    const mentioningPromotedReply = tweet({
+      meta: '推广',
+      text: '正文贴主帖链接',
+    });
+    mentioningPromotedReply.querySelector('[data-testid="tweetText"]')!.innerHTML =
+      '快看 <a href="/focal_op/status/1800000000000000222">原帖</a> 领福利';
 
     const container = document.createElement('div');
     container.innerHTML = promotedFocalHtml;
     const promotedFocal = container.firstElementChild as HTMLElement;
+    expect(promotedFocal.querySelector('a[href*="/status/"]')).toBeNull();
     const leadingAd = tweet({ meta: '推广', text: '插在前面的推广广告' });
 
-    document.body.append(leadingAd, parentPost, promotedFocal, quotingPromotedReply);
+    document.body.append(
+      leadingAd,
+      parentPost,
+      promotedFocal,
+      quotingPromotedReply,
+      mentioningPromotedReply,
+    );
 
     const clean = createCleanUi();
     clean.start();
@@ -754,6 +770,78 @@ describe('clean-ui 选择器', () => {
       expect(parentPost.hasAttribute('data-fs-clean')).toBe(false);
       expect(leadingAd.getAttribute('data-fs-clean')).toBe('promoted');
       expect(quotingPromotedReply.getAttribute('data-fs-clean')).toBe('promoted');
+      expect(mentioningPromotedReply.getAttribute('data-fs-clean')).toBe('promoted');
+    } finally {
+      clean.stop();
+    }
+  });
+
+  it('详情页旧版无任何状态 id 的推广主帖排在父帖与前置广告之后时：按已知 id 排除与 URL 作者匹配准确豁免真主帖', async () => {
+    vi.useFakeTimers();
+    stubBrowser();
+    window.history.pushState({}, '', '/focal_op/status/1800000000000000222');
+
+    const leadingAd = tweet({ meta: '推广', text: '前置广告' });
+    leadingAd.querySelector('[data-testid="User-Name"] a')!.setAttribute('href', '/ad_vendor');
+    const parentPost = tweet({ statusId: '1800000000000000111', text: '带已知父帖 id 的推文' });
+    const legacyFocal = tweet({ meta: '推广', text: '完全无 status 链接与 in_reply_to 的主帖' });
+    legacyFocal.querySelector('[data-testid="User-Name"] a')!.setAttribute('href', '/focal_op');
+    const promotedReply = tweet({ meta: '推广', text: '评论区推广广告' });
+    promotedReply.querySelector('[data-testid="User-Name"] a')!.setAttribute('href', '/spam_ad');
+
+    document.body.append(leadingAd, parentPost, legacyFocal, promotedReply);
+
+    const clean = createCleanUi();
+    clean.start();
+    try {
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(legacyFocal.hasAttribute('data-fs-clean')).toBe(false);
+      expect(parentPost.hasAttribute('data-fs-clean')).toBe(false);
+      expect(leadingAd.getAttribute('data-fs-clean')).toBe('promoted');
+      expect(promotedReply.getAttribute('data-fs-clean')).toBe('promoted');
+    } finally {
+      clean.stop();
+    }
+  });
+
+  it('无 sidebarColumn 搜索页侧栏：不误吞前置筛选框、无标题页脚与 combobox 搜索框，且正常隐藏右侧栏趋势', async () => {
+    vi.useFakeTimers();
+    stubBrowser({ hideTrends: true, hideWhoToFollow: true });
+    window.history.pushState({}, '', '/search?q=feedsieve');
+
+    document.body.innerHTML = `
+      <main id="search-results"><article data-testid="tweet"><div data-testid="User-Name"><a href="/u">u</a></div><div data-testid="tweetText">结果</div></article></main>
+      <aside role="complementary" id="flat-filter-aside">
+        <div id="filter-group" role="radiogroup"><div>来自任何人</div><div>你关注的人</div></div>
+        <h2 role="heading">推荐关注</h2>
+        <div>@flat_user</div>
+      </aside>
+      <aside role="complementary" id="stack-aside">
+        <div id="combobox-wrap"><input type="text" role="combobox" placeholder="搜索" /></div>
+        <div id="cards-stack">
+          <section role="region" id="search-trends"><h1 role="heading">当前趋势</h1><h2 role="heading">有什么新鲜事</h2><div>趋势 A</div></section>
+          <div id="search-wtf"><h2 role="heading">推荐关注</h2><div>@card_user</div></div>
+          <div id="plain-footer"><a href="/tos">服务条款</a><a href="/privacy">隐私政策</a></div>
+        </div>
+      </aside>`;
+
+    const clean = createCleanUi();
+    clean.start();
+    try {
+      await vi.advanceTimersByTimeAsync(2_000);
+      // 平铺在 radiogroup 之后的标题宁可退化不藏，也绝不把共用 aside 和搜索筛选一起藏掉
+      expect(document.getElementById('flat-filter-aside')!.hasAttribute('data-fs-clean')).toBe(
+        false,
+      );
+      expect(document.getElementById('filter-group')!.hasAttribute('data-fs-clean')).toBe(false);
+      // 卡片包裹层下有普通 div 页脚链接时：只标各自模块卡片，不爬到 #cards-stack 或吞掉页脚与 combobox
+      expect(document.getElementById('search-trends')!.getAttribute('data-fs-clean')).toBe(
+        'trends',
+      );
+      expect(document.getElementById('search-wtf')!.getAttribute('data-fs-clean')).toBe('follow');
+      expect(document.getElementById('cards-stack')!.hasAttribute('data-fs-clean')).toBe(false);
+      expect(document.getElementById('plain-footer')!.hasAttribute('data-fs-clean')).toBe(false);
+      expect(document.getElementById('combobox-wrap')!.hasAttribute('data-fs-clean')).toBe(false);
     } finally {
       clean.stop();
     }

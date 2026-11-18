@@ -99,9 +99,12 @@ const homeHtml = `<!doctype html><html><body>
   </main>
   <aside role="complementary" id="shared-sidebar">
     <form role="search"><label id="search-capsule"><input type="search" aria-label="搜索" /></label></form>
-    <div id="live-card"><h2 role="heading">X 上的直播</h2><div>直播间</div></div>
-    <section role="region" id="trends-region"><h2 role="heading">有什么新鲜事</h2><div>趋势条目</div></section>
-    <div id="wtf-card"><h2 role="heading">推荐关注</h2><div>某人</div></div>
+    <div id="sidebar-stack">
+      <div id="live-card"><h2 role="heading">X 上的直播</h2><div>直播间</div></div>
+      <section role="region" id="trends-region"><h2 role="heading">有什么新鲜事</h2><div>趋势条目</div></section>
+      <div id="wtf-card"><h2 role="heading">推荐关注</h2><div>某人</div></div>
+      <div id="plain-sidebar-footer"><a href="/tos">服务条款</a></div>
+    </div>
   </aside>
   <script>
     window.__cardClicks = [];
@@ -141,7 +144,7 @@ const detailHtml = `<!doctype html><html><body>
           <button data-slot="xds-menu-trigger" aria-label="更多"></button>
         </div>
       </div>
-      <div class="text-body whitespace-pre-wrap wrap-anywhere"><span>同意</span></div>
+      <div class="text-body whitespace-pre-wrap wrap-anywhere"><span>同意 <a href="/other_op/status/1860000000000000888">前文</a></span></div>
       <div role="radiogroup">
         <button type="button"><div class="whitespace-pre-wrap wrap-anywhere"><span>全国空降同城上门投票选项</span></div></button>
       </div>
@@ -161,6 +164,7 @@ const detailHtml = `<!doctype html><html><body>
     ${redesignCard({ id: 'reply-op-self', handle: 'focal_op', name: '主帖作者', postId: '1860000000000000004', body: '补充一句我自己的看法。' })}
     ${redesignCard({ id: 'reply-ai', handle: 'ai_bot', name: 'AI Bot', postId: '1860000000000000002', body: '这是一条非常典型的机器人自动生成长回复内容，用来测试折叠与填入回复框。' })}
     ${redesignCard({ id: 'reply-thin', handle: 'blue_water', name: '水贴蓝标', postId: '1860000000000000003', body: '支持一下', verified: true })}
+    ${redesignCard({ id: 'reply-ad-mention', handle: 'ad_reply', name: '评论广告', postId: '1860000000000000005', body: '正文带主帖链接 <a href="/focal_op/status/1860000000000000001">回看</a>', promoted: true })}
   </main>
   <script>
     window.__detailClicks = [];
@@ -473,7 +477,9 @@ try {
   assert.equal(await page.locator('#trends-region').getAttribute('data-fs-clean'), 'trends');
   assert.equal(await page.locator('#wtf-card').getAttribute('data-fs-clean'), 'follow');
   assert.equal(await page.locator('#shared-sidebar').getAttribute('data-fs-clean'), null);
+  assert.equal(await page.locator('#sidebar-stack').getAttribute('data-fs-clean'), null);
   assert.equal(await page.locator('#live-card').getAttribute('data-fs-clean'), null);
+  assert.equal(await page.locator('#plain-sidebar-footer').getAttribute('data-fs-clean'), null);
 
   // 搜索框高级搜索（与趋势/推荐关注共用同一个外层 aside 时，搜索框仍可见可点）
   await page.waitForSelector('#search-capsule .fs-search-trigger');
@@ -510,6 +516,10 @@ try {
   );
   assert.equal(await page.locator('#focal-post').getAttribute('data-fs-clean'), null);
   assert.equal(await page.locator('#leading-ad article').getAttribute('data-fs-clean'), 'promoted');
+  assert.equal(
+    await page.locator('#reply-ad-mention article').getAttribute('data-fs-clean'),
+    'promoted',
+  );
   // 已知 AI 回复在无 cellInnerDiv 下完成折叠，展开不触发外层卡片点击
   await page.waitForSelector('#reply-ai article[data-fs-ai-fold="1"] .fs-ai-foldbar');
   await page.locator('#reply-ai .fs-ai-foldbar button').click();
