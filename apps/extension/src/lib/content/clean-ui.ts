@@ -23,13 +23,18 @@ const MARK_ATTR = 'data-fs-clean';
 const FOR_YOU = ['为你推荐', 'For you'];
 const FOLLOWING = ['正在关注', 'Following'];
 const WHO_TO_FOLLOW = ['推荐关注', 'Who to follow'];
-const TRENDS_HEADINGS = new Set([
+const TRENDS_PREFIXES = [
   '当前趋势',
   '有什么新鲜事',
   'What’s happening',
   "What's happening",
+  'Trending now',
   'Trending',
-]);
+];
+const TRENDS_HEADINGS = new Set(TRENDS_PREFIXES);
+const SIDEBAR_SEARCH_SELECTOR =
+  'form[role="search"], [role="search"], [data-testid="SearchBox_Search_Input"], input[type="search"]';
+const SIDEBAR_HEADING_SELECTOR = 'h1, h2, h3, [role="heading"]';
 /** 新版无 data-testid 时间线里，帖子右上角 Grok 按钮的无障碍文案（2026-11-16 现场样本确认） */
 const GROK_POST_LABELS = new Set(['解释这个帖子', 'Explain this post']);
 /** X 给付费推广帖打的标签（贴在作者名那一行，取代发布时间） */
@@ -41,6 +46,8 @@ export const PREMIUM_REPLY_MAX_CHARS = 20;
 const SCAN_DEBOUNCE_MS = 400;
 /** 推文状态链接（.../status/123）里的 id：详情页的 URL 和推文里的时间戳链接用同一套格式 */
 const STATUS_ID = /\/status\/(\d+)/;
+/** 新版推文底部回复动作链接里的本帖 id（推广帖无 /status/ 时间戳链接时仍带此链接） */
+const IN_REPLY_TO_ID = /[?&]in_reply_to=(\d+)/;
 
 const CLEAN_UI_CSS = `
   /* Chirp 不含中文字形，中文回退到系统字体 */
@@ -86,29 +93,89 @@ export function isWhoToFollowHeading(el: Element): boolean {
   return WHO_TO_FOLLOW.includes(textOf(el));
 }
 
-/**
- * 「推荐关注」标题所属的模块卡片：从标题上溯到「只含这一个标题」的最大容器。
- *
- * 只看文案前缀不够：侧栏第一块模块前面没有文字（搜索框只有 placeholder），
- * 一路上去会把整个侧栏包裹层都选中，一次 display:none 就是整栏空白。
- * 多出一个标题就说明已经跨到别的模块了，停在前一层。
- */
-export function whoToFollowCard(heading: Element): Element | null {
+export function isTrendHeading(el: Element): boolean {
+  return TRENDS_HEADINGS.has(textOf(el));
+}
+
+function isSingleSidebarCard(
+  node: Element,
+  heading: Element,
+  isOwnHeading: (el: Element) => boolean,
+  prefixes: readonly string[],
+): boolean {
+  if (
+    node.matches('article, main, nav, header, footer') ||
+    node.querySelector('article, main, nav, header, footer')
+  ) {
+    return false;
+  }
+  // 侧栏顶部的搜索框没有可见文字，会被包裹层吞进来：见到搜索框就说明这一层不是单模块卡片
+  if (node.matches(SIDEBAR_SEARCH_SELECTOR) || node.querySelector(SIDEBAR_SEARCH_SELECTOR)) {
+    return false;
+  }
+  for (const landmark of node.querySelectorAll('section, aside')) {
+    if (!landmark.contains(heading)) return false;
+  }
+  const headings = [
+    ...(node.matches(SIDEBAR_HEADING_SELECTOR) ? [node] : []),
+    ...node.querySelectorAll(SIDEBAR_HEADING_SELECTOR),
+  ];
+  if (headings.length === 0 || !headings.every(isOwnHeading)) return false;
+  const text = textOf(node);
+  return prefixes.some((prefix) => text.startsWith(prefix));
+}
+
+function climbSidebarCard(
+  heading: Element,
+  isOwnHeading: (el: Element) => boolean,
+  prefixes: readonly string[],
+): Element | null {
   const column = heading.closest('[data-testid="sidebarColumn"]');
-  if (!column) return null;
-  const headingCount = (el: Element) => el.querySelectorAll('h2, [role="heading"]').length;
+  if (!column && !heading.closest('aside')) return null;
   let node: Element | null = heading;
   let best: Element | null = null;
-  while (node && node !== column) {
-    const text = textOf(node);
-    if (!text.startsWith('推荐关注') && !text.startsWith('Who to follow')) break;
-    if (headingCount(node) > 1) break;
-    // 侧栏顶部的搜索框没有文字，会被包裹层吞进来：见到搜索框就说明这一层不是卡片
-    if (node.querySelector('form[role="search"], [data-testid="SearchBox_Search_Input"]')) break;
+  while (node && (column ? node !== column : Boolean(node.closest('aside')))) {
+    if (!isSingleSidebarCard(node, heading, isOwnHeading, prefixes)) break;
     best = node;
     node = node.parentElement;
   }
-  return best ?? heading.closest('aside[role="complementary"]');
+  if (best && best !== heading) return best;
+  const fallbackAside = heading.closest('aside[role="complementary"]');
+  if (
+    fallbackAside &&
+    !fallbackAside.querySelector('article, main, nav, header, footer') &&
+    !fallbackAside.querySelector(SIDEBAR_SEARCH_SELECTOR) &&
+    [...fallbackAside.querySelectorAll('section, aside')].every((el) => el.contains(heading)) &&
+    [...fallbackAside.querySelectorAll(SIDEBAR_HEADING_SELECTOR)].every(isOwnHeading)
+  ) {
+    return fallbackAside;
+  }
+  return null;
+}
+
+/**
+ * 「推荐关注」标题所属的模块卡片：从标题上溯到「只含这一类标题且不含搜索框/其它模块」的最大容器。
+ *
+ * 兼容旧版 [data-testid="sidebarColumn"] 与新版右侧栏 <aside>（无论单模块独立 <aside>
+ * 还是整栏共用单个外层 <aside>），防止把顶部搜索框或相邻模块连坐隐藏。
+ */
+export function whoToFollowCard(heading: Element): Element | null {
+  return climbSidebarCard(heading, isWhoToFollowHeading, WHO_TO_FOLLOW);
+}
+
+/** 「有什么新鲜事 / 当前趋势」标题所属的侧栏模块卡片，不连坐共用 <aside> 内的搜索框或其它模块。 */
+export function trendsCard(heading: Element): Element | null {
+  const column = heading.closest('[data-testid="sidebarColumn"]');
+  if (!column && !heading.closest('aside')) return null;
+  const section = heading.closest('section[role="region"]');
+  if (
+    section &&
+    (column ? column.contains(section) : Boolean(section.closest('aside'))) &&
+    isSingleSidebarCard(section, heading, isTrendHeading, TRENDS_PREFIXES)
+  ) {
+    return section;
+  }
+  return climbSidebarCard(heading, isTrendHeading, TRENDS_PREFIXES);
 }
 
 /** 从侧栏里的一个节点上溯到它所属的模块根（[data-testid="sidebarColumn"] 的直接子级）。 */
@@ -129,27 +196,39 @@ function statusIdOf(href: string): string | null {
   return STATUS_ID.exec(href)?.[1] ?? null;
 }
 
-/**
- * 这条推文是不是 URL 指向的主帖。
- *
- * 不能靠「详情页第一条 article 就是主帖」：X 会先渲染置顶推文、广告或其它
- * article，主帖未必排在第一；按顺序猜会把主帖当回复压暗、把真回复漏掉。
- * 这里只认推文自己带的状态链接 id。引用卡片里指向主帖的链接也算（宁可少淡化
- * 一条回复），认不出就不当主帖。
- */
-export function isFocalTweet(article: Element, focalId: string | null = focalStatusId()): boolean {
-  if (!focalId) return false;
-  for (const link of article.querySelectorAll('a[href*="/status/"]')) {
-    if (statusIdOf(link.getAttribute('href') ?? '') === focalId) return true;
-  }
-  return false;
-}
-
 function isQuoted(element: Element, article: Element): boolean {
   for (let node: Element | null = element; node && node !== article; node = node.parentElement) {
     if (node.tagName === 'ARTICLE') return true;
     if (node.matches(QUOTE_CARD_SELECTOR) && node.querySelector(tweetSelectors.statusLink))
       return true;
+  }
+  return false;
+}
+
+/**
+ * 这条推文是不是 URL 指向的主帖。
+ *
+ * 不能靠「详情页第一条 article 就是主帖」：X 会先渲染置顶推文、父帖、广告或其它
+ * article，主帖未必排在第一；按顺序猜会把主帖当回复压暗或当广告藏掉。
+ * 这里认推文自己带的状态链接 id（及新版无时间戳链接时的回复动作 in_reply_to id）。
+ * 默认引用卡片里指向主帖的链接也算（宁可少淡化一条回复）；推广帖豁免传 includeQuoted=false。
+ */
+export function isFocalTweet(
+  article: Element,
+  focalId: string | null = focalStatusId(),
+  options?: { includeQuoted?: boolean },
+): boolean {
+  if (!focalId) return false;
+  const includeQuoted = options?.includeQuoted ?? true;
+  for (const link of article.querySelectorAll('a[href*="/status/"]')) {
+    if (!includeQuoted && isQuoted(link, article)) continue;
+    if (statusIdOf(link.getAttribute('href') ?? '') === focalId) return true;
+  }
+  for (const link of article.querySelectorAll(
+    '[data-engagement-action="reply"] a[href*="in_reply_to="]',
+  )) {
+    if (isQuoted(link, article)) continue;
+    if (IN_REPLY_TO_ID.exec(link.getAttribute('href') ?? '')?.[1] === focalId) return true;
   }
   return false;
 }
@@ -350,48 +429,59 @@ export function createCleanUi() {
       // [data-testid="trend"]，跟着 section[role=region] 上溯会把主页内容整块藏掉。
       const sidebar = document.querySelector('[data-testid="sidebarColumn"]');
       if (sidebar) {
-        for (const trend of sidebar.querySelectorAll('[data-testid="trend"]')) {
-          mark(trend.closest('section[role="region"]') ?? trend.parentElement, 'trends');
+        const trends = sidebar.querySelectorAll('[data-testid="trend"]');
+        if (trends.length > 0) {
+          for (const trend of trends) {
+            mark(trend.closest('section[role="region"]') ?? trend.parentElement, 'trends');
+          }
+        } else {
+          for (const heading of sidebar.querySelectorAll(SIDEBAR_HEADING_SELECTOR)) {
+            if (!isTrendHeading(heading)) continue;
+            mark(trendsCard(heading), 'trends');
+          }
         }
       } else if (!/^\/(explore|search|i\/trends)(?:[/?#]|$)/.test(location.pathname)) {
-        for (const region of document.querySelectorAll(
-          'aside section[role="region"], aside[role="complementary"]',
+        for (const heading of document.querySelectorAll(
+          'aside h1, aside h2, aside h3, aside [role="heading"]',
         )) {
-          if (region.querySelector('article')) continue;
-          const hasTrendHeading = [...region.querySelectorAll('h1, h2, h3, [role="heading"]')].some(
-            (h) => TRENDS_HEADINGS.has(textOf(h)),
-          );
-          if (hasTrendHeading) mark(region, 'trends');
+          if (!isTrendHeading(heading)) continue;
+          mark(trendsCard(heading), 'trends');
         }
       }
     }
 
     if (settings.hideWhoToFollow) {
       const sidebar = document.querySelector('[data-testid="sidebarColumn"]');
-      if (sidebar) {
-        const headings = sidebar.querySelectorAll('h2, [role="heading"]');
-        for (const heading of headings) {
-          if (!isWhoToFollowHeading(heading)) continue;
-          mark(whoToFollowCard(heading) ?? moduleRoot(heading), 'follow');
-        }
-      } else {
-        for (const aside of document.querySelectorAll('aside[role="complementary"], aside')) {
-          if (aside.querySelector('article')) continue;
-          const hasHeading = [...aside.querySelectorAll('h1, h2, h3, [role="heading"]')].some(
-            isWhoToFollowHeading,
-          );
-          if (hasHeading) mark(aside, 'follow');
-        }
+      const headings = sidebar
+        ? sidebar.querySelectorAll(SIDEBAR_HEADING_SELECTOR)
+        : document.querySelectorAll('aside h1, aside h2, aside h3, aside [role="heading"]');
+      for (const heading of headings) {
+        if (!isWhoToFollowHeading(heading)) continue;
+        mark(whoToFollowCard(heading), 'follow');
       }
     }
 
     if (settings.hidePromoted) {
-      // 详情页的主帖是用户自己点进来的，藏掉等于把整页清空：只处理时间线里的推广帖
-      const focal = /\/status\/\d+/.test(location.pathname)
-        ? document.querySelector('article')
-        : null;
-      for (const article of document.querySelectorAll('article')) {
-        if (article === focal) continue;
+      // 详情页的主帖是用户自己点进来的，藏掉等于把整页清空：优先按 URL 的 status id
+      // 认主帖（兼容前面渲染了父帖、置顶帖或广告的线程详情页）；若推广主帖自身不带状态链接
+      // 导致全页都认不出主帖，再回退豁免首条推文 article。
+      const focalId = focalStatusId();
+      const articles = [...document.querySelectorAll('article')];
+      const isOwnFocal = (article: Element) =>
+        isFocalTweet(article, focalId, { includeQuoted: false });
+      const hasMatchedFocal = focalId !== null && articles.some(isOwnFocal);
+      const fallbackFocal =
+        focalId !== null && !hasMatchedFocal
+          ? (articles.find(
+              (article) =>
+                article.matches(tweetSelectors.article) ||
+                Boolean(article.querySelector('[data-testid="User-Name"]')),
+            ) ??
+            articles[0] ??
+            null)
+          : null;
+      for (const article of articles) {
+        if (hasMatchedFocal ? isOwnFocal(article) : article === fallbackFocal) continue;
         if (isPromotedArticle(article)) mark(article, 'promoted');
       }
     }

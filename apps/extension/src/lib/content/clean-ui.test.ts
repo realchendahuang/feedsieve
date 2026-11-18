@@ -648,4 +648,114 @@ describe('clean-ui 选择器', () => {
       clean.stop();
     }
   });
+
+  it('无 sidebarColumn 且右侧栏共用单个 aside 时：隐藏趋势/推荐关注只标各自卡片，不连坐搜索框与其它模块', async () => {
+    vi.useFakeTimers();
+    const listeners = stubBrowser({ hideTrends: true, hideWhoToFollow: false });
+    document.body.innerHTML = `
+      <aside role="complementary" id="shared-sidebar">
+        <form role="search" id="search-form"><input type="search" aria-label="搜索" /></form>
+        <div id="live-card"><h2 role="heading">X 上的直播</h2><div>某直播间</div></div>
+        <div id="trends-card">
+          <h1 role="heading">当前趋势</h1>
+          <div><h2 role="heading">有什么新鲜事</h2><div>趋势条目</div></div>
+        </div>
+        <div id="wtf-card"><h2 role="heading">推荐关注</h2><div>@alice</div></div>
+        <nav aria-label="页脚" id="sidebar-footer"><a href="/tos">服务条款</a></nav>
+      </aside>`;
+
+    const clean = createCleanUi();
+    clean.start();
+    try {
+      await vi.advanceTimersByTimeAsync(2_000);
+      // 只开启 hideTrends：仅趋势卡片被标记，外层共用 aside、搜索框、直播卡片、推荐关注、页脚均保留
+      expect(document.getElementById('trends-card')!.getAttribute('data-fs-clean')).toBe('trends');
+      expect(document.getElementById('shared-sidebar')!.hasAttribute('data-fs-clean')).toBe(false);
+      expect(document.getElementById('search-form')!.hasAttribute('data-fs-clean')).toBe(false);
+      expect(document.getElementById('live-card')!.hasAttribute('data-fs-clean')).toBe(false);
+      expect(document.getElementById('wtf-card')!.hasAttribute('data-fs-clean')).toBe(false);
+      expect(document.getElementById('sidebar-footer')!.hasAttribute('data-fs-clean')).toBe(false);
+
+      // 切换为只开启 hideWhoToFollow：仅推荐关注卡片被标记
+      pushSettings(listeners, { hideTrends: false, hideWhoToFollow: true });
+      await vi.advanceTimersByTimeAsync(500);
+      expect(document.getElementById('wtf-card')!.getAttribute('data-fs-clean')).toBe('follow');
+      expect(document.getElementById('trends-card')!.hasAttribute('data-fs-clean')).toBe(false);
+      expect(document.getElementById('shared-sidebar')!.hasAttribute('data-fs-clean')).toBe(false);
+      expect(document.getElementById('search-form')!.hasAttribute('data-fs-clean')).toBe(false);
+    } finally {
+      clean.stop();
+    }
+  });
+
+  it('无 sidebarColumn 且共用 aside 仅含搜索框与单一模块时：仍只藏模块卡片，不吞掉搜索框', async () => {
+    vi.useFakeTimers();
+    stubBrowser({ hideTrends: false, hideWhoToFollow: true });
+    document.body.innerHTML = `
+      <aside role="complementary" id="shared-only-wtf">
+        <form role="search" id="search-only"><input type="search" placeholder="搜索" /></form>
+        <div id="wtf-only-card"><h2 role="heading">推荐关注</h2><div>@bob</div></div>
+      </aside>`;
+
+    const clean = createCleanUi();
+    clean.start();
+    try {
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(document.getElementById('wtf-only-card')!.getAttribute('data-fs-clean')).toBe(
+        'follow',
+      );
+      expect(document.getElementById('shared-only-wtf')!.hasAttribute('data-fs-clean')).toBe(false);
+      expect(document.getElementById('search-only')!.hasAttribute('data-fs-clean')).toBe(false);
+    } finally {
+      clean.stop();
+    }
+  });
+
+  it('详情页主帖不排在首条 article 时：hidePromoted 按 isFocalTweet 豁免真主帖，前置广告与引用主帖的推广回复照常隐藏', async () => {
+    vi.useFakeTimers();
+    stubBrowser();
+    window.history.pushState({}, '', '/focal_op/status/1800000000000000222');
+
+    const parentPost = tweet({ statusId: '1800000000000000111', text: '父帖正文' });
+    // 新版推广主帖：没有 /status/ 时间戳链接，仅底部动作栏回复链接带 in_reply_to=主帖id
+    const promotedFocalHtml = REDESIGN_TWEET_HTML.replaceAll('sample_user', 'focal_op')
+      .replace(
+        '<span><a class="x-link" href="/focal_op/status/1800000000000000001">1小时</a></span>',
+        '<span>推广</span>',
+      )
+      .replaceAll('1800000000000000001', '1800000000000000222');
+    // 引用了主帖状态链接的推广回复：不能因引用卡内含主帖链接而被误判为主帖豁免
+    const quotingPromotedReply = tweet({
+      meta: '推广',
+      statusId: '1800000000000000333',
+      text: '推广回复',
+    });
+    // 去掉自身时间戳，换上推广标签 + 引用主帖的卡片
+    quotingPromotedReply.querySelector('a[href*="/status/"]')!.replaceWith(
+      Object.assign(document.createElement('span'), { textContent: '推广' }),
+    );
+    quotingPromotedReply.insertAdjacentHTML(
+      'beforeend',
+      '<div role="link"><a href="/focal_op/status/1800000000000000222">引用主帖</a></div>',
+    );
+
+    const container = document.createElement('div');
+    container.innerHTML = promotedFocalHtml;
+    const promotedFocal = container.firstElementChild as HTMLElement;
+    const leadingAd = tweet({ meta: '推广', text: '插在前面的推广广告' });
+
+    document.body.append(leadingAd, parentPost, promotedFocal, quotingPromotedReply);
+
+    const clean = createCleanUi();
+    clean.start();
+    try {
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(promotedFocal.hasAttribute('data-fs-clean')).toBe(false);
+      expect(parentPost.hasAttribute('data-fs-clean')).toBe(false);
+      expect(leadingAd.getAttribute('data-fs-clean')).toBe('promoted');
+      expect(quotingPromotedReply.getAttribute('data-fs-clean')).toBe('promoted');
+    } finally {
+      clean.stop();
+    }
+  });
 });

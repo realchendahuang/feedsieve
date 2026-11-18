@@ -97,11 +97,12 @@ const homeHtml = `<!doctype html><html><body>
     ${redesignCard({ id: 'card-clean', handle: 'clean_author', name: 'Clean Author', postId: '1850000000000000002', body: '今天读了一篇很好的技术文章，分享一下笔记。', ownPromoteBtn: true })}
     ${redesignCard({ id: 'card-ad', handle: 'ad_brand', name: 'Brand Ad', postId: '1850000000000000003', body: '全国空降同城上门限时大促推广信息', promoted: true })}
   </main>
-  <aside>
+  <aside role="complementary" id="shared-sidebar">
     <form role="search"><label id="search-capsule"><input type="search" aria-label="搜索" /></label></form>
+    <div id="live-card"><h2 role="heading">X 上的直播</h2><div>直播间</div></div>
     <section role="region" id="trends-region"><h2 role="heading">有什么新鲜事</h2><div>趋势条目</div></section>
+    <div id="wtf-card"><h2 role="heading">推荐关注</h2><div>某人</div></div>
   </aside>
-  <aside role="complementary" id="wtf-aside"><h2 role="heading">推荐关注</h2><div>某人</div></aside>
   <script>
     window.__cardClicks = [];
     document.querySelectorAll('.outer-card').forEach((card) => {
@@ -122,6 +123,7 @@ const homeHtml = `<!doctype html><html><body>
 
 const detailHtml = `<!doctype html><html><body>
   <main>
+    ${redesignCard({ id: 'leading-ad', handle: 'ad_top', name: '前置广告', postId: '1860000000000000000', body: '插在主帖之前的推广帖', promoted: true })}
     <article id="focal-post" class="flex flex-col gap-3">
       <div class="flex items-center justify-between gap-2">
         <div class="flex items-center gap-2">
@@ -145,6 +147,7 @@ const detailHtml = `<!doctype html><html><body>
       </div>
       <div class="meta-row">
         <a href="/focal_op/status/1860000000000000001">上午10:00 · 2026年11月18日</a>
+        <span>推广</span>
       </div>
       <div class="community-note">
         <div class="whitespace-pre-wrap wrap-anywhere"><span>读者背景信息：全国空降同城上门防骗提示</span></div>
@@ -468,9 +471,11 @@ try {
     'grok',
   );
   assert.equal(await page.locator('#trends-region').getAttribute('data-fs-clean'), 'trends');
-  assert.equal(await page.locator('#wtf-aside').getAttribute('data-fs-clean'), 'follow');
+  assert.equal(await page.locator('#wtf-card').getAttribute('data-fs-clean'), 'follow');
+  assert.equal(await page.locator('#shared-sidebar').getAttribute('data-fs-clean'), null);
+  assert.equal(await page.locator('#live-card').getAttribute('data-fs-clean'), null);
 
-  // 搜索框高级搜索
+  // 搜索框高级搜索（与趋势/推荐关注共用同一个外层 aside 时，搜索框仍可见可点）
   await page.waitForSelector('#search-capsule .fs-search-trigger');
   await page.locator('#search-capsule .fs-search-trigger').click();
   await page.waitForSelector('.fs-adv-dialog');
@@ -484,7 +489,6 @@ try {
   assert.equal(await page.locator('#focal-post .fs-badge').count(), 0);
   assert.equal(await page.locator('#focal-post .fs-ai-entry').count(), 0);
   assert.equal(await page.locator('#reply-op-self .fs-ai-entry').count(), 0);
-  assert.equal(await page.locator('#focal-post').getAttribute('data-fs-clean'), null);
   // 评论区 AI 检测入口插在作者首行 @handle 前面，不塞进时间戳 span
   assert.equal(
     await page.evaluate(() => {
@@ -498,12 +502,14 @@ try {
     }),
     true,
   );
-  // 评论区蓝标短回复被标记为 premium 淡化
+  // 评论区蓝标短回复被标记为 premium 淡化；同时前置推广广告隐藏、排在第二条的主帖即使带推广标也豁免不藏
   await page.waitForFunction(
     () =>
       // eslint-disable-next-line no-undef
       document.querySelector('#reply-thin article')?.getAttribute('data-fs-clean') === 'premium',
   );
+  assert.equal(await page.locator('#focal-post').getAttribute('data-fs-clean'), null);
+  assert.equal(await page.locator('#leading-ad article').getAttribute('data-fs-clean'), 'promoted');
   // 已知 AI 回复在无 cellInnerDiv 下完成折叠，展开不触发外层卡片点击
   await page.waitForSelector('#reply-ai article[data-fs-ai-fold="1"] .fs-ai-foldbar');
   await page.locator('#reply-ai .fs-ai-foldbar button').click();
