@@ -7,6 +7,18 @@
 
 ## [Unreleased]
 
+## [0.19.4] — 2026-11-18
+
+### 修复
+
+- **修复详情页回复头部错位并理顺标签与流速布局**：
+  - **评论区机器人入口不再堆在 `@handle` 上方**：现网 `User-Name` 下 `@handle` 外包着单子节点的竖排 flex 容器，AI 检测入口（`.fs-ai-entry`）改为跳过此类竖排外壳、插入到横向行容器内 `@handle` 前面（同时避免在竖排主帖头爬进根容器），不再把回复作者行撑高成两行错位，并补充暗色主题配色与 `.x-middot-group` 下间距修正。
+  - **统一量级与 AI 味标签顺序并防止破坏新版广告判定**：量级胶囊（`.fs-tier`）始终排在「AI 味 N%」（`.fs-ai-mark`）之前；「AI 味 N%」高度收紧至 `20px` 与 X 头部对齐并支持 X 重渲染丢失后自愈；新版 `.x-middot-group` 推广帖遇到纯文本 `<span>推广</span>` 时不再往内部塞子节点，避免破坏界面净化的付费推广识别。
+  - **主帖右上角流速胶囊定位加固**：右上角流速（`.fs-velocity`）跳过第三方扩展注入的空占位节点（如 `data-plasmo-shadow-container`），并在没有 Grok / 推广按钮时保持留在右侧菜单按钮前，不再夹在按钮中间或落到作者名左侧。
+- **流速衰减、爆帖评分与冷启动口径校准**：
+  - 流速计算（`velocityPerHour`）支持按观测时刻向前衰减到当前（客户端热帖采用 5 分钟分桶滑窗防 60 分钟边界塌缩，全站热榜同步衰减），避免久未刷到的旧帖流速冻结；修正预计 24 小时浏览与爆帖指数（`viralScore`）的观测年龄口径并加入小样本平滑，主页洞察相对表现结合帖子观测时间计算。
+  - 同步 X 排序模型最新动作权重（点赞权重 `0.66 → 0.708`）；冷启动试水期排除回复与转发，补齐悬停卡 5K–5 万粉作者的冷启动提示。
+
 ## [0.19.3] — 2026-11-18
 
 ### 修复
@@ -740,7 +752,8 @@
 - 首个可用版本：黄框标注（内置名单 + 启发式，带理由）、顺手拉黑、待拉黑列表、一键批量拉黑（持久队列）、一键撤销、本地统计。
 - WXT + React 19 + MV3 最小权限架构；X DOM fixtures 锁定 reader→detector 契约；95 个单元测试；pre-push 本地质量门禁。
 
-[Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.19.3...HEAD
+[Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.19.4...HEAD
+[0.19.4]: https://github.com/realchendahuang/feedsieve/compare/v0.19.3...v0.19.4
 [0.19.3]: https://github.com/realchendahuang/feedsieve/compare/v0.19.2...v0.19.3
 [0.19.2]: https://github.com/realchendahuang/feedsieve/compare/v0.19.1...v0.19.2
 [0.19.1]: https://github.com/realchendahuang/feedsieve/compare/v0.19.0...v0.19.1
