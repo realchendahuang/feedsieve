@@ -22,6 +22,8 @@ export interface VelocityInput {
   createdAt?: number;
   views?: number;
   now: number;
+  /** 本次 `views` 实际被观测到的时刻（Unix 毫秒）；缺省时认为就是 `now`。 */
+  observedAt?: number;
   /** 同一帖子更早的一次观测；有它且间隔足够时用差分。 */
   previous?: ViewObservation;
 }
@@ -62,8 +64,8 @@ export function projectedViews(
 
 /**
  * 当前流速（浏览/小时）。
- * - 有间隔 ≥ velocityMinGapMs 的前一次观测，且浏览量没有倒退：用两次观测的实际增量。
- * - 否则：用衰减模型推算此刻的速度 V'(t)。
+ * - 先在观测时刻 `observedAt`（缺省为 `now`）求流速：间隔 ≥ velocityMinGapMs 且未倒退时用差分，否则用衰减模型；
+ * - 若距上次观测已过去一段时间（`now > observedAt`），按同一指数衰减因子推进到 `now`，避免过期帖流速冻结；
  * - 帖子超过 velocityMaxAgeHours（X 不再推荐）返回 null。
  */
 export function velocityPerHour(
@@ -71,22 +73,35 @@ export function velocityPerHour(
   overrides?: Partial<MetricsConfig>,
 ): number | null {
   const config = resolveConfig(overrides);
-  const age = ageHours(input.createdAt, input.now);
-  if (age === null || !isCount(input.views) || age > config.velocityMaxAgeHours) return null;
+  const ageAtNow = ageHours(input.createdAt, input.now);
+  if (ageAtNow === null || !isCount(input.views) || ageAtNow > config.velocityMaxAgeHours) {
+    return null;
+  }
 
+  let obsTime = input.now;
+  if (input.observedAt !== undefined) {
+    if (!isCount(input.observedAt)) return null;
+    obsTime = Math.min(input.now, input.observedAt);
+  }
+  const obsAge = ageHours(input.createdAt, obsTime);
+  if (obsAge === null) return null;
+
+  const l = lambda(config);
+  const obsDecay = Math.exp(-l * Math.max(0, (input.now - obsTime) / HOUR_MS));
   const previous = input.previous;
   if (
     previous &&
     isCount(previous.views) &&
     isCount(previous.at) &&
-    input.now - previous.at >= config.velocityMinGapMs &&
+    obsTime - previous.at >= config.velocityMinGapMs &&
     input.views >= previous.views
   ) {
-    return (input.views - previous.views) / ((input.now - previous.at) / HOUR_MS);
+    const rateAtObs = (input.views - previous.views) / ((obsTime - previous.at) / HOUR_MS);
+    return rateAtObs * obsDecay;
   }
-  const t = Math.max(age, config.decayFloorHours);
-  const total = input.views / elapsedShare(age, config);
-  return total * lambda(config) * Math.exp(-lambda(config) * t);
+  const t = Math.max(obsAge, config.decayFloorHours);
+  const total = input.views / elapsedShare(obsAge, config);
+  return total * l * Math.exp(-l * t) * obsDecay;
 }
 
 export function shouldShowVelocity(
@@ -136,8 +151,19 @@ export interface EngagementInput {
   quotes?: number;
 }
 
+function weightedEngagement(input: EngagementInput, config: MetricsConfig): number {
+  const w = config.engagementWeights;
+  const n = (value: number | undefined) => (isCount(value) ? value : 0);
+  return (
+    w.like * n(input.likes) +
+    w.reply * n(input.replies) +
+    w.retweet * n(input.retweets) +
+    w.quote * n(input.quotes)
+  );
+}
+
 /**
- * 加权互动率 = (0.66×点赞 + 5×回复 + 1×转发 + 5×引用) ÷ 浏览。
+ * 加权互动率 = (0.708×点赞 + 5×回复 + 1×转发 + 5×引用) ÷ 浏览。
  * 权重取自 X 排序模型（config.engagementWeights）：回复和引用远比点赞值钱。
  * 没有浏览量时返回 null；单项互动缺失按 0 计。
  */
@@ -146,14 +172,7 @@ export function engagementRate(
   overrides?: Partial<MetricsConfig>,
 ): number | null {
   if (!isCount(input.views) || input.views === 0) return null;
-  const w = resolveConfig(overrides).engagementWeights;
-  const n = (value: number | undefined) => (isCount(value) ? value : 0);
-  const weighted =
-    w.like * n(input.likes) +
-    w.reply * n(input.replies) +
-    w.retweet * n(input.retweets) +
-    w.quote * n(input.quotes);
-  return weighted / input.views;
+  return weightedEngagement(input, resolveConfig(overrides)) / input.views;
 }
 
 export interface HeatInput {
@@ -191,8 +210,8 @@ const VIRAL_VIEWS_FLOOR = 1_000;
 /**
  * 爆帖指数 0–100，三项对应 X 推荐的三个关键事实：
  * 1. 预计 24h 浏览（45 分）：X 全站热门帖子就按这个数排序；log 刻度，1 千 0 分，100 万满分。
- * 2. 加权互动率（35 分）：按 X 排序模型的动作权重加权，回复 / 引用多的帖子分高。
- * 3. 破圈系数（20 分）：X 给非关注者看的帖子打 0.75 折，浏览远超粉丝说明推荐系统在主动分发。
+ * 2. 加权互动率（35 分）：按 X 排序模型的动作权重加权，并做小样本收缩（防止几十浏览就满分）。
+ * 3. 破圈系数（20 分）：统一用预计 24h 浏览算破圈倍数并乘以样本置信度，避免新帖前两小时被低估或小样本噪点放大。
  * 没有浏览量时返回 null；粉丝数未知时第 3 项按 0。
  */
 export function viralScore(
@@ -205,13 +224,16 @@ export function viralScore(
   const clamp = (value: number) => Math.min(Math.max(value, 0), 1);
 
   const projected = projectedViews(input.views, input.ageHours, config) ?? input.views;
+  const prior = Math.max(0, config.viralPriorViews);
+  const confidence = input.views / (input.views + prior);
   const viewsPart = clamp(
     (Math.log10(Math.max(projected, 1)) - Math.log10(VIRAL_VIEWS_FLOOR)) /
       (Math.log10(caps.projectedViews) - Math.log10(VIRAL_VIEWS_FLOOR)),
   );
-  const engagementPart = clamp((engagementRate(input, config) ?? 0) / caps.weightedEngagement);
-  const breakout = breakoutRatio(input.views, input.followers, config);
-  const breakoutPart = breakout === null ? 0 : clamp(breakout / caps.breakout);
+  const smoothedRate = weightedEngagement(input, config) / (input.views + prior);
+  const engagementPart = clamp(smoothedRate / caps.weightedEngagement);
+  const breakout = breakoutRatio(projected, input.followers, config);
+  const breakoutPart = breakout === null ? 0 : clamp(breakout / caps.breakout) * confidence;
 
   const score =
     viewsPart * weights.projectedViews +
@@ -224,16 +246,20 @@ export interface ColdStartInput {
   followers?: number;
   ageHours: number | null;
   views?: number;
+  /** 回复和转发不参与 X 的作者冷启动试水（author_cold_start.rs）。 */
+  kind?: 'original' | 'reply' | 'quote';
+  isRetweet?: boolean;
 }
 
 /**
- * 是否处在 X 的冷启动试水期：粉丝 ≤ 5 万的作者、发出 ≤ 2 小时、曝光 < 200 的帖子，
+ * 是否处在 X 的冷启动试水期：非回复且非转发、粉丝 ≤ 5 万的作者、发出 ≤ 2 小时、曝光 < 200 的帖子，
  * X 会拿少量推荐位给它试水。用浏览量近似曝光。
  */
 export function isColdStartWindow(
   input: ColdStartInput,
   overrides?: Partial<MetricsConfig>,
 ): boolean {
+  if (input.kind === 'reply' || input.isRetweet === true) return false;
   const config = resolveConfig(overrides);
   return (
     isCount(input.followers) &&

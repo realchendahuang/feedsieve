@@ -71,11 +71,50 @@ describe('velocityPerHour', () => {
     ).toBeCloseTo(expected);
   });
 
+  it('decays stale observations forward to now instead of freezing them', () => {
+    const obsAt = NOW - 4 * HOUR_MS;
+    const atObs = velocityPerHour({
+      createdAt: NOW - 6 * HOUR_MS,
+      views: 10_000,
+      now: obsAt,
+    })!;
+    const decayed = velocityPerHour({
+      createdAt: NOW - 6 * HOUR_MS,
+      views: 10_000,
+      now: NOW,
+      observedAt: obsAt,
+    })!;
+    expect(decayed).toBeCloseTo(atObs * Math.pow(0.5, 4 / 8));
+
+    const diffAtObs = velocityPerHour({
+      createdAt: NOW - 10 * HOUR_MS,
+      views: 30_000,
+      now: obsAt,
+      previous: { views: 20_000, at: obsAt - 30 * 60_000 },
+    })!;
+    const diffDecayed = velocityPerHour({
+      createdAt: NOW - 10 * HOUR_MS,
+      views: 30_000,
+      now: NOW,
+      observedAt: obsAt,
+      previous: { views: 20_000, at: obsAt - 30 * 60_000 },
+    })!;
+    expect(diffDecayed).toBeCloseTo(diffAtObs * Math.pow(0.5, 4 / 8));
+  });
+
   it('returns null after 48 hours (X stops recommending), and for bad input', () => {
     expect(velocityPerHour({ createdAt: NOW - 49 * HOUR_MS, views: 1, now: NOW })).toBeNull();
     expect(velocityPerHour({ views: 1, now: NOW })).toBeNull();
     expect(velocityPerHour({ createdAt: NOW - HOUR_MS, now: NOW })).toBeNull();
     expect(velocityPerHour({ createdAt: NOW + HOUR_MS, views: 1, now: NOW })).toBeNull();
+    expect(
+      velocityPerHour({
+        createdAt: NOW - HOUR_MS,
+        views: 100,
+        now: NOW,
+        observedAt: NOW - 2 * HOUR_MS,
+      }),
+    ).toBeNull();
   });
 
   it('accepts config overrides', () => {
@@ -103,8 +142,17 @@ describe('projectedViews', () => {
 });
 
 describe('isColdStartWindow', () => {
-  it('flags fresh low-impression posts from authors up to 50K followers', () => {
+  it('flags fresh low-impression originals/quotes from authors up to 50K followers', () => {
     expect(isColdStartWindow({ followers: 3_000, ageHours: 0.5, views: 120 })).toBe(true);
+    expect(isColdStartWindow({ followers: 3_000, ageHours: 0.5, views: 120, kind: 'quote' })).toBe(
+      true,
+    );
+    expect(isColdStartWindow({ followers: 3_000, ageHours: 0.5, views: 120, kind: 'reply' })).toBe(
+      false,
+    );
+    expect(
+      isColdStartWindow({ followers: 3_000, ageHours: 0.5, views: 120, isRetweet: true }),
+    ).toBe(false);
     expect(isColdStartWindow({ followers: 60_000, ageHours: 0.5, views: 120 })).toBe(false);
     expect(isColdStartWindow({ followers: 3_000, ageHours: 3, views: 120 })).toBe(false);
     expect(isColdStartWindow({ followers: 3_000, ageHours: 0.5, views: 500 })).toBe(false);
@@ -145,7 +193,7 @@ describe('engagementRate', () => {
   it('uses X ranking weights: replies and quotes are worth far more than likes', () => {
     expect(
       engagementRate({ views: 1_000, likes: 10, retweets: 2, quotes: 1, replies: 3 }),
-    ).toBeCloseTo((0.66 * 10 + 1 * 2 + 5 * 1 + 5 * 3) / 1_000);
+    ).toBeCloseTo((0.708 * 10 + 1 * 2 + 5 * 1 + 5 * 3) / 1_000);
   });
 
   it('treats missing interactions as zero but needs views', () => {
@@ -302,6 +350,23 @@ describe('viralScore', () => {
     const early = viralScore({ ageHours: 0.5, views: 5_000 })!;
     const late = viralScore({ ageHours: 30, views: 5_000 })!;
     expect(early).toBeGreaterThan(late);
+  });
+
+  it('dampens tiny-sample engagement noise while projecting early breakout fairly', () => {
+    // 刚发 6 分钟、仅 30 次浏览和 1 条回复：不会因为小分母拿到高分
+    const noisy = viralScore({ ageHours: 0.1, views: 30, replies: 1, followers: 100 })!;
+    expect(noisy).toBeLessThan(15);
+
+    // 刚发 30 分钟已有 4000 浏览（预计 24h ~8.26万，8.3× 粉丝）：破圈分应按预计值计
+    const earlyBreakout = viralScore({
+      ageHours: 0.5,
+      views: 4_000,
+      likes: 120,
+      replies: 20,
+      retweets: 25,
+      followers: 10_000,
+    })!;
+    expect(earlyBreakout).toBeGreaterThanOrEqual(55);
   });
 });
 

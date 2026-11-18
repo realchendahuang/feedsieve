@@ -301,10 +301,9 @@ export async function ingestProfileObservations(
     .map((item) => parseProfileAccount(item, now))
     .filter((item): item is ProfileAccountInput => item !== null);
   const db = getDb(env);
-  const allowed = await eligibleHandles(
-    db,
-    [...new Set([...parsedPosts.map((p) => p.handle), ...parsedAccounts.map((a) => a.handle)])],
-  );
+  const allowed = await eligibleHandles(db, [
+    ...new Set([...parsedPosts.map((p) => p.handle), ...parsedAccounts.map((a) => a.handle)]),
+  ]);
   let posts = foldPosts(parsedPosts.filter((post) => allowed.has(post.handle)));
   const accounts = foldAccounts(parsedAccounts.filter((account) => allowed.has(account.handle)));
   if (posts.length === 0 && accounts.length === 0) {
@@ -516,6 +515,7 @@ async function eligibleHandles(
 export interface ProfilePostOutput {
   post_id: string;
   created_at: number;
+  updated_at: number;
   kind?: string;
   media?: string;
   pinned?: boolean;
@@ -649,6 +649,7 @@ export async function getProfile(
       return {
         post_id: postId,
         created_at: snowflakeTime(postId) ?? 0,
+        updated_at: row.updatedAt,
         ...decodeFlags(row.flags),
         ...pick({
           snippet: row.snippet ?? undefined,

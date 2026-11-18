@@ -47,6 +47,62 @@ describe('createTweetStatsStore', () => {
     expect(store.insight('1', NOW + 2 * HOUR)?.velocity).toBeCloseTo(1_000 / 1.5);
   });
 
+  it('keeps a stable differential span across the 60-minute boundary instead of collapsing', () => {
+    const store = createTweetStatsStore();
+    const MIN = 60_000;
+    const createdAt = NOW - 5 * HOUR;
+    store.recordTweet({ postId: '1', handle: 'a', createdAt, views: 10_000 }, NOW);
+    store.recordTweet({ postId: '1', handle: 'a', createdAt, views: 20_000 }, NOW + 59 * MIN);
+    // 跨过 60 分钟：不该因为滚到 59 分钟的点导致间隔塌缩成 2 分钟而退回单点模型
+    store.recordTweet({ postId: '1', handle: 'a', createdAt, views: 20_400 }, NOW + 61 * MIN);
+    expect(store.insight('1', NOW + 61 * MIN)?.velocity).toBeCloseTo(10_400 / (61 / 60));
+  });
+
+  it('decays frozen velocity over time while keeping projected views anchored to observation time', () => {
+    const store = createTweetStatsStore();
+    const createdAt = NOW - 2 * HOUR;
+    store.recordTweet({ postId: '1', handle: 'a', createdAt, views: 10_000 }, NOW);
+    const initial = store.insight('1', NOW)!;
+    // 一小时后没有新观测：流速按衰减曲线下降，但预计 24h 浏览不因「未再刷到」而缩水
+    const later = store.insight('1', NOW + HOUR)!;
+    expect(later.observedAt).toBe(NOW);
+    expect(later.projected).toBeCloseTo(initial.projected!);
+    expect(later.velocity!).toBeCloseTo(initial.velocity! * Math.pow(0.5, 1 / 8));
+  });
+
+  it('excludes replies and retweets from cold-start window detection', () => {
+    const store = createTweetStatsStore();
+    store.recordAuthor({ handle: 'a', followers: 3_000 });
+    store.recordTweet(
+      { postId: '1', handle: 'a', createdAt: NOW - 0.5 * HOUR, views: 80, kind: 'original' },
+      NOW,
+    );
+    store.recordTweet(
+      { postId: '2', handle: 'a', createdAt: NOW - 0.5 * HOUR, views: 80, kind: 'reply' },
+      NOW,
+    );
+    store.recordTweet(
+      {
+        postId: '3',
+        handle: 'a',
+        createdAt: NOW - 0.5 * HOUR,
+        views: 80,
+        kind: 'original',
+        isRetweet: true,
+      },
+      NOW,
+    );
+    expect(store.insight('1', NOW)?.coldStart).toBe(true);
+    expect(store.insight('2', NOW)?.coldStart).toBe(false);
+    expect(store.insight('3', NOW)?.coldStart).toBe(false);
+    // 之后原帖直接出现在时间线上（不再是转推）时，恢复正常判定
+    store.recordTweet(
+      { postId: '3', handle: 'a', createdAt: NOW - 0.5 * HOUR, views: 90, kind: 'original' },
+      NOW + 60_000,
+    );
+    expect(store.insight('3', NOW + 60_000)?.coldStart).toBe(true);
+  });
+
   it('uses author followers for breakout and returns null velocity for old posts', () => {
     const store = createTweetStatsStore();
     store.recordAuthor({ handle: 'a', followers: 1_000 });

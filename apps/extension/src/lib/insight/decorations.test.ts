@@ -333,5 +333,9 @@ describe('hover number format', () => {
     expect(tier.rows).toContainEqual(['粉丝', '5万']);
     expect(tier.rows).toContainEqual(['关注', '1234']);
     expect(tier.rows).toContainEqual(['关注比', '0.02']);
+    expect(tier.notes).toEqual(expect.arrayContaining([expect.stringContaining('冷启动')]));
+
+    const aboveCap = tierHover({ followers: 60_000, followingCount: 1_234 }, 6, 'zh', NOW);
+    expect(aboveCap.notes).toEqual([]);
   });
 });

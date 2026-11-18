@@ -23,6 +23,7 @@ import {
   followRatio,
   OUTLIER_MULTIPLE,
   outlierMultiple,
+  resolveConfig,
   shouldShowBreakout,
   type ProfileBaseline,
   type AccountTier,
@@ -181,7 +182,9 @@ export function tierHover(
   if (flags.mutualFollowFarm) notes.push(`⚠️ ${t.flagMutual}`);
   if (flags.newAccount) notes.push(`⚠️ ${t.flagNew}`);
   if (flags.abnormalFollowRatio) notes.push(`⚠️ ${t.flagRatio}`);
-  if (tier <= 3) notes.push(`🌱 ${t.coldStartTier}`);
+  if (author.followers <= resolveConfig().coldStartFollowerCap) {
+    notes.push(`🌱 ${t.coldStartTier}`);
+  }
   return { title: `${tierCode(tier)} · ${tierTitle(tier, language)}`, rows, notes };
 }
 
@@ -266,6 +269,16 @@ export function createInsightDecorations(deps: {
   let enabled = true;
   let refreshTimer: number | undefined;
 
+  function statMultiple(stat: TweetInsight | null | undefined, baseline: ProfileBaseline) {
+    if (!stat || stat.kind === 'reply') return null;
+    const at = now();
+    return outlierMultiple(
+      { ...stat, ...(stat.observedAt !== undefined ? { updatedAt: stat.observedAt } : {}) },
+      baseline,
+      at,
+    );
+  }
+
   /**
    * 流速卡片里的相对表现：倍数低于 MULTIPLE_MIN 时页面上不显示，数值仍有地方看。
    * 只算主页主人自己的原创/引用——转帖的作者是别人，不能拿主人的基线去比。
@@ -276,8 +289,7 @@ export function createInsightDecorations(deps: {
     const article = anchor.closest(tweetSelectors.article);
     const item = article ? extractTweetIdentity(article) : null;
     if (!item || item.author.handle.toLowerCase() !== profile.handle) return null;
-    const stat = store.insight(postId, now());
-    return stat && stat.kind !== 'reply' ? outlierMultiple(stat, profile.baseline, now()) : null;
+    return statMultiple(store.insight(postId, now()), profile.baseline);
   }
 
   const hovercard = createHovercard({
@@ -296,7 +308,7 @@ export function createInsightDecorations(deps: {
       if (badge) {
         const profile = deps.profileBaseline?.();
         const stat = store.insight(badge.getAttribute(MULTIPLE_ATTR) ?? '', now());
-        const result = profile && stat ? outlierMultiple(stat, profile.baseline, now()) : null;
+        const result = profile ? statMultiple(stat, profile.baseline) : null;
         if (!profile || !stat || !result) return null;
         return {
           anchor: badge,
@@ -385,8 +397,7 @@ export function createInsightDecorations(deps: {
     const profile = enabled ? deps.profileBaseline?.() : null;
     const found =
       profile && postId && profile.handle === handle ? store.insight(postId, now()) : null;
-    const stat = found && found.kind !== 'reply' ? found : null;
-    const result = profile && stat ? outlierMultiple(stat, profile.baseline, now()) : null;
+    const result = profile ? statMultiple(found, profile.baseline) : null;
     const slot = result && result.value >= MULTIPLE_MIN ? velocitySlot(article) : null;
     if (!result || !slot) {
       existing?.remove();

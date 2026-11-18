@@ -19,6 +19,8 @@ export const PROFILE_FORMATS: readonly ProfileFormat[] = ['text', 'photo', 'vide
 export interface ProfilePost {
   postId: string;
   createdAt?: number;
+  /** 这条帖子最近一次更新计数的时刻（Unix 毫秒）；缺省时按调用方传入的 `now` 算。 */
+  updatedAt?: number;
   views?: number;
   likes?: number;
   retweets?: number;
@@ -97,8 +99,14 @@ export function isBaselinePost(post: ProfilePost): boolean {
   return post.kind !== 'reply' && isCount(post.views) && isCount(post.createdAt);
 }
 
+function observationNow(post: Pick<ProfilePost, 'createdAt' | 'updatedAt'>, now: number): number {
+  return isCount(post.updatedAt) && isCount(post.createdAt) && post.updatedAt >= post.createdAt
+    ? Math.min(now, post.updatedAt)
+    : now;
+}
+
 function isMature(post: ProfilePost, now: number): boolean {
-  const age = ageHours(post.createdAt, now);
+  const age = ageHours(post.createdAt, observationNow(post, now));
   return age !== null && age >= PROFILE_MATURE_HOURS;
 }
 
@@ -117,15 +125,15 @@ export function profileBaseline(
   };
 }
 
-/** 单条帖子的倍数：成熟帖子用实际浏览，刚发的用预计 24 小时浏览。 */
+/** 单条帖子的倍数：成熟帖子用实际浏览，刚发的（或最后观测不满 24 小时的）用预计 24 小时浏览。 */
 export function outlierMultiple(
-  post: Pick<ProfilePost, 'views' | 'createdAt'>,
+  post: Pick<ProfilePost, 'views' | 'createdAt' | 'updatedAt'>,
   baseline: ProfileBaseline | null,
   now: number,
   overrides?: Partial<MetricsConfig>,
 ): { value: number; estimated: boolean } | null {
   if (!baseline || !isCount(post.views)) return null;
-  const age = ageHours(post.createdAt, now);
+  const age = ageHours(post.createdAt, observationNow(post, now));
   if (age === null) return null;
   if (age >= PROFILE_MATURE_HOURS) {
     return { value: post.views / baseline.medianViews, estimated: false };

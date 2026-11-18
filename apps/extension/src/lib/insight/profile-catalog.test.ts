@@ -198,7 +198,11 @@ describe('createProfileCatalog', () => {
 
   it('migrates a legacy v1 single-blob profile into v2 shards and removes the old key', async () => {
     const legacyKey = `${PROFILE_KEY_PREFIX}alice`;
-    const post = { ...tweet(idAt(NOW - DAY), 'alice'), firstSeenAt: NOW - DAY, updatedAt: NOW - DAY };
+    const post = {
+      ...tweet(idAt(NOW - DAY), 'alice'),
+      firstSeenAt: NOW - DAY,
+      updatedAt: NOW - DAY,
+    };
     const { storage, data } = memoryStorage({
       [PROFILE_INDEX_KEY]: [['alice', NOW - DAY]],
       [legacyKey]: {
@@ -245,5 +249,25 @@ describe('createProfileCatalog', () => {
     await restarted.clear();
     expect(await restarted.get('alice')).toBeNull();
     expect(Object.keys(data)).toEqual([]);
+  });
+
+  it('preserves remote post updated_at timestamp during mergeRemote', async () => {
+    const { storage } = memoryStorage();
+    const catalog = createProfileCatalog({ storage, now: () => NOW });
+    await catalog.visit('alice');
+    const createdAt = NOW - 3 * DAY;
+    const remoteUpdatedAt = createdAt + 2 * 60 * 60 * 1000;
+    const postId = idAt(createdAt);
+    await catalog.mergeRemote(
+      'alice',
+      {
+        posts: [
+          { post_id: postId, created_at: createdAt, updated_at: remoteUpdatedAt, views: 250 },
+        ],
+      },
+      `${remoteUpdatedAt}_${postId}`,
+    );
+    const entry = (await catalog.get('alice'))!;
+    expect(entry.posts[postId]?.updatedAt).toBe(remoteUpdatedAt);
   });
 });

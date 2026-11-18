@@ -313,6 +313,29 @@ describe('hot boards', () => {
     expect(post!.velocity).toBeGreaterThan(65_000);
   });
 
+  it('decays stale observations forward to now instead of freezing old bursts', async () => {
+    await report(
+      [1],
+      [
+        // 同为「发帖 2 小时拿到 10 万浏览」，401 是 85 分钟前看到的，402 是刚才看到的：旧观测应衰减更低
+        observation('401', 100_000, {
+          handle: 'alice',
+          created_at: NOW - 2 * HOUR - 85 * MINUTE,
+          observed_at: NOW - 85 * MINUTE,
+        }),
+        observation('402', 100_000, {
+          handle: 'bob',
+          created_at: NOW - 2 * HOUR - MINUTE,
+          observed_at: NOW - MINUTE,
+        }),
+      ],
+    );
+    const { rising } = await computeHotBoards(env, NOW);
+    const stale = rising.find((p) => p.postId === '401')!;
+    const fresh = rising.find((p) => p.postId === '402')!;
+    expect(fresh.velocity!).toBeGreaterThan(stale.velocity!);
+  });
+
   it('demotes posts that have been on the board for hours and drops them after 12 hours', async () => {
     await report([1], [observation('410', 80_000), observation('411', 80_000)]);
     await report([1], [observation('412', 80_000)]);

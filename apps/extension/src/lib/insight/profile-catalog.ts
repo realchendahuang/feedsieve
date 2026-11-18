@@ -198,7 +198,7 @@ export interface RemoteProfile {
 function readRemotePost(
   handle: string,
   raw: unknown,
-): Omit<CatalogPost, 'firstSeenAt' | 'updatedAt'> | null {
+): (Omit<CatalogPost, 'firstSeenAt' | 'updatedAt'> & { updatedAt?: number }) | null {
   if (!raw || typeof raw !== 'object') return null;
   const r = raw as Record<string, unknown>;
   const parsed = readTweet({
@@ -218,7 +218,9 @@ function readRemotePost(
     quotes: r.quotes,
     bookmarks: r.bookmarks,
   });
-  return parsed?.post ?? null;
+  if (!parsed) return null;
+  const updatedAt = count(r.updated_at);
+  return updatedAt !== undefined ? { ...parsed.post, updatedAt } : parsed.post;
 }
 
 function readRemoteAccount(handle: string, raw: unknown): CatalogAccount | null {
@@ -585,10 +587,7 @@ export function createProfileCatalog(deps: {
       keys.push(metaKey(handle), PROFILE_KEY_PREFIX + handle);
       const loaded = profiles.get(handle)?.meta.shards;
       const stored = (metas[metaKey(handle)] as CatalogMeta | undefined)?.shards;
-      const shards = new Set<number>([
-        ...(loaded ?? []),
-        ...(Array.isArray(stored) ? stored : []),
-      ]);
+      const shards = new Set<number>([...(loaded ?? []), ...(Array.isArray(stored) ? stored : [])]);
       for (const shard of shards) keys.push(shardKey(handle, shard));
     }
     map.clear();
@@ -642,14 +641,14 @@ export function createProfileCatalog(deps: {
         ...parsed,
         ...previous,
         firstSeenAt: previous?.firstSeenAt ?? at,
-        updatedAt: previous?.updatedAt ?? at,
+        updatedAt: previous?.updatedAt ?? parsed.updatedAt ?? at,
       };
       for (const key of COUNT_KEYS) {
         const local = previous?.[key];
         const server = parsed[key];
         if (server !== undefined && (local === undefined || server > local)) {
           merged[key] = server;
-          merged.updatedAt = at;
+          merged.updatedAt = parsed.updatedAt ?? at;
         }
       }
       for (const key of ['kind', 'media', 'snippet', 'mediaUrl', 'lang'] as const) {

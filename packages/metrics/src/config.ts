@@ -1,5 +1,5 @@
 /**
- * 指标参数。依据见 docs/03-X推荐算法与指标设计.md（xai-org/x-algorithm @ 606b254，2026-10-29）。
+ * 指标参数。依据见 docs/03-X推荐算法与指标设计.md（xai-org/x-algorithm @ 9081b33，2026-11-18）。
  *
  * 调用方可以整体或部分覆盖：计算函数都接受 `Partial<MetricsConfig>`，缺省字段回落到这里。
  */
@@ -37,10 +37,12 @@ export interface MetricsConfig {
   heatBreakoutLogCap: number;
   /**
    * 爆帖指数的互动加权，取自 X 排序模型的动作权重（home-mixer/params/param.rs）：
-   * 点赞 0.66、回复 5、转发 1、引用 5。X 用它乘「预测概率」，我们用它乘「实际发生率」，
+   * 点赞 0.708、回复 5、转发 1、引用 5。X 用它乘「预测概率」，我们用它乘「实际发生率」，
    * 只借用相对重要性。
    */
   engagementWeights: { like: number; reply: number; retweet: number; quote: number };
+  /** 爆帖指数的小样本平滑伪浏览量：避免刚发、仅几十浏览时靠 1 条互动拿满分。 */
+  viralPriorViews: number;
   /** 爆帖指数三项：预计 24h 浏览（log 刻度）、加权互动率、破圈系数；各自的满分值与分数。 */
   viralCaps: { projectedViews: number; weightedEngagement: number; breakout: number };
   viralWeights: { projectedViews: number; weightedEngagement: number; breakout: number };
@@ -84,7 +86,8 @@ export const DEFAULT_METRICS_CONFIG: Readonly<MetricsConfig> = Object.freeze({
   heatDecayPower: 1.5,
   heatBreakoutWeight: 0.5,
   heatBreakoutLogCap: 2,
-  engagementWeights: { like: 0.66, reply: 5, retweet: 1, quote: 5 },
+  engagementWeights: { like: 0.708, reply: 5, retweet: 1, quote: 5 },
+  viralPriorViews: 500,
   viralCaps: { projectedViews: 1_000_000, weightedEngagement: 0.05, breakout: 10 },
   viralWeights: { projectedViews: 45, weightedEngagement: 35, breakout: 20 },
   replyWindowHours: 24,

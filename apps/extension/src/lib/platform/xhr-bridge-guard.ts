@@ -140,6 +140,8 @@ export interface SanitizedTweetStat {
   inReplyToHandle?: string;
   /** 主页置顶条目（TimelinePinEntry）。 */
   pinned?: true;
+  /** 本条在时间线上是以转推形式出现的（X 冷启动不扶持转推）。 */
+  isRetweet?: true;
   /** X 标记的可能敏感内容（多为成人图片/视频）：不进热帖、不上报全站热榜。 */
   sensitive?: true;
   media?: PostMedia;
@@ -291,6 +293,7 @@ function sanitizeTweetStat(
               ? ('original' as const)
               : undefined,
       pinned: tweet.isPinned === true ? (true as const) : undefined,
+      isRetweet: tweet.isRetweet === true ? (true as const) : undefined,
       sensitive: tweet.possiblySensitive === true ? (true as const) : undefined,
       inReplyToId: sanitizeXUserId(tweet.inReplyToId),
       inReplyToHandle: normalizeStrictHandle(tweet.inReplyToHandle) ?? undefined,

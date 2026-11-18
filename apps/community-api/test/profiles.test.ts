@@ -261,6 +261,7 @@ describe('POST /v1/profile-observations', () => {
     expect(out).toEqual({
       post_id: snowflake(at),
       created_at: at,
+      updated_at: NOW,
       kind: 'quote',
       media: 'video',
       pinned: true,

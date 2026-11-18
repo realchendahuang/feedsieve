@@ -52,8 +52,11 @@ export function hotThreshold(velocities: readonly number[], base: number): numbe
   const line = sorted[Math.floor(sorted.length * ADAPTIVE_QUANTILE)]!;
   return Math.min(base, Math.max(ADAPTIVE_FLOOR_PER_HOUR, line));
 }
-/** 差分基准点最多保留这么久，之后滚动到上一次观测，让流速反映最近的速度。 */
+/** 差分首选最大回看窗口（1 小时）与保留上限（90 分钟）；相邻采样至少隔 5 分钟避免高频轮询冲掉早期基准点。 */
 const ANCHOR_ROLL_MS = 60 * 60 * 1000;
+const ANCHOR_MAX_AGE_MS = 90 * 60 * 1000;
+const MIN_SAMPLE_GAP_MS = 5 * 60 * 1000;
+const MAX_HISTORY = 20;
 /** 单个标签页的热帖窗口：只看最近这么久内出现过的推文。 */
 export const HOT_WINDOW_MS = 30 * 60 * 1000;
 /** 跨标签页共享的热帖窗口：弹窗里的热帖看最近 2 小时在所有 X 标签页刷到的帖子。 */
@@ -66,6 +69,7 @@ export interface TweetEntry {
   stat: SanitizedTweetStat;
   latest: ViewObservation | null;
   anchor: ViewObservation | null;
+  history?: ViewObservation[];
   lastSeenAt: number;
 }
 
@@ -121,6 +125,8 @@ export interface TweetInsight {
   heat: number | null;
   /** 发帖后小时数。 */
   ageHours?: number;
+  /** 最近一次更新浏览量的观测时刻（Unix 毫秒）。 */
+  observedAt?: number;
   /** 预计 24 小时浏览（X 热门帖子同款公式）。 */
   projected: number | null;
   /** 处在 X 冷启动试水期。 */
@@ -215,6 +221,76 @@ export interface TweetStatsState {
   hotMembers?: string[];
 }
 
+function validObservation(value: unknown): value is ViewObservation {
+  if (!value || typeof value !== 'object') return false;
+  const raw = value as Partial<ViewObservation>;
+  return (
+    typeof raw.views === 'number' &&
+    Number.isFinite(raw.views) &&
+    raw.views >= 0 &&
+    typeof raw.at === 'number' &&
+    Number.isFinite(raw.at) &&
+    raw.at >= 0
+  );
+}
+
+/**
+ * 从历史观测里挑出最稳的差分基准点：
+ * - 优先在 `[latest.at - ANCHOR_ROLL_MS, latest.at - minGapMs]` 里挑最早的一个（最长跨度不超过 1 小时）；
+ * - 如果跨过 1 小时边界且 60 分钟内没有满足 `minGapMs` 的点，退回 `[latest.at - ANCHOR_MAX_AGE_MS, latest.at - ANCHOR_ROLL_MS]` 里最新的一个，避免窗口突然塌缩到几分钟。
+ */
+function selectBaseline(
+  history: readonly ViewObservation[],
+  latest: ViewObservation,
+  minGapMs: number,
+): ViewObservation | null {
+  let preferred: ViewObservation | null = null;
+  let fallback: ViewObservation | null = null;
+  for (const point of history) {
+    const gap = latest.at - point.at;
+    if (gap < minGapMs || gap > ANCHOR_MAX_AGE_MS || point.views > latest.views) continue;
+    if (gap <= ANCHOR_ROLL_MS) {
+      if (!preferred || point.at < preferred.at) preferred = point;
+    } else if (!fallback || point.at > fallback.at) {
+      fallback = point;
+    }
+  }
+  return preferred ?? fallback;
+}
+
+function entryHistory(entry: TweetEntry): ViewObservation[] {
+  if (entry.history && entry.history.length > 0) return entry.history;
+  const seed: ViewObservation[] = [];
+  if (entry.anchor) seed.push(entry.anchor);
+  if (entry.latest && entry.latest.at !== entry.anchor?.at) seed.push(entry.latest);
+  return seed;
+}
+
+function recordObservation(
+  entry: TweetEntry,
+  observation: ViewObservation,
+  minGapMs: number,
+): void {
+  const points = [...entryHistory(entry)];
+  const last = points.at(-1);
+  if (!last) {
+    points.push(observation);
+  } else if (last.at === observation.at) {
+    points[points.length - 1] = observation;
+  } else {
+    const beforeLast = points.at(-2);
+    if (beforeLast && observation.at - beforeLast.at < MIN_SAMPLE_GAP_MS) {
+      points[points.length - 1] = observation;
+    } else {
+      points.push(observation);
+    }
+  }
+  const cutoff = observation.at - ANCHOR_MAX_AGE_MS;
+  entry.history = points.filter((point) => point.at >= cutoff).slice(-MAX_HISTORY);
+  entry.latest = observation;
+  entry.anchor = selectBaseline(entry.history, observation, minGapMs);
+}
+
 export function createTweetStatsStore(
   overrides?: Partial<MetricsConfig>,
   options: { hotWindowMs?: number } = {},
@@ -259,25 +335,21 @@ export function createTweetStatsStore(
     const previous = tweets.get(stat.postId);
     // 多个标签页的观测可能乱序到达：比已有观测还旧的，只补缺失字段，不改观测点
     const stale = previous?.latest ? at < previous.latest.at : false;
+    const mergedStat = previous
+      ? stale
+        ? { ...stat, ...previous.stat }
+        : { ...previous.stat, ...stat }
+      : { ...stat };
+    if (!stale && !stat.isRetweet) delete mergedStat.isRetweet;
     const entry: TweetEntry = previous
       ? {
           ...previous,
-          stat: stale ? { ...stat, ...previous.stat } : { ...previous.stat, ...stat },
+          stat: mergedStat,
           lastSeenAt: Math.max(previous.lastSeenAt, at),
         }
-      : { stat, latest: null, anchor: null, lastSeenAt: at };
+      : { stat: mergedStat, latest: null, anchor: null, history: [], lastSeenAt: at };
     if (typeof stat.views === 'number' && !stale) {
-      const observation = { views: stat.views, at };
-      const prior = entry.latest;
-      // 同一时刻的重复响应不算新观测
-      if (!prior || prior.at !== at) {
-        entry.latest = observation;
-        if (prior && (!entry.anchor || at - entry.anchor.at > ANCHOR_ROLL_MS)) {
-          entry.anchor = prior;
-        }
-      } else {
-        entry.latest = observation;
-      }
+      recordObservation(entry, { views: stat.views, at }, config.velocityMinGapMs);
     }
     touch(tweets, stat.postId, entry, MAX_TWEETS);
   }
@@ -304,15 +376,19 @@ export function createTweetStatsStore(
     const { stat } = entry;
     const followers = authors.get(stat.handle)?.followers;
     const age = ageHours(stat.createdAt, now);
+    const obsTime = entry.latest?.at ?? now;
+    const obsAge = ageHours(stat.createdAt, obsTime);
     let velocity: number | null = null;
     if (entry.latest && age !== null && age <= config.velocityMaxAgeHours) {
-      // 差分与均值都以「最近一次观测」为时刻：浏览量是那一刻的数
+      const baseline = selectBaseline(entryHistory(entry), entry.latest, config.velocityMinGapMs);
+      // 差分与单点模型都在观测时刻求值，再由 velocityPerHour 衰减到当前 now
       velocity = velocityPerHour(
         {
           createdAt: stat.createdAt,
           views: entry.latest.views,
-          now: entry.latest.at,
-          ...(entry.anchor ? { previous: entry.anchor } : {}),
+          now,
+          observedAt: entry.latest.at,
+          ...(baseline ? { previous: baseline } : {}),
         },
         config,
       );
@@ -338,23 +414,26 @@ export function createTweetStatsStore(
       ...(stat.lang ? { lang: stat.lang } : {}),
       ...(stat.createdAt !== undefined ? { createdAt: stat.createdAt } : {}),
       ...(seen.has(postId) ? { seenAt: seen.get(postId)! } : {}),
+      ...(entry.latest ? { observedAt: entry.latest.at } : {}),
       ...counts,
       ...(followers !== undefined ? { followers } : {}),
       velocity,
       breakout,
       heat: heatScore({ velocityPerHour: velocity, breakout, ageHours: age }, config),
       ...(age !== null ? { ageHours: age } : {}),
-      projected: projectedViews(stat.views, age, config),
+      projected: projectedViews(stat.views, obsAge, config),
       coldStart: isColdStartWindow(
         {
           ageHours: age,
+          ...(stat.kind ? { kind: stat.kind } : {}),
+          ...(stat.isRetweet ? { isRetweet: true } : {}),
           ...(followers !== undefined ? { followers } : {}),
           ...(stat.views !== undefined ? { views: stat.views } : {}),
         },
         config,
       ),
       viral: viralScore(
-        { ageHours: age, ...counts, ...(followers !== undefined ? { followers } : {}) },
+        { ageHours: obsAge, ...counts, ...(followers !== undefined ? { followers } : {}) },
         config,
       ),
       opportunity: replyOpportunity(
@@ -477,7 +556,17 @@ export function createTweetStatsStore(
     for (const item of Array.isArray(raw.tweets) ? raw.tweets.slice(-MAX_TWEETS) : []) {
       const [postId, entry] = Array.isArray(item) ? item : [];
       if (typeof postId === 'string' && entry && typeof entry === 'object' && entry.stat) {
-        tweets.set(postId, entry);
+        const latest = validObservation(entry.latest) ? entry.latest : null;
+        const anchor = validObservation(entry.anchor) ? entry.anchor : null;
+        const history = Array.isArray(entry.history)
+          ? entry.history.filter(validObservation).slice(-MAX_HISTORY)
+          : [anchor, latest].filter((p): p is ViewObservation => p !== null);
+        tweets.set(postId, {
+          ...entry,
+          latest,
+          anchor,
+          history,
+        });
       }
     }
     for (const item of Array.isArray(raw.authors) ? raw.authors.slice(-MAX_AUTHORS) : []) {

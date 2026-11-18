@@ -509,10 +509,12 @@ export function boardDecay(hoursOnBoard: number): number {
 /**
  * 近期流速：最近一个点，和它之前至少 RECENT_GAP_MS 的点里最近的那个；
  * 没有这样的点时退回最早的点（间隔不足 10 分钟时由 velocityPerHour 走模型推算）。
+ * 传入 `now` 时会把观测时刻的流速衰减到当前，防止久未刷到的旧帖流速冻结。
  */
 export function recentVelocity(
   createdAt: number,
   points: ViewObservation[],
+  now?: number,
 ): { velocity: number | null; latest: ViewObservation } | null {
   const latest = points.at(-1);
   if (!latest) return null;
@@ -527,7 +529,8 @@ export function recentVelocity(
   const velocity = velocityPerHour({
     createdAt,
     views: latest.views,
-    now: latest.at,
+    now: now ?? latest.at,
+    observedAt: latest.at,
     ...(previous ? { previous } : {}),
   });
   return { velocity, latest };
@@ -683,11 +686,11 @@ export async function computeHotBoards(
     if ((nets.get(row.post_id)?.size ?? 0) < netThreshold) continue;
     const points = [...(series.get(row.post_id) ?? new Map<number, number[]>()).entries()]
       .map(([bucket, values]): ViewObservation => ({
-        at: (bucket + 1) * BUCKET_MS,
+        at: Math.min(now, (bucket + 1) * BUCKET_MS),
         views: median(values),
       }))
       .sort((a, b) => a.at - b.at);
-    const measured = recentVelocity(row.created_at, points);
+    const measured = recentVelocity(row.created_at, points, now);
     if (!measured) continue;
     const { velocity, latest } = measured;
     // 各桶中位数里最大的那个：最新一桶只有一个落后的会话时，浏览数不会往回掉

@@ -45,6 +45,16 @@ describe('profileBaseline', () => {
     expect(profileBaseline(ordinary(9), NOW)).toBeNull();
     expect(profileBaseline(ordinary(10), NOW)).not.toBeNull();
   });
+
+  it('uses updatedAt observation age so stale young snapshots do not pollute the mature baseline', () => {
+    const posts: ProfilePost[] = [
+      ...ordinary(),
+      // 发帖于 3 天前，但数字最后一次抓到时它才发出 2 小时：不该当成成熟老帖拉低中位数
+      { postId: 'stale', createdAt: NOW - 3 * DAY, updatedAt: NOW - 3 * DAY + 2 * HOUR, views: 10 },
+    ];
+    expect(profileBaseline(posts, NOW)?.sample).toBe(12);
+    expect(profileBaseline(posts, NOW)?.medianViews).toBe(1_550);
+  });
 });
 
 describe('outlierMultiple', () => {
@@ -59,6 +69,14 @@ describe('outlierMultiple', () => {
     expect(young.estimated).toBe(true);
     // 发出 2 小时就有中位数的浏览：预计 24 小时会远超中位数
     expect(young.value).toBeGreaterThan(2);
+    // 若数字只观测到发出后 2 小时，两天后再打开页面仍按 2 小时外推估算，不被当成成熟帖
+    const staleYoung = outlierMultiple(
+      { views: 1_000, createdAt: NOW - 2 * DAY, updatedAt: NOW - 2 * DAY + 2 * HOUR },
+      baseline,
+      NOW,
+    )!;
+    expect(staleYoung.estimated).toBe(true);
+    expect(staleYoung.value).toBeCloseTo(young.value);
     expect(outlierMultiple({ views: 4_000, createdAt: NOW - 2 * DAY }, null, NOW)).toBeNull();
   });
 });

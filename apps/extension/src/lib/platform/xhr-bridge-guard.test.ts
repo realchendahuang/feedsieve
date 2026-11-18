@@ -311,6 +311,7 @@ describe('sanitizeBridgePayload：推文指标与作者统计', () => {
             postId: '1850000000000000001',
             text: '  正文  ',
             createdAt,
+            isRetweet: true,
             metrics: { views: 1200, likes: 30, retweets: 2 },
             author: {
               handle: 'Alice',
@@ -329,6 +330,7 @@ describe('sanitizeBridgePayload：推文指标与作者统计', () => {
         displayName: 'Alice A',
         snippet: '正文',
         createdAt,
+        isRetweet: true,
         views: 1200,
         likes: 30,
         retweets: 2,
