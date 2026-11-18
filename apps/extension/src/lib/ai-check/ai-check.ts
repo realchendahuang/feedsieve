@@ -576,6 +576,37 @@ export function createAiCheck(deps: {
     return rows[rows.length - 1] ?? area;
   }
 
+  function entrySlotOf(
+    article: Element,
+    handle: string,
+  ): { parent: Element; before: ChildNode | null } | null {
+    const area = findTweetAuthorArea(article);
+    if (!area) return null;
+    const atHandle = `@${handle.toLowerCase()}`;
+    const handleNode = [...area.querySelectorAll('a, span')].find(
+      (node) =>
+        !node.classList.contains('fs-ai-entry') &&
+        (node.textContent ?? '').trim().toLowerCase() === atHandle,
+    );
+    if (handleNode) {
+      let slot: Element = handleNode;
+      while (
+        slot.parentElement &&
+        slot.parentElement !== area &&
+        slot.parentElement.tagName === 'SPAN' &&
+        [...slot.parentElement.children].filter((c) => !c.classList.contains('fs-ai-entry'))
+          .length <= 1
+      ) {
+        slot = slot.parentElement;
+      }
+      if (slot.parentElement) {
+        return { parent: slot.parentElement, before: slot };
+      }
+    }
+    const row = nameRowOf(article);
+    return row ? { parent: row, before: row.firstChild } : null;
+  }
+
   /** 把「折叠了 N 条」那一行插到 cell 顶部；X 重渲冲掉后由 sync 逻辑再调一次。 */
   function mountFoldBar(
     cell: Element,
@@ -713,12 +744,16 @@ export function createAiCheck(deps: {
         foldHost.querySelectorAll(':scope > .fs-ai-foldbar').forEach((b) => b.remove());
       }
 
-      // 入口：没有结论时在作者名后面挂一个灰色机器人；有结论就让位给 AI 味标签。
-      // 和标签同一个位置，用户不用记两个地方；拉黑留在动作栏最右。
-      const entryRow = mark ? null : nameRowOf(article);
+      // 入口：没有结论时在 @handle 前面挂一个灰色机器人；有结论就让位给 AI 味标签。
+      // 新版 X 的 @handle 在首行 flex 容器内而非时间戳 span 里，按 @handle 锚点定位不挤进时间戳。
+      const entrySlot = mark ? null : entrySlotOf(article, handle);
       const entry = article.querySelector<HTMLElement>('[data-fs-action="ai"]');
-      if (eligible && entryRow && !mark) {
-        if (!entry || entry.parentElement !== entryRow) {
+      if (eligible && entrySlot && !mark) {
+        if (
+          !entry ||
+          entry.parentElement !== entrySlot.parent ||
+          entry.nextSibling !== entrySlot.before
+        ) {
           entry?.remove();
           const btn = el('button', 'fs-ai-entry');
           btn.type = 'button';
@@ -731,8 +766,7 @@ export function createAiCheck(deps: {
             event.stopPropagation();
             void openFor(handle, item.postId ?? undefined);
           });
-          // 插到 @handle 前面：紧挨作者名，不放到行末被时间和徽标挤开
-          entryRow.insertBefore(btn, entryRow.firstChild);
+          entrySlot.parent.insertBefore(btn, entrySlot.before);
         }
       } else {
         entry?.remove();
@@ -897,15 +931,24 @@ export function createAiCheck(deps: {
   }
 
   function displayNameOn(handle: string): string | undefined {
+    const lower = handle.toLowerCase();
     const profile = profileFromPath(location.pathname);
-    if (profile?.handle === handle) {
+    if (profile?.handle === lower) {
       const name = document.querySelector('[data-testid="UserName"] span')?.textContent?.trim();
       if (name) return name;
     }
     for (const article of document.querySelectorAll(tweetSelectors.article)) {
       const item = extractFeedItem(article, 'other');
-      if (item?.author.handle.toLowerCase() === handle && item.author.displayName) {
+      if (item?.author.handle.toLowerCase() === lower && item.author.displayName) {
         return item.author.displayName;
+      }
+    }
+    if (profile?.handle === lower) {
+      const titleMatch = /^(?:\(\d+\)\s*)?(.+?)\s*\(@([a-z0-9_]{1,15})\)/i.exec(
+        document.title.trim(),
+      );
+      if (titleMatch?.[2]?.toLowerCase() === lower && titleMatch[1]?.trim()) {
+        return titleMatch[1].trim();
       }
     }
     return undefined;

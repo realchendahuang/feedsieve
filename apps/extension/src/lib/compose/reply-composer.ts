@@ -107,18 +107,29 @@ function imageInput(host: ParentNode): HTMLInputElement | null {
   );
 }
 
+function isComposerBoundary(node: Element, editor: HTMLElement, article: Element): boolean {
+  if (node === document.body || node === document.documentElement) return true;
+  if (
+    node.matches('main, aside, nav, [data-testid="primaryColumn"], [data-testid="sidebarColumn"]')
+  ) {
+    return true;
+  }
+  if (article.contains(editor)) return node === article.parentElement;
+  return node.querySelector('article') !== null;
+}
+
 /**
  * 回复框的宿主：详情页里是内联展开（没有 dialog），其它地方是弹窗。
  * 往上找到第一个带附件区或文件入口的祖先，找不到就退到编辑器本身。
  *
- * 走到 body 必须停：整页里装着侧栏「发帖」框的同款 file input，继续往上
- * 一定会命中它，那样图就会贴进用户正在写的**新帖草稿**而不是回复框。
+ * 走到 body / 主栏 / 跨出当前回复框容器必须停：整页里装着侧栏「发帖」框的同款 file input，
+ * 继续往上会命中它，那样图就会贴进用户正在写的**新帖草稿**而不是回复框。
  */
-function locateHost(editor: HTMLElement): ParentNode {
+function locateHost(editor: HTMLElement, article: Element): ParentNode {
   const dialog = editor.closest('[role="dialog"]');
   if (dialog) return dialog;
   for (let node = editor.parentElement; node; node = node.parentElement) {
-    if (node === document.body || node === document.documentElement) break;
+    if (isComposerBoundary(node, editor, article)) break;
     if (
       node.querySelector('[data-testid="attachments"]') ||
       node.querySelector('input[type="file"]')
@@ -127,6 +138,50 @@ function locateHost(editor: HTMLElement): ParentNode {
     }
   }
   return editor;
+}
+
+function composerRoot(editor: HTMLElement, article: Element): ParentNode {
+  const dialog = editor.closest('[role="dialog"]');
+  if (dialog) return dialog;
+  const cell = article.closest('[data-testid="cellInnerDiv"]');
+  if (cell && cell.contains(editor)) return cell;
+  const host = locateHost(editor, article);
+  if (host !== editor) return host;
+  let top: HTMLElement = editor;
+  for (let node = editor.parentElement; node; node = node.parentElement) {
+    if (isComposerBoundary(node, editor, article)) break;
+    top = node;
+  }
+  return top !== editor ? top : (editor.parentElement ?? editor);
+}
+
+function findFocusedInlineEditor(article: Element): HTMLElement | null {
+  const active = document.activeElement;
+  if (
+    active instanceof HTMLElement &&
+    active.matches(EDITOR_SELECTOR) &&
+    !active.closest('aside, nav, [data-testid="sidebarColumn"]')
+  ) {
+    const ownerArticle = active.closest('article');
+    if (!ownerArticle || ownerArticle === article) return active;
+  }
+  return null;
+}
+
+function findDetailInlineEditor(article: Element, postId: string): HTMLElement | null {
+  if (!new RegExp(`/status/${postId}(?:$|[/?#])`).test(location.pathname)) return null;
+  const column =
+    article.closest('main, [data-testid="primaryColumn"]') ??
+    document.querySelector('main, [data-testid="primaryColumn"]');
+  if (!column) return null;
+  return (
+    [...column.querySelectorAll<HTMLElement>(EDITOR_SELECTOR)].find(
+      (node) =>
+        !node.closest('aside, nav, [data-testid="sidebarColumn"], [role="dialog"]') &&
+        (!node.closest('article') || node.closest('article') === article) &&
+        Boolean(article.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING),
+    ) ?? null
+  );
 }
 
 /** 回复框里已经有正文：绝不往上叠图，也不碰用户正在写的内容。 */
@@ -205,8 +260,10 @@ export async function fillReplyComposer(options: FillReplyOptions): Promise<Fill
   replyButton.click();
 
   const cell = article.closest('[data-testid="cellInnerDiv"]');
+  let polls = 0;
   const editor = await waitFor(
     () => {
+      const tickIndex = polls++;
       const fresh = [...document.querySelectorAll<HTMLElement>(EDITOR_SELECTOR)].filter(
         (node) => !editorsBefore.has(node),
       );
@@ -215,6 +272,8 @@ export async function fillReplyComposer(options: FillReplyOptions): Promise<Fill
       );
       const opened = freshDialog?.querySelector<HTMLElement>(EDITOR_SELECTOR) ?? null;
       if (opened) return opened;
+      // 已经弹出了新对话框、只是对话框里的编辑器还没挂好：继续等对话框，别退回背景里的内联框
+      if (freshDialog) return null;
       // 没有新弹窗时只认「新出现、且不在侧栏/导航里」的内联回复编辑器：
       // 页面上原本就挂着的侧栏发帖框已在 editorsBefore 里排除。
       const scoped = cell
@@ -226,12 +285,16 @@ export async function fillReplyComposer(options: FillReplyOptions): Promise<Fill
           );
       if (scoped) return scoped;
       // 详情页的回复框是内联展开的，而且可能本来就开着：点一下只是把焦点还给它。
-      // 这时不会有新节点，用这条帖子自己（或它所在的格子里）的编辑器顶上。
-      return (
+      // 新版 X 无 cellInnerDiv 时内联框位于 article 之外的兄弟容器里，先给异步弹窗留一拍，
+      // 再回退识别焦点或详情页主帖正下方的内联编辑器。
+      const direct =
         article.querySelector<HTMLElement>(EDITOR_SELECTOR) ??
         cell?.querySelector<HTMLElement>(EDITOR_SELECTOR) ??
-        null
-      );
+        findFocusedInlineEditor(article);
+      if (direct) return direct;
+      return tickIndex >= 1 || waitMs < 120
+        ? findDetailInlineEditor(article, options.postId)
+        : null;
     },
     waitMs,
     wait,
@@ -242,21 +305,21 @@ export async function fillReplyComposer(options: FillReplyOptions): Promise<Fill
   // 粘贴兜底还可能在光标处插入，等于改用户正在写的东西。
   if (!draftIsEmpty(editor)) return { ok: false, reason: 'draft_not_empty' };
 
-  const host = locateHost(editor);
-  // 判断「图有没有上去」的范围要单独算：attachments 是插在编辑器**旁边**的兄弟节点，
-  // 宿主退回编辑器本身时，在 editor 里面找永远找不到。
-  const scope =
-    editor.closest('[role="dialog"]') ??
-    cell ??
-    (host !== editor ? host : (editor.parentElement ?? editor));
+  // 详情页折叠态的内联回复框要聚焦后才挂载工具栏与 fileInput
+  editor.focus();
+  const scope = () => composerRoot(editor, article);
   const file = makeFile(options.blob, options.filename ?? 'ai-flavor.png');
-  const before = countAttachments(scope);
-  const attached = () => countAttachments(scope) > before;
+  const before = countAttachments(scope());
+  const attached = () => countAttachments(scope()) > before;
 
   // 编辑器先渲染、文件入口随后才挂上（真实 X 上观察到两者可能差一拍）。
-  // 等到编辑器就往下走会漏掉 fileInput，直接掉进兜底分支。
+  // 每一轮轮询重新从编辑器向上定位宿主，避免首拍未挂 fileInput 时把宿主锁死在编辑器节点自身。
   // 只给这段一个短时限：文件入口没等到的常态就是该走粘贴兜底，不能在这里耗满 10 秒。
-  const input = await waitFor(() => imageInput(host), Math.min(waitMs, INPUT_WAIT_MS), wait);
+  const input = await waitFor(
+    () => imageInput(locateHost(editor, article)),
+    Math.min(waitMs, INPUT_WAIT_MS),
+    wait,
+  );
 
   // 有 X 自己的文件入口就先走它（媒体按钮背后就是它，最接近原生行为）。
   // 两条路都试会在上传慢时塞进两张图，所以只挑一条。

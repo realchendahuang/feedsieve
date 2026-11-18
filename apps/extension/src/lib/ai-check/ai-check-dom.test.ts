@@ -663,3 +663,38 @@ it('无 primaryColumn 的新版主页仍能挂载「AI 味」Tab 且不把自己
   expect(document.querySelectorAll('[data-fs-ai-tab]')).toHaveLength(1);
   ai.stop();
 });
+
+it('新版 X 评论区的机器人检测入口插在作者首行 @handle 前面，不塞进时间戳 span', () => {
+  const focalHtml = `
+    <article class="flex flex-col gap-3">
+      <div class="flex items-center gap-2">
+        <a href="/emoji_op"><div class="x-avatar"><img src="https://pbs.twimg.com/profile_images/1/op.jpg" /></div></a>
+        <div class="flex flex-col">
+          <div><a href="/emoji_op"><div class="font-bold">主帖<img alt="🌸" src="https://abs-0.twimg.com/emoji/v2/svg/1f338.svg" /></div></a></div>
+          <div><a href="/emoji_op"><span>@emoji_op</span></a></div>
+        </div>
+      </div>
+      <div class="whitespace-pre-wrap wrap-anywhere"><span>主帖正文</span></div>
+      <div><a href="/emoji_op/status/1800000000000000000">上午10:00</a></div>
+      <div role="group"><div data-engagement-action="like"><button aria-label="点赞"></button></div></div>
+    </article>`;
+  const opSelfReply = REDESIGN_TWEET_HTML.replaceAll('sample_user', 'emoji_op').replaceAll(
+    '1800000000000000001',
+    '1800000000000000002',
+  );
+  const { ai, tick } = setup(
+    '/emoji_op/status/1800000000000000000',
+    `${focalHtml}${opSelfReply}${REDESIGN_TWEET_HTML}`,
+  );
+  tick();
+  const articles = [...document.querySelectorAll('article')];
+  // 带 Twemoji 昵称的主帖被正确认出，主帖与主帖作者自评都不加机器人入口，第三方回复照常加
+  expect(articles.map((a) => !!a.querySelector('.fs-ai-entry'))).toEqual([false, false, true]);
+  const entry = articles[2]!.querySelector<HTMLElement>('.fs-ai-entry')!;
+  const timeSpan = articles[2]!.querySelector(
+    'a[href$="/status/1800000000000000001"]',
+  )!.parentElement!;
+  expect(timeSpan.contains(entry)).toBe(false);
+  expect(entry.nextElementSibling?.textContent?.trim()).toBe('@sample_user');
+  ai.stop();
+});

@@ -95,7 +95,7 @@ const homeHtml = `<!doctype html><html><body>
   <main>
     ${redesignCard({ id: 'card-spam', handle: 'spammer_x', name: '广告号', postId: '1850000000000000001', body: '全国空降同城上门' })}
     ${redesignCard({ id: 'card-clean', handle: 'clean_author', name: 'Clean Author', postId: '1850000000000000002', body: '今天读了一篇很好的技术文章，分享一下笔记。', ownPromoteBtn: true })}
-    ${redesignCard({ id: 'card-ad', handle: 'ad_brand', name: 'Brand Ad', postId: '1850000000000000003', body: '限时大促推广信息', promoted: true })}
+    ${redesignCard({ id: 'card-ad', handle: 'ad_brand', name: 'Brand Ad', postId: '1850000000000000003', body: '全国空降同城上门限时大促推广信息', promoted: true })}
   </main>
   <aside>
     <form role="search"><label id="search-capsule"><input type="search" aria-label="搜索" /></label></form>
@@ -127,7 +127,11 @@ const detailHtml = `<!doctype html><html><body>
         <div class="flex items-center gap-2">
           <a href="/focal_op"><div class="x-avatar"><img src="https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png" /></div></a>
           <div class="flex flex-col">
-            <div><a href="/focal_op"><div class="font-bold">主帖作者</div></a><div><span aria-label="认证账号" role="button"></span></div></div>
+            <div class="flex items-center gap-1">
+              <a href="/focal_op"><div class="font-bold">主帖作者<img alt="🌸" src="https://abs-0.twimg.com/emoji/v2/svg/1f338.svg" /></div></a>
+              <a href="/org_hq"><img src="https://pbs.twimg.com/profile_images/2/org.jpg" alt="Org" /></a>
+              <div><span aria-label="认证账号" role="button"></span></div>
+            </div>
             <div><a href="/focal_op"><span>@focal_op</span></a></div>
           </div>
         </div>
@@ -136,14 +140,22 @@ const detailHtml = `<!doctype html><html><body>
         </div>
       </div>
       <div class="text-body whitespace-pre-wrap wrap-anywhere"><span>同意</span></div>
+      <div role="radiogroup">
+        <button type="button"><div class="whitespace-pre-wrap wrap-anywhere"><span>全国空降同城上门投票选项</span></div></button>
+      </div>
       <div class="meta-row">
         <a href="/focal_op/status/1860000000000000001">上午10:00 · 2026年11月18日</a>
+      </div>
+      <div class="community-note">
+        <div class="whitespace-pre-wrap wrap-anywhere"><span>读者背景信息：全国空降同城上门防骗提示</span></div>
       </div>
       <div role="group">
         <div data-engagement-action="reply"><a href="/compose/post?in_reply_to=1860000000000000001"></a></div>
         <div data-engagement-action="like"><button aria-label="点赞"></button></div>
+        <button data-engagement-action="share" data-slot="xds-menu-trigger" aria-label="分享"><svg viewBox="0 0 24 24"><path d="M1 1h2"/></svg></button>
       </div>
     </article>
+    ${redesignCard({ id: 'reply-op-self', handle: 'focal_op', name: '主帖作者', postId: '1860000000000000004', body: '补充一句我自己的看法。' })}
     ${redesignCard({ id: 'reply-ai', handle: 'ai_bot', name: 'AI Bot', postId: '1860000000000000002', body: '这是一条非常典型的机器人自动生成长回复内容，用来测试折叠与填入回复框。' })}
     ${redesignCard({ id: 'reply-thin', handle: 'blue_water', name: '水贴蓝标', postId: '1860000000000000003', body: '支持一下', verified: true })}
   </main>
@@ -174,6 +186,48 @@ const detailHtml = `<!doctype html><html><body>
           dialog.querySelector('.preview-zone').appendChild(img);
         });
       });
+    });
+  </script>
+</body></html>`;
+
+const inlineDetailHtml = `<!doctype html><html><body>
+  <aside><div role="textbox" contenteditable="true"></div><input type="file" accept="image/png" id="sidebar-input" hidden /></aside>
+  <main>
+    ${redesignCard({ id: 'focal-ai-reply', handle: 'ai_bot', name: 'AI Bot', postId: '1860000000000000099', body: '被直接点进详情页的一条 AI 回复，下方是预渲染的内联回复框。' })}
+    <div class="inline-composer-shell">
+      <div class="editor-box"><div id="inline-textbox" role="textbox" contenteditable="true"></div></div>
+      <div class="preview-zone"></div>
+      <button id="send-inline-reply" type="button">回复</button>
+    </div>
+  </main>
+  <script>
+    window.__sidebarTouched = false;
+    document.getElementById('sidebar-input').addEventListener('change', () => {
+      window.__sidebarTouched = true;
+    });
+    document.querySelectorAll('[data-engagement-action="reply"] a').forEach((link) => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      });
+    });
+    const tb = document.getElementById('inline-textbox');
+    tb.addEventListener('focus', () => {
+      setTimeout(() => {
+        const shell = document.querySelector('.inline-composer-shell');
+        if (shell.querySelector('input[type="file"]')) return;
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/png,image/jpeg';
+        input.hidden = true;
+        input.addEventListener('change', () => {
+          if (!input.files || !input.files[0]) return;
+          const img = document.createElement('img');
+          img.src = 'blob:https://x.com/mock-inline-upload';
+          shell.querySelector('.preview-zone').appendChild(img);
+        });
+        shell.appendChild(input);
+      }, 40);
     });
   </script>
 </body></html>`;
@@ -364,6 +418,9 @@ try {
     if (url.pathname.startsWith('/focal_op/status/')) {
       return route.fulfill({ contentType: 'text/html; charset=utf-8', body: detailHtml });
     }
+    if (url.pathname.startsWith('/ai_bot/status/')) {
+      return route.fulfill({ contentType: 'text/html; charset=utf-8', body: inlineDetailHtml });
+    }
     if (url.pathname === '/alice') {
       return route.fulfill({ contentType: 'text/html; charset=utf-8', body: profileHtml });
     }
@@ -400,8 +457,9 @@ try {
   await page.locator('#card-clean [data-engagement-action="share"]').click();
   await page.waitForSelector('[data-slot="xds-menu-content"] [data-fs-share-item]');
 
-  // 界面净化断言
+  // 界面净化断言 + 无时间戳链接的推广帖也能被扫描器识别并标黄
   assert.equal(await page.locator('#card-ad article').getAttribute('data-fs-clean'), 'promoted');
+  assert.equal(await page.locator('#card-ad .fs-badge').count(), 1);
   assert.equal(await page.locator('#card-clean article').getAttribute('data-fs-clean'), null);
   assert.equal(
     await page
@@ -421,9 +479,25 @@ try {
   // === 2. 新版帖子详情页全链路 ===
   await page.goto('https://x.com/focal_op/status/1860000000000000001');
   await page.waitForSelector('#reply-thin .fs-ai-entry', { timeout: 15_000 });
-  // 主帖自身不挂 AI 检测入口、不被蓝标短回复规则压暗
+  await page.waitForSelector('#focal-post .fs-manual-mark', { timeout: 10_000 });
+  // 带 Twemoji + 机构徽章的主帖被正确识别：不误并入投票选项/社区备注的垃圾词，不挂 AI 入口，主帖作者自评也不挂 AI 入口
+  assert.equal(await page.locator('#focal-post .fs-badge').count(), 0);
   assert.equal(await page.locator('#focal-post .fs-ai-entry').count(), 0);
+  assert.equal(await page.locator('#reply-op-self .fs-ai-entry').count(), 0);
   assert.equal(await page.locator('#focal-post').getAttribute('data-fs-clean'), null);
+  // 评论区 AI 检测入口插在作者首行 @handle 前面，不塞进时间戳 span
+  assert.equal(
+    await page.evaluate(() => {
+      // eslint-disable-next-line no-undef
+      const entry = document.querySelector('#reply-thin .fs-ai-entry');
+      // eslint-disable-next-line no-undef
+      const timeSpan = document.querySelector(
+        '#reply-thin a[href$="/status/1860000000000000003"]',
+      )?.parentElement;
+      return Boolean(entry && timeSpan && !timeSpan.contains(entry));
+    }),
+    true,
+  );
   // 评论区蓝标短回复被标记为 premium 淡化
   await page.waitForFunction(
     () =>
@@ -450,6 +524,22 @@ try {
   });
   assert.equal(await page.locator('#send-reply').textContent(), '回复');
   assert.match((await panel.locator('.fs-ai-toast').textContent()) ?? '', /已填入回复框/);
+
+  // === 2b. 新版详情页无 cellInnerDiv 预渲染内联回复框（非 dialog，fileInput 延迟挂载） ===
+  await page.goto('https://x.com/ai_bot/status/1860000000000000099');
+  await page.waitForSelector('#focal-ai-reply .fs-ai-mark', { timeout: 15_000 });
+  await page.locator('#focal-ai-reply .fs-ai-mark').click();
+  await panel.locator('.fs-ai-level').waitFor();
+  await panel.getByRole('button', { name: '填入回复框' }).click();
+  await page.waitForSelector('.inline-composer-shell .preview-zone img[src^="blob:"]', {
+    timeout: 15_000,
+  });
+  assert.equal(await page.locator('#send-inline-reply').textContent(), '回复');
+  assert.equal(
+    // eslint-disable-next-line no-undef
+    await page.evaluate(() => window.__sidebarTouched),
+    false,
+  );
 
   // === 3. 新版个人主页全链路 ===
   await page.goto('https://x.com/alice');

@@ -407,3 +407,57 @@ it('回复弹窗本身也无 tweetTextarea / attachments 等 testid 时，靠 ro
   expect(outcome).toEqual({ ok: true });
   expect(names).toEqual(['ai-flavor.png']);
 });
+
+it('详情页无 cellInnerDiv 时，回复框作为 article 外的兄弟内联容器预渲染且 fileInput 延迟挂载同样能填入', async () => {
+  window.history.pushState({}, '', '/sample_user/status/1800000000000000001');
+  document.body.innerHTML = `
+    <aside><div role="textbox" contenteditable="true"></div><input type="file" accept="image/png" id="sidebar-file" /></aside>
+    <main>
+      <div role="link">${REDESIGN_TWEET_HTML}</div>
+      <div class="inline-composer-shell">
+        <div class="editor-box"><div role="textbox" contenteditable="true"></div></div>
+        <div class="preview-slot"></div>
+      </div>
+    </main>`;
+  const inlineShell = document.querySelector<HTMLElement>('.inline-composer-shell')!;
+  const inlineEditor = inlineShell.querySelector<HTMLElement>('[role="textbox"]')!;
+  const names: string[] = [];
+  let sidebarTouched = false;
+  document.getElementById('sidebar-file')!.addEventListener('change', () => {
+    sidebarTouched = true;
+  });
+  // 模拟真实详情页：点击或聚焦折叠态内联回复框后一拍才挂出工具栏与 fileInput
+  inlineEditor.addEventListener('focus', () => {
+    setTimeout(() => {
+      if (inlineShell.querySelector('input[type="file"]')) return;
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/jpeg,image/png';
+      input.addEventListener('change', () => {
+        const file = input.files?.[0];
+        if (!file) return;
+        names.push(file.name);
+        const img = document.createElement('img');
+        img.src = 'blob:https://x.com/inline-preview';
+        inlineShell.querySelector('.preview-slot')!.appendChild(img);
+      });
+      inlineShell.appendChild(input);
+    }, 30);
+  });
+  document
+    .querySelector<HTMLAnchorElement>('[data-engagement-action="reply"] a')!
+    .addEventListener('click', (event) => event.preventDefault());
+
+  try {
+    const outcome = await fillReplyComposer({
+      postId: '1800000000000000001',
+      blob: new Blob(['x'], { type: 'image/png' }),
+      waitMs: 2_000,
+    });
+    expect(outcome).toEqual({ ok: true });
+    expect(names).toEqual(['ai-flavor.png']);
+    expect(sidebarTouched).toBe(false);
+  } finally {
+    window.history.pushState({}, '', '/');
+  }
+});
