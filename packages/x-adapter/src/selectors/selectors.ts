@@ -16,8 +16,8 @@ export const tweetSelectors = {
   timelineCell: 'div[data-testid="cellInnerDiv"]',
   /** 作者头像容器（旧版 testid；新版由 reader 按本帖作者链接定位）。 */
   avatarContainer: '[data-testid="Tweet-User-Avatar"]',
-  /** 作者信息区（含 displayName 与 @handle 链接）。 */
-  authorNameArea: ':is([data-testid="User-Name"], .x-middot-group:has(a[href*="/status/"]))',
+  /** 作者信息区（含 displayName 与 @handle 链接；新版由 reader 校验固定链接或作者对偶关系）。 */
+  authorNameArea: ':is([data-testid="User-Name"], .x-middot-group)',
   /** 作者行里指向 /handle 的链接（displayName 同样包在一个用户链接里）。 */
   authorLink: '[data-testid="User-Name"] a[href^="/"]',
   /** 蓝标认证图标（旧版 testid + 新版中英文无障碍标签）。 */

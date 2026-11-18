@@ -172,4 +172,63 @@ describe('2026-11 X redesign without data-testid', () => {
     });
     expect(findTweetAvatarImg(article)?.getAttribute('src')).toContain('focal.jpg');
   });
+
+  it('recognizes redesigned focal tweet when author displayName has Twemoji/affiliate imgs and excludes polls or post-permalink notes', () => {
+    document.body.innerHTML = `
+      <article class="flex flex-col gap-3">
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <a href="/emoji_op"><div class="x-avatar"><img src="https://pbs.twimg.com/profile_images/1/op.jpg" /></div></a>
+            <div class="flex flex-col">
+              <div class="flex items-center gap-1">
+                <a href="/emoji_op"><div class="font-bold">🌸甜心<img alt="🚀" src="https://abs-0.twimg.com/emoji/v2/svg/1f680.svg" /></div></a>
+                <a href="/org_hq"><img src="https://pbs.twimg.com/profile_images/2/org.jpg" alt="Org" /></a>
+              </div>
+              <div><a href="/emoji_op"><span>@emoji_op</span></a></div>
+            </div>
+          </div>
+        </div>
+        <div class="text-body whitespace-pre-wrap wrap-anywhere"><span>Focal body text only.</span></div>
+        <div role="radiogroup">
+          <button type="button"><div class="whitespace-pre-wrap wrap-anywhere"><span>Poll option A</span></div></button>
+        </div>
+        <div class="meta-row">
+          <a href="/emoji_op/status/1800000000000000888">上午9:10 · 2026年11月18日</a>
+        </div>
+        <div class="community-note">
+          <div class="whitespace-pre-wrap wrap-anywhere"><span>Community note warning: giveaway scam</span></div>
+        </div>
+        <div role="group">
+          <div data-engagement-action="like"><button aria-label="点赞"></button></div>
+        </div>
+      </article>`;
+    const article = document.querySelector(tweetSelectors.article)!;
+    expect(extractFeedItem(article, 'reply')).toEqual({
+      source: 'x',
+      postId: '1800000000000000888',
+      author: { handle: 'emoji_op', displayName: '🌸甜心🚀' },
+      text: 'Focal body text only.',
+      links: [],
+      context: 'reply',
+    });
+    expect(findTweetAvatarImg(article)?.getAttribute('src')).toContain('op.jpg');
+  });
+
+  it('extracts redesigned promoted posts that replace the timestamp permalink with a Promoted label', () => {
+    document.body.innerHTML = REDESIGN_TWEET_HTML.replace(
+      '<span><a class="x-link" href="/sample_user/status/1800000000000000001">1小时</a></span>',
+      '<span>推广</span>',
+    )
+      .replaceAll('/sample_user/status/1800000000000000001/photo/1', '#')
+      .replaceAll('/sample_user/status/1800000000000000001/analytics', '#');
+    const article = document.querySelector(tweetSelectors.article)!;
+    expect(extractFeedItem(article, 'timeline')).toEqual({
+      source: 'x',
+      postId: undefined,
+      author: { handle: 'sample_user', displayName: 'Sample Author' },
+      text: 'Sample post body.',
+      links: [],
+      context: 'timeline',
+    });
+  });
 });

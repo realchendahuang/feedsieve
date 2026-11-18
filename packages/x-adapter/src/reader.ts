@@ -51,6 +51,39 @@ function postAuthorHandle(article: Element, postId: string | undefined): string 
   return null;
 }
 
+function isAvatarLink(link: HTMLAnchorElement): boolean {
+  if (link.closest(tweetSelectors.avatarContainer)) return true;
+  if (
+    link.querySelector('.x-avatar, [data-testid="Tweet-User-Avatar"], [data-testid^="UserAvatar"]')
+  ) {
+    return true;
+  }
+  const hasNonEmojiImg = link.querySelector('img:not([src*="/emoji/"])') !== null;
+  return hasNonEmojiImg && visibleText(link).trim() === '';
+}
+
+function middotAuthorHandle(area: Element): string | null {
+  for (const anchor of area.querySelectorAll<HTMLAnchorElement>(tweetSelectors.profileLink)) {
+    if (isAvatarLink(anchor)) continue;
+    const handle = extractHandleFromPath(anchor.getAttribute('href') ?? '');
+    if (!handle || !/^[a-z0-9_]{1,15}$/i.test(handle)) continue;
+    const lower = handle.toLowerCase();
+    const atHandle = `@${lower}`;
+    const nameText = visibleText(anchor).trim().toLowerCase();
+    if (!nameText || nameText.includes(atHandle)) continue;
+    const hasAtHandle = [...area.querySelectorAll('a, span, div')].some(
+      (el) =>
+        el !== anchor &&
+        !anchor.contains(el) &&
+        (el.matches('a')
+          ? visibleText(el).trim().toLowerCase() === atHandle
+          : el.childElementCount === 0 && (el.textContent ?? '').trim().toLowerCase() === atHandle),
+    );
+    if (hasAtHandle) return lower;
+  }
+  return null;
+}
+
 /**
  * 详情页主帖无 data-testid 时，时间戳在正文下方而不是头部 .x-middot-group 内：
  * 要求本帖固定链接的作者 handle 与头部（非头像、非正文）的昵称链接和 @handle 同时吻合。
@@ -60,11 +93,10 @@ function findFocalAuthorArea(article: Element, postId: string | undefined): Elem
   if (!handle) return null;
   const expectedPath = `/${handle}`;
   const atHandle = `@${handle}`;
-  const headerLinks = [
+  const matchingProfileLinks = [
     ...article.querySelectorAll<HTMLAnchorElement>(tweetSelectors.profileLink),
   ].filter((link) => {
     if (isQuotedContent(link, article) || link.closest(tweetSelectors.text)) return false;
-    if (link.querySelector('img, .x-avatar')) return false;
     try {
       const pathname = new URL(link.getAttribute('href') ?? '', location.origin).pathname;
       return pathname.replace(/\/+$/, '').toLowerCase() === expectedPath;
@@ -72,6 +104,8 @@ function findFocalAuthorArea(article: Element, postId: string | undefined): Elem
       return false;
     }
   });
+  const avatarLinks = matchingProfileLinks.filter(isAvatarLink);
+  const headerLinks = matchingProfileLinks.filter((link) => !isAvatarLink(link));
   const nameLink = headerLinks.find((link) => {
     const text = visibleText(link).trim().toLowerCase();
     return text.length > 0 && !text.includes(atHandle);
@@ -96,8 +130,9 @@ function findFocalAuthorArea(article: Element, postId: string | undefined): Elem
     node = node.parentElement
   ) {
     if (
+      avatarLinks.some((avatar) => node.contains(avatar)) ||
       node.querySelector(
-        `img, .x-avatar, ${tweetSelectors.statusLink}, ${tweetSelectors.actionGroup}`,
+        `.x-avatar, ${tweetSelectors.avatarContainer}, [data-testid^="UserAvatar"], ${tweetSelectors.statusLink}, ${tweetSelectors.actionGroup}`,
       )
     ) {
       return null;
@@ -107,7 +142,7 @@ function findFocalAuthorArea(article: Element, postId: string | undefined): Elem
   return null;
 }
 
-/** 新版作者区需同时有本帖固定链接及相同 handle 的用户链接；缺失时安全跳过。 */
+/** 新版作者区需同时有本帖固定链接及相同 handle 的用户链接；推广帖无时间戳链接时按昵称+@handle成对校验。 */
 export function findTweetAuthorArea(article: Element): Element | null {
   const postId = extractPostId(article);
   const candidates = [...article.querySelectorAll(tweetSelectors.authorNameArea)].filter(
@@ -116,17 +151,26 @@ export function findTweetAuthorArea(article: Element): Element | null {
   if (candidates.length > 0) {
     for (const area of candidates) {
       if (area.matches(tweetSelectors.legacyNameArea)) return area;
-      for (const link of area.querySelectorAll<HTMLAnchorElement>(tweetSelectors.statusLink)) {
-        if (statusId(link) !== postId) continue;
-        const match = /^\/([a-z0-9_]{1,15})\/status\/\d+\/?$/i.exec(link.pathname);
-        if (!match) continue;
-        const path = `/${match[1]!.toLowerCase()}`;
-        if (
-          [...area.querySelectorAll<HTMLAnchorElement>(tweetSelectors.profileLink)].some(
-            (anchor) => anchor.pathname.replace(/\/+$/, '').toLowerCase() === path,
+      const statusLinks = [...area.querySelectorAll<HTMLAnchorElement>(tweetSelectors.statusLink)];
+      if (statusLinks.length > 0) {
+        for (const link of statusLinks) {
+          if (statusId(link) !== postId) continue;
+          const match = /^\/([a-z0-9_]{1,15})\/status\/\d+\/?$/i.exec(link.pathname);
+          if (!match) continue;
+          const path = `/${match[1]!.toLowerCase()}`;
+          if (
+            [...area.querySelectorAll<HTMLAnchorElement>(tweetSelectors.profileLink)].some(
+              (anchor) => anchor.pathname.replace(/\/+$/, '').toLowerCase() === path,
+            )
           )
-        )
-          return area;
+            return area;
+        }
+        continue;
+      }
+      const pairedHandle = middotAuthorHandle(area);
+      const expectedHandle = postAuthorHandle(article, postId);
+      if (pairedHandle && (!expectedHandle || expectedHandle === pairedHandle)) {
+        return area;
       }
     }
     return null;
@@ -145,12 +189,17 @@ function authorAnchor(article: Element): HTMLAnchorElement | null {
   );
   const handle = permalink
     ? extractHandleFromPath(permalink.pathname)
-    : postAuthorHandle(article, postId);
+    : (postAuthorHandle(article, postId) ?? middotAuthorHandle(area));
   if (!handle) return null;
   return (
-    [...area.querySelectorAll<HTMLAnchorElement>(tweetSelectors.profileLink)].find(
-      (anchor) => anchor.pathname.replace(/\/+$/, '').toLowerCase() === `/${handle}`,
-    ) ?? null
+    [...area.querySelectorAll<HTMLAnchorElement>(tweetSelectors.profileLink)].find((anchor) => {
+      try {
+        const pathname = new URL(anchor.getAttribute('href') ?? '', location.origin).pathname;
+        return pathname.replace(/\/+$/, '').toLowerCase() === `/${handle}`;
+      } catch {
+        return false;
+      }
+    }) ?? null
   );
 }
 
@@ -277,14 +326,28 @@ export function findTweetOwnTextElements(
     !!nameArea &&
     !nameArea.matches(tweetSelectors.legacyNameArea) &&
     !nameArea.matches('.x-middot-group');
+  const focalPermalink =
+    isFocalRedesigned && postId
+      ? [...article.querySelectorAll<HTMLAnchorElement>(tweetSelectors.statusLink)].find(
+          (anchor) =>
+            !isQuotedContent(anchor, article) &&
+            !nameArea.contains(anchor) &&
+            /\/status\/\d+\/?(?:[?#].*)?$/.test(anchor.getAttribute('href') ?? '') &&
+            statusId(anchor) === postId,
+        )
+      : undefined;
   for (const textEl of article.querySelectorAll(tweetSelectors.text)) {
     if (!textEl.matches(tweetSelectors.legacyText)) {
       if (isFocalRedesigned) {
         if (
           nameArea.contains(textEl) ||
           textEl.closest(
-            'a, [role="link"], [role="group"], [role="menu"], [data-slot="xds-menu-content"], [data-slot="xds-context-menu-trigger"], [data-testid="card.wrapper"], aside, blockquote',
-          )
+            'a, button, [role="button"], [role="radiogroup"], [role="link"], [role="group"], [role="menu"], [data-slot="xds-menu-content"], [data-slot="xds-context-menu-trigger"], [data-testid="card.wrapper"], [data-testid="birdwatch-pivot"], aside, blockquote',
+          ) ||
+          (focalPermalink &&
+            Boolean(
+              focalPermalink.compareDocumentPosition(textEl) & Node.DOCUMENT_POSITION_FOLLOWING,
+            ))
         ) {
           continue;
         }
