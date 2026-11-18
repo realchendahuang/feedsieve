@@ -31,6 +31,7 @@ describe('contextFromPath', () => {
     ['/home', 'timeline'],
     ['/search?q=x', 'search'],
     ['/kim/status/123', 'reply'],
+    ['/i/web/status/123', 'reply'],
     ['/notifications', 'other'],
     ['/kim/following', 'profile'],
     ['/i/flow/login', 'other'],

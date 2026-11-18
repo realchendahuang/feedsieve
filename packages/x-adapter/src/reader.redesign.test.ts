@@ -224,11 +224,82 @@ describe('2026-11 X redesign without data-testid', () => {
     const article = document.querySelector(tweetSelectors.article)!;
     expect(extractFeedItem(article, 'timeline')).toEqual({
       source: 'x',
+      postId: '1800000000000000001',
+      author: { handle: 'sample_user', displayName: 'Sample Author' },
+      text: 'Sample post body.',
+      links: [],
+      context: 'timeline',
+    });
+
+    // 若连回复动作里的 in_reply_to 也缺失，仍能提取作者与正文
+    article.querySelector('[data-engagement-action="reply"] a')!.setAttribute('href', '#');
+    expect(extractFeedItem(article, 'timeline')).toEqual({
+      source: 'x',
       postId: undefined,
       author: { handle: 'sample_user', displayName: 'Sample Author' },
       text: 'Sample post body.',
       links: [],
       context: 'timeline',
+    });
+  });
+
+  it('ignores /status/ links inside body text on redesigned focal and promoted posts', () => {
+    vi.stubGlobal('location', new URL('https://x.com/focal_author/status/1800000000000000777'));
+    document.body.innerHTML = `
+      <article class="flex flex-col gap-3">
+        <div class="flex items-center gap-2">
+          <a href="/focal_author"><div class="x-avatar"><img src="https://pbs.twimg.com/profile_images/1/f.jpg" /></div></a>
+          <div class="flex flex-col">
+            <div><a href="/focal_author"><div class="font-bold">Focal Name</div></a></div>
+            <div><a href="/focal_author"><span>@focal_author</span></a></div>
+          </div>
+        </div>
+        <div class="text-body whitespace-pre-wrap wrap-anywhere">
+          <span>See <a href="/other_user/status/1800000000000000555">previous post</a></span>
+        </div>
+        <div class="meta-row">
+          <a href="/focal_author/status/1800000000000000777">上午5:25 · 2026年11月15日</a>
+        </div>
+        <div role="group"><div data-engagement-action="like"><button aria-label="点赞"></button></div></div>
+      </article>`;
+    const focal = document.querySelector(tweetSelectors.article)!;
+    expect(extractFeedItem(focal, 'reply')).toEqual({
+      source: 'x',
+      postId: '1800000000000000777',
+      author: { handle: 'focal_author', displayName: 'Focal Name' },
+      text: 'See previous post',
+      links: [],
+      context: 'reply',
+    });
+
+    // 详情页推广主帖无 /status/ 时间戳链接，仅带 in_reply_to 且正文提及他人状态链接
+    vi.stubGlobal('location', new URL('https://x.com/focal_ad/status/1800000000000000999'));
+    document.body.innerHTML = `
+      <article class="flex flex-col gap-3">
+        <div class="flex items-center gap-2">
+          <a href="/focal_ad"><div class="x-avatar"><img src="https://pbs.twimg.com/profile_images/1/ad.jpg" /></div></a>
+          <div class="flex flex-col">
+            <div><a href="/focal_ad"><div class="font-bold">Promoted OP</div></a></div>
+            <div><a href="/focal_ad"><span>@focal_ad</span></a></div>
+          </div>
+        </div>
+        <div class="text-body whitespace-pre-wrap wrap-anywhere">
+          <span>Promo body <a href="/other_user/status/1800000000000000555">ref</a></span>
+        </div>
+        <div class="meta-row"><span>推广</span></div>
+        <div role="group">
+          <div data-engagement-action="reply"><a href="/compose/post?in_reply_to=1800000000000000999"></a></div>
+          <div data-engagement-action="like"><button aria-label="点赞"></button></div>
+        </div>
+      </article>`;
+    const promotedFocal = document.querySelector(tweetSelectors.article)!;
+    expect(extractFeedItem(promotedFocal, 'reply')).toEqual({
+      source: 'x',
+      postId: '1800000000000000999',
+      author: { handle: 'focal_ad', displayName: 'Promoted OP' },
+      text: 'Promo body ref',
+      links: [],
+      context: 'reply',
     });
   });
 });

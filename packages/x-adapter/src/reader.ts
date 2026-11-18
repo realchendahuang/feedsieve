@@ -3,6 +3,7 @@ import { extractHandleFromPath } from './handle';
 import { menuSelectors, QUOTE_CARD_SELECTOR, tweetSelectors } from './selectors/selectors';
 
 const POST_ID_RE = /\/status\/(\d+)/;
+const IN_REPLY_TO_RE = /[?&]in_reply_to=(\d+)/;
 
 function statusId(anchor: Element): string | undefined {
   return POST_ID_RE.exec(anchor.getAttribute('href') ?? '')?.[1];
@@ -18,24 +19,47 @@ function isQuotedContent(element: Element, article: Element): boolean {
   return false;
 }
 
+/** 正文、外链预览卡、社区备注里的 /status/ 链接是用户内容或附加卡，不是本帖自己的状态链接。 */
+function isUserContentLink(element: Element, article: Element): boolean {
+  if (isQuotedContent(element, article)) return true;
+  for (let node: Element | null = element; node && node !== article; node = node.parentElement) {
+    if (
+      node.matches(
+        `${tweetSelectors.text}, [data-testid="card.wrapper"], [data-testid="birdwatch-pivot"], blockquote`,
+      )
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
  * 本推文 id。优先级：
- * 1. 包着 <time> 的时间戳链接，且不在引用卡片里（X 每条推文的固定结构）；
- * 2. 引用卡片之外的固定链接（新版时间戳是纯文本，不再有 time 元素）；
- * 3. 引用卡片之外的第一个 /status/ 链接。
+ * 1. 包着 <time> 的时间戳链接，且不在引用卡片/正文里（X 每条推文的固定结构）；
+ * 2. 引用卡片与正文之外的固定链接（新版时间戳是纯文本，且详情页主帖固定链接在正文下方）；
+ * 3. 引用卡片与正文之外的第一个 /status/ 链接；
+ * 4. 新版推广帖去掉 /status/ 时间戳链接时，底部回复动作里的 in_reply_to=<本帖id>。
  *
- * 不能直接取第一个链接：详情页主推文引用了带图帖子时，DOM 里最先出现的是
- * 被引用帖子的图片链接（/other/status/<引用帖>/photo/1），2026-10-30 真机发现。
+ * 不能直接取第一个链接：详情页主推文引用了带图帖子或正文提及别的推文链接时，
+ * DOM 里最先出现的是其它推文的链接。
  */
 function extractPostId(article: Element): string | undefined {
   const anchors = [...article.querySelectorAll(tweetSelectors.statusLink)];
-  const outsideQuote = anchors.filter((anchor) => !isQuotedContent(anchor, article));
-  const timestamp = outsideQuote.find((anchor) => anchor.querySelector('time'));
-  const permalink = outsideQuote.find((anchor) =>
+  const ownStatusLinks = anchors.filter((anchor) => !isUserContentLink(anchor, article));
+  const timestamp = ownStatusLinks.find((anchor) => anchor.querySelector('time'));
+  const permalink = ownStatusLinks.find((anchor) =>
     /\/status\/\d+\/?(?:[?#].*)?$/.test(anchor.getAttribute('href') ?? ''),
   );
-  for (const anchor of [timestamp, permalink, ...outsideQuote]) {
+  for (const anchor of [timestamp, permalink, ...ownStatusLinks]) {
     const id = anchor ? statusId(anchor) : undefined;
+    if (id) return id;
+  }
+  for (const replyLink of article.querySelectorAll(
+    '[data-engagement-action="reply"] a[href*="in_reply_to="]',
+  )) {
+    if (isUserContentLink(replyLink, article)) continue;
+    const id = IN_REPLY_TO_RE.exec(replyLink.getAttribute('href') ?? '')?.[1];
     if (id) return id;
   }
   return undefined;
@@ -44,11 +68,19 @@ function extractPostId(article: Element): string | undefined {
 function postAuthorHandle(article: Element, postId: string | undefined): string | null {
   if (!postId) return null;
   for (const link of article.querySelectorAll<HTMLAnchorElement>(tweetSelectors.statusLink)) {
-    if (isQuotedContent(link, article) || statusId(link) !== postId) continue;
+    if (isUserContentLink(link, article) || statusId(link) !== postId) continue;
     const handle = extractHandleFromPath(link.getAttribute('href') ?? '');
     if (handle && /^[a-z0-9_]{1,15}$/i.test(handle)) return handle.toLowerCase();
   }
   return null;
+}
+
+function focalUrlAuthorHandle(postId: string | undefined): string | null {
+  if (!postId) return null;
+  const pathname = globalThis.location?.pathname ?? '';
+  if (POST_ID_RE.exec(pathname)?.[1] !== postId) return null;
+  const handle = extractHandleFromPath(pathname);
+  return handle && /^[a-z0-9_]{1,15}$/i.test(handle) ? handle.toLowerCase() : null;
 }
 
 function isAvatarLink(link: HTMLAnchorElement): boolean {
@@ -89,7 +121,7 @@ function middotAuthorHandle(area: Element): string | null {
  * 要求本帖固定链接的作者 handle 与头部（非头像、非正文）的昵称链接和 @handle 同时吻合。
  */
 function findFocalAuthorArea(article: Element, postId: string | undefined): Element | null {
-  const handle = postAuthorHandle(article, postId);
+  const handle = postAuthorHandle(article, postId) ?? focalUrlAuthorHandle(postId);
   if (!handle) return null;
   const expectedPath = `/${handle}`;
   const atHandle = `@${handle}`;
@@ -330,7 +362,7 @@ export function findTweetOwnTextElements(
     isFocalRedesigned && postId
       ? [...article.querySelectorAll<HTMLAnchorElement>(tweetSelectors.statusLink)].find(
           (anchor) =>
-            !isQuotedContent(anchor, article) &&
+            !isUserContentLink(anchor, article) &&
             !nameArea.contains(anchor) &&
             /\/status\/\d+\/?(?:[?#].*)?$/.test(anchor.getAttribute('href') ?? '') &&
             statusId(anchor) === postId,

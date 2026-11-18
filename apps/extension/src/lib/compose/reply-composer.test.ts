@@ -273,8 +273,8 @@ describe('安全性：绝不误伤用户已有内容或别的输入框', () => {
     expect(inline.querySelectorAll('[data-testid="attachments"] img')).toHaveLength(0);
   });
 
-  it('引用卡片里的 /status/ 链接不会让别的帖子被认成目标', async () => {
-    // 这条帖子引用了 960：它自带被引帖的 status 链接，但目标应该是 960 那条本身
+  it('引用卡片或正文里的 /status/ 链接不会让别的帖子被认成目标', async () => {
+    // 第一条帖子引用了 960；第二条帖子在正文里直接贴了 960 的链接：目标都应该是 960 本身
     const quoting = document.createElement('article');
     quoting.dataset.testid = 'tweet';
     quoting.innerHTML = `
@@ -283,6 +283,11 @@ describe('安全性：绝不误伤用户已有内容或别的输入框', () => {
       <div role="link"><a href="/target/status/960"><time>2h</time></a></div>
       <div role="group"><button data-testid="reply">reply</button></div>`;
     document.body.appendChild(quoting);
+
+    const mentioning = tweet('959');
+    mentioning.querySelector('[data-testid="tweetText"]')!.innerHTML =
+      '正文提及 <a href="/target/status/960">原帖链接</a>';
+    document.body.appendChild(mentioning);
 
     const target = tweet('960');
     document.body.appendChild(target);

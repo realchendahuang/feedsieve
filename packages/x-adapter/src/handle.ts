@@ -53,7 +53,7 @@ export function extractHandleFromPath(pathname: string): string | null {
 const CONTEXT_BY_PREFIX: ReadonlyArray<readonly [RegExp, FeedContext]> = [
   [/^\/home/, 'timeline'],
   [/^\/search/, 'search'],
-  [/^\/[^/]+\/status\//, 'reply'],
+  [/^\/(?:[^/]+|i\/web)\/status\//, 'reply'],
   [/^\/notifications|^\/messages|^\/explore/, 'other'],
 ];
 

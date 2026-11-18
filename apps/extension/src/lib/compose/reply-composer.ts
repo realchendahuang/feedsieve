@@ -11,7 +11,7 @@
  * 并派发 change（媒体按钮背后的同一个入口）。
  */
 
-import { QUOTE_CARD_SELECTOR, tweetSelectors } from '@feedsieve/x-adapter';
+import { extractTweetIdentity, QUOTE_CARD_SELECTOR, tweetSelectors } from '@feedsieve/x-adapter';
 
 export type FillReplyReason =
   'no_article' | 'no_reply_button' | 'no_editor' | 'draft_not_empty' | 'upload_timeout';
@@ -58,6 +58,7 @@ async function waitFor<T>(
 }
 
 const POST_ID_RE = /\/status\/(\d+)/;
+const IN_REPLY_TO_RE = /[?&]in_reply_to=(\d+)/;
 
 function isQuoted(element: Element, article: Element): boolean {
   for (let node: Element | null = element; node && node !== article; node = node.parentElement) {
@@ -81,15 +82,28 @@ function findReplyButton(article: Element): HTMLElement | null {
 /** 按帖子 ID 找时间线 / 详情页里的那一条（X 重渲染会换节点，所以每次现找）。 */
 export function findArticle(postId: string): HTMLElement | null {
   for (const article of document.querySelectorAll<HTMLElement>(tweetSelectors.article)) {
-    // 只看这条帖子自己的时间戳链接：引用卡片里也带着被引帖的 /status/ 链接，
-    // 光按 href 子串匹配会把「引用了这条帖子的那条帖子」也认成目标，
-    // 于是图被贴到错误的帖子下面（引用卡片本身也有 [data-testid=reply]）。
+    const identityId = extractTweetIdentity(article)?.postId;
+    if (identityId) {
+      if (identityId === postId) return article;
+      continue;
+    }
+    // 极简占位结构兜底：只看正文与引用卡片之外的状态链接和本帖回复动作链接，
+    // 防止引用了目标帖或正文里贴了目标帖链接的其它推文被误认成目标。
     const own = [...article.querySelectorAll(tweetSelectors.statusLink)].some(
       (anchor) =>
         !isQuoted(anchor, article) &&
+        !anchor.closest(`${tweetSelectors.text}, [data-testid="card.wrapper"]`) &&
         POST_ID_RE.exec(anchor.getAttribute('href') ?? '')?.[1] === postId,
     );
     if (own) return article;
+    const replyOwn = [
+      ...article.querySelectorAll('[data-engagement-action="reply"] a[href*="in_reply_to="]'),
+    ].some(
+      (anchor) =>
+        !isQuoted(anchor, article) &&
+        IN_REPLY_TO_RE.exec(anchor.getAttribute('href') ?? '')?.[1] === postId,
+    );
+    if (replyOwn) return article;
   }
   return null;
 }
