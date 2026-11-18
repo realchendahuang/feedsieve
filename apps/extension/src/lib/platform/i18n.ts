@@ -188,6 +188,7 @@ export const UI_COPY = {
     profileLine: '主页人气行',
     profileLineHint:
       '在 X 主页资料卡下显示一行人气数据：量级、粉丝、关注比、中位浏览、爆款率和已收条数；点这一行打开主页洞察。',
+    profileLineEnabled: '已开启主页人气行',
     searchAssist: '搜索框高级搜索',
     searchAssistHint:
       '默认开启。在 X 搜索框右侧加一个入口，点开是完整的高级搜索弹窗：搜索词、博主、时间、互动、筛选、位置都能单独填，也能直接写 X 运算符；同一个弹窗里可以转到 Google 搜这个博主的帖子。不想用时在这里关闭，页面上就不再出现。',
@@ -639,6 +640,7 @@ export const UI_COPY = {
     profileLine: 'Profile popularity line',
     profileLineHint:
       'Shows a popularity line under the profile card on X: tier, followers, follow ratio, median views, outlier rate and posts collected. Click the line to open profile insight.',
+    profileLineEnabled: 'Profile popularity line enabled',
     searchAssist: 'Advanced search under the search box',
     searchAssistHint:
       "On by default. Adds an entry to the right of X's search box that opens a full advanced-search dialog: keywords, people, dates, engagement, filters and location each have their own field, and X operators can be typed directly. The same dialog can hand the filters to Google to search this author's posts. Turn it off here and it disappears from the page.",

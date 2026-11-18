@@ -38,7 +38,12 @@ import {
   type CatalogEntry,
   type CatalogPost,
 } from '../../../src/lib/insight/profile-catalog';
-import { AppIcon, EmptyState, HelpIcon, IconButton, SkeletonList, useTip } from './shared';
+import {
+  getProfileLineEnabled,
+  setProfileLineEnabled,
+  subscribeProfileLineEnabled,
+} from '../../../src/lib/insight/insight-settings';
+import { AppIcon, EmptyState, HelpIcon, IconButton, SkeletonList, Toggle, useTip } from './shared';
 import { Avatar, PostActions, readableText, shortAgo, VerifiedMark } from './post-parts';
 import {
   asCatalogEntry,
@@ -448,6 +453,7 @@ export default function ProfileView({
   const [googleOpen, setGoogleOpen] = useState(false);
   const [googleKeyword, setGoogleKeyword] = useState('');
   const [googleRange, setGoogleRange] = useState<GoogleRange>('any');
+  const [profileLine, setProfileLine] = useState<boolean | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [visited, setVisited] = useState<Set<string>>(() => new Set());
   const [fillingHandle, setFillingHandle] = useState<string | null>(null);
@@ -470,6 +476,22 @@ export default function ProfileView({
         if (typeof stored[PATTERNS_KEY] === 'boolean') setPatternsOpen(stored[PATTERNS_KEY]);
       })
       .catch(() => undefined);
+    let active = true;
+    void getProfileLineEnabled()
+      .then((enabled) => {
+        if (active) setProfileLine(enabled);
+      })
+      .catch(() => undefined);
+    const unsub =
+      browser.storage?.onChanged
+        ? subscribeProfileLineEnabled((enabled) => {
+            if (active) setProfileLine(enabled);
+          })
+        : () => undefined;
+    return () => {
+      active = false;
+      unsub();
+    };
   }, []);
 
   const load = useCallback(
@@ -798,6 +820,28 @@ export default function ProfileView({
     }
   }
 
+  const profileLinePrompt =
+    profileLine === false ? (
+      <section className="group profile-line-prompt">
+        <div className="row">
+          <div className="row-label">
+            <span>{t.profileLine}</span>
+            <HelpIcon text={t.profileLineHint} />
+          </div>
+          <Toggle
+            checked={false}
+            label={t.profileLine}
+            onChange={(enabled) => {
+              setProfileLine(enabled);
+              void setProfileLineEnabled(enabled).then(() => {
+                if (enabled) notify(t.profileLineEnabled);
+              });
+            }}
+          />
+        </div>
+      </section>
+    ) : null;
+
   if (!handle) {
     return (
       <div className="view profile-view" ref={rootRef}>
@@ -813,6 +857,7 @@ export default function ProfileView({
           </button>
         </div>
         <EmptyState hint={t.profileNotOnProfileHint}>{t.profileNotOnProfile}</EmptyState>
+        {profileLinePrompt}
       </div>
     );
   }
@@ -915,6 +960,7 @@ export default function ProfileView({
       <div className="view profile-view" ref={rootRef}>
         {entry ? <AccountCard entry={entry} now={now} language={language} tools={tools} /> : null}
         {googlePanel}
+        {profileLinePrompt}
         <EmptyState hint={t.profileEmptyHint}>{t.profileEmpty}</EmptyState>
       </div>
     );
@@ -925,6 +971,7 @@ export default function ProfileView({
       <AccountCard entry={entry} now={now} language={language} tools={tools} />
       {googlePanel}
       <BaselineLine analysis={analysis} entry={entry} now={now} language={language} />
+      {profileLinePrompt}
 
       <Patterns
         analysis={analysis}

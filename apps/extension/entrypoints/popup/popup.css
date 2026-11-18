@@ -2888,6 +2888,10 @@ input:not([type]):focus,
   max-width: 180px;
 }
 
+.profile-line-prompt {
+  margin-top: 8px;
+}
+
 /* 侧边栏最窄 300px：栏目 + 设置齿轮放不下，收紧内边距、藏掉角标 */
 @media (min-width: 401px) {
   html[lang='en'] .section-nav {

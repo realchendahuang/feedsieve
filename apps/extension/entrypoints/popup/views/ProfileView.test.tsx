@@ -393,6 +393,22 @@ describe('ProfileView', () => {
     const { el } = await render();
     expect(el.textContent).toContain('打开一个博主的主页');
   });
+
+  it('主板「主页人气行」默认关闭时在阅人面板给出轻量一键开启开关，打开后持久化并自动收起', async () => {
+    const { el, notify } = await render();
+    const toggle = el.querySelector<HTMLInputElement>('.profile-line-prompt input[type="checkbox"]');
+    expect(toggle).not.toBeNull();
+    expect(toggle?.checked).toBe(false);
+
+    await act(async () => {
+      toggle!.click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(browser.storage.local.set).toHaveBeenCalledWith({ profileLine: true });
+    expect(notify).toHaveBeenCalledWith('已开启主页人气行');
+    expect(el.querySelector('.profile-line-prompt')).toBeNull();
+  });
 });
 
 describe('profile-model', () => {
