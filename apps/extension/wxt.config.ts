@@ -90,4 +90,44 @@ export default defineConfig({
   zip: {
     name: 'feedsieve',
   },
+  hooks: {
+    'vite:build:extendConfig': (entrypoints, viteConfig) => {
+      const entry = entrypoints[0];
+      if (
+        entrypoints.length !== 1 ||
+        entry?.type !== 'unlisted-script' ||
+        !entry.name.startsWith('lazy-')
+      ) {
+        return;
+      }
+      if (Array.isArray(viteConfig.plugins)) {
+        viteConfig.plugins = viteConfig.plugins.filter(
+          (plugin) =>
+            !plugin ||
+            typeof plugin !== 'object' ||
+            !('name' in plugin) ||
+            plugin.name !== 'wxt:iife-anonymous',
+        );
+      }
+      const build = (viteConfig.build ??= {});
+      if (build.lib && typeof build.lib === 'object') {
+        build.lib.formats = ['es'];
+      }
+      const rollup = (build.rollupOptions ??= {});
+      if (rollup.output && !Array.isArray(rollup.output)) {
+        rollup.output.format = 'es';
+        rollup.output.entryFileNames = 'chunks/[name].js';
+      }
+    },
+    'build:manifestGenerated': (_wxt, manifest) => {
+      const existing = manifest.web_accessible_resources ?? [];
+      manifest.web_accessible_resources = [
+        ...existing,
+        {
+          resources: ['chunks/*.js'],
+          matches: ['https://x.com/*'],
+        },
+      ] as typeof manifest.web_accessible_resources;
+    },
+  },
 });

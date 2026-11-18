@@ -40,15 +40,16 @@ import { createShareMenu } from '../src/lib/insight/share-menu';
 import { createCleanUi } from '../src/lib/content/clean-ui';
 import { createPageTicker } from '../src/lib/content/page-ticker';
 import { createProfileFill, PROFILE_FILL_UPDATED_MESSAGE } from '../src/lib/content/profile-fill';
-import { createSearchAssist } from '../src/lib/content/search-assist';
+import { createSearchAssistTrigger } from '../src/lib/content/search-assist-trigger';
 import { registerMuteMessageHandlers } from '../src/lib/content/mute-messages';
 import {
   getSearchAssistEnabled,
   subscribeSearchAssistEnabled,
 } from '../src/lib/settings/search-assist';
-import { createAiCheck } from '../src/lib/ai-check/ai-check';
+import { createAiCheckCore } from '../src/lib/ai-check/ai-check-core';
 import { createComposeSchedule } from '../src/lib/compose/compose-schedule';
-import { createArticleHelper } from '../src/lib/compose/article-editor';
+import type { createArticleHelper } from '../src/lib/compose/article-editor';
+import { loadLazyModule } from '../src/lib/content/lazy-chunk';
 import { getScheduleSettings, subscribeScheduleSettings } from '../src/lib/compose/schedule-store';
 import {
   getInsightBadgesEnabled,
@@ -154,17 +155,18 @@ export default defineContentScript({
       },
       profileBaseline: () => profileInsight.baseline(),
     });
-    // 搜索框高级搜索：默认关闭，挂在 X 侧栏搜索框下面（设置 › 主页 › 搜索框高级搜索）
+    // 搜索框高级搜索：默认关闭，常驻只挂轻触发器，弹窗表单按需从 chunks/lazy-search-assist.js 加载
     let searchAssistEnabled = false;
-    const searchAssist = createSearchAssist({
+    const searchAssist = createSearchAssistTrigger({
       getLanguage: () => state.uiLanguage,
       isEnabled: () => modules.profile && searchAssistEnabled,
       getPath: () => location.pathname,
       getSearch: () => location.search,
+      loadDialog: () => loadLazyModule('lazy-search-assist.js'),
     });
     // 主页洞察由页面巡检驱动（tick），模块关闭时巡检不再调用它
-    // AI 味检测：详情页回复上的「AI?」按钮 + 回复页的检测卡
-    const aiCheck = createAiCheck({
+    // AI 味检测：详情页回复上的「AI?」按钮 + 回复页的检测卡（重面板与收集器按需加载）
+    const aiCheck = createAiCheckCore({
       getLanguage: () => state.uiLanguage,
       getSelfHandle: () => state.selfHandle,
       isProtected: (handle) => state.allowCache.has(handle) || state.followingCache.has(handle),
@@ -172,6 +174,7 @@ export default defineContentScript({
       isFollowing: (handle) => state.followingCache.has(handle),
       isEnabled: () => modules.aiCheck,
       send,
+      loadRunner: () => loadLazyModule('lazy-ai-check.js'),
     });
     aiCheck.start();
     // 发帖：发帖框「下一个空档」、安排表快捷时间、预排期列表顺带记下（只在本机）
@@ -180,14 +183,37 @@ export default defineContentScript({
       getAccount: () => state.selfHandle ?? null,
     });
     composeSchedule.start();
-    // 文章编辑器：粘贴 Markdown 自动排版、大纲与字数
-    const articleHelper = createArticleHelper({
-      getLanguage: () => state.uiLanguage,
-    });
-    articleHelper.start();
+    // 文章编辑器：仅在 /compose/articles* 路径按需加载 lazy-article-editor.js
+    let articleHelper: ReturnType<typeof createArticleHelper> | null = null;
+    let articleHelperPromise: Promise<void> | null = null;
     let articleHelperEnabled = true;
+    let contentInvalidated = false;
+    const syncArticleHelper = (): void => {
+      if (contentInvalidated || !modules.write || !articleHelperEnabled) {
+        articleHelper?.setEnabled(false);
+        return;
+      }
+      if (articleHelper) {
+        articleHelper.start();
+        articleHelper.setEnabled(true);
+        articleHelper.tick();
+        return;
+      }
+      if (!location.pathname.startsWith('/compose/articles') || articleHelperPromise) return;
+      articleHelperPromise = loadLazyModule<typeof createArticleHelper>('lazy-article-editor.js')
+        .then((factory) => {
+          if (contentInvalidated) return;
+          articleHelper = factory({ getLanguage: () => state.uiLanguage });
+          articleHelper.start();
+          articleHelper.setEnabled(modules.write && articleHelperEnabled);
+        })
+        .catch((error) => {
+          articleHelperPromise = null;
+          console.error('[FeedSieve] 文章编辑器增强加载失败:', error);
+        });
+    };
     const applyArticleHelper = (): void => {
-      articleHelper.setEnabled(modules.write && articleHelperEnabled);
+      syncArticleHelper();
     };
     void getScheduleSettings().then((settings) => {
       articleHelperEnabled = settings.articleHelper;
@@ -228,7 +254,7 @@ export default defineContentScript({
       if (modules.profile) searchAssist.tick();
     });
     ticker.add(() => {
-      if (modules.write) articleHelper.tick();
+      if (modules.write) syncArticleHelper();
     });
     ticker.start();
     // 规则命中：本页去重、攒 5 秒交给后台，后台按节奏匿名上报（见 rule-hit-uplink.ts）
@@ -361,13 +387,15 @@ export default defineContentScript({
       insight.clearAll();
     };
     ctx.onInvalidated(() => {
+      contentInvalidated = true;
       ticker.stop();
       controller.dispose();
       profileInsight.stop();
+      searchAssist.stop();
       aiCheck.stop();
       shareMenu.dispose();
       composeSchedule.stop();
-      articleHelper.stop();
+      articleHelper?.stop();
       cleanUi.stop();
       // 扩展被重载/停用后别再继续滚页面
       profileFill.stop();
@@ -448,11 +476,10 @@ export default defineContentScript({
       if (previous.write !== next.write) {
         if (next.write) {
           composeSchedule.start();
-          articleHelper.start();
           applyArticleHelper();
         } else {
           composeSchedule.stop();
-          articleHelper.stop();
+          articleHelper?.stop();
         }
       }
       if (previous.filter !== next.filter) {
