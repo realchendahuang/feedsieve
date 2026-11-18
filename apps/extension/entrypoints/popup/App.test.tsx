@@ -767,6 +767,50 @@ describe('popup App 渲染冒烟', () => {
     expect(storageSet).toHaveBeenCalledWith({ uiLanguage: 'zh' });
     expect(storageSet.mock.calls.filter(([value]) => 'installationId' in value).length).toBe(0);
     expect(rootEl.textContent).toContain('仅本地设置已更新');
+
+    // v2 完整个人配置导入：应同时还原界面净化、模块总开关、发帖节奏等纯偏好设置
+    storageSet.mockClear();
+    const v2File = new File(
+      [
+        JSON.stringify({
+          format: 'feedsieve-personal-config',
+          schemaVersion: 2,
+          exportedAt: '2026-11-18T00:00:00.000Z',
+          keywordRules: {
+            customPhrases: ['迁移关键词'],
+            knownCategoryIds: ['adult_gray_traffic'],
+            subscribedCategoryIds: ['adult_gray_traffic'],
+            disabledOfficialRuleIds: [],
+          },
+          preferences: { uiLanguage: 'zh', communityEnabled: true, markStrength: 'standard' },
+          uiSettings: { cleanUi: true, hideForYou: true },
+          modules: { hot: true, profile: false, write: true, aiCheck: true, filter: true, shareMenu: true },
+          insight: { badges: false, profileLine: true },
+        }),
+      ],
+      'feedsieve-personal-config-v2.json',
+      { type: 'application/json' },
+    );
+    await chooseFile(input, v2File);
+    expect(rootEl.textContent).toContain('界面净化（2 项）');
+    expect(rootEl.textContent).toContain('模块总开关（1 项）');
+    expect(rootEl.textContent).toContain('主页显示开关（2 项）');
+    await act(async () => {
+      buttonWithText(rootEl, '合并导入').click();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(storageSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        uiSettingsV1: expect.objectContaining({ cleanUi: true, hideForYou: true, v: 2 }),
+      }),
+    );
+    expect(storageSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        moduleSettingsV1: expect.objectContaining({ profile: false }),
+      }),
+    );
+    expect(storageSet).toHaveBeenCalledWith({ profileLine: true });
+    expect(storageSet).toHaveBeenCalledWith({ insightBadges: false });
   });
 
   it('renders the backup controls with English copy when English is the local preference', async () => {

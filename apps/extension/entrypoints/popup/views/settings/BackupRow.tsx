@@ -2,13 +2,37 @@ import { useRef, useState, type ChangeEvent } from 'react';
 import type { KeywordRuleSettings } from '../../../../src/lib/detection/keyword-rules';
 import { replaceKeywordRuleSettings } from '../../../../src/lib/detection/keyword-rules';
 import type { KeywordPackCatalog } from '../../../../src/lib/detection/keyword-packs';
-import type { CommunitySettings } from '../../../../src/lib/community/community-store';
+import type { CommunitySettings } from '../../../../src/lib/community/community-settings';
+import { getUiSettings, setUiSettings } from '../../../../src/lib/settings/ui-settings';
+import {
+  getScheduleSettings,
+  setScheduleSettings,
+} from '../../../../src/lib/compose/schedule-store';
+import {
+  getModuleSettings,
+  setModuleSettings,
+  type ModuleSettings,
+} from '../../../../src/lib/settings/module-settings';
+import {
+  getSearchAssistEnabled,
+  getSearchAssistPrefs,
+  setSearchAssistEnabled,
+  setSearchAssistPrefs,
+} from '../../../../src/lib/settings/search-assist';
+import {
+  getInsightBadgesEnabled,
+  getProfileLineEnabled,
+  setInsightBadgesEnabled,
+  setProfileLineEnabled,
+} from '../../../../src/lib/insight/insight-settings';
+import { getAiSettings, setAiSettings } from '../../../../src/lib/ai-check/client';
 import {
   createPersonalConfigDocument,
   MAX_PERSONAL_CONFIG_BYTES,
   parsePersonalConfigDocument,
   preparePersonalConfigImport,
   serializePersonalConfigDocument,
+  type PersonalConfigContext,
   type PersonalConfigImportMode,
   type PersonalConfigImportResult,
   type PersonalConfigParseError,
@@ -30,6 +54,8 @@ interface BackupRowProps {
   community: CommunitySettings;
   onUpdateCommunity: (patch: { enabled?: boolean; strength?: MarkStrength }) => Promise<unknown>;
   onLanguageChange: (next: UiLanguage) => void;
+  modules?: ModuleSettings | null;
+  onUpdateModule?: (patch: Partial<ModuleSettings>) => Promise<unknown> | void;
 }
 
 /** 备份与迁移：导出个人配置；导入前先给预览，再选合并或替换。 */
@@ -41,6 +67,8 @@ export default function BackupRow({
   community,
   onUpdateCommunity,
   onLanguageChange,
+  modules,
+  onUpdateModule,
 }: BackupRowProps) {
   const t = UI_COPY[language];
   const inputRef = useRef<HTMLInputElement>(null);
@@ -68,13 +96,50 @@ export default function BackupRow({
     window.setTimeout(() => setMessage((current) => (current === text ? null : current)), 4_000);
   }
 
-  function exportConfig(): void {
-    if (!keywordRules) return;
+  async function loadLocalExtras(): Promise<
+    Pick<
+      PersonalConfigContext,
+      'uiSettings' | 'composeSchedule' | 'modules' | 'searchAssist' | 'insight' | 'aiDisplay'
+    >
+  > {
+    const [
+      uiSettings,
+      composeSchedule,
+      loadedModules,
+      saEnabled,
+      saPrefs,
+      badges,
+      profileLine,
+      aiDisplay,
+    ] = await Promise.all([
+      getUiSettings(),
+      getScheduleSettings(),
+      modules ? Promise.resolve(modules) : getModuleSettings(),
+      getSearchAssistEnabled(),
+      getSearchAssistPrefs(),
+      getInsightBadgesEnabled(),
+      getProfileLineEnabled(),
+      getAiSettings(),
+    ]);
+    return {
+      uiSettings,
+      composeSchedule,
+      modules: loadedModules,
+      searchAssist: { enabled: saEnabled, prefs: saPrefs },
+      insight: { badges, profileLine },
+      aiDisplay,
+    };
+  }
+
+  async function exportConfig(): Promise<void> {
+    if (!keywordRules || busy) return;
+    setBusy(true);
     setError(null);
     setMessage(null);
     try {
+      const extras = await loadLocalExtras();
       const body = serializePersonalConfigDocument(
-        createPersonalConfigDocument({ keywordRules, community, language, catalog }),
+        createPersonalConfigDocument({ keywordRules, community, language, catalog, ...extras }),
       );
       const objectUrl = URL.createObjectURL(new Blob([body], { type: 'application/json' }));
       const anchor = document.createElement('a');
@@ -88,6 +153,8 @@ export default function BackupRow({
       flash(t.personalConfigExported);
     } catch {
       setError(t.personalConfigExportFailed);
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -116,10 +183,26 @@ export default function BackupRow({
         setError(errorMessage(parsed.error));
         return;
       }
-      const context = { keywordRules, community, language, catalog };
+      const doc = parsed.document;
+      const hasExtras = Boolean(
+        doc.uiSettings ||
+        doc.composeSchedule ||
+        doc.modules ||
+        doc.searchAssist ||
+        doc.insight ||
+        doc.aiDisplay,
+      );
+      const extras = hasExtras ? await loadLocalExtras() : {};
+      const context: PersonalConfigContext = {
+        keywordRules,
+        community,
+        language,
+        catalog,
+        ...extras,
+      };
       setPreview({
-        merge: preparePersonalConfigImport(parsed.document, context, 'merge'),
-        replace: preparePersonalConfigImport(parsed.document, context, 'replace'),
+        merge: preparePersonalConfigImport(doc, context, 'merge'),
+        replace: preparePersonalConfigImport(doc, context, 'replace'),
       });
     } catch {
       setError(t.personalConfigReadFailed);
@@ -129,21 +212,42 @@ export default function BackupRow({
   async function apply(mode: PersonalConfigImportMode): Promise<void> {
     const prepared = preview?.[mode];
     if (!prepared?.next || busy) return;
+    const next = prepared.next;
     setBusy(true);
     setError(null);
     try {
       const [nextKeywordRules] = await Promise.all([
-        replaceKeywordRuleSettings(prepared.next.keywordRules),
+        replaceKeywordRuleSettings(next.keywordRules),
         onUpdateCommunity({
-          enabled: prepared.next.preferences.communityEnabled,
-          strength: prepared.next.preferences.markStrength,
+          enabled: next.preferences.communityEnabled,
+          strength: next.preferences.markStrength,
         }),
+        next.uiSettings ? setUiSettings(next.uiSettings) : Promise.resolve(),
+        next.composeSchedule ? setScheduleSettings(next.composeSchedule) : Promise.resolve(),
+        next.modules
+          ? onUpdateModule
+            ? Promise.resolve(onUpdateModule(next.modules))
+            : setModuleSettings(next.modules)
+          : Promise.resolve(),
+        next.searchAssist
+          ? Promise.all([
+              setSearchAssistEnabled(next.searchAssist.enabled),
+              setSearchAssistPrefs(next.searchAssist.prefs),
+            ])
+          : Promise.resolve(),
+        next.insight
+          ? Promise.all([
+              setInsightBadgesEnabled(next.insight.badges),
+              setProfileLineEnabled(next.insight.profileLine),
+            ])
+          : Promise.resolve(),
+        next.aiDisplay ? setAiSettings(next.aiDisplay) : Promise.resolve(),
       ]);
-      await setUiLanguage(prepared.next.preferences.uiLanguage);
+      await setUiLanguage(next.preferences.uiLanguage);
       setKeywordRules(nextKeywordRules);
-      onLanguageChange(prepared.next.preferences.uiLanguage);
+      onLanguageChange(next.preferences.uiLanguage);
       setPreview(null);
-      flash(UI_COPY[prepared.next.preferences.uiLanguage].personalConfigImported);
+      flash(UI_COPY[next.preferences.uiLanguage].personalConfigImported);
     } catch {
       setError(t.personalConfigApplyFailed);
     } finally {
@@ -170,6 +274,9 @@ export default function BackupRow({
         merge.markStrengthChange
           ? `${t.strength} → ${STRENGTH_LABELS[language][merge.markStrengthChange.to]}`
           : null,
+        ...merge.sectionChanges.map((change) =>
+          t.personalConfigSection(change.section, change.changedCount),
+        ),
       ].filter((value): value is string => value !== null)
     : [];
 
@@ -185,7 +292,7 @@ export default function BackupRow({
             type="button"
             className="text-button"
             disabled={!keywordRules || busy}
-            onClick={exportConfig}
+            onClick={() => void exportConfig()}
           >
             {t.exportPersonalConfig}
           </button>

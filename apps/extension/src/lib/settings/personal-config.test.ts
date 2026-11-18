@@ -63,7 +63,7 @@ describe('个人配置备份与迁移', () => {
 
     expect(value).toEqual({
       format: PERSONAL_CONFIG_FORMAT,
-      schemaVersion: 1,
+      schemaVersion: 2,
       exportedAt: '2026-09-02T00:00:00.000Z',
       keywordRules: {
         customPhrases: ['我的词'],
@@ -250,5 +250,120 @@ describe('个人配置备份与迁移', () => {
       ok: true,
       document: source,
     });
+  });
+
+  it('v2 支持完整纯偏好设置导入导出，且兼容 v1 备份（缺省分区不改写本机设置）', () => {
+    const fullCtx = context({
+      uiSettings: {
+        cleanUi: true,
+        hideForYou: true,
+        hideTrends: false,
+        hideWhoToFollow: true,
+        hidePromoted: false,
+        hidePromoteButton: false,
+        hideGrok: true,
+        dimPremiumReplies: false,
+        systemFont: true,
+      },
+      composeSchedule: {
+        composeHelper: false,
+        articleHelper: true,
+        windows: [{ id: 'w1', days: [1, 3, 5], start: '09:00', end: '11:00', perHour: 2 }],
+        minGapMinutes: 30,
+        leadMinutes: 10,
+        randomize: false,
+        horizonDays: 7,
+      },
+      modules: {
+        hot: true,
+        profile: false,
+        write: true,
+        aiCheck: false,
+        filter: true,
+        shareMenu: false,
+      },
+      searchAssist: {
+        enabled: false,
+        prefs: {
+          allWords: 'ai',
+          exactPhrase: '',
+          anyWords: '',
+          noneWords: '',
+          hashtags: '',
+          language: 'zh',
+          to: '',
+          mention: '',
+          since: '2026-01-01',
+          until: '',
+          minReplies: '',
+          minRetweets: '',
+          minLikes: '10',
+          content: 'images',
+          replies: 'exclude',
+          excludeRetweets: true,
+          verifiedOnly: false,
+          near: '',
+          within: '',
+          unit: 'km',
+          sort: 'live',
+          raw: '',
+        },
+      },
+      insight: { badges: false, profileLine: true },
+      aiDisplay: { mode: 'fold', scope: 'blue', markFollowing: true },
+    });
+
+    const exported = createPersonalConfigDocument(fullCtx, '2026-11-18T00:00:00.000Z');
+    const serialized = serializePersonalConfigDocument(exported);
+    expect(serialized).not.toContain('blockedAccounts');
+    expect(serialized).not.toContain('scheduledPosts');
+    expect(serialized).not.toContain('articleBackups');
+
+    const parsed = parsePersonalConfigDocument(serialized);
+    expect(parsed).toEqual({ ok: true, document: exported });
+    if (!parsed.ok) return;
+
+    const prepared = preparePersonalConfigImport(parsed.document, context(), 'merge');
+    expect(prepared.preview.sectionChanges).toEqual([
+      { section: 'uiSettings', changedCount: 5 },
+      { section: 'modules', changedCount: 3 },
+      { section: 'composeSchedule', changedCount: 5 },
+      { section: 'searchAssist', changedCount: 9 },
+      { section: 'insight', changedCount: 2 },
+      { section: 'aiDisplay', changedCount: 3 },
+    ]);
+    expect(prepared.next?.uiSettings).toEqual(fullCtx.uiSettings);
+    expect(prepared.next?.composeSchedule).toEqual(fullCtx.composeSchedule);
+    expect(prepared.next?.modules).toEqual(fullCtx.modules);
+    expect(prepared.next?.searchAssist).toEqual(fullCtx.searchAssist);
+    expect(prepared.next?.insight).toEqual(fullCtx.insight);
+    expect(prepared.next?.aiDisplay).toEqual(fullCtx.aiDisplay);
+
+    // 导入旧版 v1 备份时不应生成额外分区的写入载荷
+    const v1Parsed = parsePersonalConfigDocument(JSON.stringify(document()));
+    expect(v1Parsed.ok).toBe(true);
+    if (!v1Parsed.ok) return;
+    const v1Prepared = preparePersonalConfigImport(v1Parsed.document, fullCtx, 'merge');
+    expect(v1Prepared.preview.sectionChanges).toEqual([]);
+    expect(v1Prepared.next?.uiSettings).toBeUndefined();
+    expect(v1Prepared.next?.modules).toBeUndefined();
+    expect(v1Prepared.next?.composeSchedule).toBeUndefined();
+
+    // 非法可选字段直接拒收
+    expect(
+      parsePersonalConfigDocument(
+        JSON.stringify({ ...exported, uiSettings: { cleanUi: 'yes' } }),
+      ),
+    ).toEqual({ ok: false, error: 'invalid_payload' });
+    expect(
+      parsePersonalConfigDocument(
+        JSON.stringify({ ...exported, modules: { hot: 1 } }),
+      ),
+    ).toEqual({ ok: false, error: 'invalid_payload' });
+    expect(
+      parsePersonalConfigDocument(
+        JSON.stringify({ ...exported, aiDisplay: { mode: 'bad', scope: 'all', markFollowing: false } }),
+      ),
+    ).toEqual({ ok: false, error: 'invalid_payload' });
   });
 });

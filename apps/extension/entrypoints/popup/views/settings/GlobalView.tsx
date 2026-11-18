@@ -176,6 +176,8 @@ export default function GlobalView({
                 community={community}
                 onUpdateCommunity={onUpdateCommunity}
                 onLanguageChange={onLanguageChange}
+                modules={modules}
+                onUpdateModule={onUpdateModule}
               />
             </section>
             <ArticleBackups language={language} notify={notify} />

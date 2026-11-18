@@ -315,7 +315,7 @@ export const UI_COPY = {
     keywordContributed: '已匿名提交，维护者审阅后会纳入词库',
     personalConfig: '备份与迁移',
     personalConfigHint:
-      '只备份个人关键词和显示偏好；不会上传，不包含账号、黑白名单、关注列表或 X 登录信息。',
+      '备份个人关键词、模块开关、界面净化、发帖节奏与显示偏好；不会上传，不包含账号、黑白名单、关注列表、文章备份或 X 登录信息。',
     exportPersonalConfig: '导出',
     importPersonalConfig: '导入',
     personalConfigExported: '个人配置已下载',
@@ -336,6 +336,25 @@ export const UI_COPY = {
     personalConfigCategories: (count: number) => `词库分类设置将更新 ${count} 项`,
     personalConfigRules: (count: number) => `单条官方规则将更新 ${count} 项`,
     personalConfigPreferences: (count: number) => `显示偏好将更新 ${count} 项`,
+    personalConfigSection: (
+      section: 'uiSettings' | 'composeSchedule' | 'modules' | 'searchAssist' | 'insight' | 'aiDisplay',
+      count: number,
+    ) => {
+      switch (section) {
+        case 'uiSettings':
+          return `界面净化（${count} 项）`;
+        case 'composeSchedule':
+          return `发帖节奏与编辑器偏好（${count} 项）`;
+        case 'modules':
+          return `模块总开关（${count} 项）`;
+        case 'searchAssist':
+          return `高级搜索偏好（${count} 项）`;
+        case 'insight':
+          return `主页显示开关（${count} 项）`;
+        case 'aiDisplay':
+          return `AI 味显示偏好（${count} 项）`;
+      }
+    },
     personalConfigIgnored: (categories: number, rules: number) =>
       `已忽略当前词库不存在的项目：分类 ${categories} 个，规则 ${rules} 条`,
     personalConfigNoChanges: '备份与当前设置相同',
@@ -758,7 +777,7 @@ export const UI_COPY = {
     keywordContributed: 'Submitted anonymously; will be reviewed for official wordpacks',
     personalConfig: 'Backup & migration',
     personalConfigHint:
-      'Back up only your keywords and display preferences. Nothing is uploaded; accounts, lists, following, and X sign-in data are excluded.',
+      'Back up keywords, module switches, clean UI, posting schedule, and display preferences. Nothing is uploaded; accounts, lists, following, article backups, and X sign-in data are excluded.',
     exportPersonalConfig: 'Export',
     importPersonalConfig: 'Import',
     personalConfigExported: 'Personal config downloaded',
@@ -780,6 +799,25 @@ export const UI_COPY = {
     personalConfigCategories: (count: number) => `${count} category subscriptions will change`,
     personalConfigRules: (count: number) => `${count} official rules will change`,
     personalConfigPreferences: (count: number) => `${count} display preferences will change`,
+    personalConfigSection: (
+      section: 'uiSettings' | 'composeSchedule' | 'modules' | 'searchAssist' | 'insight' | 'aiDisplay',
+      count: number,
+    ) => {
+      switch (section) {
+        case 'uiSettings':
+          return `Clean UI (${count})`;
+        case 'composeSchedule':
+          return `Posting schedule & editor (${count})`;
+        case 'modules':
+          return `Module switches (${count})`;
+        case 'searchAssist':
+          return `Advanced search preferences (${count})`;
+        case 'insight':
+          return `Insight display switches (${count})`;
+        case 'aiDisplay':
+          return `AI check display preferences (${count})`;
+      }
+    },
     personalConfigIgnored: (categories: number, rules: number) =>
       `Unavailable items skipped: ${categories} categories and ${rules} rules`,
     personalConfigNoChanges: 'This backup matches the current settings',

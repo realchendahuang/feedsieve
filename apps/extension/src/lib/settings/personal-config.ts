@@ -1,5 +1,5 @@
 import { isMarkStrength, type MarkStrength } from '@feedsieve/community-lists';
-import type { CommunitySettings } from '../community/community-store';
+import type { CommunitySettings } from '../community/community-settings';
 import type { UiLanguage } from '../platform/i18n';
 import type { KeywordPackCatalog } from '../detection/keyword-packs';
 import {
@@ -9,20 +9,115 @@ import {
   type CustomKeywordRule,
   type KeywordRuleSettings,
 } from '../detection/keyword-rules';
+import {
+  DEFAULT_UI_SETTINGS,
+  normalizeUiSettings,
+  type UiSettings,
+} from './ui-settings';
+import {
+  DEFAULT_MODULE_SETTINGS,
+  normalizeModuleSettings,
+  type ModuleSettings,
+} from './module-settings';
+import {
+  DEFAULT_SEARCH_ASSIST_PREFS,
+  normalizeSearchAssistPrefs,
+  type SearchAssistPrefs,
+} from './search-assist';
+import {
+  DEFAULT_SCHEDULE_SETTINGS,
+  normalizeScheduleSettings,
+  type ScheduleSettings,
+} from '../compose/schedule-slots';
+import {
+  DEFAULT_AI_SETTINGS,
+  normalizeAiSettings,
+  type AiCheckSettings,
+} from '../ai-check/client';
 
 /**
- * 用户主动下载的本地配置文件。它不是账号资料、社区名单或第三方规则包。
+ * 用户主动下载的本地配置文件。它只含可移植的规则与纯偏好设置，
+ * 不含账号资料、安装 ID、黑白名单、排期内容或文章备份。
  */
 export const PERSONAL_CONFIG_FORMAT = 'feedsieve-personal-config';
-export const PERSONAL_CONFIG_SCHEMA_VERSION = 1 as const;
+export const PERSONAL_CONFIG_SCHEMA_VERSION = 2 as const;
 export const MAX_PERSONAL_CONFIG_BYTES = 256 * 1024;
 
 // 跟关键词包目录使用相同格式。未知 ID 会在预览中忽略，而不是因命名风格不同拒绝整份备份。
 const OFFICIAL_ID_RE = /^[a-z][a-z0-9_-]{1,95}$/;
 
+const UI_SETTING_KEYS: ReadonlyArray<keyof UiSettings> = [
+  'cleanUi',
+  'hideForYou',
+  'hideTrends',
+  'hideWhoToFollow',
+  'hidePromoted',
+  'hidePromoteButton',
+  'hideGrok',
+  'dimPremiumReplies',
+  'systemFont',
+];
+
+const MODULE_SETTING_KEYS: ReadonlyArray<keyof ModuleSettings> = [
+  'hot',
+  'profile',
+  'write',
+  'aiCheck',
+  'filter',
+  'shareMenu',
+];
+
+const SEARCH_PREF_KEYS: ReadonlyArray<keyof SearchAssistPrefs> = [
+  'allWords',
+  'exactPhrase',
+  'anyWords',
+  'noneWords',
+  'hashtags',
+  'language',
+  'to',
+  'mention',
+  'since',
+  'until',
+  'minReplies',
+  'minRetweets',
+  'minLikes',
+  'content',
+  'replies',
+  'excludeRetweets',
+  'verifiedOnly',
+  'near',
+  'within',
+  'unit',
+  'sort',
+  'raw',
+];
+
+export interface PersonalConfigInsightPreferences {
+  badges: boolean;
+  profileLine: boolean;
+}
+
+export interface PersonalConfigSearchAssist {
+  enabled: boolean;
+  prefs: SearchAssistPrefs;
+}
+
+export type PersonalConfigExtraSection =
+  | 'uiSettings'
+  | 'composeSchedule'
+  | 'modules'
+  | 'searchAssist'
+  | 'insight'
+  | 'aiDisplay';
+
+export interface PersonalConfigSectionChange {
+  section: PersonalConfigExtraSection;
+  changedCount: number;
+}
+
 export interface PersonalConfigDocument {
   format: typeof PERSONAL_CONFIG_FORMAT;
-  schemaVersion: typeof PERSONAL_CONFIG_SCHEMA_VERSION;
+  schemaVersion: 1 | typeof PERSONAL_CONFIG_SCHEMA_VERSION;
   exportedAt: string;
   keywordRules: {
     customPhrases: string[];
@@ -36,6 +131,12 @@ export interface PersonalConfigDocument {
     communityEnabled: boolean;
     markStrength: MarkStrength;
   };
+  uiSettings?: UiSettings;
+  composeSchedule?: ScheduleSettings;
+  modules?: ModuleSettings;
+  searchAssist?: PersonalConfigSearchAssist;
+  insight?: PersonalConfigInsightPreferences;
+  aiDisplay?: AiCheckSettings;
 }
 
 export interface PersonalConfigContext {
@@ -43,13 +144,24 @@ export interface PersonalConfigContext {
   community: Pick<CommunitySettings, 'enabled' | 'strength'>;
   language: UiLanguage;
   catalog: KeywordPackCatalog;
+  uiSettings?: UiSettings;
+  composeSchedule?: ScheduleSettings;
+  modules?: ModuleSettings;
+  searchAssist?: PersonalConfigSearchAssist;
+  insight?: PersonalConfigInsightPreferences;
+  aiDisplay?: AiCheckSettings;
 }
 
 export type PersonalConfigParseError =
-  'file_too_large' | 'invalid_json' | 'invalid_format' | 'unsupported_version' | 'invalid_payload';
+  | 'file_too_large'
+  | 'invalid_json'
+  | 'invalid_format'
+  | 'unsupported_version'
+  | 'invalid_payload';
 
 export type PersonalConfigParseResult =
-  { ok: true; document: PersonalConfigDocument } | { ok: false; error: PersonalConfigParseError };
+  | { ok: true; document: PersonalConfigDocument }
+  | { ok: false; error: PersonalConfigParseError };
 
 export type PersonalConfigImportMode = 'merge' | 'replace';
 
@@ -78,6 +190,7 @@ export interface PersonalConfigImportPreview {
   languageChange: { from: UiLanguage; to: UiLanguage } | null;
   communityEnabledChange: { from: boolean; to: boolean } | null;
   markStrengthChange: { from: MarkStrength; to: MarkStrength } | null;
+  sectionChanges: PersonalConfigSectionChange[];
 }
 
 export interface PersonalConfigImportResult {
@@ -86,6 +199,12 @@ export interface PersonalConfigImportResult {
   next: {
     keywordRules: KeywordRuleSettings;
     preferences: PersonalConfigDocument['preferences'];
+    uiSettings?: UiSettings;
+    composeSchedule?: ScheduleSettings;
+    modules?: ModuleSettings;
+    searchAssist?: PersonalConfigSearchAssist;
+    insight?: PersonalConfigInsightPreferences;
+    aiDisplay?: AiCheckSettings;
   } | null;
 }
 
@@ -149,6 +268,109 @@ function parseCustomPhrases(value: unknown): string[] | null {
   return cleanPhrases(phrases);
 }
 
+function parseBooleanGroup<K extends string>(
+  raw: unknown,
+  keys: readonly K[],
+  normalize: (value: unknown) => Record<K, boolean>,
+): Record<K, boolean> | null {
+  if (!isRecord(raw)) return null;
+  for (const key of keys) {
+    const entry = raw[key];
+    if (entry !== undefined && typeof entry !== 'boolean') return null;
+  }
+  return normalize(raw);
+}
+
+function parseComposeSchedule(raw: unknown): ScheduleSettings | null {
+  if (!isRecord(raw) || !Array.isArray(raw.windows) || raw.windows.length > 64) return null;
+  for (const item of raw.windows) {
+    if (!isRecord(item)) return null;
+  }
+  for (const key of ['composeHelper', 'articleHelper', 'randomize'] as const) {
+    if (raw[key] !== undefined && typeof raw[key] !== 'boolean') return null;
+  }
+  for (const key of ['minGapMinutes', 'leadMinutes', 'horizonDays'] as const) {
+    if (raw[key] !== undefined && (typeof raw[key] !== 'number' || !Number.isFinite(raw[key]))) {
+      return null;
+    }
+  }
+  return normalizeScheduleSettings(raw);
+}
+
+function parseSearchAssist(raw: unknown): PersonalConfigSearchAssist | null {
+  if (!isRecord(raw) || typeof raw.enabled !== 'boolean' || !isRecord(raw.prefs)) return null;
+  return {
+    enabled: raw.enabled,
+    prefs: normalizeSearchAssistPrefs(raw.prefs),
+  };
+}
+
+function parseInsight(raw: unknown): PersonalConfigInsightPreferences | null {
+  if (!isRecord(raw) || typeof raw.badges !== 'boolean' || typeof raw.profileLine !== 'boolean') {
+    return null;
+  }
+  return {
+    badges: raw.badges,
+    profileLine: raw.profileLine,
+  };
+}
+
+function parseAiDisplay(raw: unknown): AiCheckSettings | null {
+  if (!isRecord(raw)) return null;
+  if (raw.mode !== 'off' && raw.mode !== 'mark' && raw.mode !== 'fold') return null;
+  if (raw.scope !== 'all' && raw.scope !== 'blue' && raw.scope !== 'skipBlue') return null;
+  if (typeof raw.markFollowing !== 'boolean') return null;
+  return normalizeAiSettings(raw);
+}
+
+function cloneSchedule(settings: ScheduleSettings): ScheduleSettings {
+  return {
+    ...settings,
+    windows: settings.windows.map((window) => ({ ...window, days: [...window.days] })),
+  };
+}
+
+function countBooleanDiffs<K extends string>(
+  keys: readonly K[],
+  current: Record<K, boolean>,
+  incoming: Record<K, boolean>,
+): number {
+  let changed = 0;
+  for (const key of keys) {
+    if (current[key] !== incoming[key]) changed += 1;
+  }
+  return changed;
+}
+
+function countScheduleDiffs(current: ScheduleSettings, incoming: ScheduleSettings): number {
+  let changed = 0;
+  for (const key of [
+    'composeHelper',
+    'articleHelper',
+    'minGapMinutes',
+    'leadMinutes',
+    'randomize',
+    'horizonDays',
+  ] as const) {
+    if (current[key] !== incoming[key]) changed += 1;
+  }
+  if (JSON.stringify(current.windows) !== JSON.stringify(incoming.windows)) {
+    changed += 1;
+  }
+  return changed;
+}
+
+function countSearchAssistDiffs(
+  current: PersonalConfigSearchAssist,
+  incoming: PersonalConfigSearchAssist,
+): number {
+  let changed = current.enabled === incoming.enabled ? 0 : 1;
+  for (const key of SEARCH_PREF_KEYS) {
+    if (current.prefs[key] !== incoming.prefs[key]) changed += 1;
+  }
+  return changed;
+}
+
 /** 从当前本地设置建立可读、可移植、且不含任何身份或动作数据的文档。 */
 export function createPersonalConfigDocument(
   context: PersonalConfigContext,
@@ -178,6 +400,28 @@ export function createPersonalConfigDocument(
       communityEnabled: context.community.enabled,
       markStrength: context.community.strength,
     },
+    ...(context.uiSettings ? { uiSettings: normalizeUiSettings(context.uiSettings) } : {}),
+    ...(context.composeSchedule
+      ? { composeSchedule: normalizeScheduleSettings(context.composeSchedule) }
+      : {}),
+    ...(context.modules ? { modules: normalizeModuleSettings(context.modules) } : {}),
+    ...(context.searchAssist
+      ? {
+          searchAssist: {
+            enabled: context.searchAssist.enabled,
+            prefs: normalizeSearchAssistPrefs(context.searchAssist.prefs),
+          },
+        }
+      : {}),
+    ...(context.insight
+      ? {
+          insight: {
+            badges: context.insight.badges,
+            profileLine: context.insight.profileLine,
+          },
+        }
+      : {}),
+    ...(context.aiDisplay ? { aiDisplay: normalizeAiSettings(context.aiDisplay) } : {}),
   };
 }
 
@@ -198,7 +442,7 @@ export function parsePersonalConfigDocument(text: string): PersonalConfigParseRe
   }
   if (!isRecord(raw)) return { ok: false, error: 'invalid_format' };
   if (raw.format !== PERSONAL_CONFIG_FORMAT) return { ok: false, error: 'invalid_format' };
-  if (raw.schemaVersion !== PERSONAL_CONFIG_SCHEMA_VERSION) {
+  if (raw.schemaVersion !== 1 && raw.schemaVersion !== PERSONAL_CONFIG_SCHEMA_VERSION) {
     return { ok: false, error: 'unsupported_version' };
   }
   if (
@@ -237,11 +481,41 @@ export function parsePersonalConfigDocument(text: string): PersonalConfigParseRe
     return { ok: false, error: 'invalid_payload' };
   }
 
+  const uiSettings =
+    raw.uiSettings !== undefined
+      ? (parseBooleanGroup(raw.uiSettings, UI_SETTING_KEYS, normalizeUiSettings) as
+          | UiSettings
+          | null)
+      : undefined;
+  const modules =
+    raw.modules !== undefined
+      ? (parseBooleanGroup(raw.modules, MODULE_SETTING_KEYS, normalizeModuleSettings) as
+          | ModuleSettings
+          | null)
+      : undefined;
+  const composeSchedule =
+    raw.composeSchedule !== undefined ? parseComposeSchedule(raw.composeSchedule) : undefined;
+  const searchAssist =
+    raw.searchAssist !== undefined ? parseSearchAssist(raw.searchAssist) : undefined;
+  const insight = raw.insight !== undefined ? parseInsight(raw.insight) : undefined;
+  const aiDisplay = raw.aiDisplay !== undefined ? parseAiDisplay(raw.aiDisplay) : undefined;
+
+  if (
+    uiSettings === null ||
+    modules === null ||
+    composeSchedule === null ||
+    searchAssist === null ||
+    insight === null ||
+    aiDisplay === null
+  ) {
+    return { ok: false, error: 'invalid_payload' };
+  }
+
   return {
     ok: true,
     document: {
       format: PERSONAL_CONFIG_FORMAT,
-      schemaVersion: PERSONAL_CONFIG_SCHEMA_VERSION,
+      schemaVersion: raw.schemaVersion,
       exportedAt: raw.exportedAt,
       keywordRules: {
         customPhrases,
@@ -254,6 +528,12 @@ export function parsePersonalConfigDocument(text: string): PersonalConfigParseRe
         communityEnabled,
         markStrength,
       },
+      ...(uiSettings ? { uiSettings } : {}),
+      ...(composeSchedule ? { composeSchedule } : {}),
+      ...(modules ? { modules } : {}),
+      ...(searchAssist ? { searchAssist } : {}),
+      ...(insight ? { insight } : {}),
+      ...(aiDisplay ? { aiDisplay } : {}),
     },
   };
 }
@@ -342,6 +622,48 @@ export function preparePersonalConfigImport(
     return from === to ? [] : [{ id, from, to }];
   });
 
+  const sectionChanges: PersonalConfigSectionChange[] = [];
+  if (document.uiSettings) {
+    const currentUi = normalizeUiSettings(context.uiSettings ?? DEFAULT_UI_SETTINGS);
+    const changedCount = countBooleanDiffs(UI_SETTING_KEYS, currentUi, document.uiSettings);
+    if (changedCount > 0) sectionChanges.push({ section: 'uiSettings', changedCount });
+  }
+  if (document.modules) {
+    const currentModules = normalizeModuleSettings(context.modules ?? DEFAULT_MODULE_SETTINGS);
+    const changedCount = countBooleanDiffs(MODULE_SETTING_KEYS, currentModules, document.modules);
+    if (changedCount > 0) sectionChanges.push({ section: 'modules', changedCount });
+  }
+  if (document.composeSchedule) {
+    const currentSchedule = context.composeSchedule
+      ? normalizeScheduleSettings(context.composeSchedule)
+      : normalizeScheduleSettings(DEFAULT_SCHEDULE_SETTINGS);
+    const changedCount = countScheduleDiffs(currentSchedule, document.composeSchedule);
+    if (changedCount > 0) sectionChanges.push({ section: 'composeSchedule', changedCount });
+  }
+  if (document.searchAssist) {
+    const currentSearch = context.searchAssist ?? {
+      enabled: true,
+      prefs: DEFAULT_SEARCH_ASSIST_PREFS,
+    };
+    const changedCount = countSearchAssistDiffs(currentSearch, document.searchAssist);
+    if (changedCount > 0) sectionChanges.push({ section: 'searchAssist', changedCount });
+  }
+  if (document.insight) {
+    const currentInsight = context.insight ?? { badges: true, profileLine: false };
+    const changedCount =
+      (currentInsight.badges !== document.insight.badges ? 1 : 0) +
+      (currentInsight.profileLine !== document.insight.profileLine ? 1 : 0);
+    if (changedCount > 0) sectionChanges.push({ section: 'insight', changedCount });
+  }
+  if (document.aiDisplay) {
+    const currentAi = normalizeAiSettings(context.aiDisplay ?? DEFAULT_AI_SETTINGS);
+    const changedCount =
+      (currentAi.mode !== document.aiDisplay.mode ? 1 : 0) +
+      (currentAi.scope !== document.aiDisplay.scope ? 1 : 0) +
+      (currentAi.markFollowing !== document.aiDisplay.markFollowing ? 1 : 0);
+    if (changedCount > 0) sectionChanges.push({ section: 'aiDisplay', changedCount });
+  }
+
   const preview: PersonalConfigImportPreview = {
     mode,
     customRules: {
@@ -373,6 +695,7 @@ export function preparePersonalConfigImport(
       context.community.strength === document.preferences.markStrength
         ? null
         : { from: context.community.strength, to: document.preferences.markStrength },
+    sectionChanges,
   };
 
   if (exceedsLimit) return { preview, next: null };
@@ -386,7 +709,22 @@ export function preparePersonalConfigImport(
         disabledOfficialRuleIds: unique([...nextDisabled]),
         customRules: nextCustomRules,
       },
-      preferences: document.preferences,
+      preferences: { ...document.preferences },
+      ...(document.uiSettings ? { uiSettings: { ...document.uiSettings } } : {}),
+      ...(document.composeSchedule
+        ? { composeSchedule: cloneSchedule(document.composeSchedule) }
+        : {}),
+      ...(document.modules ? { modules: { ...document.modules } } : {}),
+      ...(document.searchAssist
+        ? {
+            searchAssist: {
+              enabled: document.searchAssist.enabled,
+              prefs: { ...document.searchAssist.prefs },
+            },
+          }
+        : {}),
+      ...(document.insight ? { insight: { ...document.insight } } : {}),
+      ...(document.aiDisplay ? { aiDisplay: { ...document.aiDisplay } } : {}),
     },
   };
 }
