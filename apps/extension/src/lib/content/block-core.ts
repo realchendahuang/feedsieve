@@ -8,7 +8,7 @@ import { resolveUserIdByHandle, runNativeAction } from '@feedsieve/x-adapter';
 import { markBlocked } from '../community/blocked-accounts';
 import { getUserId, saveUserIds } from '../community/user-ids';
 import { contributeBlocks } from '../community/contribute';
-import { requestOfficialPauseCheck } from '../community/community-store';
+import { requestOfficialPauseCheck } from '../community/community-settings';
 import { bumpStat } from '../stats/local-stats';
 import { bumpDaily } from '../stats/daily-stats';
 import { STRICT_HANDLE_RE } from '../platform/xhr-bridge-guard';

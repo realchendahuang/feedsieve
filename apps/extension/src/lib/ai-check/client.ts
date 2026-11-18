@@ -8,7 +8,7 @@
  * 一个人测出来的结论服务端不公开（证据可以伪造），只有本人能看：所以本机要存一份完整结果，
  * 关掉检测卡以后还能从主页 Tab、评论区标记、面板回来看、继续投票。
  */
-import { COMMUNITY_API_BASE, getCommunitySettings } from '../community/community-store';
+import { COMMUNITY_API_BASE, getCommunitySettings } from '../community/community-settings';
 import { getInstallationId } from '../community/contribute';
 import type { AiVerdict } from '@feedsieve/shared';
 import type { ReplyEvidence } from './evidence';

@@ -118,6 +118,12 @@ export class PageScanController {
     this.pruneHandle(handle);
   }
 
+  /** 读取某个 handle 当前仍连接在 DOM 上的卡片集合（供富信息异步回填时清理旧徽章）。 */
+  articlesForHandle(handle: string): Element[] {
+    this.pruneHandle(handle);
+    return [...(this.articlesByHandle.get(handle) ?? [])];
+  }
+
   /** Evidence for a template changed: invalidate only its currently rendered authors. */
   invalidateHandle(handle: string): void {
     for (const article of this.articlesByHandle.get(handle) ?? []) {

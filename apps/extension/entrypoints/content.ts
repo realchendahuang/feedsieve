@@ -5,7 +5,7 @@ import {
   KEYWORD_PACK_SYNC_MAX_AGE_MS,
   subscribeKeywordPackCatalog,
 } from '../src/lib/detection/keyword-packs';
-import { subscribeCommunity } from '../src/lib/community/community-store';
+import { subscribeCommunity } from '../src/lib/community/community-settings';
 import { createFollowingSync } from '../src/lib/community/following-sync';
 import { createQueueSupervisor, QUEUE_HEARTBEAT_KEY } from '../src/lib/queue/queue-supervisor';
 import {
@@ -102,10 +102,12 @@ export default defineContentScript({
       processOne: ScanCallbacks['processOne'];
       flushBadges: ScanCallbacks['flushBadges'];
       scanDone: NonNullable<ScanCallbacks['scanDone']>;
+      rebuildForEnrichment: (handles: ReadonlySet<string>) => void;
     } = {
       processOne: () => {},
       flushBadges: () => {},
       scanDone: () => {},
+      rebuildForEnrichment: () => {},
     };
     const controller = new PageScanController({
       processOne: (article, context, pendingBadges) => {
@@ -274,10 +276,13 @@ export default defineContentScript({
     scanWiring.flushBadges = badges.flushPendingBadges;
     // AI 标签 / 折叠 / 入口按整页顺序判断，等这一轮脏节点扫完再画一次
     scanWiring.scanDone = aiCheck.decorate;
+    scanWiring.rebuildForEnrichment = scan.rebuildForEnrichment;
     const sync = createStateSync({
       state,
       controller,
       fold,
+      send,
+      onCommunityEnriched: (handles) => scanWiring.rebuildForEnrichment(handles),
       isFilterEnabled: () => modules.filter,
     });
     // Following 全量同步（分页循环 / draft 原子替换）收敛到 following-sync。

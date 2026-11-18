@@ -9,6 +9,8 @@ import {
   type OfficialPauseState,
 } from '../src/lib/community/community-store';
 import { flushContributions } from '../src/lib/community/contribute';
+import { upgradeBlockedCategories } from '../src/lib/community/category-upgrade';
+import { createCommunityWorker } from '../src/lib/community/community-worker';
 import { syncKeywordPackCatalog } from '../src/lib/detection/keyword-packs';
 import { getChromeSidePanel } from '../src/lib/platform/sidepanel';
 import { openProfilePanel, profileHandleFromUrl } from '../src/lib/platform/profile-panel';
@@ -37,6 +39,8 @@ import { handleAiCheckMessage } from '../src/lib/ai-check/client';
 
 export default defineBackground(() => {
   registerRuntimeDataWorker();
+  const communityWorker = createCommunityWorker();
+  communityWorker.register();
 
   // 模块总开关：后台只做防御性兜底（正常路径上内容脚本已经不再发对应消息）。
   // SW 随时可能被回收，这里在每次启动时读一次并订阅变化。
@@ -158,6 +162,8 @@ export default defineBackground(() => {
   browser.runtime.onMessage.addListener((message: unknown, sender) => {
     // 只接收本扩展自己的内容脚本和页面
     if (sender.id !== browser.runtime.id) return undefined;
+    const communityReply = communityWorker.handleMessage(message);
+    if (communityReply) return communityReply;
     const msg = message as { type?: string; observations?: unknown; sort?: unknown } | null;
     if (msg?.type === RULE_HIT_MESSAGE) {
       if (!modules.filter) return Promise.resolve({ ok: true });
@@ -331,13 +337,19 @@ export default defineBackground(() => {
     return syncKeywordPackCatalog({ force });
   }
 
+  function flushContributionsWithUpgrade(): Promise<void> {
+    return upgradeBlockedCategories()
+      .catch(() => 0)
+      .then(() => flushContributions());
+  }
+
   browser.runtime.onInstalled.addListener((details) => {
     console.info(`[FeedSieve] installed (${details.reason})`);
     // 安装/更新后立即拉一次社区快照和关键词包。
     void sync(true);
     void syncKeywordPacks(true);
     // 升级后补传历史黑名单/白名单；同步状态会防止重复上传。
-    void flushContributions();
+    void flushContributionsWithUpgrade();
     void flushTrainingSamples();
     // 默认点击图标打开浮层（popup），支持用户在浮层内一键切换为侧边栏
     const sidePanel = getChromeSidePanel();
@@ -351,7 +363,7 @@ export default defineBackground(() => {
     void sync(false);
     void syncKeywordPacks(false);
     // 补交上次网络失败时积压的社区贡献
-    void flushContributions();
+    void flushContributionsWithUpgrade();
     void flushTrainingSamples();
   });
 
@@ -383,7 +395,7 @@ export default defineBackground(() => {
       }));
     }
     if (msg?.type === 'feedsieve:labels-sync') {
-      return flushContributions().then(() => ({ type: 'feedsieve:labels-sync', ok: true }));
+      return flushContributionsWithUpgrade().then(() => ({ type: 'feedsieve:labels-sync', ok: true }));
     }
     return undefined;
   });

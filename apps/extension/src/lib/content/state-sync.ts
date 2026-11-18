@@ -14,7 +14,11 @@ import {
   subscribeFollowingAllowlist,
   subscribeSelfHandle,
 } from '../community/following-allowlist';
-import { buildRuntimeCommunity, getCommunitySettings } from '../community/community-store';
+import { getCommunitySettings } from '../community/community-settings';
+import {
+  loadSlimCommunityRuntime,
+  type LoadedCommunityRuntime,
+} from '../community/community-runtime-client';
 import {
   createKeywordHeuristics,
   ensureVariantTables,
@@ -30,10 +34,16 @@ export function createStateSync(deps: {
   state: ContentState;
   controller: PageScanController;
   fold: BlockedFold;
+  /** 发送扩展消息（带 ctx.isValid 防护） */
+  send?: (message: unknown) => Promise<unknown>;
+  /** SW 批量补查回条目 / Campaign 详情后的徽章原地升级回调 */
+  onCommunityEnriched?: (handles: ReadonlySet<string>) => void;
   /** 过滤模块总开关：关掉后即使「自动标黄」子开关还开着也不检测 */
   isFilterEnabled?: () => boolean;
 }) {
   const { state, controller, fold } = deps;
+  let activeRuntime: LoadedCommunityRuntime | null = null;
+  let communitySeq = 0;
 
   function refreshBlockedCache(): void {
     const apply = (items: Array<{ handle: string }>): void => {
@@ -104,11 +114,39 @@ export function createStateSync(deps: {
   }
 
   async function refreshCommunity(): Promise<void> {
-    state.community = await buildRuntimeCommunity();
-    const settings = await getCommunitySettings();
-    state.detectionEnabled = settings.enabled && (deps.isFilterEnabled?.() ?? true);
-    state.strength = settings.strength;
-    state.autoContribute = settings.autoContribute;
+    const seq = ++communitySeq;
+    try {
+      const loaded = await loadSlimCommunityRuntime({
+        send: deps.send,
+        onEnriched: deps.onCommunityEnriched,
+      });
+      if (seq !== communitySeq) {
+        loaded.dispose();
+        return;
+      }
+      activeRuntime?.dispose();
+      activeRuntime = loaded;
+      state.community = loaded.community;
+      state.builtinList = loaded.builtinList;
+      state.requestCommunityEnrichment = loaded.requestEnrichment;
+      state.detectionEnabled = loaded.settings.enabled && (deps.isFilterEnabled?.() ?? true);
+      state.strength = loaded.settings.strength;
+      state.autoContribute = loaded.settings.autoContribute;
+    } catch (error) {
+      if (seq !== communitySeq) return;
+      console.error('[FeedSieve] 社区运行时名单加载失败，保留设置并清空社区索引:', error);
+      activeRuntime?.dispose();
+      activeRuntime = null;
+      state.community = null;
+      state.builtinList = new Set<string>();
+      state.requestCommunityEnrichment = undefined;
+      const settings = await getCommunitySettings().catch(() => null);
+      if (settings && seq === communitySeq) {
+        state.detectionEnabled = settings.enabled && (deps.isFilterEnabled?.() ?? true);
+        state.strength = settings.strength;
+        state.autoContribute = settings.autoContribute;
+      }
+    }
     controller.reset();
     controller.fullRescan();
   }

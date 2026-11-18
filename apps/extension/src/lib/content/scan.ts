@@ -10,7 +10,7 @@ import { PROFILE_INVITATION_RULE_ID } from '../detection/profile-invitation';
  * 只处理传入的这一个节点；调度（脏集合、分片、防重入）由 PageScanController 负责。
  */
 
-import { toHandleSet, type DetectAuthor } from '@feedsieve/detector';
+import type { DetectAuthor } from '@feedsieve/detector';
 import {
   contextFromPath,
   extractFeedItem,
@@ -24,7 +24,6 @@ import {
   type PageScanController,
   type PendingBadge,
 } from '../detection/page-scan-controller';
-import { getBundledEntries } from '../community/community-store';
 import {
   HIDDEN_TWEET_CELL_ATTRIBUTE,
   hiddenForOtherPost,
@@ -36,15 +35,6 @@ import type { BlockedFold } from './blocked-fold';
 import type { ManualActions } from './manual-actions';
 import type { InsightDecorations } from '../insight/decorations';
 import { toReportableHit, type RuleHitItem } from '../community/rule-hit-uplink';
-
-/**
- * 最近一次公开最终名单随扩展打包，作为离线兜底。
- * 社区名单走运行时同步（background SW -> storage.local -> 这里建索引），
- * 服务器快照永远是权威来源。
- * 名单 JSON（2 MB+ 级）不进 JS chunk，由后台读取随包资源（替换原来
- * 的静态 import——它会同步锁住 content script 的 JS 解析三个入口各一份）。
- */
-let builtinList: ReadonlySet<string> = toHandleSet([]);
 
 export function createScan(deps: {
   state: ContentState;
@@ -88,21 +78,13 @@ export function createScan(deps: {
    * - 挂过手动拉黑按钮、按钮没了
    * 任一成立就要丢弃 revision 早退、把这一条重新走一遍标注。
    */
+  /** 记录因 SW 批量补全详情触发重扫的卡片，避免重复计入本地检测统计。 */
+  const pendingEnrichArticles = new WeakMap<Element, string>();
+
   function decorationsLost(article: Element, cell: Element): boolean {
     if (cell.hasAttribute(MARK_ATTRIBUTE) && !cell.querySelector('.fs-badge')) return true;
     return manualActionArticles.has(article) && !article.querySelector('[data-fs-manual-action]');
   }
-
-  void getBundledEntries()
-    .then((entries) => {
-      builtinList = toHandleSet(entries as never[]);
-      controller.reset();
-      controller.fullRescan();
-    })
-    .catch((error) => {
-      // 打包资源缺失属异常；保持空集，社区名单同步通道仍可用。但绝不静默：
-      console.error('[FeedSieve] 随包名单快照加载失败，内置名单为空，仅剩服务端同步通道:', error);
-    });
 
   /**
    * 单个 article 的提取 + 检测 + 标注。
@@ -235,7 +217,7 @@ export function createScan(deps: {
     let result = runDetectionPipeline({
       input,
       community: state.community,
-      builtinList,
+      builtinList: state.builtinList,
       keywordHeuristics: state.keywordHeuristics,
       catalog: state.keywordCatalog,
       strength: state.strength,
@@ -248,7 +230,7 @@ export function createScan(deps: {
       result = runDetectionPipeline({
         input,
         community: state.community,
-        builtinList,
+        builtinList: state.builtinList,
         keywordHeuristics: [
           ...state.keywordHeuristics,
           {
@@ -300,9 +282,28 @@ export function createScan(deps: {
       return;
     }
 
+    // 命中的社区名单条目或 Campaign 指纹尚未在本地缓存到完整解释：排队向 SW 批查，
+    // 先挂基础黄框保证即时反馈，结果回来后仅原地升级徽章与页面账本。
+    if (result.detection?.source === 'community-list' && !result.communityEntry) {
+      state.requestCommunityEnrichment?.({ handle });
+    } else if (
+      result.detection?.source === 'fingerprint' &&
+      result.detection.matchedFingerprint &&
+      !result.detection.campaignEntryId
+    ) {
+      state.requestCommunityEnrichment?.({
+        handle,
+        fingerprint: result.detection.matchedFingerprint,
+      });
+    }
+
+    const enriching = pendingEnrichArticles.get(element) === handle;
+    pendingEnrichArticles.delete(element);
+    const countAsNew = changed && !enriching;
+
     // 本地规则质量观测：只有真正到达页面的命中才计数（见 detection-log.ts）；
-    // 装饰被 X 冲掉后的重建（changed=false）不是新命中，不重复计数/上报。
-    if (changed) {
+    // 装饰被 X 冲掉或 SW 补全详情后的重建（countAsNew=false）不是新命中，不重复计数/上报。
+    if (countAsNew) {
       void recordDetection({
         handle,
         ruleId: result.detection!.ruleId ?? result.detection!.source,
@@ -313,7 +314,7 @@ export function createScan(deps: {
       });
     }
     // 官方规则 / 内置启发式的命中匿名上报（名单命中、个人自定义词不报，见 rule-hit-uplink.ts）
-    if (changed) {
+    if (countAsNew) {
       const ruleHit = toReportableHit({
         handle,
         ruleId: result.detection!.ruleId,
@@ -339,9 +340,23 @@ export function createScan(deps: {
       item.text,
       item.author.displayName,
       item.postId,
-      changed,
+      countAsNew,
     );
   }
 
-  return { scanOne };
+  /** SW 批量查回社区条目 / Campaign 详情后，就地替换已标出的徽章与账本分类。 */
+  function rebuildForEnrichment(handles: ReadonlySet<string>): void {
+    for (const handle of handles) {
+      const articles = controller.articlesForHandle(handle);
+      if (articles.length === 0) continue;
+      for (const article of articles) {
+        const cell = article.closest(tweetSelectors.timelineCell) ?? article;
+        for (const badge of cell.querySelectorAll('.fs-badge')) badge.remove();
+        pendingEnrichArticles.set(article, handle);
+      }
+      controller.invalidateHandle(handle);
+    }
+  }
+
+  return { scanOne, rebuildForEnrichment };
 }

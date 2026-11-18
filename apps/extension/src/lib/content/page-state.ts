@@ -53,8 +53,12 @@ export interface ContentState {
   blockedCache: Set<string>;
   /** 当前登录用户自己的 handle（小写）：自己的帖子永不折叠也永不标注 */
   selfHandle: string | null;
-  /** 社区最终名单运行时状态（快照同步后的索引） */
+  /** 社区最终名单运行时状态（精简查表索引，SW 按命中懒查详情） */
   community: RuntimeCommunity | null;
+  /** 随包兜底名单的 handle 集合（由后台 SW 随运行时快照一并下发） */
+  builtinList: ReadonlySet<string>;
+  /** 命中社区账号或指纹时按微任务批量向 SW 请求完整解释与 Campaign 规模 */
+  requestCommunityEnrichment?: (hit: { handle?: string; fingerprint?: string }) => void;
   /** 检测总开关；关闭后仍保留用户主动「拉黑」入口。 */
   detectionEnabled: boolean;
   /** 自动贡献总开关（决定「抢救」按钮是否出现） */
@@ -91,6 +95,7 @@ export function createContentState(): ContentState {
   const notifyPageMarkedChanged = (): void => {
     window.clearTimeout(notifyMarkedTimer);
     notifyMarkedTimer = window.setTimeout(() => {
+      if (typeof browser === 'undefined' || !browser.runtime?.sendMessage) return;
       void browser.runtime
         .sendMessage({ type: 'feedsieve:page-marked-updated', count: pageMarked.size })
         .catch(() => {
@@ -108,6 +113,7 @@ export function createContentState(): ContentState {
     blockedCache: new Set<string>(),
     selfHandle: null,
     community: null,
+    builtinList: new Set<string>(),
     detectionEnabled: true,
     autoContribute: true,
     strength: 'standard',

@@ -1,5 +1,5 @@
 import { parseTrainingSample, type TrainingSample, type SampleAction } from '@feedsieve/shared';
-import { COMMUNITY_API_BASE, getCommunitySettings } from './community-store';
+import { COMMUNITY_API_BASE, getCommunitySettings } from './community-settings';
 import { getInstallationId } from './contribute';
 import type { BlockEvidence } from '../detection/detection-evidence';
 

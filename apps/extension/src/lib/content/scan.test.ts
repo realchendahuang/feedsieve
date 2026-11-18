@@ -11,12 +11,6 @@ import { createScan } from './scan';
 import { HIDDEN_TWEET_CELL_ATTRIBUTE, hideCellsSoon } from '../platform/remove-tweets';
 import { REDESIGN_TWEET_HTML } from '../../../../../fixtures/x/timeline/redesign';
 
-// 随包名单在测试里永不落地：避免 createScan 启动时触发 controller.reset() + 全页重扫，
-// 打乱用例里的 dirty / 快照状态。
-vi.mock('../community/community-store', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../community/community-store')>();
-  return { ...actual, getBundledEntries: () => new Promise<unknown[]>(() => {}) };
-});
 vi.mock('../detection/detection-log', () => ({ recordDetection: vi.fn(async () => {}) }));
 vi.mock('../stats/local-stats', () => ({ bumpStat: vi.fn(async () => {}) }));
 vi.mock('../stats/daily-stats', () => ({ bumpDaily: vi.fn(async () => {}) }));
@@ -240,5 +234,54 @@ describe('scanOne：X 重渲染后的装饰自愈', () => {
     hideCellsSoon([article], 0);
     await vi.advanceTimersByTimeAsync(10);
     expect(article.getAttribute(HIDDEN_TWEET_CELL_ATTRIBUTE)).toBe('1800000000000000001');
+  });
+
+  it('SW 批量查回完整社区条目后原地升级徽章与账本，且不重复计入统计', async () => {
+    let resolvedEntry: unknown = null;
+    const ctx = setup();
+    ctx.state.community = {
+      ...community(['spammer']),
+      index: {
+        version: 'test',
+        size: 1,
+        lookup: () => resolvedEntry as never,
+      },
+    };
+    const requested: Array<{ handle?: string; fingerprint?: string }> = [];
+    ctx.state.requestCommunityEnrichment = (hit) => requested.push(hit);
+
+    const { cell, article } = tweet({
+      handle: 'spammer',
+      postId: '3001',
+      text: 'normal text',
+    });
+
+    await scanOnce(ctx.controller, article);
+    expect(requested).toEqual([{ handle: 'spammer' }]);
+    expect(cell.querySelector('.fs-reason')?.textContent).toBe('名单命中');
+    expect(ctx.state.pageMarked.get('spammer')?.category).toBe('other');
+    expect(recordDetection).toHaveBeenCalledTimes(1);
+    expect(bumpStat).toHaveBeenCalledTimes(1);
+
+    resolvedEntry = {
+      handle: 'spammer',
+      x_user_id: null,
+      category: 'copy_paste',
+      sources: ['community'],
+      community_score: 0.9,
+      report_count: 6,
+      rescue_count: 0,
+      net_votes: 6,
+      first_seen_at: '2026-11-01T00:00:00.000Z',
+      updated_at: '2026-11-02T00:00:00.000Z',
+      evidence_post_ids: [],
+    };
+    ctx.scan.rebuildForEnrichment(new Set(['spammer']));
+    await vi.advanceTimersByTimeAsync(SCAN_DEBOUNCE_MS);
+
+    expect(cell.querySelector('.fs-reason')?.textContent).toContain('6');
+    expect(ctx.state.pageMarked.get('spammer')?.category).toBe('copy_paste');
+    expect(recordDetection).toHaveBeenCalledTimes(1);
+    expect(bumpStat).toHaveBeenCalledTimes(1);
   });
 });

@@ -23,7 +23,7 @@ import {
   shouldPauseForQuota,
   type SafetyPreset,
 } from '../queue/block-safety';
-import { requestOfficialPauseCheck } from '../community/community-store';
+import { requestOfficialPauseCheck } from '../community/community-settings';
 import { hideCellsSoon } from '../platform/remove-tweets';
 import type { BlockEvidence } from '../detection/detection-pipeline';
 import type { ContentState } from './page-state';
