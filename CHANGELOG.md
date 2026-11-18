@@ -7,6 +7,15 @@
 
 ## [Unreleased]
 
+## [0.19.3] — 2026-11-18
+
+### 修复
+
+- **继续加固新版 X 推文身份提取、界面净化边界与静音词签名桥**：
+  - **正文内状态链接隔离与无时间戳推广帖 `postId` 恢复**：提取推文 `postId` 与作者时排除正文、外链预览卡与社区备注里的 `/status/` 链接，避免新版详情页主帖提及他人推文时失配导致过滤与评论区入口失效；去掉时间戳链接的新版推广帖回退从回复动作读取本帖 `postId`，并在详情页结合 URL 身份识别竖排头部；「填入回复框」同步排除正文提及链接，补充 `/i/web/status/` 详情页上下文识别。
+  - **界面净化侧栏边界收紧与搜索页趋势净化恢复**：移除绕过标题前缀校验的 `fallbackAside` 兜底，将筛选单选组、任意输入框与页脚 / Premium 引导链接纳入侧栏非卡片边界，防止共用 `<aside>` 或卡片栈误藏搜索筛选与底部链接；恢复无 `sidebarColumn` 时搜索页与探索页右侧栏 `<aside>` 趋势净化；详情页隐藏付费推广改为严格按本帖自身 `postId` 豁免主帖（排除正文提及主帖链接的推广回复），旧版完全无状态 ID 的推广主帖排在父帖或前置广告之后时排除已知其它 ID 推文并优先按 URL 作者匹配豁免。
+  - **原生静音词签名桥冷启动与防混淆加固**：移除已在当前 X 线上构建中失效的硬编码模块号，改为在 `req.c` 未命中时按不可混淆的请求头与开关常量从 webpack 模块工厂表（`req.m`）按需加载签名模块，并补充导出键名混淆下的三参签名器回退与 `document_start` 冷启动重试。
+
 ## [0.19.2] — 2026-11-18
 
 ### 修复
@@ -731,7 +740,8 @@
 - 首个可用版本：黄框标注（内置名单 + 启发式，带理由）、顺手拉黑、待拉黑列表、一键批量拉黑（持久队列）、一键撤销、本地统计。
 - WXT + React 19 + MV3 最小权限架构；X DOM fixtures 锁定 reader→detector 契约；95 个单元测试；pre-push 本地质量门禁。
 
-[Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.19.1...HEAD
+[Unreleased]: https://github.com/realchendahuang/feedsieve/compare/v0.19.3...HEAD
+[0.19.3]: https://github.com/realchendahuang/feedsieve/compare/v0.19.2...v0.19.3
 [0.19.2]: https://github.com/realchendahuang/feedsieve/compare/v0.19.1...v0.19.2
 [0.19.1]: https://github.com/realchendahuang/feedsieve/compare/v0.19.0...v0.19.1
 [0.19.0]: https://github.com/realchendahuang/feedsieve/compare/v0.18.1...v0.19.0
