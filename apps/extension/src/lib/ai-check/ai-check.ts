@@ -55,6 +55,7 @@ import {
   type AiVoteOutcome,
 } from './client';
 import { actionIcon } from '../content/action-slot';
+import { findAuthorMetaRow } from '../content/author-header';
 
 const SITE_BASE = 'https://feedsieve.win';
 const MARK_ATTR = 'data-fs-ai-mark';
@@ -279,19 +280,23 @@ function ensureStyles(): void {
       color: rgba(255,255,255,.75); font-size: 12px; text-align: center; }
     .fs-ai-stop { margin-top: 12px; }
     /* 评论区：名字后面高对比标签 + 卡片左侧色条，点开看报告 */
-    .fs-ai-mark { display: inline-flex; align-items: center; gap: 4px; height: 22px; margin-left: 6px;
-      padding: 0 9px 0 7px; border-radius: 999px; font: 700 12px/1 system-ui, sans-serif; letter-spacing: .01em;
+    .fs-ai-mark { display: inline-flex; align-items: center; gap: 3px; height: 20px; margin-left: 6px;
+      padding: 0 7px 0 6px; border-radius: 999px; font: 700 11.5px/1 system-ui, sans-serif; letter-spacing: .01em;
       border: 0; background: #d81e2f; color: #fff; flex: none; align-self: center; white-space: nowrap;
       box-shadow: 0 1px 2px rgba(0,0,0,.28); }
-    .fs-ai-mark svg { width: 14px; height: 14px; flex: none; }
+    .fs-ai-mark::before { content: none; }
+    .fs-ai-mark svg { width: 12px; height: 12px; flex: none; }
     .fs-ai-mark[data-tone="mixed"] { background: #b45309; }
     .fs-ai-mark:hover { filter: brightness(1.1); }
     .fs-ai-mark:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
     /* 未检测的入口：@handle 前面的灰色机器人小圆，hover 变紫 */
     .fs-ai-entry { display: inline-flex; align-items: center; justify-content: center;
       width: 20px; height: 20px; margin-right: 4px; padding: 0; border: 0; border-radius: 50%;
-      background: rgba(113,118,123,.14); color: rgb(83,100,113); opacity: .85; cursor: pointer;
+      background: rgba(113,118,123,.14); color: rgb(83,100,113); opacity: .88; cursor: pointer;
       flex: none; align-self: center; }
+    .x-middot-group .fs-ai-entry { margin-right: 0; }
+    html[data-feedsieve-theme="dark"] .fs-ai-entry {
+      background: rgba(139,152,165,.16); color: rgb(139,152,165); }
     .fs-ai-entry svg { width: 14px; height: 14px; }
     .fs-ai-entry:hover { color: #7856ff; background: rgba(120,86,255,.14); opacity: 1; }
     .fs-ai-entry:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
@@ -567,13 +572,36 @@ export function createAiCheck(deps: {
   function nameRowOf(article: Element): Element | null {
     const area = findTweetAuthorArea(article);
     if (!area) return null;
-    const rows = [...area.children].filter(
-      (child) =>
-        !child.classList.contains('fs-tier') &&
-        !child.classList.contains('fs-ai-mark') &&
-        !child.classList.contains('fs-ai-entry'),
+    return findAuthorMetaRow(area) ?? area;
+  }
+
+  function hasFlexDirection(el: Element, direction: 'column' | 'row'): boolean {
+    if (typeof getComputedStyle !== 'function') return false;
+    const style = getComputedStyle(el);
+    return (
+      (style.display === 'flex' || style.display === 'inline-flex') &&
+      style.flexDirection.startsWith(direction)
     );
-    return rows[rows.length - 1] ?? area;
+  }
+
+  /**
+   * 从 @handle 节点往上跳过单子节点包装层（如 `<span>` 或 X 的竖排 `div.css-g5y9jx`）：
+   * 若直接塞进竖排包装 div，会把机器人图标堆在 `@handle` 正上方并撑高整行。
+   */
+  function canClimbHandleWrapper(parent: Element, area: Element): boolean {
+    if (parent === area) return false;
+    const nonEntry = [...parent.children].filter((c) => !c.classList.contains('fs-ai-entry'));
+    if (nonEntry.length > 1) return false;
+    if (parent.tagName === 'SPAN') return true;
+    const grand = parent.parentElement;
+    if (hasFlexDirection(parent, 'column')) {
+      // 详情页主帖的 User-Name 本身竖排，不要直接爬进竖排根容器
+      return !(grand === area && hasFlexDirection(area, 'column'));
+    }
+    if (hasFlexDirection(parent, 'row')) return false;
+    // 无样式测试环境（如 happy-dom）读不到 flex 类时：仅当上层存在同级行元素（如 · / 时间）才脱壳
+    if (!grand || grand === area) return false;
+    return [...grand.children].filter((c) => !c.classList.contains('fs-ai-entry')).length > 1;
   }
 
   function entrySlotOf(
@@ -590,13 +618,7 @@ export function createAiCheck(deps: {
     );
     if (handleNode) {
       let slot: Element = handleNode;
-      while (
-        slot.parentElement &&
-        slot.parentElement !== area &&
-        slot.parentElement.tagName === 'SPAN' &&
-        [...slot.parentElement.children].filter((c) => !c.classList.contains('fs-ai-entry'))
-          .length <= 1
-      ) {
+      while (slot.parentElement && canClimbHandleWrapper(slot.parentElement, area)) {
         slot = slot.parentElement;
       }
       if (slot.parentElement) {
@@ -605,6 +627,26 @@ export function createAiCheck(deps: {
     }
     const row = nameRowOf(article);
     return row ? { parent: row, before: row.firstChild } : null;
+  }
+
+  function buildMarkPill(
+    handle: string,
+    postId: string,
+    mark: { percent: number; tone: 'ai' | 'mixed' },
+  ): HTMLButtonElement {
+    const label = mark.percent < 0 ? t().markListed : t().mark(mark.percent);
+    const pill = el('button', 'fs-ai-mark');
+    pill.type = 'button';
+    pill.dataset.tone = mark.tone;
+    pill.title = t().markTip(label);
+    pill.setAttribute('aria-label', t().markTip(label));
+    pill.append(actionIcon('robot'), document.createTextNode(label));
+    pill.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      void openFor(handle, postId);
+    });
+    return pill;
   }
 
   /** 把「折叠了 N 条」那一行插到 cell 顶部；X 重渲冲掉后由 sync 逻辑再调一次。 */
@@ -711,21 +753,10 @@ export function createAiCheck(deps: {
         foldHost.removeAttribute(FOLD_ATTR);
         foldHost.querySelectorAll(':scope > .fs-ai-foldbar').forEach((b) => b.remove());
         if (mark) {
-          const nameRow = nameRowOf(article);
-          const label = mark.percent < 0 ? t().markListed : t().mark(mark.percent);
-          const pill = el('button', 'fs-ai-mark');
-          pill.type = 'button';
-          pill.dataset.tone = mark.tone;
-          pill.title = t().markTip(label);
-          pill.setAttribute('aria-label', t().markTip(label));
-          pill.append(actionIcon('robot'), document.createTextNode(label));
-          pill.addEventListener('click', (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            void openFor(handle, item.postId ?? undefined);
-          });
-          nameRow?.appendChild(pill);
+          nameRowOf(article)?.appendChild(buildMarkPill(handle, item.postId, mark));
         }
+      } else if (mark && !article.querySelector('.fs-ai-mark')) {
+        nameRowOf(article)?.appendChild(buildMarkPill(handle, item.postId, mark));
       }
 
       // 折叠态自愈：X 重渲染会把折叠条冲掉，属性却还在——那就是「内容没了、也没有展开按钮」，

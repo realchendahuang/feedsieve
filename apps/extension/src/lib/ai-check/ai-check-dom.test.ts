@@ -698,3 +698,106 @@ it('新版 X 评论区的机器人检测入口插在作者首行 @handle 前面�
   expect(entry.nextElementSibling?.textContent?.trim()).toBe('@sample_user');
   ai.stop();
 });
+
+it('旧版/现网 User-Name 下把 @handle 包在竖排 div 里时，机器人入口脱壳到同行，不堆在 @handle 上方', () => {
+  const opHtml = tweet('op', '500');
+  const replyHtml = `
+    <article data-testid="tweet">
+      <div data-testid="User-Name" style="display: flex; flex-direction: row;">
+        <div style="display: flex; flex-direction: row;"><a href="/ryxinxxxx"><span>ryxin</span></a></div>
+        <div style="display: flex; flex-direction: row;">
+          <div id="row2-inner" style="display: flex; flex-direction: row;">
+            <div id="handle-col-wrap" style="display: flex; flex-direction: column;">
+              <a href="/ryxinxxxx"><div><span>@ryxinxxxx</span></div></a>
+            </div>
+            <div><span>·</span></div>
+            <div><a href="/ryxinxxxx/status/501"><time>24分钟</time></a></div>
+          </div>
+        </div>
+      </div>
+      <div data-testid="tweetText">回复内容</div>
+      <div role="group"><button data-testid="like">like</button></div>
+    </article>`;
+  const { ai, tick } = setup('/op/status/500', `${opHtml}${replyHtml}`);
+  tick();
+  const entry = document.querySelector<HTMLElement>('.fs-ai-entry')!;
+  expect(entry).not.toBeNull();
+  expect(entry.parentElement?.id).toBe('row2-inner');
+  expect(entry.nextElementSibling?.id).toBe('handle-col-wrap');
+  ai.stop();
+});
+
+it('被直接点开的回复主帖自身为竖排 User-Name 时，机器人入口脱壳到横向行容器，不爬进竖排根容器', () => {
+  const focalReplyHtml = `
+    <article data-testid="tweet">
+      <div data-testid="User-Name" id="focal-name" style="display: flex; flex-direction: column;">
+        <div style="display: flex; flex-direction: row;"><a href="/replier"><span>Replier</span></a></div>
+        <div style="display: flex; flex-direction: row;">
+          <div id="focal-row2-inner" style="display: flex; flex-direction: row;">
+            <div id="focal-handle-col" style="display: flex; flex-direction: column;">
+              <a href="/replier"><div><span>@replier</span></div></a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-testid="tweetText">这是回复主帖</div>
+      <div><a href="/replier/status/300"><time>1h</time></a></div>
+      <div role="group"><button data-testid="like">like</button></div>
+    </article>`;
+  const { ai, tick } = setup('/replier/status/300', focalReplyHtml);
+  ai.ingest([
+    { postId: '100', handle: 'op', text: '原帖' },
+    {
+      postId: '300',
+      handle: 'replier',
+      text: '这是回复主帖',
+      inReplyToId: '100',
+      inReplyToHandle: 'op',
+    },
+  ]);
+  tick();
+  const entry = document.querySelector<HTMLElement>('.fs-ai-entry')!;
+  expect(entry).not.toBeNull();
+  expect(entry.parentElement?.id).toBe('focal-row2-inner');
+  expect(entry.nextElementSibling?.id).toBe('focal-handle-col');
+  ai.stop();
+});
+
+it('推广帖的 .x-middot-group 不把 AI 味标签塞进纯文本「推广」span 内', async () => {
+  const promoted = REDESIGN_TWEET_HTML.replace(
+    '<span><a class="x-link" href="/sample_user/status/1800000000000000001">1小时</a></span>',
+    '<span id="promo-label">推广</span>',
+  );
+  const { ai, tick } = setup('/op/status/1800000000000000000', promoted, undefined, {
+    aiListV1: { at: Date.now(), entries: [['sample_user', 0.92, 1]] },
+    aiCheckSettingsV1: { mode: 'mark', scope: 'all', markFollowing: false },
+  });
+  tick();
+  await new Promise((r) => setTimeout(r, 0));
+  tick();
+  const promo = document.getElementById('promo-label')!;
+  expect(promo.childElementCount).toBe(0);
+  expect(promo.textContent).toBe('推广');
+  expect(document.querySelector('.x-middot-group > .fs-ai-mark')).not.toBeNull();
+  ai.stop();
+});
+
+it('X 重渲染清掉 .fs-ai-mark 但保留标记属性时，下轮装饰自动补回标签', async () => {
+  const { ai, tick } = setup(
+    '/op/status/400',
+    [tweet('op', '400'), tweet('farm', '401')].join(''),
+    undefined,
+    {
+      aiListV1: { at: Date.now(), entries: [['farm', 0.92, 1]] },
+    },
+  );
+  tick();
+  await new Promise((r) => setTimeout(r, 0));
+  tick();
+  expect(document.querySelector('.fs-ai-mark')).not.toBeNull();
+  document.querySelector('.fs-ai-mark')!.remove();
+  expect(document.querySelector('.fs-ai-mark')).toBeNull();
+  ai.decorate();
+  expect(document.querySelector('.fs-ai-mark')).not.toBeNull();
+  ai.stop();
+});

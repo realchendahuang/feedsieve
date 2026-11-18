@@ -339,3 +339,85 @@ describe('hover number format', () => {
     expect(aboveCap.notes).toEqual([]);
   });
 });
+
+describe('reply page layout guards', () => {
+  it('ignores empty third-party shadow hosts next to caret and puts velocity at the front of the button group', () => {
+    const { store, decorations } = setup();
+    store.recordTweet({ postId: '9', handle: 'alice', createdAt: NOW - HOUR, views: 5_000 }, NOW);
+    const article = document.createElement('article');
+    article.setAttribute('data-testid', 'tweet');
+    article.innerHTML = `
+      <div class="header-row">
+        <div data-testid="User-Name"><div><a href="/alice">Alice</a></div><div><a href="/alice">@alice</a></div></div>
+        <div class="top-right-group">
+          <button>推广</button>
+          <div class="grok"><button>grok</button></div>
+          <div class="caret-wrap">
+            <div data-plasmo-shadow-container="true" class="notranslate"></div>
+            <button data-testid="caret">…</button>
+          </div>
+        </div>
+      </div>
+      <div data-testid="tweetText">text</div>
+      <div role="group"><button data-testid="like">like</button></div>`;
+    document.body.appendChild(article);
+    decorations.decorate(article, { postId: '9', author: { handle: 'alice' } });
+    const topRight = article.querySelector('.top-right-group')!;
+    expect(topRight.firstElementChild?.className).toBe('fs-velocity');
+    expect(article.querySelector('.caret-wrap .fs-velocity')).toBeNull();
+    decorations.dispose();
+  });
+
+  it('keeps velocity on the right side instead of before User-Name when a post only has caret', () => {
+    const { store, decorations } = setup();
+    store.recordTweet({ postId: '10', handle: 'alice', createdAt: NOW - HOUR, views: 5_000 }, NOW);
+    const article = document.createElement('article');
+    article.setAttribute('data-testid', 'tweet');
+    article.innerHTML = `
+      <div class="header-row">
+        <div data-testid="User-Name"><div><a href="/alice">Alice</a></div><div><a href="/alice">@alice</a></div></div>
+        <div class="only-caret"><button data-testid="caret">…</button></div>
+      </div>
+      <div data-testid="tweetText">text</div>
+      <div role="group"><button data-testid="like">like</button></div>`;
+    document.body.appendChild(article);
+    decorations.decorate(article, { postId: '10', author: { handle: 'alice' } });
+    const headerRow = article.querySelector('.header-row')!;
+    expect(headerRow.firstElementChild?.getAttribute('data-testid')).toBe('User-Name');
+    expect(article.querySelector('.only-caret')?.firstElementChild?.className).toBe('fs-velocity');
+    decorations.dispose();
+  });
+
+  it('keeps fs-tier before fs-ai-mark even when ai-check mounts first', () => {
+    const { store, decorations } = setup();
+    store.recordAuthor({ handle: 'alice', followers: 900 });
+    const article = tweetArticle('alice', '11');
+    const row2 = article.querySelector('.handle-row')!;
+    const mark = document.createElement('button');
+    mark.className = 'fs-ai-mark';
+    mark.textContent = 'AI 味 92%';
+    row2.appendChild(mark);
+
+    decorations.decorate(article, { postId: '11', author: { handle: 'alice' } });
+    const tier = row2.querySelector('.fs-tier')!;
+    expect(tier.nextElementSibling).toBe(mark);
+    decorations.dispose();
+  });
+
+  it('does not append fs-tier inside the leaf promoted label span in .x-middot-group', () => {
+    const { store, decorations } = setup();
+    document.body.innerHTML = REDESIGN_TWEET_HTML.replace(
+      '<span><a class="x-link" href="/sample_user/status/1800000000000000001">1小时</a></span>',
+      '<span id="promo-span">推广</span>',
+    );
+    const article = document.querySelector('article')!;
+    store.recordAuthor({ handle: 'sample_user', followers: 32_000 });
+    const item = extractFeedItem(article)!;
+    decorations.decorate(article, item);
+    const promo = document.getElementById('promo-span')!;
+    expect(promo.childElementCount).toBe(0);
+    expect(promo.textContent).toBe('推广');
+    expect(article.querySelector('.x-middot-group > .fs-tier')?.textContent).toBe('32K');
+    decorations.dispose();
+  });
+});
