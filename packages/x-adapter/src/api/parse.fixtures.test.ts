@@ -1,11 +1,11 @@
 // fixtures/x/graphql 是 2026-10-29 真实抓包后裁剪脱敏的响应（scripts/prune-x-fixture.mjs）。
 // 这里锁定解析契约：X 改响应形状时，这组测试应先挂。
 import { describe, expect, it } from 'vitest';
-import { mayMatchEndpoint, parseXApiResponse } from './parse';
 import homeTimeline from '../../../../fixtures/x/graphql/home-timeline.json';
 import tweetDetail from '../../../../fixtures/x/graphql/tweet-detail.json';
 import userByScreenName from '../../../../fixtures/x/graphql/user-by-screen-name.json';
 import userOriginalsTimeline from '../../../../fixtures/x/graphql/user-originals-timeline.json';
+import { mayMatchEndpoint, parseXApiResponse } from './parse';
 
 const GQL = 'https://x.com/i/api/graphql/abc123';
 

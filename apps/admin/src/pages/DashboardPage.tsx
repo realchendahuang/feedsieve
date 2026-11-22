@@ -1,4 +1,3 @@
-import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Activity,
@@ -11,6 +10,7 @@ import {
   Tag,
   UserSearch,
 } from 'lucide-react';
+import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Hint, LoadError, Loading, PageHeader } from '../components/layout';
 import { getDashboard } from '../lib/api';
@@ -52,16 +52,22 @@ function MetricCard({ metric }: { metric: Metric }) {
   const Icon = metric.icon;
   const style = COLOR_STYLES[metric.color] ?? COLOR_STYLES.amber;
   return (
-    <Card className={`group relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${style.cardHover}`}>
+    <Card
+      className={`group relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${style.cardHover}`}
+    >
       <CardContent className="space-y-2.5 p-5">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-semibold tracking-wide text-muted-foreground">{metric.label}</span>
-          <div className={`flex size-8 items-center justify-center rounded-lg border ${style.iconWrap}`}>
+          <span className="text-xs font-semibold tracking-wide text-muted-foreground">
+            {metric.label}
+          </span>
+          <div
+            className={`flex size-8 items-center justify-center rounded-lg border ${style.iconWrap}`}
+          >
             <Icon className="size-4" />
           </div>
         </div>
         <div className="flex items-baseline gap-2">
-          <div className="truncate text-3xl font-extrabold tracking-tight tabular-nums text-foreground">
+          <div className="truncate text-3xl font-extrabold tracking-tight text-foreground tabular-nums">
             {metric.value ?? '—'}
           </div>
           {metric.hint ? <Hint text={metric.hint} /> : null}
@@ -150,7 +156,7 @@ export function DashboardPage() {
               <MetricCard key={metric.label} metric={metric} />
             ))}
           </div>
-          <div className="mt-5 flex items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-2.5 text-xs text-muted-foreground w-fit">
+          <div className="mt-5 flex w-fit items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-2.5 text-xs text-muted-foreground">
             <Tag className="size-3.5 text-amber-600 dark:text-amber-400" />
             <span>名单快照版本</span>
             <strong className="font-semibold text-foreground">

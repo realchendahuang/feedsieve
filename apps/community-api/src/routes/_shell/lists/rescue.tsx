@@ -1,16 +1,17 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { getWhitelistData } from '@/site/data.functions';
-import { pageHead } from '@/site/seo';
-import { ListPageHeader, HelpIcon } from '@/site/pages/lists/lists-common';
 import type { RosterWhitelistEntry } from '@/roster';
+import { getWhitelistData } from '@/site/data.functions';
+import { ListPageHeader, HelpIcon } from '@/site/pages/lists/lists-common';
 import { RescuePanel } from '@/site/pages/lists/RescuePanel';
+import { pageHead } from '@/site/seo';
 
 export const Route = createFileRoute('/_shell/lists/rescue')({
   head: (ctx) => {
-    const roster = ctx.loaderData as Awaited<ReturnType<typeof getWhitelistData>> | undefined;
+    const roster = ctx.loaderData;
     return pageHead({
       title: '社区抢救名单公示',
-      description: 'FeedSieve 社区抢救公开镜像：被验证为「误标正常」的账号，与扩展执行的豁免口径同源。',
+      description:
+        'FeedSieve 社区抢救公开镜像：被验证为「误标正常」的账号，与扩展执行的豁免口径同源。',
       path: '/lists/rescue',
       ogImage: '/og/lists/rescue.png',
       noindex: !roster,
@@ -24,7 +25,7 @@ function RescueRoute() {
   const roster = Route.useLoaderData();
 
   return (
-    <main className="mx-auto max-w-5xl px-[clamp(18px,2.2vw,34px)] pb-16 pt-8">
+    <main className="mx-auto max-w-5xl px-[clamp(18px,2.2vw,34px)] pt-8 pb-16">
       <ListPageHeader
         title="社区抢救名单"
         meta={roster ? `快照 ${roster.snapshot_version}` : undefined}
@@ -40,7 +41,13 @@ function RescueRoute() {
         <div className="mt-6">
           <RescuePanel
             verified={roster.whitelist.verified}
-            whitelistHandles={new Set(roster.whitelist.maintained.map((e: RosterWhitelistEntry) => e.handle.toLowerCase()))}
+            whitelistHandles={
+              new Set(
+                roster.whitelist.maintained.map((e: RosterWhitelistEntry) =>
+                  e.handle.toLowerCase(),
+                ),
+              )
+            }
           />
         </div>
       )}

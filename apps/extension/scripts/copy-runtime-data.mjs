@@ -15,7 +15,10 @@ const publicDir = resolve(appDir, 'public/community');
 export const RUNTIME_DATA_COPIES = [
   { src: [repoRoot, 'community/lists/official.json'], dst: 'lists/official.json' },
   { src: [repoRoot, 'community/keyword-packs/official.json'], dst: 'keyword-packs/official.json' },
-  { src: [appDir, 'src/lib/detection/variant-tables.json'], dst: 'keyword-packs/variant-tables.json' },
+  {
+    src: [appDir, 'src/lib/detection/variant-tables.json'],
+    dst: 'keyword-packs/variant-tables.json',
+  },
 ];
 
 /** 把随包资源按清单拷入 public/community/，返回拷贝数。 */
@@ -30,5 +33,7 @@ export function copyRuntimeData() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const count = copyRuntimeData();
-  process.stdout.write(`[copy-runtime-data] ${count} 个随包资源已入 apps/extension/public/community/\n`);
+  process.stdout.write(
+    `[copy-runtime-data] ${count} 个随包资源已入 apps/extension/public/community/\n`,
+  );
 }

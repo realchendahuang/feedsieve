@@ -1,11 +1,11 @@
 import { env } from 'cloudflare:workers';
+import { sql, type SQL } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
+import { getDb } from '../src/db/client';
 import worker from '../src/index';
 import { refreshAccountsFromLabels } from '../src/labels';
-import { hashInstallationId } from '../src/lib/hash';
 import { computeConsensusV2, voteWeight, CONSENSUS_V2_POLICY } from '../src/lib/consensus-v2';
-import { sql, type SQL } from 'drizzle-orm';
-import { getDb } from '../src/db/client';
+import { hashInstallationId } from '../src/lib/hash';
 
 const ORIGIN = 'https://api.example.com';
 
@@ -144,12 +144,12 @@ describe('consensus v2 影子接入（集成）', () => {
     // 把这些安装伪装成「已存在 10 天」，并把其中一票挪到 3 天前 —— 模拟跨周、跨日观察者
     const tenDaysAgo = Math.floor(Date.now() / 1000) - 10 * 86400;
     for (const id of installs) {
-      const hashed = (await hashInstallationId(env.INSTALLATION_SALT, id)).toString();
+      const hashed = await hashInstallationId(env.INSTALLATION_SALT, id);
       await getDb(env).execute(
         sql`UPDATE installations SET first_seen_at = ${tenDaysAgo} WHERE id = ${hashed}`,
       );
     }
-    const firstHash = (await hashInstallationId(env.INSTALLATION_SALT, installs[0]!)).toString();
+    const firstHash = await hashInstallationId(env.INSTALLATION_SALT, installs[0]!);
     await getDb(env).execute(
       sql`UPDATE reports SET created_at = ${tenDaysAgo}
           WHERE installation_id = ${firstHash} AND handle = 'established'`,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { detect, normalizeHandle, toHandleSet } from './detect';
-import { DEFAULT_HEURISTICS } from './heuristics';
 import { fingerprintText, fingerprintTextV1 } from './fingerprint';
+import { DEFAULT_HEURISTICS } from './heuristics';
 
 const SEED_LIST = toHandleSet(['@SpamKing88', 'crypto_teacher']);
 const KNOWN_TEMPLATE_FP = fingerprintText(

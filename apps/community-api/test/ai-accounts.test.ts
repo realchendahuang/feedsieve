@@ -1,9 +1,7 @@
-import { count, eq, like, or } from 'drizzle-orm';
-import { getDb } from '../src/db/client';
-import { aiAccountVerdicts, meta, trainingSampleUsage } from '../src/db/schema';
 import { env } from 'cloudflare:workers';
+import { count, eq, like, or } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import worker from '../src/index';
+import { checkAiAccount, INSTALL_DAILY_CHECKS } from '../src/ai-accounts/check';
 import {
   buildReplies,
   decide,
@@ -11,7 +9,9 @@ import {
   rhythm,
   type VendorTimeline,
 } from '../src/ai-accounts/evidence';
-import { checkAiAccount, INSTALL_DAILY_CHECKS } from '../src/ai-accounts/check';
+import { getDb } from '../src/db/client';
+import { aiAccountVerdicts, meta, trainingSampleUsage } from '../src/db/schema';
+import worker from '../src/index';
 
 const INSTALL = 'install-0001-abcdef';
 const T0 = Date.parse('2026-10-30T06:00:00Z');
@@ -195,7 +195,7 @@ describe('POST /v1/ai-accounts/check', () => {
     expect(sent).not.toContain('bot_one');
     expect(sent).not.toContain('poster');
     expect(
-      (calls.jevBodies[0]?.input as { state: { reply_gaps_seconds: number[] } }).state
+      (calls.jevBodies[0]?.input as { state: { reply_gaps_seconds: number[] } } | undefined)?.state
         .reply_gaps_seconds,
     ).toHaveLength(9);
 

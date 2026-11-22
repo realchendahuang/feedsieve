@@ -407,7 +407,7 @@ export const importKeywordCatalog = () =>
 /** GET/POST /keywords/detector-config：天级判定参数（对象或 null=清除）。 */
 export const getDetectorConfig = () =>
   request<{ detector_config: unknown }>('/keywords/detector-config');
-export const saveDetectorConfig = (detector_config: unknown | null) =>
+export const saveDetectorConfig = (detector_config: unknown) =>
   request<{ saved: boolean | null; version: string | null }>('/keywords/detector-config', {
     method: 'POST',
     body: JSON.stringify({ detector_config }),

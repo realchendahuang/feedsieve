@@ -12,20 +12,20 @@
     "directory": "./dist/client",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": true
+    "run_worker_first": true,
   },
   // 本地 PostgreSQL；实际地址由 vitest.config.ts 的 miniflare.hyperdrives 覆盖（见 test/database-url.ts）
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
       "id": "00000000000000000000000000000000",
-      "localConnectionString": "postgres://feedsieve:feedsieve_dev_password@127.0.0.1:54330/feedsieve_test"
-    }
+      "localConnectionString": "postgres://feedsieve:feedsieve_dev_password@127.0.0.1:54330/feedsieve_test",
+    },
   ],
   "r2_buckets": [
     {
       "binding": "KEYWORD_PACKS",
-      "bucket_name": "feedsieve-keyword-packs"
-    }
-  ]
+      "bucket_name": "feedsieve-keyword-packs",
+    },
+  ],
 }

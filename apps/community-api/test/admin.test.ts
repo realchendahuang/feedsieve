@@ -1,9 +1,9 @@
 import { env } from 'cloudflare:workers';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import worker from '../src/index';
 import { getDb } from '../src/db/client';
 import { accounts } from '../src/db/schema';
+import worker from '../src/index';
 
 const ORIGIN = 'https://api.example.com';
 

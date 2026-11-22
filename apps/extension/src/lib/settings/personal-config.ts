@@ -1,6 +1,11 @@
 import { isMarkStrength, type MarkStrength } from '@feedsieve/community-lists';
+import { DEFAULT_AI_SETTINGS, normalizeAiSettings, type AiCheckSettings } from '../ai-check/client';
 import type { CommunitySettings } from '../community/community-settings';
-import type { UiLanguage } from '../platform/i18n';
+import {
+  DEFAULT_SCHEDULE_SETTINGS,
+  normalizeScheduleSettings,
+  type ScheduleSettings,
+} from '../compose/schedule-slots';
 import type { KeywordPackCatalog } from '../detection/keyword-packs';
 import {
   isValidPhrase,
@@ -9,11 +14,7 @@ import {
   type CustomKeywordRule,
   type KeywordRuleSettings,
 } from '../detection/keyword-rules';
-import {
-  DEFAULT_UI_SETTINGS,
-  normalizeUiSettings,
-  type UiSettings,
-} from './ui-settings';
+import type { UiLanguage } from '../platform/i18n';
 import {
   DEFAULT_MODULE_SETTINGS,
   normalizeModuleSettings,
@@ -24,16 +25,7 @@ import {
   normalizeSearchAssistPrefs,
   type SearchAssistPrefs,
 } from './search-assist';
-import {
-  DEFAULT_SCHEDULE_SETTINGS,
-  normalizeScheduleSettings,
-  type ScheduleSettings,
-} from '../compose/schedule-slots';
-import {
-  DEFAULT_AI_SETTINGS,
-  normalizeAiSettings,
-  type AiCheckSettings,
-} from '../ai-check/client';
+import { DEFAULT_UI_SETTINGS, normalizeUiSettings, type UiSettings } from './ui-settings';
 
 /**
  * 用户主动下载的本地配置文件。它只含可移植的规则与纯偏好设置，
@@ -268,11 +260,11 @@ function parseCustomPhrases(value: unknown): string[] | null {
   return cleanPhrases(phrases);
 }
 
-function parseBooleanGroup<K extends string>(
+function parseBooleanGroup<K extends string, T>(
   raw: unknown,
   keys: readonly K[],
-  normalize: (value: unknown) => Record<K, boolean>,
-): Record<K, boolean> | null {
+  normalize: (value: unknown) => T,
+): T | null {
   if (!isRecord(raw)) return null;
   for (const key of keys) {
     const entry = raw[key];
@@ -483,15 +475,11 @@ export function parsePersonalConfigDocument(text: string): PersonalConfigParseRe
 
   const uiSettings =
     raw.uiSettings !== undefined
-      ? (parseBooleanGroup(raw.uiSettings, UI_SETTING_KEYS, normalizeUiSettings) as
-          | UiSettings
-          | null)
+      ? parseBooleanGroup(raw.uiSettings, UI_SETTING_KEYS, normalizeUiSettings)
       : undefined;
   const modules =
     raw.modules !== undefined
-      ? (parseBooleanGroup(raw.modules, MODULE_SETTING_KEYS, normalizeModuleSettings) as
-          | ModuleSettings
-          | null)
+      ? parseBooleanGroup(raw.modules, MODULE_SETTING_KEYS, normalizeModuleSettings)
       : undefined;
   const composeSchedule =
     raw.composeSchedule !== undefined ? parseComposeSchedule(raw.composeSchedule) : undefined;

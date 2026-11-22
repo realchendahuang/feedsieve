@@ -82,7 +82,7 @@ describe('createProfileCatalog', () => {
       { at: NOW + 1, tweets: [tweet('4', 'alice', { kind: 'reply' })], authors: [] },
     ]);
     const entry = (await catalog.get('alice'))!;
-    expect(Object.keys(entry.posts).sort()).toEqual(['2', '4']);
+    expect(Object.keys(entry.posts).toSorted()).toEqual(['2', '4']);
     expect(entry.posts['2']).toMatchObject({ pinned: true, firstSeenAt: NOW });
     expect(entry.posts['4']?.kind).toBe('reply');
     expect(entry.account).toMatchObject({

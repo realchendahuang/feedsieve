@@ -7,8 +7,8 @@
  * 规则只消费 Reader 能稳定提供的字段：handle / displayName / text / links。
  */
 
-import type { DetectInput } from './detect';
 import { detectorConfig } from './config';
+import type { DetectInput } from './detect';
 
 /** 单条启发式的命中结论。null 表示未命中。 */
 export interface HeuristicRule {

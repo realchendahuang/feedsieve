@@ -44,7 +44,7 @@ const liteTables = lite
 const skipped = liteTables.filter((t) => !pgColumns.has(t));
 const tables = liteTables
   .filter((t) => pgColumns.has(t))
-  .sort(
+  .toSorted(
     (a, b) =>
       (ORDER_FIRST.includes(b) ? 1 : 0) - (ORDER_FIRST.includes(a) ? 1 : 0) ||
       (a < b ? -1 : a > b ? 1 : 0),

@@ -119,9 +119,7 @@ function sampleFromTweet(id, data) {
   const text = cutText(stripReplyNoise(data.text), MAX_TEXT);
   if (!text) return null;
   const createdMs = Date.parse(data.created_at);
-  const postedAt = Number.isFinite(createdMs)
-    ? Math.floor(createdMs / 1000)
-    : snowflakeSeconds(id);
+  const postedAt = Number.isFinite(createdMs) ? Math.floor(createdMs / 1000) : snowflakeSeconds(id);
   const parentId =
     typeof data.in_reply_to_status_id_str === 'string' &&
     POST_ID.test(data.in_reply_to_status_id_str)
@@ -166,7 +164,7 @@ async function main() {
     // 间隔是「与上一条回复」的差：按时间升序配对，第一条没有间隔
     const timed = rows
       .filter((row) => row.postedAt != null)
-      .sort((a, b) => a.postedAt - b.postedAt);
+      .toSorted((a, b) => a.postedAt - b.postedAt);
     for (let i = 1; i < timed.length; i += 1) {
       timed[i].gapSeconds = Math.max(0, timed[i].postedAt - timed[i - 1].postedAt);
     }

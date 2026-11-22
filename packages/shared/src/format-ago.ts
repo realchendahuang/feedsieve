@@ -9,7 +9,10 @@
 
 import type { Locale } from './categories';
 
-const AGO_LABELS: Record<Locale, { justNow: string; minutes: string; hours: string; days: string }> = {
+const AGO_LABELS: Record<
+  Locale,
+  { justNow: string; minutes: string; hours: string; days: string }
+> = {
   zh: { justNow: '刚刚', minutes: ' 分钟前', hours: ' 小时前', days: ' 天前' },
   en: { justNow: 'just now', minutes: 'm ago', hours: 'h ago', days: 'd ago' },
 };

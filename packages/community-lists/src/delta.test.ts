@@ -36,7 +36,7 @@ function verifiedEntry(handle: string) {
 
 /** 和服务端 generateSnapshot 同一种序列化。 */
 function body(version: string, extra: Record<string, unknown>): string {
-  const entries = (extra.entries as Array<{ handle: string }>).sort((a, b) =>
+  const entries = (extra.entries as Array<{ handle: string }>).toSorted((a, b) =>
     a.handle < b.handle ? -1 : a.handle > b.handle ? 1 : 0,
   );
   return `${JSON.stringify(
@@ -70,7 +70,7 @@ describe('snapshot delta', () => {
   it('rebuilds the exact target text from the base and the delta', () => {
     const delta = buildSnapshotDelta(BASE, TARGET);
     expect(delta.entries.remove).toEqual(['spam_b']);
-    expect(delta.entries.upsert.map((row) => row.handle).sort()).toEqual([
+    expect(delta.entries.upsert.map((row) => row.handle).toSorted()).toEqual([
       '_under',
       'new_one',
       'spam_a',

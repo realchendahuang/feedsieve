@@ -1,9 +1,9 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
-import worker from '../src/index';
+import { listCommunityCandidates } from '../src/candidates';
 import { getDb } from '../src/db/client';
 import { accounts } from '../src/db/schema';
-import { listCommunityCandidates } from '../src/candidates';
+import worker from '../src/index';
 
 const ORIGIN = 'https://api.example.com';
 

@@ -1,3 +1,4 @@
+import type { UiLanguage } from '../platform/i18n';
 /**
  * 高级搜索表单弹窗（懒加载块：用户第一次点击搜索框旁的高级搜索按钮时加载）。
  */
@@ -11,17 +12,13 @@ import {
   type SearchContent,
   type SearchSort,
 } from '../search/advanced';
-import type { UiLanguage } from '../platform/i18n';
 import {
   DEFAULT_SEARCH_ASSIST_PREFS,
   getSearchAssistPrefs,
   setSearchAssistPrefs,
   type SearchAssistPrefs,
 } from '../settings/search-assist';
-import {
-  SEARCH_ASSIST_BACKDROP_CLASS,
-  SEARCH_ASSIST_SHARED_COPY,
-} from './search-assist-shared';
+import { SEARCH_ASSIST_BACKDROP_CLASS, SEARCH_ASSIST_SHARED_COPY } from './search-assist-shared';
 
 const SAVE_DEBOUNCE_MS = 600;
 
@@ -258,6 +255,79 @@ export interface SearchAssistDialogController {
   stop(): void;
 }
 
+function textField(
+  label: string,
+  name: string,
+  value: string,
+  options: {
+    placeholder?: string;
+    wide?: boolean;
+    type?: 'text' | 'date';
+    inputMode?: 'numeric';
+    onInput: (value: string) => void;
+  },
+): HTMLElement {
+  const field = document.createElement('label');
+  field.className = `fs-adv-field${options.wide ? ' fs-adv-field-wide' : ''}`;
+  const caption = document.createElement('span');
+  caption.className = 'fs-adv-label';
+  caption.textContent = label;
+  const input = document.createElement('input');
+  input.type = options.type ?? 'text';
+  input.name = name;
+  if (options.inputMode) input.inputMode = options.inputMode;
+  input.value = value;
+  if (options.placeholder) input.placeholder = options.placeholder;
+  input.addEventListener('input', () => options.onInput(input.value));
+  field.append(caption, input);
+  return field;
+}
+
+function selectField(
+  label: string,
+  name: string,
+  value: string,
+  options: ReadonlyArray<readonly [string, string]>,
+  onChange: (value: string) => void,
+  wide = false,
+): HTMLElement {
+  const field = document.createElement('label');
+  field.className = `fs-adv-field${wide ? ' fs-adv-field-wide' : ''}`;
+  const caption = document.createElement('span');
+  caption.className = 'fs-adv-label';
+  caption.textContent = label;
+  const select = document.createElement('select');
+  select.name = name;
+  select.value = value;
+  for (const [key, text] of options) {
+    const option = document.createElement('option');
+    option.value = key;
+    option.textContent = text;
+    select.appendChild(option);
+  }
+  select.value = value;
+  select.addEventListener('change', () => onChange(select.value));
+  field.append(caption, select);
+  return field;
+}
+
+function checkField(
+  label: string,
+  name: string,
+  checked: boolean,
+  onChange: (value: boolean) => void,
+): HTMLElement {
+  const field = document.createElement('label');
+  field.className = 'fs-adv-check';
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.name = name;
+  input.checked = checked;
+  input.addEventListener('change', () => onChange(input.checked));
+  field.append(input, document.createTextNode(label));
+  return field;
+}
+
 export function createSearchAssistDialog(
   deps: SearchAssistDialogDeps,
 ): SearchAssistDialogController {
@@ -428,79 +498,6 @@ export function createSearchAssistDialog(
     icon.setAttribute('data-fs-tip', note);
     icon.setAttribute('data-fs-tip-title', copy().helpTitle);
     return icon;
-  }
-
-  function textField(
-    label: string,
-    name: string,
-    value: string,
-    options: {
-      placeholder?: string;
-      wide?: boolean;
-      type?: 'text' | 'date';
-      inputMode?: 'numeric';
-      onInput: (value: string) => void;
-    },
-  ): HTMLElement {
-    const field = document.createElement('label');
-    field.className = `fs-adv-field${options.wide ? ' fs-adv-field-wide' : ''}`;
-    const caption = document.createElement('span');
-    caption.className = 'fs-adv-label';
-    caption.textContent = label;
-    const input = document.createElement('input');
-    input.type = options.type ?? 'text';
-    input.name = name;
-    if (options.inputMode) input.inputMode = options.inputMode;
-    input.value = value;
-    if (options.placeholder) input.placeholder = options.placeholder;
-    input.addEventListener('input', () => options.onInput(input.value));
-    field.append(caption, input);
-    return field;
-  }
-
-  function selectField(
-    label: string,
-    name: string,
-    value: string,
-    options: ReadonlyArray<readonly [string, string]>,
-    onChange: (value: string) => void,
-    wide = false,
-  ): HTMLElement {
-    const field = document.createElement('label');
-    field.className = `fs-adv-field${wide ? ' fs-adv-field-wide' : ''}`;
-    const caption = document.createElement('span');
-    caption.className = 'fs-adv-label';
-    caption.textContent = label;
-    const select = document.createElement('select');
-    select.name = name;
-    select.value = value;
-    for (const [key, text] of options) {
-      const option = document.createElement('option');
-      option.value = key;
-      option.textContent = text;
-      select.appendChild(option);
-    }
-    select.value = value;
-    select.addEventListener('change', () => onChange(select.value));
-    field.append(caption, select);
-    return field;
-  }
-
-  function checkField(
-    label: string,
-    name: string,
-    checked: boolean,
-    onChange: (value: boolean) => void,
-  ): HTMLElement {
-    const field = document.createElement('label');
-    field.className = 'fs-adv-check';
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.name = name;
-    input.checked = checked;
-    input.addEventListener('change', () => onChange(input.checked));
-    field.append(input, document.createTextNode(label));
-    return field;
   }
 
   function section(

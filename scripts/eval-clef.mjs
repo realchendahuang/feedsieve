@@ -26,10 +26,10 @@
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { registerHooks } from 'node:module';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { registerHooks } from 'node:module';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -113,7 +113,8 @@ function readCases(path) {
     } catch (error) {
       throw new Error(`${path}:${index + 1} JSON 解析失败：${error.message}`, { cause: error });
     }
-    if (!row.id || !row.input?.handle) throw new Error(`${path}:${index + 1} 缺少 id 或 input.handle`);
+    if (!row.id || !row.input?.handle)
+      throw new Error(`${path}:${index + 1} 缺少 id 或 input.handle`);
     if (row.label !== 'spam' && row.label !== 'ham') {
       throw new Error(`${path}:${index + 1} label 必须是 spam/ham`);
     }
@@ -216,7 +217,7 @@ async function callClef(token, { state, questions, images }) {
 
 /** 固定并发池：顺序稳定，单条失败不拖垮整批。 */
 async function mapLimit(items, limit, fn) {
-  const results = new Array(items.length);
+  const results = Array.from({ length: items.length });
   let cursor = 0;
   const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
     for (;;) {
@@ -262,9 +263,19 @@ function tally(rows, scoreFn, threshold) {
 const clefScore = (row) => row.score;
 const rulesScore = (row) => (row.rules.marked ? 1 : 0);
 
+function meanValues(values) {
+  return values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
+}
+
+function rangeSpan(values) {
+  return values.length
+    ? `${Math.min(...values).toFixed(3)}–${Math.max(...values).toFixed(3)}`
+    : 'n/a';
+}
+
 function percentile(values, p) {
   if (!values.length) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
+  const sorted = values.toSorted((a, b) => a - b);
   const index = Math.min(sorted.length - 1, Math.max(0, Math.ceil((p / 100) * sorted.length) - 1));
   return sorted[index];
 }
@@ -359,9 +370,7 @@ function renderMarkdown(summary) {
   lines.push('');
   lines.push('## 分类别');
   lines.push('');
-  lines.push(
-    '| 类别 | 条数 | clef 均分 | clef P | clef R | clef F1 | 规则 P | 规则 R | 规则 F1 |',
-  );
+  lines.push('| 类别 | 条数 | clef 均分 | clef P | clef R | clef F1 | 规则 P | 规则 R | 规则 F1 |');
   lines.push('| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |');
   for (const row of summary.perCategory) {
     lines.push(
@@ -373,8 +382,12 @@ function renderMarkdown(summary) {
     lines.push('');
     lines.push('## AI 生成探测（单条文本）');
     lines.push('');
-    lines.push(`- 正样本（AI 拟定）均值 ${probe.positives.mean.toFixed(3)}，范围 ${probe.positives.range}`);
-    lines.push(`- 负样本（真人）均值 ${probe.negatives.mean.toFixed(3)}，范围 ${probe.negatives.range}`);
+    lines.push(
+      `- 正样本（AI 拟定）均值 ${probe.positives.mean.toFixed(3)}，范围 ${probe.positives.range}`,
+    );
+    lines.push(
+      `- 负样本（真人）均值 ${probe.negatives.mean.toFixed(3)}，范围 ${probe.negatives.range}`,
+    );
     lines.push(`- AUC ${probe.auc == null ? 'n/a' : probe.auc.toFixed(3)}（0.5 = 随机）`);
     lines.push(`- 额外 token ${probe.tokens}，失败 ${probe.failed}`);
   }
@@ -527,21 +540,26 @@ async function main() {
           latencyMs: answer.latencyMs,
         };
       } catch (error) {
-        return { id: row.id, category: row.category, ai: row.ai, score: null, error: error.message, tokens: 0, latencyMs: 0 };
+        return {
+          id: row.id,
+          category: row.category,
+          ai: row.ai,
+          score: null,
+          error: error.message,
+          tokens: 0,
+          latencyMs: 0,
+        };
       }
     });
     const good = probed.filter((row) => typeof row.score === 'number');
     const positives = good.filter((row) => row.ai).map((row) => row.score);
     const negatives = good.filter((row) => !row.ai).map((row) => row.score);
-    const mean = (values) => (values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0);
-    const span = (values) =>
-      values.length ? `${Math.min(...values).toFixed(3)}–${Math.max(...values).toFixed(3)}` : 'n/a';
     summary.probe = {
       question: AI_QUESTION.ai.instructions,
       total: probed.length,
       failed: probed.length - good.length,
-      positives: { n: positives.length, mean: mean(positives), range: span(positives) },
-      negatives: { n: negatives.length, mean: mean(negatives), range: span(negatives) },
+      positives: { n: positives.length, mean: meanValues(positives), range: rangeSpan(positives) },
+      negatives: { n: negatives.length, mean: meanValues(negatives), range: rangeSpan(negatives) },
       auc: auc(positives, negatives),
       tokens: good.reduce((sum, row) => sum + row.tokens, 0),
       rows: probed,

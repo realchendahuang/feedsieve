@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
-import type { Detection } from '@feedsieve/detector';
 import type { CommunityEntry } from '@feedsieve/community-lists';
+import type { Detection } from '@feedsieve/detector';
+import { describe, expect, it } from 'vitest';
 import { classifyDetection } from './detection-policy';
 
 function detection(source: Detection['source']): Detection {
@@ -31,7 +31,10 @@ describe('扩展检测安全政策', () => {
     );
     expect(
       classifyDetection({
-        detection: { ...detection('heuristic'), ruleId: 'keyword:official:adult-profile-collect-benefits' },
+        detection: {
+          ...detection('heuristic'),
+          ruleId: 'keyword:official:adult-profile-collect-benefits',
+        },
         strength: 'standard',
       }),
     ).toBe('review');

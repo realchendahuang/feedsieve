@@ -1,0 +1,75 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react", "unicorn", "oxc", "import", "vitest"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "options": {
+    "typeAware": true,
+    "denyWarnings": true,
+    "reportUnusedDisableDirectives": "error"
+  },
+  "env": {
+    "browser": true,
+    "es2022": true,
+    "node": true
+  },
+  "rules": {
+    "react/react-in-jsx-scope": "off",
+    "react/refs": "off",
+    "react/purity": "off",
+    "react/static-components": "off",
+    "react/preserve-manual-memoization": "off",
+    "react/exhaustive-effect-dependencies": "off",
+    "react/memo-dependencies": "off",
+    "typescript/no-explicit-any": "error",
+    "typescript/no-unsafe-type-assertion": "off",
+    "typescript/consistent-return": "off",
+    "typescript/no-unnecessary-type-parameters": "off",
+    "eslint/no-underscore-dangle": "off",
+    "import/no-unassigned-import": "off",
+    "oxc/no-async-endpoint-handlers": "off"
+  },
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/.output/**",
+    "**/.wxt/**",
+    "**/.wrangler/**",
+    "**/.tanstack/**",
+    "**/coverage/**",
+    "apps/community-api/drizzle/**",
+    "**/routeTree.gen.ts",
+    "**/*.gen.*",
+    "third_party/**",
+    "fixtures/**",
+    "community/**",
+    "orbital/**",
+    "apps/extension/public/community/**",
+    "apps/admin/src/components/ui/**",
+    "apps/community-api/src/site/components/ui/**"
+  ],
+  "overrides": [
+    {
+      "files": ["scripts/**/*.mjs", "apps/*/scripts/**/*.mjs"],
+      "env": {
+        "browser": false,
+        "node": true
+      },
+      "rules": {
+        "eslint/no-undef": "error"
+      }
+    },
+    {
+      "files": ["**/*.test.ts", "**/*.test.tsx"],
+      "rules": {
+        "vitest/no-conditional-tests": "off",
+        "vitest/no-conditional-expect": "off",
+        "vitest/require-mock-type-parameters": "off",
+        "vitest/require-to-throw-message": "off",
+        "unicorn/consistent-function-scoping": "off",
+        "typescript/unbound-method": "off"
+      }
+    }
+  ]
+}

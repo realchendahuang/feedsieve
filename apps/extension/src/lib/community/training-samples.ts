@@ -1,7 +1,7 @@
 import { parseTrainingSample, type TrainingSample, type SampleAction } from '@feedsieve/shared';
+import type { BlockEvidence } from '../detection/detection-evidence';
 import { COMMUNITY_API_BASE, getCommunitySettings } from './community-settings';
 import { getInstallationId } from './contribute';
-import type { BlockEvidence } from '../detection/detection-evidence';
 
 const PREFIX = 'trainingSamplePending:';
 let running: Promise<void> | null = null;

@@ -1,3 +1,4 @@
+import { env } from 'cloudflare:workers';
 /**
  * AI 号广场的回复样本（ai_account_samples）：判定落库 / 裁剪 / 清除。
  *
@@ -7,18 +8,17 @@
  * - 正文 ≤200 码点、原帖 ≤80 码点，写库前去 NUL（PG 的 text 不接受 U+0000）。
  */
 import { asc, count, eq } from 'drizzle-orm';
-import { env } from 'cloudflare:workers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getDb } from '../src/db/client';
-import { aiAccountSamples, aiAccountVerdicts, meta, trainingSampleUsage } from '../src/db/schema';
 import {
   MAX_SAMPLES_PER_HANDLE,
   checkAiAccount,
   saveVerdictSamples,
   type AiSampleRow,
 } from '../src/ai-accounts/check';
-import { judgeAiAccount } from '../src/ai-accounts/judge';
 import { type VendorTimeline } from '../src/ai-accounts/evidence';
+import { judgeAiAccount } from '../src/ai-accounts/judge';
+import { getDb } from '../src/db/client';
+import { aiAccountSamples, aiAccountVerdicts, meta, trainingSampleUsage } from '../src/db/schema';
 
 const INSTALL = 'install-0001-abcdef';
 const TWITTER_EPOCH = 1288834974657n;
@@ -98,9 +98,7 @@ function stubVendors(options: { data?: VendorTimeline; score?: number } = {}) {
         const handle = url.searchParams.get('screen_name') ?? '';
         return new Response(
           JSON.stringify({
-            data:
-              options.data ??
-              timeline(handle, 10, Date.parse('2026-10-30T06:00:00Z')),
+            data: options.data ?? timeline(handle, 10, Date.parse('2026-10-30T06:00:00Z')),
           }),
           { status: 200 },
         );
@@ -143,17 +141,12 @@ describe('judge 路径落库样本（扩展直传）', () => {
     const long = '很长的回复正文'.repeat(40); // 280 码点，超过 200 的写库上限
     const payload = replies(now, 10, {
       tag: 'a',
-      text: (i) =>
-        i === 3
-          ? long
-          : i === 4
-            ? '有\u0000效回复'
-            : `第 a${i} 条回复：先跑通再说。`,
+      text: (i) => (i === 3 ? long : i === 4 ? '有\u0000效回复' : `第 a${i} 条回复：先跑通再说。`),
     });
     const result = await judgeAiAccount(
       keyed(),
       // 扩展上报的列表是「从新到旧」，落库要按时间重新排
-      { installation_id: INSTALL, handle: '@Bot_Sample', replies: [...payload].reverse() },
+      { installation_id: INSTALL, handle: '@Bot_Sample', replies: payload.toReversed() },
       undefined,
       now,
     );
@@ -175,7 +168,7 @@ describe('judge 路径落库样本（扩展直传）', () => {
     expect(rows[9]).toMatchObject({ postedAt: nowS + 9 * 300, gapSeconds: 300 });
     // 正文按码点截到 200，且 U+0000 已被去掉（PG 的 text 不接受 NUL）
     const longRow = rows.find((row) => row.text.startsWith('很长的回复正文'))!;
-    expect([...longRow.text]).toHaveLength(200);
+    expect(Array.from(longRow.text)).toHaveLength(200);
     expect(rows.some((row) => row.text === '有效回复')).toBe(true);
     expect(rows.every((row) => !row.text.includes('\u0000'))).toBe(true);
     expect(rows.every((row) => row.parentText?.startsWith('原帖 '))).toBe(true);
@@ -224,7 +217,11 @@ describe('judge 路径落库样本（扩展直传）', () => {
     stubVendors({ score: 0.05 });
     const human = await judgeAiAccount(
       keyed(),
-      { installation_id: INSTALL, handle: 'flip_flop', replies: replies(now + 9 * DAY_MS, 10, { tag: 'b' }) },
+      {
+        installation_id: INSTALL,
+        handle: 'flip_flop',
+        replies: replies(now + 9 * DAY_MS, 10, { tag: 'b' }),
+      },
       undefined,
       now + 9 * DAY_MS,
     );
@@ -328,8 +325,8 @@ describe('saveVerdictSamples 兜底规则', () => {
       source: 'judge',
       createdAt: nowS,
     });
-    const row = (tweetId: string): AiSampleRow => ({
-      tweetId,
+    const row = (id: string): AiSampleRow => ({
+      tweetId: id,
       parentId: null,
       text: '新样本',
       parentText: null,

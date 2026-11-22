@@ -46,7 +46,7 @@ function textW(s: string, size: number): number {
  * OG 卡没有自动换行，锐评最长 60 个汉字，单行放不下，所以给两行。
  */
 export function wrapLines(s: string, maxW: number, size: number, maxLines: number): string[] {
-  const chars = [...s];
+  const chars = Array.from(s);
   const lines: string[] = [];
   let rest = chars;
   while (rest.length && lines.length < maxLines) {
@@ -66,7 +66,7 @@ export function wrapLines(s: string, maxW: number, size: number, maxLines: numbe
 /** 超宽截断：留出一个省略号的宽度 */
 export function truncate(s: string, maxW: number, size: number): string {
   if (textW(s, size) <= maxW) return s;
-  const chars = [...s];
+  const chars = Array.from(s);
   while (chars.length > 1 && textW(chars.join(''), size) > maxW - size) chars.pop();
   return chars.join('') + '…';
 }
@@ -219,7 +219,7 @@ export function aiCardOgSvg(card: AiOgCard): string {
           ? AI_TONE[card.tone]
           : GOLD;
   const name = card.displayName?.trim() || `@${card.handle}`;
-  const initial = esc([...name.replace(/^@/, '')][0]?.toUpperCase() ?? '?');
+  const initial = esc(Array.from(name.replace(/^@/, ''))[0]?.toUpperCase() ?? '?');
   const avatar = card.avatar
     ? `<clipPath id="aiav"><circle cx="126" cy="200" r="54"/></clipPath>
 <image x="72" y="146" width="108" height="108" clip-path="url(#aiav)" preserveAspectRatio="xMidYMid slice" href="${card.avatar}"/>`

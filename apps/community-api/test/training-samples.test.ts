@@ -1,8 +1,7 @@
 import { env } from 'cloudflare:workers';
-import { describe, expect, it } from 'vitest';
 import { count, eq, inArray } from 'drizzle-orm';
-import { hashInstallationId, hashIp } from '../src/lib/hash';
-import worker from '../src/index';
+import { max } from 'drizzle-orm';
+import { describe, expect, it } from 'vitest';
 import { getDb } from '../src/db/client';
 import {
   activeLabels,
@@ -10,13 +9,14 @@ import {
   trainingSamples,
   trainingSampleUsage,
 } from '../src/db/schema';
-import { max } from 'drizzle-orm';
+import worker from '../src/index';
+import { hashInstallationId, hashIp } from '../src/lib/hash';
+import { validateRescue } from '../src/lib/validate';
 import {
   ingestTrainingSamples,
   listTrainingSamples,
   reviewTrainingSample,
 } from '../src/training-samples';
-import { validateRescue } from '../src/lib/validate';
 const sample = () => ({
   schemaVersion: 1,
   eventId: crypto.randomUUID(),
@@ -197,7 +197,7 @@ describe('immutable samples independent of votes', () => {
     const before = { id: maxRow?.id ?? 0 };
     const s = sample();
     await ingestTrainingSamples(env, { installation_id: 'watermark-install', samples: [s] });
-    const first = await listTrainingSamples(env, before!.id);
+    const first = await listTrainingSamples(env, before.id);
     const item = first.entries.find((e) => e.sample.eventId === s.eventId)!;
     await reviewTrainingSample(
       env,
@@ -206,7 +206,7 @@ describe('immutable samples independent of votes', () => {
       'reviewer',
     );
     await ingestTrainingSamples(env, { installation_id: 'watermark-install', samples: [sample()] });
-    const frozen = await listTrainingSamples(env, before!.id, 200, first.until, first.review_until);
+    const frozen = await listTrainingSamples(env, before.id, 200, first.until, first.review_until);
     expect(frozen.entries.find((e) => e.id === item.id)?.verdict).toBeNull();
     expect(frozen.entries.every((e) => e.id <= first.until)).toBe(true);
   });

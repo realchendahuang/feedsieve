@@ -1,9 +1,9 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
-import worker from '../src/index';
-import { generateSnapshot } from '../src/snapshot';
 import { getDb } from '../src/db/client';
+import worker from '../src/index';
 import { upsertMaintainerWhitelist } from '../src/maintainer-whitelist';
+import { generateSnapshot } from '../src/snapshot';
 
 const ORIGIN = 'https://api.example.com';
 
@@ -97,7 +97,7 @@ describe('GET /v1/roster/latest（官网名单公示）', () => {
     const res = await worker.fetch(new Request(`${ORIGIN}/v1/roster/latest`), env);
     expect(res.status).toBe(200);
     expect(res.headers.get('cache-control')).toBe('public, max-age=300');
-    const roster = (await res.json()) as RosterResponse;
+    const roster = await res.json<RosterResponse>();
 
     expect(roster.snapshot_version).toMatch(/^\d{4}\.\d{2}\.\d{2}\.\d{1,4}$/);
     expect(roster.generated_at).toBeTruthy();
@@ -130,9 +130,11 @@ describe('GET /v1/roster/latest（官网名单公示）', () => {
 
   it('公示面公开证据明细（evidence_post_ids / domains / aliases），指纹永不外泄', async () => {
     const res = await worker.fetch(new Request(`${ORIGIN}/v1/roster/latest`), env);
-    const roster = (await res.json()) as RosterResponse & {
-      blacklist: { entries: Record<string, unknown>[] };
-    };
+    const roster = await res.json<
+      RosterResponse & {
+        blacklist: { entries: Record<string, unknown>[] };
+      }
+    >();
     for (const entry of roster.blacklist.entries) {
       expect(entry.fingerprints).toBeUndefined();
     }

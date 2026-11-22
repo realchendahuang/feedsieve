@@ -156,7 +156,7 @@ function num(value: number | string | null | undefined): number | null {
 
 /** 按码点截断，去掉截断产生的孤立代理项 */
 export function cutChars(value: string, max = VIEW_TEXT_CHARS): string {
-  const chars = [...value];
+  const chars = Array.from(value);
   if (chars.length <= max) return value;
   return chars
     .slice(0, max)
@@ -261,7 +261,7 @@ async function loadSamples(
   for (const row of rowsOf<SampleRow & { rn: number | string }>(result)) {
     const list = out.get(row.handle) ?? [];
     list.push({
-      tweetId: String(row.tweet_id),
+      tweetId: row.tweet_id,
       text: cutChars(row.text),
       parentText: row.parent_text,
       postedAt: num(row.posted_at),
@@ -382,8 +382,8 @@ function toEntry(row: PublicRow, samples: AiSampleView[]): AiSquareEntry {
     kind: row.verdict === 'suspect' ? 'suspect' : 'ai',
     origin,
     audit: null,
-    score: row.score == null ? null : Number(row.score),
-    listed: Boolean(row.listed),
+    score: row.score ?? null,
+    listed: row.listed,
     votes: { ai_count: num(row.ai_count) ?? 0, human_count: num(row.human_count) ?? 0 },
     rhythm: rhythm
       ? {

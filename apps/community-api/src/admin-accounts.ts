@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
 import { getDb } from './db/client';
 import { adminAccountDrafts, adminAuditLog, adminReleases, maintainerBlocklist } from './db/schema';
+import { collateC, escapeLike } from './lib/sql';
 import {
   deactivateMaintainerEntries,
   insertMaintainerAudits,
@@ -9,7 +10,6 @@ import {
   type MaintainerAuditRow,
 } from './maintainer-blocklist';
 import { generateSnapshot } from './snapshot';
-import { collateC, escapeLike } from './lib/sql';
 
 export interface AccountDraft {
   handle: string;

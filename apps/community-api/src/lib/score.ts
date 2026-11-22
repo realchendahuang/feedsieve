@@ -38,9 +38,7 @@ export function computeScore(input: ScoreInput): number {
   );
   score += dayBonus;
 
-  const isBurst =
-    input.reportCount >= SCORE_POLICY.burstMinReports &&
-    input.distinctDays <= 1;
+  const isBurst = input.reportCount >= SCORE_POLICY.burstMinReports && input.distinctDays <= 1;
   if (isBurst) {
     score *= SCORE_POLICY.burstPenaltyFactor;
   }

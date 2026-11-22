@@ -1,9 +1,9 @@
 import { env } from 'cloudflare:workers';
 import { desc, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import worker from '../src/index';
 import { getDb } from '../src/db/client';
 import { accounts, adminAuditLog } from '../src/db/schema';
+import worker from '../src/index';
 import { getSnapshotFile, SNAPSHOT_PACK } from '../src/snapshot';
 
 const ORIGIN = 'https://api.example.com';
@@ -13,10 +13,12 @@ const KEYED_ENV = { ...env, AGENT_API_KEYS: `ops:${AGENT_KEY}` } as typeof env;
 
 function agentRequest(path: string, init: RequestInit = {}): Promise<Response> {
   // cast 到 worker.fetch 期望的 Request 泛型；Promise.resolve 摊平 Response | Promise<Response>
+  const headers = new Headers(init.headers);
+  headers.set('x-agent-key', AGENT_KEY);
   const request = new Request(`${ORIGIN}${path}`, {
     ...init,
-    headers: { 'x-agent-key': AGENT_KEY, ...(init.headers ?? {}) },
-  }) as unknown as Parameters<typeof worker.fetch>[0];
+    headers,
+  }) as unknown;
   return Promise.resolve(worker.fetch(request, KEYED_ENV));
 }
 
@@ -30,7 +32,7 @@ function putEntry(handle: string): Promise<Response> {
 
 async function latestVersion(envLike: typeof env): Promise<string> {
   const latest = await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), envLike);
-  const manifest = (await latest.json()) as { snapshot_version: string };
+  const manifest = await latest.json<{ snapshot_version: string }>();
   return manifest.snapshot_version;
 }
 
@@ -62,12 +64,12 @@ describe('agent maintenance API', () => {
   it('PUT 新增 → 立即发布进快照，审计以 agent:ops 身份记录', async () => {
     const res = await putEntry('agent_new_user');
     expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = await res.json<{
       ok: boolean;
       action: string;
       handle: string;
       snapshot_version: string;
-    };
+    }>();
     expect(body.ok).toBe(true);
     expect(body.action).toBe('add');
     expect(body.handle).toBe('agent_new_user');
@@ -107,7 +109,7 @@ describe('agent maintenance API', () => {
 
     const res = await agentRequest('/api/agent/entries/agent_del_user', { method: 'DELETE' });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { ok: boolean; changed: boolean };
+    const body = await res.json<{ ok: boolean; changed: boolean }>();
     expect(body.ok).toBe(true);
     expect(body.changed).toBe(true);
 
@@ -116,7 +118,7 @@ describe('agent maintenance API', () => {
 
     // 幂等：再次撤销返回 ok + changed:false
     const again = await agentRequest('/api/agent/entries/agent_del_user', { method: 'DELETE' });
-    expect((await again.json()) as { changed: boolean }).toEqual({ ok: true, changed: false });
+    expect(await again.json<{ changed: boolean }>()).toEqual({ ok: true, changed: false });
   });
 
   it('词库：PUT pack/rule + publish → R2 产物与审计（agent:ops）', async () => {
@@ -131,7 +133,7 @@ describe('agent maintenance API', () => {
       }),
     });
     expect(packRes.status).toBe(200);
-    expect((await packRes.json()) as { id: string }).toEqual({ ok: true, id: packId });
+    expect(await packRes.json<{ id: string }>()).toEqual({ ok: true, id: packId });
 
     const ruleId = 'agent-rule-a';
     const ruleRes = await agentRequest(`/api/agent/keywords/rules/${ruleId}`, {
@@ -146,15 +148,15 @@ describe('agent maintenance API', () => {
       }),
     });
     expect(ruleRes.status).toBe(200);
-    expect((await ruleRes.json()) as { id: string }).toEqual({ ok: true, id: ruleId });
+    expect(await ruleRes.json<{ id: string }>()).toEqual({ ok: true, id: ruleId });
 
     const published = await agentRequest('/api/agent/keywords/publish', { method: 'POST' });
     expect(published.status).toBe(200);
-    const body = (await published.json()) as {
+    const body = await published.json<{
       version: string;
       packs: number;
       rules: number;
-    };
+    }>();
     expect(body.version).toMatch(/^\d{4}\.\d{2}\.\d{2}\.\d+$/);
     expect(body.rules).toBeGreaterThanOrEqual(1);
 
@@ -187,10 +189,10 @@ describe('agent maintenance API', () => {
       }),
     });
     const del = await agentRequest(`/api/agent/keywords/packs/${packId}`, { method: 'DELETE' });
-    expect((await del.json()) as { changed: boolean }).toEqual({ ok: true, changed: true });
+    expect(await del.json<{ changed: boolean }>()).toEqual({ ok: true, changed: true });
     await agentRequest('/api/agent/keywords/publish', { method: 'POST' });
     const keywords = await agentRequest('/api/agent/keywords');
-    const data = (await keywords.json()) as { packs: Array<{ id: string; active: boolean }> };
+    const data = await keywords.json<{ packs: Array<{ id: string; active: boolean }> }>();
     expect(data.packs.find((pack) => pack.id === packId)?.active).toBe(false);
   });
 
@@ -218,26 +220,26 @@ describe('agent maintenance API', () => {
     await agentRequest('/api/agent/keywords/publish', { method: 'POST' });
     const statusRes = await agentRequest('/api/agent/status');
     expect(statusRes.status).toBe(200);
-    const status = (await statusRes.json()) as {
+    const status = await statusRes.json<{
       snapshot: { version: string | null; entries: number };
       kill_switch: unknown;
       community: { listed: number; maintainer_entries: number };
       keywords: { pack_version: string | null; signed: boolean };
-    };
+    }>();
     expect(typeof status.snapshot.version).toBe('string');
     expect(status.community.listed).toBeGreaterThanOrEqual(0);
     expect(typeof status.keywords.pack_version).toBe('string');
 
     const releases = await agentRequest('/api/agent/releases');
-    expect((await releases.json()) as { releases: unknown[] }).toHaveProperty('releases');
+    expect(await releases.json<{ releases: unknown[] }>()).toHaveProperty('releases');
 
     const audit = await agentRequest('/api/agent/audit?limit=10');
-    const auditBody = (await audit.json()) as { audit: Array<{ actor_email: string }> };
+    const auditBody = await audit.json<{ audit: Array<{ actor_email: string }> }>();
     expect(Array.isArray(auditBody.audit)).toBe(true);
     expect(auditBody.audit.some((row) => row.actor_email === 'agent:ops')).toBe(true);
 
     const assets = await agentRequest('/api/agent/assets?prefix=keyword-packs/');
-    const assetsBody = (await assets.json()) as { assets: Array<{ key: string }> };
+    const assetsBody = await assets.json<{ assets: Array<{ key: string }> }>();
     expect(assetsBody.assets.length).toBeGreaterThan(0);
     expect(assetsBody.assets.some((asset) => asset.key === 'keyword-packs/latest.json')).toBe(true);
   });
@@ -264,7 +266,7 @@ describe('agent maintenance API', () => {
     expect(row?.category).toBe('other');
 
     const audit = await agentRequest('/api/agent/audit?limit=10');
-    const auditBody = (await audit.json()) as { audit: Array<{ action: string }> };
+    const auditBody = await audit.json<{ audit: Array<{ action: string }> }>();
     expect(auditBody.audit.some((auditRow) => auditRow.action === 'recompute_categories')).toBe(
       true,
     );

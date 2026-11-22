@@ -8,8 +8,8 @@ import { createServerFn } from '@tanstack/react-start';
 import { env } from 'cloudflare:workers';
 import { getPublicRoster, type RosterPayload } from '../roster';
 
-export const getRosterData = createServerFn({ method: 'GET' }).handler(async (): Promise<RosterPayload | null> =>
-  getPublicRoster(env),
+export const getRosterData = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<RosterPayload | null> => getPublicRoster(env),
 );
 
 /** 白名单/抢救公示面的瘦身 loader：这两个页面用不到 blacklist.entries（含全部
@@ -35,7 +35,8 @@ export interface KeywordPackView {
   id: string;
   name: { zh: string } | null;
   rules: Array<{ phrase: string }>;
-}export interface KeywordPublicData {
+}
+export interface KeywordPublicData {
   pack_version: string;
   signed: boolean;
   total_rules: number;
@@ -67,14 +68,19 @@ export const getKeywordData = createServerFn({
   );
   const bodyRaw = bodyObject ? await bodyObject.text() : null;
   if (!bodyRaw) return null;
-  let body: { packs?: Array<{ id?: unknown; name?: unknown; rules?: Array<Record<string, unknown>> }> };
+  let body: {
+    packs?: Array<{ id?: unknown; name?: unknown; rules?: Array<Record<string, unknown>> }>;
+  };
   try {
     body = JSON.parse(bodyRaw) as typeof body;
   } catch {
     return null;
   }
   const packs: KeywordPackView[] = (body.packs ?? [])
-    .filter((p): p is object => typeof p === 'object' && p !== null && typeof (p as { id?: unknown }).id === 'string')
+    .filter(
+      (p): p is object =>
+        typeof p === 'object' && p !== null && typeof (p as { id?: unknown }).id === 'string',
+    )
     .map((p) => {
       const raw = p as { id: string; name?: { zh?: unknown }; rules?: unknown };
       const list = Array.isArray(raw.rules) ? (raw.rules as Array<Record<string, unknown>>) : [];
@@ -99,7 +105,9 @@ let keywordMemo: { version: string; value: KeywordPublicData } | null = null;
 
 function rawRulesToPhrases(raw: Array<Record<string, unknown>>): Array<{ phrase: string }> {
   return raw
-    .map((rule) => (typeof rule.phrase === 'string' ? rule.phrase : (typeof rule.id === 'string' ? rule.id : '')))
+    .map((rule) =>
+      typeof rule.phrase === 'string' ? rule.phrase : typeof rule.id === 'string' ? rule.id : '',
+    )
     .filter((phrase) => phrase.length > 0)
     .map((phrase) => ({ phrase }));
 }
@@ -118,26 +126,33 @@ export interface WeeklyPick {
   issueNumber: number | null;
   createdAt: string;
   author: { handle: string | null; displayName: string } | null;
-  source: { authorName: string | null; authorHandle: string | null; text: string | null; whitelisted: boolean } | null;
+  source: {
+    authorName: string | null;
+    authorHandle: string | null;
+    text: string | null;
+    whitelisted: boolean;
+  } | null;
 }
 
-export const getWeeklyPicks = createServerFn({ method: 'GET' }).handler(async (): Promise<WeeklyPick[] | null> => {
-  if (!env.WEEKLY) return null;
-  try {
-    const res = await env.WEEKLY.fetch('https://feedsieve.win/weekly/api/public/hot?limit=6', {
-      signal: AbortSignal.timeout(3000),
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { items?: WeeklyPick[] };
-    return Array.isArray(data.items) ? data.items : null;
-  } catch {
-    return null;
-  }
-});
+export const getWeeklyPicks = createServerFn({ method: 'GET' }).handler(
+  async (): Promise<WeeklyPick[] | null> => {
+    if (!env.WEEKLY) return null;
+    try {
+      const res = await env.WEEKLY.fetch('https://feedsieve.win/weekly/api/public/hot?limit=6', {
+        signal: AbortSignal.timeout(3000),
+      });
+      if (!res.ok) return null;
+      const data = await res.json<{ items?: WeeklyPick[] }>();
+      return Array.isArray(data.items) ? data.items : null;
+    } catch {
+      return null;
+    }
+  },
+);
 
 /** AI 味公开结果页（/ai/:handle）：只给可公开的结论，单人未确认的显示「待复核」（见 ai-accounts/public-page.ts） */
 export const getAiPublicData = createServerFn({ method: 'GET' })
-  .validator((data: { handle: string }) => ({ handle: String(data?.handle ?? '').slice(0, 32) }))
+  .validator((data: { handle: string }) => ({ handle: (data?.handle ?? '').slice(0, 32) }))
   .handler(async ({ data }) => {
     const { getAiPublic } = await import('../ai-accounts/public-page');
     return getAiPublic(env, data.handle);
@@ -151,7 +166,7 @@ export const getAiSquareData = createServerFn({ method: 'GET' }).handler(async (
 
 /** AI 号广场单人详情（/ai/:handle）：广场口径的完整条目；不可公示返回 null */
 export const getAiSquareDetail = createServerFn({ method: 'GET' })
-  .validator((data: { handle: string }) => ({ handle: String(data?.handle ?? '').slice(0, 32) }))
+  .validator((data: { handle: string }) => ({ handle: (data?.handle ?? '').slice(0, 32) }))
   .handler(async ({ data }) => {
     const { getAiSquareDetail: load } = await import('../ai-accounts/square');
     return load(env, data.handle);

@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
 import { analyzeProfile, HEATMAP_SLOT_HOURS } from '@feedsieve/metrics';
+import { useMemo, useState } from 'react';
+import { getSelfHandle } from '../../../../src/lib/community/following-allowlist';
 import {
   GAP_OPTIONS,
   HORIZON_OPTIONS,
@@ -14,10 +15,9 @@ import {
   type ScheduleWindow,
 } from '../../../../src/lib/compose/schedule-slots';
 import { setScheduleSettings } from '../../../../src/lib/compose/schedule-store';
-import { getSelfHandle } from '../../../../src/lib/community/following-allowlist';
 import type { UiLanguage } from '../../../../src/lib/platform/i18n';
-import { AppIcon, EmptyState, HelpIcon, IconButton, Row, Toggle } from '../shared';
 import { asCatalogEntry } from '../profile-model';
+import { AppIcon, EmptyState, HelpIcon, IconButton, Row, Toggle } from '../shared';
 
 const COPY = {
   zh: {
@@ -88,6 +88,16 @@ function windowId(): string {
   return `w${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 }
 
+function save(patch: Partial<ScheduleSettings>): void {
+  void setScheduleSettings(patch);
+}
+
+/** 时段按整点算：12:30 选进来会落到 12:00，避免一个小时里被算成两个名额。 */
+function hourOf(value: string): string | null {
+  const minutes = parseClock(value);
+  return minutes === null ? null : formatClock(Math.floor(minutes / 60) * 60);
+}
+
 export default function CadencePage({
   language,
   schedule,
@@ -100,16 +110,6 @@ export default function CadencePage({
   const t = COPY[language];
   const [now] = useState(() => Date.now());
   const summary = useMemo(() => capacitySummary(schedule, [], now, 7), [schedule, now]);
-
-  function save(patch: Partial<ScheduleSettings>): void {
-    void setScheduleSettings(patch);
-  }
-
-  /** 时段按整点算：12:30 选进来会落到 12:00，避免一个小时里被算成两个名额。 */
-  function hourOf(value: string): string | null {
-    const minutes = parseClock(value);
-    return minutes === null ? null : formatClock(Math.floor(minutes / 60) * 60);
-  }
 
   function updateWindow(id: string, patch: Partial<ScheduleWindow>): void {
     const next = schedule.windows.map((window) => {
@@ -160,7 +160,7 @@ export default function CadencePage({
     updateWindow(window.id, {
       days: window.days.includes(day)
         ? window.days.filter((value) => value !== day)
-        : [...window.days, day].sort((a, b) => a - b),
+        : [...window.days, day].toSorted((a, b) => a - b),
     });
   }
 
@@ -203,9 +203,7 @@ export default function CadencePage({
           <span>{t.add}</span>
         </button>
       </Row>
-      {schedule.windows.length === 0 ? (
-        <EmptyState>{t.previewEmpty}</EmptyState>
-      ) : null}
+      {schedule.windows.length === 0 ? <EmptyState>{t.previewEmpty}</EmptyState> : null}
       {schedule.windows.map((window) => (
         <div className="cadence-window" key={window.id}>
           <div className="cadence-days" role="group" aria-label={t.days}>

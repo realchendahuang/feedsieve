@@ -1,8 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { getAiPublicData, getAiSquareDetail } from '@/site/data.functions';
+import { AiPublicPage } from '@/site/pages/AiPublicPage';
 import { pageHead } from '@/site/seo';
 import { SITE_URL } from '@/site/site';
-import { AiPublicPage } from '@/site/pages/AiPublicPage';
 
 type PageLoaderData = {
   data: Awaited<ReturnType<typeof getAiPublicData>>;
@@ -20,7 +20,7 @@ export const Route = createFileRoute('/_shell/ai/$handle')({
     return { data, detail };
   },
   head: (ctx) => {
-    const loaded = ctx.loaderData as PageLoaderData | undefined;
+    const loaded = ctx.loaderData;
     const data = loaded?.data;
     const audit = loaded?.detail?.audit ?? null;
     const handle = data?.handle ?? ctx.params.handle.replace(/^@/, '').toLowerCase();

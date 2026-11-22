@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { createMentionInvitationRule, MENTION_INVITATION_RULE_ID } from './mention-invitation';
+import { communityVoteForDetection } from '../content/block-core';
+import { runDetectionPipeline } from './detection-pipeline';
+import { BUNDLED_KEYWORD_PACK_CATALOG } from './keyword-packs';
 import {
   normalizeKeywordPhrase,
   createKeywordHeuristics,
   DEFAULT_KEYWORD_RULE_SETTINGS,
 } from './keyword-rules';
-import { runDetectionPipeline } from './detection-pipeline';
-import { BUNDLED_KEYWORD_PACK_CATALOG } from './keyword-packs';
-import { communityVoteForDetection } from '../content/block-core';
+import { createMentionInvitationRule, MENTION_INVITATION_RULE_ID } from './mention-invitation';
 const rule = createMentionInvitationRule(normalizeKeywordPhrase);
 const text = '她太涩了qy 我真顶不住\n@belly308\n2o';
 describe('paired third-party promotion', () => {
@@ -35,8 +35,8 @@ describe('paired third-party promotion', () => {
   it.each([
     ['love_live_idol', '她太涩了jl 我真顶不住\n@kkilyc\n 2w'],
     ['MeSoHawny94', '她太涩了rc 我真顶不住 \n@belly308\n 9f'],
-  ])('covers the additional live sibling %s', (handle, text) => {
-    expect(rule.check({ handle, text })).not.toBeNull();
+  ])('covers the additional live sibling %s', (handle, sampleText) => {
+    expect(rule.check({ handle, text: sampleText })).not.toBeNull();
   });
   it('normalizes inserted emoji, traditional characters and full-width mention syntax', () => {
     expect(
@@ -55,7 +55,7 @@ describe('paired third-party promotion', () => {
     '“她太涩了qy 我真顶不住 @belly308 2o”',
     '这首歌的歌词是她太涩了我真顶不住 @belly308',
     '她太涩了qy 我真顶不住 mail@belly308 2o',
-  ])('does not treat incomplete, quoted or unrelated content as promotion: %s', (text) => {
-    expect(rule.check({ handle: 'author', text })).toBeNull();
+  ])('does not treat incomplete, quoted or unrelated content as promotion: %s', (sampleText) => {
+    expect(rule.check({ handle: 'author', text: sampleText })).toBeNull();
   });
 });

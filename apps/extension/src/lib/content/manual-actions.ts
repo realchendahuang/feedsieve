@@ -7,15 +7,15 @@
 
 import { findTweetActionGroup } from '@feedsieve/x-adapter';
 import { removeAllowed } from '../community/allowlist';
-import { removeFollowingAccount } from '../community/following-allowlist';
 import { syncLocalLabels } from '../community/contribute';
-import { hideCellsSoon } from '../platform/remove-tweets';
+import { removeFollowingAccount } from '../community/following-allowlist';
+import type { ManualReportReason } from '../community/manual-reasons';
 import type { BlockEvidence } from '../detection/detection-pipeline';
-import type { ContentState } from './page-state';
+import { hideCellsSoon } from '../platform/remove-tweets';
+import { actionIcon, alignActionSlot, createActionSlot, type ActionSlot } from './action-slot';
 import type { BlockCore } from './block-core';
 import type { BlockedFold } from './blocked-fold';
-import { actionIcon, alignActionSlot, createActionSlot, type ActionSlot } from './action-slot';
-import type { ManualReportReason } from '../community/manual-reasons';
+import type { ContentState } from './page-state';
 import { openReasonMenu } from './reason-menu';
 
 /** 动作栏图标按钮的状态：图标随状态切换，失败时短暂显示错误码。 */
@@ -30,6 +30,25 @@ function setManualState(
     return;
   }
   slot.setContent(actionIcon(state === 'done' ? 'check' : 'userX'));
+}
+
+function normalizeManualHandle(value: string): string | null {
+  const trimmed = value.trim();
+  let candidate = trimmed;
+  try {
+    const url = new URL(trimmed);
+    if (
+      url.hostname === 'x.com' ||
+      url.hostname === 'www.x.com' ||
+      url.hostname === 'twitter.com'
+    ) {
+      candidate = url.pathname.split('/').filter(Boolean)[0] ?? '';
+    }
+  } catch {
+    // 不是 URL，按 @handle 处理
+  }
+  const handle = candidate.replace(/^@+/, '').toLowerCase();
+  return /^[a-z0-9_]{1,15}$/.test(handle) ? handle : null;
 }
 
 export function createManualActions(deps: {
@@ -157,25 +176,6 @@ export function createManualActions(deps: {
     await Promise.all([removeAllowed(handle), removeFollowingAccount(handle)]);
     await syncLocalLabels();
     return { ok: true, handle };
-  }
-
-  function normalizeManualHandle(value: string): string | null {
-    const trimmed = value.trim();
-    let candidate = trimmed;
-    try {
-      const url = new URL(trimmed);
-      if (
-        url.hostname === 'x.com' ||
-        url.hostname === 'www.x.com' ||
-        url.hostname === 'twitter.com'
-      ) {
-        candidate = url.pathname.split('/').filter(Boolean)[0] ?? '';
-      }
-    } catch {
-      // 不是 URL，按 @handle 处理
-    }
-    const handle = candidate.replace(/^@+/, '').toLowerCase();
-    return /^[a-z0-9_]{1,15}$/.test(handle) ? handle : null;
   }
 
   /**

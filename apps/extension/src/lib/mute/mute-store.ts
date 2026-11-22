@@ -82,7 +82,7 @@ export function normalizeMutePhrase(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const phrase = value.normalize('NFKC').replace(/\s+/g, ' ').trim();
   if (!phrase) return null;
-  const length = [...phrase].length;
+  const length = Array.from(phrase).length;
   if (length < MIN_MUTE_PHRASE_LENGTH || length > MAX_MUTE_PHRASE_LENGTH) return null;
   // 只有标点/符号/emoji 的词没有意义，直接拒绝。
   if (!normalizeMuteText(phrase).replace(/[\p{P}\p{S}\s]+/gu, '')) return null;
@@ -94,7 +94,10 @@ function newRuleId(now: number): string {
   return uuid ?? `mute_${now.toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function isNativeMuteExpired(mute: Pick<NativeMute, 'validUntil'>, now = Date.now()): boolean {
+export function isNativeMuteExpired(
+  mute: Pick<NativeMute, 'validUntil'>,
+  now = Date.now(),
+): boolean {
   if (!mute.validUntil) return false;
   const time = Date.parse(mute.validUntil);
   return Number.isFinite(time) && time <= now;
@@ -114,7 +117,12 @@ export function normalizeNativeMute(raw: unknown): NativeMute | null {
   };
 }
 
-function ruleFromNativeMute(mute: NativeMute, now: number, id?: string, createdAt?: number): MuteRule {
+function ruleFromNativeMute(
+  mute: NativeMute,
+  now: number,
+  id?: string,
+  createdAt?: number,
+): MuteRule {
   return {
     id: id ?? newRuleId(now),
     phrase: normalizeMutePhrase(mute.keyword) ?? mute.keyword.trim(),
@@ -142,14 +150,18 @@ export function normalizeMuteRule(raw: unknown, now = Date.now()): MuteRule | nu
     ...(asStringArray(value.nativeSurfaces)
       ? { nativeSurfaces: asStringArray(value.nativeSurfaces) }
       : {}),
-    ...(asStringArray(value.nativeOptions) ? { nativeOptions: asStringArray(value.nativeOptions) } : {}),
+    ...(asStringArray(value.nativeOptions)
+      ? { nativeOptions: asStringArray(value.nativeOptions) }
+      : {}),
     ...(typeof value.validUntil === 'string' && value.validUntil
       ? { validUntil: value.validUntil }
       : value.validUntil === null
         ? { validUntil: null }
         : {}),
     createdAt:
-      typeof value.createdAt === 'number' && Number.isFinite(value.createdAt) ? value.createdAt : now,
+      typeof value.createdAt === 'number' && Number.isFinite(value.createdAt)
+        ? value.createdAt
+        : now,
   };
 }
 
@@ -239,9 +251,7 @@ export function replaceMuteRule(
   return {
     ...settings,
     rules: settings.rules.map((rule) =>
-      rule.id === id
-        ? ruleFromNativeMute(mute, now, rule.id, rule.createdAt)
-        : rule,
+      rule.id === id ? ruleFromNativeMute(mute, now, rule.id, rule.createdAt) : rule,
     ),
   };
 }
@@ -266,13 +276,10 @@ export async function setMuteSettings(settings: MuteSettings): Promise<void> {
 export function subscribeMuteSettings(onChange: (settings: MuteSettings) => void): () => void {
   const listener = (changes: Record<string, unknown>, areaName: string): void => {
     if (areaName !== 'local' || !changes[MUTE_SETTINGS_KEY]) return;
-    onChange(normalizeMuteSettings((changes[MUTE_SETTINGS_KEY] as { newValue?: unknown }).newValue));
-  };
-  browser.storage.onChanged.addListener(
-    listener as Parameters<typeof browser.storage.onChanged.addListener>[0],
-  );
-  return () =>
-    browser.storage.onChanged.removeListener(
-      listener as Parameters<typeof browser.storage.onChanged.removeListener>[0],
+    onChange(
+      normalizeMuteSettings((changes[MUTE_SETTINGS_KEY] as { newValue?: unknown }).newValue),
     );
+  };
+  browser.storage.onChanged.addListener(listener);
+  return () => browser.storage.onChanged.removeListener(listener);
 }

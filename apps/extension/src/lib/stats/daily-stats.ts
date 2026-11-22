@@ -83,7 +83,7 @@ async function bumpDailyInner(
   }
   stats.days[today] = day;
   // 只保留最近 KEEP_DAYS 天：按日期字符串排序，淘汰最旧的
-  const dates = Object.keys(stats.days).sort();
+  const dates = Object.keys(stats.days).toSorted();
   if (dates.length > KEEP_DAYS) {
     for (const old of dates.slice(0, dates.length - KEEP_DAYS)) {
       delete stats.days[old];

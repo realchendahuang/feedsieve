@@ -16,8 +16,8 @@ import {
   Bot,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { GITHUB_URL } from '../site';
 import { InstallButtons } from '../components/InstallButtons';
+import { GITHUB_URL } from '../site';
 import { WeeklyPicks } from './WeeklyPicks';
 
 function GithubIcon({ className = 'size-4' }: { className?: string }) {
@@ -39,7 +39,7 @@ function GithubIcon({ className = 'size-4' }: { className?: string }) {
  */
 export default function HomePage() {
   return (
-    <main className="mx-auto max-w-5xl px-[clamp(18px,2.2vw,34px)] pb-20 pt-8 sm:pt-14">
+    <main className="mx-auto max-w-5xl px-[clamp(18px,2.2vw,34px)] pt-8 pb-20 sm:pt-14">
       {/* 1. HERO 头部 */}
       <section className="text-center">
         {/* 顶部胶囊标签 */}
@@ -49,16 +49,16 @@ export default function HomePage() {
         </div>
 
         {/* 标语主标题 */}
-        <h1 className="mt-5 text-4xl font-extrabold tracking-tight sm:text-6xl text-ink leading-[1.15]">
+        <h1 className="mt-5 text-4xl leading-[1.15] font-extrabold tracking-tight text-ink sm:text-6xl">
           用了福滤娃，
           <br />
-          <span className="bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 dark:from-amber-400 dark:via-amber-500 dark:to-amber-600 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 bg-clip-text text-transparent dark:from-amber-400 dark:via-amber-500 dark:to-amber-600">
             评论区不骚了，好帖也不漏了。
           </span>
         </h1>
 
         {/* 副标题 */}
-        <p className="mx-auto mt-5 max-w-2xl text-base text-mist sm:text-lg leading-relaxed">
+        <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-mist sm:text-lg">
           开源的中文 X（Twitter）副驾驶：清评论、看热帖、挖博主、排发帖、辨 AI
           味——一个装全，本地优先，不拿账号冒险。
         </p>
@@ -74,22 +74,22 @@ export default function HomePage() {
             href={GITHUB_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex h-12 items-center gap-2 rounded-full bg-surface px-7 text-sm font-semibold text-ink shadow-[var(--panel-elev)] border border-line/70 transition-all hover:bg-wash-strong active:scale-98"
+            className="hover:bg-wash-strong inline-flex h-12 items-center gap-2 rounded-full border border-line/70 bg-surface px-7 text-sm font-semibold text-ink shadow-[var(--panel-elev)] transition-all active:scale-98"
           >
             <GithubIcon className="size-4 text-ink" />
             <span>GitHub 开源仓库</span>
           </a>
           <Link
             to="/guide"
-            className="inline-flex h-12 items-center rounded-full px-5 text-sm font-semibold text-mist hover:text-ink transition-colors"
+            className="inline-flex h-12 items-center rounded-full px-5 text-sm font-semibold text-mist transition-colors hover:text-ink"
           >
             上手教程 →
           </Link>
         </div>
 
         {/* 2. 拟真视窗演示区 */}
-        <div className="relative mx-auto mt-12 max-w-4xl glow-gold">
-          <div className="window-frame overflow-hidden">
+        <div className="glow-gold relative mx-auto mt-12 max-w-4xl">
+          <div className="overflow-hidden window-frame">
             {/* 模拟浏览器标题栏 */}
             <div className="flex h-10 items-center justify-between border-b border-line/60 bg-soft-surface/90 px-4 backdrop-blur-sm">
               <div className="flex items-center gap-1.5">
@@ -102,7 +102,7 @@ export default function HomePage() {
                 <span className="font-mono">扩展面板 / 主页洞察</span>
               </div>
               <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="size-2 animate-pulse rounded-full bg-emerald-500" />
                 <span className="hidden sm:inline">福滤娃正在保护</span>
               </div>
             </div>
@@ -118,21 +118,21 @@ export default function HomePage() {
           </div>
 
           {/* 视窗下方的悬浮标签 */}
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 text-xs">
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5 text-xs sm:gap-3">
             <span className="pill-badge text-ink">
-              <span className="text-gold font-bold">🧹</span> 黄推标出 · 原生拉黑全端同步
+              <span className="font-bold text-gold">🧹</span> 黄推标出 · 原生拉黑全端同步
             </span>
             <span className="pill-badge text-ink">
-              <span className="text-gold font-bold">🔥</span> 每条帖子的流速 · 热帖榜
+              <span className="font-bold text-gold">🔥</span> 每条帖子的流速 · 热帖榜
             </span>
             <span className="pill-badge text-ink">
-              <span className="text-gold font-bold">🔍</span> 博主爆款倍数 · 内容与时段规律
+              <span className="font-bold text-gold">🔍</span> 博主爆款倍数 · 内容与时段规律
             </span>
             <span className="pill-badge text-ink">
-              <span className="text-gold font-bold">🗓</span> 发帖时间表 · 下一个空档
+              <span className="font-bold text-gold">🗓</span> 发帖时间表 · 下一个空档
             </span>
             <span className="pill-badge text-ink">
-              <span className="text-gold font-bold">🤖</span> AI 味检测 · 多人复核
+              <span className="font-bold text-gold">🤖</span> AI 味检测 · 多人复核
             </span>
           </div>
         </div>
@@ -172,7 +172,7 @@ export default function HomePage() {
       {/* 3.6 看得准 · 挖得深：热帖与博主主页 */}
       <section className="mt-20">
         <div className="text-center">
-          <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gold">
+          <div className="inline-flex items-center gap-1.5 text-xs font-bold tracking-wider text-gold uppercase">
             <TrendingUp className="size-4 text-gold" />
             <span>看得准 · 挖得深</span>
           </div>
@@ -233,7 +233,7 @@ export default function HomePage() {
       {/* 4. 清干净 BENTO GRID */}
       <section className="mt-20">
         <div className="text-center">
-          <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gold">
+          <div className="inline-flex items-center gap-1.5 text-xs font-bold tracking-wider text-gold uppercase">
             <Filter className="size-4 text-gold" />
             <span>清干净</span>
           </div>
@@ -247,16 +247,16 @@ export default function HomePage() {
 
         <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {/* Bento 1: 只框不藏（跨 2 列） */}
-          <div className="panel-card p-6 md:col-span-2 lg:col-span-2 flex flex-col justify-between">
+          <div className="flex flex-col justify-between panel-card p-6 md:col-span-2 lg:col-span-2">
             <div>
               <div className="flex items-center gap-2 text-gold">
                 <Filter className="size-5" />
-                <span className="text-xs font-bold uppercase tracking-wider">证据明牌</span>
+                <span className="text-xs font-bold tracking-wider uppercase">证据明牌</span>
               </div>
               <h3 className="mt-2 text-xl font-bold text-ink">
                 只框不藏：推文原汁原味展示，判断权永远归你
               </h3>
-              <p className="mt-2 text-sm text-mist leading-relaxed">
+              <p className="mt-2 text-sm leading-relaxed text-mist">
                 不搞暗箱操作，绝不搞盲盒式直接吞掉推文。高置信垃圾账号被醒目黄框圈出，明牌贴出识别原因（机器人水军、色情引流、套路模板、外链欺诈）。你可以亲眼看到它到底说了什么，再决定一键送走还是放它一马。
               </p>
             </div>
@@ -265,13 +265,13 @@ export default function HomePage() {
             <div className="mt-5 rounded-xl border-2 border-gold/80 bg-gold-surface/30 p-4 dark:bg-gold-surface/10">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <div className="size-8 rounded-full bg-mist/20 flex items-center justify-center font-bold text-xs">
+                  <div className="flex size-8 items-center justify-center rounded-full bg-mist/20 text-xs font-bold">
                     媚
                   </div>
                   <div>
                     <div className="flex items-center gap-1.5 text-xs font-bold text-ink">
                       <span>娇妻媚儿（私信看主页）</span>
-                      <span className="rounded bg-gold/20 px-1.5 py-0.2 text-[10px] text-gold-deep font-semibold">
+                      <span className="py-0.2 rounded bg-gold/20 px-1.5 text-[10px] font-semibold text-gold-deep">
                         黄推特征命中
                       </span>
                     </div>
@@ -282,7 +282,7 @@ export default function HomePage() {
                   顺手拉黑
                 </div>
               </div>
-              <p className="mt-2.5 text-xs text-ink/90 leading-relaxed font-sans">
+              <p className="mt-2.5 font-sans text-xs leading-relaxed text-ink/90">
                 那一夜你没有拒绝我，我以为这就是爱情……点我置顶链接看更多私密小视频 🔞👇
               </p>
               <div className="mt-2 text-[11px] font-medium text-gold-deep">
@@ -292,14 +292,14 @@ export default function HomePage() {
           </div>
 
           {/* Bento 2: 原生 Block */}
-          <div className="panel-card p-6 md:col-span-2 lg:col-span-1 flex flex-col justify-between">
+          <div className="flex flex-col justify-between panel-card p-6 md:col-span-2 lg:col-span-1">
             <div>
               <div className="flex items-center gap-2 text-gold">
                 <Zap className="size-5" />
-                <span className="text-xs font-bold uppercase tracking-wider">真拉黑</span>
+                <span className="text-xs font-bold tracking-wider uppercase">真拉黑</span>
               </div>
               <h3 className="mt-2 text-xl font-bold text-ink">原生 Block：手机平板全端同步清净</h3>
-              <p className="mt-2 text-sm text-mist leading-relaxed">
+              <p className="mt-2 text-sm leading-relaxed text-mist">
                 为什么不做本地隐藏？因为本地隐藏是掩耳盗铃，只在当前浏览器把 DOM 节点设为 display:
                 none，换个手机刷推依然骑脸。福滤娃直接调取 X 官方原生 Block
                 接口，全端设备立刻同步消失。
@@ -307,31 +307,31 @@ export default function HomePage() {
             </div>
             <ul className="mt-5 space-y-2 border-t border-line/50 pt-4 text-xs font-medium text-ink">
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
+                <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
                 <span>手机 App 端即刻同步生效</span>
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
+                <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
                 <span>彻底掐断后续私信与骚扰提示</span>
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
+                <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
                 <span>与网页手动屏蔽完全相同的安全通道</span>
               </li>
             </ul>
           </div>
 
           {/* Bento 3: 密码学验签（通栏） */}
-          <div className="panel-card p-6 md:col-span-2 lg:col-span-3 flex flex-col justify-between">
+          <div className="flex flex-col justify-between panel-card p-6 md:col-span-2 lg:col-span-3">
             <div>
               <div className="flex items-center gap-2 text-gold">
                 <Lock className="size-5" />
-                <span className="text-xs font-bold uppercase tracking-wider">密码学防投毒</span>
+                <span className="text-xs font-bold tracking-wider uppercase">密码学防投毒</span>
               </div>
               <h3 className="mt-2 text-xl font-bold text-ink">
                 纯数学验签：Ed25519 签名防篡改与透明开源
               </h3>
-              <p className="mt-2 text-sm text-mist leading-relaxed">
+              <p className="mt-2 text-sm leading-relaxed text-mist">
                 所有分发的黑名单快照与规则包均附带官方 Ed25519
                 数字签名。浏览器扩展在本地沙箱内用预置公钥严格验签通过才加载生效，杜绝任何中间人投毒篡改。3,144
                 条黑名单与 778 条词库全量开源，任何人均可随时审计。
@@ -377,7 +377,7 @@ export default function HomePage() {
           <div className="grid grid-cols-3 border-b border-line/60 bg-soft-surface/80 p-4 text-xs font-bold text-ink sm:text-sm">
             <div>维度</div>
             <div className="text-mist">传统脚本 / 隐藏插件</div>
-            <div className="text-gold font-extrabold">福滤娃 FeedSieve</div>
+            <div className="font-extrabold text-gold">福滤娃 FeedSieve</div>
           </div>
           <div className="divide-y divide-line/50 text-xs sm:text-sm">
             <ComparisonRow
@@ -444,7 +444,7 @@ export default function HomePage() {
       {/* 6. 交互式 FAQ 折叠区 */}
       <section className="mt-20">
         <div className="text-center">
-          <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-gold">
+          <div className="inline-flex items-center gap-1.5 text-xs font-bold tracking-wider text-gold uppercase">
             <Shield className="size-4 text-gold" />
             <span>问答与解惑</span>
           </div>
@@ -456,7 +456,7 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div className="mt-8 space-y-3.5 max-w-3xl mx-auto">
+        <div className="mx-auto mt-8 max-w-3xl space-y-3.5">
           <FaqItem
             q="会封我自己的推特账号吗？"
             a="推特天天治不了批量黄推，但对正常用户的高频操作抓得贼严。我们比你更怕被封大号：内置 400 发/24小时滚动配额，外加拟人化随机时间抖动；一旦检测到 X 返回 429 限流，立即触发「装死休眠熔断」，宁可停下来歇歇，也绝不拿你的大号去试探风控底线。"
@@ -526,12 +526,12 @@ export default function HomePage() {
 
       {/* 7. 底部行动呼吁 CTA BANNER */}
       <section className="mt-20">
-        <div className="relative overflow-hidden rounded-3xl border border-gold/40 bg-gradient-to-b from-gold-surface/40 to-surface p-8 sm:p-12 text-center shadow-[var(--panel-elev)]">
+        <div className="relative overflow-hidden rounded-3xl border border-gold/40 bg-gradient-to-b from-gold-surface/40 to-surface p-8 text-center shadow-[var(--panel-elev)] sm:p-12">
           <div className="mx-auto max-w-2xl">
             <h2 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
               评论区清净了，好帖也不再错过
             </h2>
-            <p className="mt-3 text-base text-mist leading-relaxed">
+            <p className="mt-3 text-base leading-relaxed text-mist">
               装上福滤娃，黄推自动标出，火帖自动收集，打开任意博主主页就能看到他的爆款。
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
@@ -542,7 +542,7 @@ export default function HomePage() {
               />
               <Link
                 to="/guide"
-                className="inline-flex h-12 items-center rounded-full bg-surface px-6 text-sm font-semibold text-ink shadow-sm border border-line/70 transition-all hover:bg-wash-strong"
+                className="hover:bg-wash-strong inline-flex h-12 items-center rounded-full border border-line/70 bg-surface px-6 text-sm font-semibold text-ink shadow-sm transition-all"
               >
                 查看新手教程
               </Link>
@@ -550,7 +550,7 @@ export default function HomePage() {
                 href={GITHUB_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-12 items-center gap-2 rounded-full bg-surface px-6 text-sm font-semibold text-mist hover:text-ink shadow-sm border border-line/70 transition-all hover:bg-wash-strong"
+                className="hover:bg-wash-strong inline-flex h-12 items-center gap-2 rounded-full border border-line/70 bg-surface px-6 text-sm font-semibold text-mist shadow-sm transition-all hover:text-ink"
               >
                 <GithubIcon className="size-4" />
                 <span>Star 支持一下</span>
@@ -582,10 +582,10 @@ function StatCard({
 }) {
   const isInternal = link.startsWith('/');
   const content = (
-    <div className="panel-card p-5 h-full transition-all hover:scale-[1.01] hover:shadow-md">
+    <div className="h-full panel-card p-5 transition-all hover:scale-[1.01] hover:shadow-md">
       <div className="text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">{number}</div>
       <div className="mt-1 text-sm font-bold text-gold">{label}</div>
-      <div className="mt-1 text-xs text-mist leading-relaxed">{desc}</div>
+      <div className="mt-1 text-xs leading-relaxed text-mist">{desc}</div>
     </div>
   );
 
@@ -615,7 +615,7 @@ function ShowcaseCard({
   points: string[];
 }) {
   return (
-    <div className="panel-card flex flex-col gap-5 p-6 sm:flex-row sm:items-start">
+    <div className="flex flex-col gap-5 panel-card p-6 sm:flex-row sm:items-start">
       {image ? (
         <img
           src={image}
@@ -629,10 +629,10 @@ function ShowcaseCard({
       <div className="min-w-0">
         <div className="flex items-center gap-2 text-gold">
           {icon}
-          <span className="text-xs font-bold uppercase tracking-wider">{kicker}</span>
+          <span className="text-xs font-bold tracking-wider uppercase">{kicker}</span>
         </div>
         <h3 className="mt-2 text-lg font-bold text-ink">{title}</h3>
-        <ul className="mt-3 space-y-2 text-sm text-mist leading-relaxed">
+        <ul className="mt-3 space-y-2 text-sm leading-relaxed text-mist">
           {points.map((point) => (
             <li key={point} className="flex items-start gap-2">
               <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-500" />
@@ -676,14 +676,14 @@ function SourceRow({
 
 function ComparisonRow({ dimension, bad, good }: { dimension: string; bad: string; good: string }) {
   return (
-    <div className="grid grid-cols-3 p-4 items-center gap-2">
+    <div className="grid grid-cols-3 items-center gap-2 p-4">
       <div className="font-bold text-ink">{dimension}</div>
-      <div className="flex items-start gap-1.5 text-mist text-xs leading-relaxed">
-        <XCircle className="size-4 text-rose-500 shrink-0 mt-0.5" />
+      <div className="flex items-start gap-1.5 text-xs leading-relaxed text-mist">
+        <XCircle className="mt-0.5 size-4 shrink-0 text-rose-500" />
         <span>{bad}</span>
       </div>
-      <div className="flex items-start gap-1.5 text-ink text-xs font-semibold leading-relaxed">
-        <CheckCircle2 className="size-4 text-emerald-500 shrink-0 mt-0.5" />
+      <div className="flex items-start gap-1.5 text-xs leading-relaxed font-semibold text-ink">
+        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-500" />
         <span>{good}</span>
       </div>
     </div>
@@ -693,11 +693,11 @@ function ComparisonRow({ dimension, bad, good }: { dimension: string; bad: strin
 function FaqItem({ q, a }: { q: string; a: ReactNode }) {
   return (
     <details className="group rounded-2xl border border-line/70 bg-surface p-5 shadow-[var(--panel-elev)] transition-all">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-bold text-sm text-ink select-none">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-bold text-ink select-none">
         <span>{q}</span>
         <ChevronDown className="size-4 shrink-0 text-fog transition-transform duration-200 group-open:rotate-180" />
       </summary>
-      <div className="mt-3 text-xs text-mist leading-relaxed border-t border-line/40 pt-3">{a}</div>
+      <div className="mt-3 border-t border-line/40 pt-3 text-xs leading-relaxed text-mist">{a}</div>
     </details>
   );
 }

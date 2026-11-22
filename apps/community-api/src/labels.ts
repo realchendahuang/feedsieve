@@ -1,17 +1,17 @@
 import { and, count, countDistinct, eq, inArray, sql } from 'drizzle-orm';
-import { hashInstallationId } from './lib/hash';
-import { deriveStatus } from './rating';
+import { inferCategory, type CategoryVoteRow } from './category-inference';
+import { syncConsensusEvents, type ConsensusTransition } from './consensus-events';
+import { getDb, retryOnConflict } from './db/client';
+import { accounts, activeLabels, installations, reports } from './db/schema';
 import {
   computeConsensusV2,
   EMPTY_CONSENSUS_V2_INPUT,
   loadConsensusV2InputsByHandles,
 } from './lib/consensus-v2';
-import { inferCategory, type CategoryVoteRow } from './category-inference';
-import { syncConsensusEvents, type ConsensusTransition } from './consensus-events';
-import { validateRescue } from './lib/validate';
-import { getDb, retryOnConflict } from './db/client';
+import { hashInstallationId } from './lib/hash';
 import { compareText } from './lib/sql';
-import { accounts, activeLabels, installations, reports } from './db/schema';
+import { validateRescue } from './lib/validate';
+import { deriveStatus } from './rating';
 
 const MAX_LABEL_BATCH = 50;
 /** 单安装每日撤回上限：报告/撤回无限对拍会反复打脏快照 */
@@ -97,7 +97,7 @@ export async function refreshAccountsFromLabels(
   const now = Math.floor(Date.now() / 1000);
   const updates: ReturnType<typeof sql>[] = [];
   // 按主键排序：并发请求以相同顺序锁行，避免死锁
-  for (const handle of [...existingHandles].sort(compareText)) {
+  for (const handle of [...existingHandles].toSorted(compareText)) {
     const reportCount = labelCounts.get(handle)?.blocked ?? 0;
     const rescueCount = labelCounts.get(handle)?.allowed ?? 0;
     const status = deriveStatus({

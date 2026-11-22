@@ -29,9 +29,9 @@ async function report(
   );
   expect(res.status).toBe(200);
   await spreadLatestReport();
-  const body = (await res.json()) as {
+  const body = await res.json<{
     results: { status: string; error?: string }[];
-  };
+  }>();
   return body.results[0]!;
 }
 
@@ -52,15 +52,15 @@ interface Entry {
 async function publishAndGetEntry(handle: string): Promise<Entry | undefined> {
   // bypassDailyOnce：用例验证聚类内容正确性；日更时序由 snapshot-daily.test.ts 覆盖
   await generateSnapshot(env, 0, { bypassDailyOnce: true });
-  const latest = (await (
+  const latest = await (
     await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), env)
-  ).json()) as { snapshot_version: string; files: { path: string }[] };
-  const body = (await (
+  ).json<{ snapshot_version: string; files: { path: string }[] }>();
+  const body = await (
     await worker.fetch(
       new Request(`${ORIGIN}/v1/snapshots/${latest.snapshot_version}/${latest.files[0]!.path}`),
       env,
     )
-  ).json()) as { entries: Entry[] };
+  ).json<{ entries: Entry[] }>();
   return body.entries.find((e) => e.handle === handle);
 }
 

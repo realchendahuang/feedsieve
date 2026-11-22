@@ -84,7 +84,7 @@ describe('本地检测日志', () => {
     expect(log.at(-1)?.handle).toBe('h5');
 
     const stats = await readRuleStats();
-    const days = Object.keys(stats).sort();
+    const days = Object.keys(stats).toSorted();
     // 205 条毫秒级时间戳落在同一天 —— 30 天裁剪把 40 天前的旧数据清掉
     storage.detectionRuleStatsV1 = {
       '2026-07-01': { stale: 9 },

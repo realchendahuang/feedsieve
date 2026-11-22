@@ -40,7 +40,7 @@ export function InstallButtons({
         target="_blank"
         rel="noopener noreferrer"
         title="Firefox 附加组件（AMO）官方条目 FeedSieve 福滤娃"
-        className={`inline-flex ${pill} items-center justify-center gap-2 rounded-full border border-line/70 bg-surface font-semibold text-ink shadow-sm transition-all hover:scale-[1.02] hover:bg-wash-strong active:scale-98`}
+        className={`inline-flex ${pill} hover:bg-wash-strong items-center justify-center gap-2 rounded-full border border-line/70 bg-surface font-semibold text-ink shadow-sm transition-all hover:scale-[1.02] active:scale-98`}
       >
         <span>{firefoxLabel}</span>
         <ExternalLink className="size-3.5 text-mist" />

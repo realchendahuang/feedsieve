@@ -8,13 +8,7 @@
  */
 import { recordVendor, VendorError } from '../breaker';
 import questionFile from '../question.json';
-import {
-  errorStatus,
-  noulScore,
-  usageOf,
-  type JudgeProvider,
-  type JudgeResult,
-} from './types';
+import { errorStatus, noulScore, usageOf, type JudgeProvider, type JudgeResult } from './types';
 
 const TYPESAFE_URL = 'https://api.typesafe.ai/v1/systemone';
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -50,7 +44,7 @@ export function createTypesafeDirectProvider(): JudgeProvider {
         await recordVendor(env, vendor, false);
         throw new VendorError(vendor, errorStatus(error));
       }
-      const json = (await response.json().catch(() => null)) as unknown;
+      const json: unknown = await response.json().catch(() => null);
       const score = noulScore(json);
       if (!response.ok || score === null) {
         await recordVendor(env, vendor, false);

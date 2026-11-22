@@ -61,7 +61,8 @@ export async function feedSieveLogo(env: Cloudflare.Env, origin: string): Promis
 function pngAspect(buf: ArrayBuffer): number {
   const b = new Uint8Array(buf);
   const be32 = (o: number) =>
-    (((b[o] ?? 0) << 24) | ((b[o + 1] ?? 0) << 16) | ((b[o + 2] ?? 0) << 8) | (b[o + 3] ?? 0)) >>> 0;
+    (((b[o] ?? 0) << 24) | ((b[o + 1] ?? 0) << 16) | ((b[o + 2] ?? 0) << 8) | (b[o + 3] ?? 0)) >>>
+    0;
   // PNG：8 字节签名 + IHDR 长度/类型 8 字节，宽高在偏移 16/20
   const w = be32(16);
   const h = be32(20);

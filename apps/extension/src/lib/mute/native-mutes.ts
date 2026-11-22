@@ -122,15 +122,17 @@ function failureFromError(error: unknown): NativeMuteResult<never> {
   const message = error instanceof Error ? error.message : String(error);
   if (message === 'missing_csrf') return { ok: false, code: 'missing_csrf' };
   if (message === 'signer_timeout') return { ok: false, code: 'signer_timeout' };
-  if (message === 'signer_unavailable' || message === 'signer_failed' || message === 'unsupported_path') {
+  if (
+    message === 'signer_unavailable' ||
+    message === 'signer_failed' ||
+    message === 'unsupported_path'
+  ) {
     return { ok: false, code: 'signer_unavailable' };
   }
   return { ok: false, code: 'network_error' };
 }
 
-async function readFailure(
-  response: Response,
-): Promise<NativeMuteResult<never>> {
+async function readFailure(response: Response): Promise<NativeMuteResult<never>> {
   const status = response.status;
   if (status === 401 || status === 403) return { ok: false, code: 'auth_required', status };
   if (status === 429) {
@@ -192,7 +194,8 @@ export async function createNativeMute(
   if (!result.ok) return result;
   const key = phrase.normalize('NFKC').toLocaleLowerCase();
   const mute =
-    result.data.find((entry) => entry.keyword.normalize('NFKC').toLocaleLowerCase() === key) ?? null;
+    result.data.find((entry) => entry.keyword.normalize('NFKC').toLocaleLowerCase() === key) ??
+    null;
   return { ok: true, data: { mute, list: result.data } };
 }
 

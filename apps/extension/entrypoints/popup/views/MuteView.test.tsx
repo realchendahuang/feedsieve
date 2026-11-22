@@ -2,8 +2,8 @@
 import React, { act } from 'react';
 import ReactDOM from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import MuteView from './MuteView';
 import type { MuteSettings, NativeMute } from '../../../src/lib/mute/mute-store';
+import MuteView from './MuteView';
 
 let root: ReactDOM.Root;
 let container: HTMLElement;
@@ -30,7 +30,11 @@ function sendFor(x: FakeX) {
   return vi.fn(async (message: { type: string; keyword?: string; ids?: string[] }) => {
     const call = message.type.replace('feedsieve:mute-', '');
     x.calls.push(
-      message.keyword ? `${call}:${message.keyword}` : message.ids ? `${call}:${message.ids.join(',')}` : call,
+      message.keyword
+        ? `${call}:${message.keyword}`
+        : message.ids
+          ? `${call}:${message.ids.join(',')}`
+          : call,
     );
     if (x.fail) throw new Error('no x.com receiver');
     if (message.type === 'feedsieve:mute-list') return { ok: true, data: x.words };
@@ -88,7 +92,13 @@ async function flush(times = 8): Promise<void> {
 async function render(x: FakeX, language: 'zh' | 'en' = 'zh'): Promise<void> {
   const sendToXPage = sendFor(x);
   await act(async () => {
-    root.render(<MuteView language={language} notify={(message) => notified.push(message)} sendToXPage={sendToXPage} />);
+    root.render(
+      <MuteView
+        language={language}
+        notify={(message) => notified.push(message)}
+        sendToXPage={sendToXPage}
+      />,
+    );
     await flush();
   });
 }
@@ -148,7 +158,9 @@ describe('关键词页（只管理 X 原生静音词）', () => {
 
     await submitAdd('加微信');
     // 还没确认：不写 X，规则也没落库
-    expect(container.querySelector('.mute-consent')?.textContent).toContain('把静音词写进 X 账号？');
+    expect(container.querySelector('.mute-consent')?.textContent).toContain(
+      '把静音词写进 X 账号？',
+    );
     expect(x.calls.filter((call) => call.startsWith('create'))).toEqual([]);
     expect(saved().rules).toEqual([]);
 

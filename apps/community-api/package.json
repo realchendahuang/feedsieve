@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsrs --noEmit --fast",
+    "typecheck:strict": "tsrs --noEmit",
+    "typecheck:tsc": "tsc --noEmit",
     "test": "vitest run",
     "deploy": "vite build && node scripts/merge-client-assets.mjs && wrangler deploy --config wrangler.local.jsonc",
     "db:generate": "drizzle-kit generate",

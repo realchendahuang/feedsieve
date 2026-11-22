@@ -1,5 +1,3 @@
-// @vitest-environment happy-dom
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { existsSync } from 'node:fs';
 import {
   buildSigningMessage,
@@ -7,6 +5,8 @@ import {
   type ManifestSignature,
   type TrustedKey,
 } from '@feedsieve/community-lists';
+// @vitest-environment happy-dom
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   BUNDLED_KEYWORD_PACK_CATALOG,
   getKeywordPackCatalog,

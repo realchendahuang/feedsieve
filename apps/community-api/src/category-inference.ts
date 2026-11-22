@@ -51,7 +51,7 @@ export function inferCategory(input: CategoryInferenceInput): string {
     }
     counts.set(vote.reason, (counts.get(vote.reason) ?? 0) + vote.count);
   }
-  const top = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
+  const top = [...counts.entries()].toSorted((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
   if (top) {
     return top[0];
   }

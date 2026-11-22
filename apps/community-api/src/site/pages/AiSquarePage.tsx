@@ -1,14 +1,14 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { categoryLabel } from '@feedsieve/shared';
 import { Link } from '@tanstack/react-router';
 import { Copy, ExternalLink } from 'lucide-react';
-import { categoryLabel } from '@feedsieve/shared';
+import { useMemo, useState, type ReactNode } from 'react';
 import type { AiSquareAudit, AiSquareData, AiSquareEntry } from '@/ai-accounts/square';
+import { StoreLinks } from '@/site/components/InstallButtons';
 import { HelpIcon } from '@/site/components/SiteHeader';
 import { toast } from '@/site/components/ui/toast';
+import { initialOf } from '@/site/lib/utils';
 import { ListPageHeader } from '@/site/pages/lists/lists-common';
 import { GITHUB_URL, xProfileUrl } from '@/site/site';
-import { StoreLinks } from '@/site/components/InstallButtons';
-import { initialOf } from '@/site/lib/utils';
 
 /** 「AI 号」与「疑似」的语义色：红 / 琥珀（同站点 AI 味报告的 ai / mixed），且始终带文字标签，不只靠颜色。 */
 const KIND = {
@@ -123,9 +123,9 @@ export function AiSquarePage({ data }: { data: AiSquareData | null }) {
         (e) => e.handle.includes(q) || (e.displayName ?? '').toLowerCase().includes(q),
       );
     }
-    if (sort === 'score') list = [...list].sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+    if (sort === 'score') list = list.toSorted((a, b) => (b.score ?? -1) - (a.score ?? -1));
     else if (sort === 'recent')
-      list = [...list].sort((a, b) => (b.judgedAt ?? 0) - (a.judgedAt ?? 0));
+      list = list.toSorted((a, b) => (b.judgedAt ?? 0) - (a.judgedAt ?? 0));
     return list;
   }, [data, filter, query, sort]);
 
@@ -133,7 +133,7 @@ export function AiSquarePage({ data }: { data: AiSquareData | null }) {
   const now = data?.generatedAt ?? 0;
 
   return (
-    <main className="mx-auto max-w-5xl px-[clamp(18px,2.2vw,34px)] pb-16 pt-8">
+    <main className="mx-auto max-w-5xl px-[clamp(18px,2.2vw,34px)] pt-8 pb-16">
       <ListPageHeader
         title="AI 号广场"
         aside={
@@ -264,7 +264,7 @@ export function AiSquarePage({ data }: { data: AiSquareData | null }) {
 
 function StatCard({ label, value, tone }: { label: string; value: number; tone?: string }) {
   return (
-    <div className="panel-card flex flex-col gap-1 p-4">
+    <div className="flex flex-col gap-1 panel-card p-4">
       <span className="text-xs font-semibold text-mist">{label}</span>
       <span className="text-2xl font-bold tabular-nums" style={tone ? { color: tone } : undefined}>
         {value}
@@ -275,7 +275,7 @@ function StatCard({ label, value, tone }: { label: string; value: number; tone?:
 
 function EmptyState({ title, hint }: { title: string; hint: ReactNode }) {
   return (
-    <div className="panel-card mt-4 flex flex-col items-center gap-1 px-6 py-14 text-center">
+    <div className="mt-4 flex flex-col items-center gap-1 panel-card px-6 py-14 text-center">
       <p className="text-sm font-semibold text-ink">{title}</p>
       <div className="text-xs text-fog">{hint}</div>
     </div>
@@ -332,10 +332,10 @@ function SquareCard({ entry, now }: { entry: AiSquareEntry; now: number }) {
   const percent = entry.score == null ? null : Math.round((entry.score * 100) / 5) * 5;
   const rhythm = entry.rhythm;
   const latest = entry.samples[0];
-  const latestLong = latest ? [...latest.text].length >= 120 : false;
+  const latestLong = latest ? Array.from(latest.text).length >= 120 : false;
 
   return (
-    <article className="panel-card flex flex-col p-5">
+    <article className="flex flex-col panel-card p-5">
       <div className="flex items-start gap-3">
         {avatar ? (
           <img
@@ -390,7 +390,7 @@ function SquareCard({ entry, now }: { entry: AiSquareEntry; now: number }) {
       {percent != null ? (
         <div className="mt-4 flex items-baseline gap-1">
           <span
-            className="text-3xl font-black leading-none tabular-nums"
+            className="text-3xl leading-none font-black tabular-nums"
             style={{ color: kind.color }}
           >
             {percent}

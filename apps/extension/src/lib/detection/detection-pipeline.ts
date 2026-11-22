@@ -10,6 +10,7 @@
  * 分层指标（review 层 vs 批拉层），而不是只测 detector 底层规则。
  */
 
+import type { CommunityEntry, MarkStrength } from '@feedsieve/community-lists';
 import {
   detect,
   RUNTIME_HEURISTICS,
@@ -17,12 +18,11 @@ import {
   type Detection,
   type HeuristicRule,
 } from '@feedsieve/detector';
-import type { CommunityEntry, MarkStrength } from '@feedsieve/community-lists';
 import type { RuntimeCommunity } from '../community/community-store';
-import { classifyDetection, type DetectionPresentation } from './detection-policy';
-import { categoryLabel, localizedDetectionReason, type UiLanguage } from '../platform/i18n';
 import { categoryFromDetection } from '../community/contribute';
+import { categoryLabel, localizedDetectionReason, type UiLanguage } from '../platform/i18n';
 import { collectContentEvidence, type BlockEvidence } from './detection-evidence';
+import { classifyDetection, type DetectionPresentation } from './detection-policy';
 import type { KeywordPackCatalog } from './keyword-packs';
 
 export type { BlockEvidence };

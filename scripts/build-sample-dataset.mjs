@@ -1,6 +1,6 @@
+import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { createHash } from 'node:crypto';
 
 const hash = (value) => createHash('sha256').update(value).digest('hex');
 // Coarse blocking key, not semantic equivalence. Reviewers must merge paraphrase families.

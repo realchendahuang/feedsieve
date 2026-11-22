@@ -15,7 +15,8 @@
  *   node scripts/ingest-whitelist-issues.mjs             # 拉取 + 写 yaml + 已处理 issue 打标/回帖
  */
 import { execFileSync } from 'node:child_process';
-import { entryBlock, existingHandles } from './lib/whitelist-yaml.mjs';
+import { readFileSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
 import {
   AVATAR_PREFIX,
   HANDLE_RE,
@@ -26,8 +27,7 @@ import {
   USER_ID_RE,
   pyLen,
 } from './lib/whitelist-schema.mjs';
-import { readFileSync, writeFileSync } from 'node:fs';
-import path from 'node:path';
+import { entryBlock, existingHandles } from './lib/whitelist-yaml.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const SOURCE_FILE = 'community/lists/whitelist.yaml';
@@ -45,7 +45,9 @@ export const FIELD_LABELS = {
 
 // avatar 在提交层校验比 publish 层严：必须是 profile_images/ 下的真实路径
 // （publish 层只看前缀，见 lib/whitelist-schema.mjs）
-const AVATAR_RE = new RegExp(`^${AVATAR_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\\w\\-./]+$`);
+const AVATAR_RE = new RegExp(
+  `^${AVATAR_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\\w\\-./]+$`,
+);
 
 /** 解析 issue 表单正文：按 `### 小标题` 切段，取每段正文。 */
 export function parseIssueBody(body) {
@@ -68,24 +70,35 @@ export function normalizeEntry(body) {
   const errors = [];
 
   const handle = val('handle').replace(/^@/, '').toLowerCase();
-  if (!HANDLE_RE.test(handle)) errors.push(`handle 非法：「${val('handle')}」（字母数字下划线 1-15 位）`);
+  if (!HANDLE_RE.test(handle))
+    errors.push(`handle 非法：「${val('handle')}」（字母数字下划线 1-15 位）`);
 
   const note = val('note');
   const noteLen = pyLen(note);
-  if (!(NOTE_MIN <= noteLen && noteLen <= NOTE_MAX)) errors.push(`入册说明需 4-240 字（当前 ${noteLen} 字）`);
+  if (!(NOTE_MIN <= noteLen && noteLen <= NOTE_MAX))
+    errors.push(`入册说明需 4-240 字（当前 ${noteLen} 字）`);
 
   const name = val('name') || null;
-  if (name && !(NAME_MIN <= pyLen(name) && pyLen(name) <= NAME_MAX)) errors.push('显示昵称需 1-40 字');
+  if (name && !(NAME_MIN <= pyLen(name) && pyLen(name) <= NAME_MAX))
+    errors.push('显示昵称需 1-40 字');
 
   const avatarUrl = val('avatarUrl') || null;
-  if (avatarUrl && !AVATAR_RE.test(avatarUrl)) errors.push('头像必须是 pbs.twimg.com/profile_images/ 开头的公开链接');
+  if (avatarUrl && !AVATAR_RE.test(avatarUrl))
+    errors.push('头像必须是 pbs.twimg.com/profile_images/ 开头的公开链接');
 
   const xUserId = val('xUserId') || null;
   if (xUserId && !USER_ID_RE.test(xUserId)) errors.push('X 数字 ID 必须是纯数字');
 
   // 双引号会破坏 publish 解析器的行格式；字段名用中文回显
-  for (const [k, v] of Object.entries({ handle, note, name, avatar_url: avatarUrl, x_user_id: xUserId })) {
-    if (v != null && /["\\]/.test(v)) errors.push(`「${FIELD_LABELS[k] ?? k}」不能包含引号或反斜杠`);
+  for (const [k, v] of Object.entries({
+    handle,
+    note,
+    name,
+    avatar_url: avatarUrl,
+    x_user_id: xUserId,
+  })) {
+    if (v != null && /["\\]/.test(v))
+      errors.push(`「${FIELD_LABELS[k] ?? k}」不能包含引号或反斜杠`);
   }
   if (errors.length > 0) return { ok: false, errors };
 
@@ -101,7 +114,7 @@ export function normalizeEntry(body) {
 export { entryBlock };
 
 function gh(args, opts = {}) {
-  return execFileSync('gh', args, { encoding: 'utf8', ...opts }).toString().trim();
+  return execFileSync('gh', args, { encoding: 'utf8', ...opts }).trim();
 }
 
 /**
@@ -109,10 +122,30 @@ function gh(args, opts = {}) {
  * `sh scripts/publish-community-whitelist.sh` 才真正入库（发布仍亲手执行）。
  */
 export async function run({ dryRun = false } = {}) {
-  gh(['label', 'create', SOURCE_LABEL, '--force', '--repo', ghRepo(), '--description', '推荐白名单申请（维护者手动拉取评审）']);
+  gh([
+    'label',
+    'create',
+    SOURCE_LABEL,
+    '--force',
+    '--repo',
+    ghRepo(),
+    '--description',
+    '推荐白名单申请（维护者手动拉取评审）',
+  ]);
 
   const issues = JSON.parse(
-    gh(['issue', 'list', '--repo', ghRepo(), '--state', 'open', '--label', SOURCE_LABEL, '--json', 'number,title,body,labels']),
+    gh([
+      'issue',
+      'list',
+      '--repo',
+      ghRepo(),
+      '--state',
+      'open',
+      '--label',
+      SOURCE_LABEL,
+      '--json',
+      'number,title,body,labels',
+    ]),
   ).filter((issue) => !issue.labels.some((l) => l.name === INGESTED_LABEL));
 
   const abs = path.join(ROOT, SOURCE_FILE);
@@ -138,19 +171,38 @@ export async function run({ dryRun = false } = {}) {
   }
 
   if (dryRun) {
-    for (const { issue, entry } of pending) console.log(`[dry] #${issue.number} + @${entry.handle} · ${entry.note}`);
-    for (const { issue, handle } of duplicates) console.log(`[dry] #${issue.number} 已在名单：@${handle}`);
-    for (const { issue, errors } of invalid) console.log(`[dry] #${issue.number} 不合规：${errors.join('；')}`);
+    for (const { issue, entry } of pending)
+      console.log(`[dry] #${issue.number} + @${entry.handle} · ${entry.note}`);
+    for (const { issue, handle } of duplicates)
+      console.log(`[dry] #${issue.number} 已在名单：@${handle}`);
+    for (const { issue, errors } of invalid)
+      console.log(`[dry] #${issue.number} 不合规：${errors.join('；')}`);
     return { pending, invalid, duplicates, fileChanged: false };
   }
 
   // 不合规与重复：回帖说明并打标终结，这两类不写 yaml
   for (const { issue, handle } of duplicates) {
-    gh(['issue', 'comment', String(issue.number), '--repo', ghRepo(), '--body', `提出的 @${handle} 已在推荐白名单里，无需重复申请。`]);
+    gh([
+      'issue',
+      'comment',
+      String(issue.number),
+      '--repo',
+      ghRepo(),
+      '--body',
+      `提出的 @${handle} 已在推荐白名单里，无需重复申请。`,
+    ]);
     gh(['issue', 'edit', String(issue.number), '--repo', ghRepo(), '--add-label', INGESTED_LABEL]);
   }
   for (const { issue, errors } of invalid) {
-    gh(['issue', 'comment', String(issue.number), '--repo', ghRepo(), '--body', `申请暂不合规，请修正后重新提交：\n${errors.map((e) => `- ${e}`).join('\n')}`]);
+    gh([
+      'issue',
+      'comment',
+      String(issue.number),
+      '--repo',
+      ghRepo(),
+      '--body',
+      `申请暂不合规，请修正后重新提交：\n${errors.map((e) => `- ${e}`).join('\n')}`,
+    ]);
   }
 
   if (pending.length === 0) return { pending, invalid, duplicates, fileChanged: false };
@@ -162,14 +214,25 @@ export async function run({ dryRun = false } = {}) {
   const yamlTail = yaml.replace(/\s*$/, '');
   writeFileSync(abs, `${yamlTail}\n${block}\n`);
   for (const { issue } of pending) {
-    gh(['issue', 'comment', String(issue.number), '--repo', ghRepo(), '--body', '已由维护者拉取写入发版候选（推荐白名单）。发布即生效，届时扩展与公示页同时更新。']);
+    gh([
+      'issue',
+      'comment',
+      String(issue.number),
+      '--repo',
+      ghRepo(),
+      '--body',
+      '已由维护者拉取写入发版候选（推荐白名单）。发布即生效，届时扩展与公示页同时更新。',
+    ]);
     gh(['issue', 'edit', String(issue.number), '--repo', ghRepo(), '--add-label', INGESTED_LABEL]);
   }
   return { pending, invalid, duplicates, fileChanged: true };
 }
 
 function ghRepo() {
-  if (!ghRepo.cache) ghRepo.cache = process.env.GITHUB_REPOSITORY || gh(['repo', 'view', '--json', 'nameWithOwner', '-q', '.nameWithOwner']);
+  if (!ghRepo.cache)
+    ghRepo.cache =
+      process.env.GITHUB_REPOSITORY ||
+      gh(['repo', 'view', '--json', 'nameWithOwner', '-q', '.nameWithOwner']);
   return ghRepo.cache;
 }
 

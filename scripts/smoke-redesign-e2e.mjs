@@ -1,3 +1,7 @@
+import assert from 'node:assert/strict';
+import { cpSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 /**
  * 新版无 data-testid X 全功能端到端验收：真 Chromium + 真 MV3 构建产物（content + xhr-bridge + SW + popup）。
  *
@@ -22,10 +26,6 @@
  * 运行：node scripts/smoke-redesign-e2e.mjs（需先 pnpm build:extension）
  */
 import { chromium } from 'playwright';
-import { cpSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
-import assert from 'node:assert/strict';
 
 const source = resolve('apps/extension/.output/chrome-mv3');
 const manifest = JSON.parse(readFileSync(join(source, 'manifest.json'), 'utf8'));

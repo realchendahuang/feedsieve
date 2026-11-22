@@ -37,13 +37,14 @@ describe('关键词短语贡献', () => {
     expect(outcome).toEqual({ status: 'recorded' });
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toContain('/v1/keyword-contributions');
-    const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+    if (typeof init.body !== 'string') throw new Error('expected string body');
+    const body = JSON.parse(init.body) as Record<string, unknown>;
     expect(body).toMatchObject({
       installation_id: 'install-0123456789',
       phrases: ['同城上门'],
     });
     // 红线口径：绝不携带短语之外的本地数据（无账号/名单/历史）
-    const serialized = String(init.body);
+    const serialized = init.body;
     expect(serialized).not.toContain('blockedAccounts');
     expect(serialized).not.toContain('handle');
   });

@@ -77,8 +77,7 @@ export function openReasonMenu(anchor: HTMLElement, options: ReasonMenuOptions):
   personal.type = 'button';
   personal.className = 'fs-reason-option fs-reason-personal';
   personal.setAttribute('role', 'menuitem');
-  personal.textContent =
-    language === 'zh' ? '仅拉黑，不参与社区' : 'Block only, no community vote';
+  personal.textContent = language === 'zh' ? '仅拉黑，不参与社区' : 'Block only, no community vote';
   personal.addEventListener('click', (event) => {
     event.preventDefault();
     event.stopPropagation();

@@ -1,9 +1,9 @@
 import { env } from 'cloudflare:workers';
+import { sql, type SQL } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
+import { getDb } from '../src/db/client';
 import worker from '../src/index';
 import { deriveStatus } from '../src/rating';
-import { sql, type SQL } from 'drizzle-orm';
-import { getDb } from '../src/db/client';
 
 const ORIGIN = 'https://api.example.com';
 const LEGACY_OWNER_INSTALL = 'owner-test-install-0001';

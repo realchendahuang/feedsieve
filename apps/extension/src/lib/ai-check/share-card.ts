@@ -160,8 +160,8 @@ function fitRoast(
   const fits = measured.find((c) => {
     if (c.lines.length > 3 || c.blockH > innerH) return false;
     if (c.lines.length === 1) return true;
-    const first = [...c.lines[0]!].length;
-    const last = [...c.lines[c.lines.length - 1]!].length;
+    const first = Array.from(c.lines[0]!).length;
+    const last = Array.from(c.lines[c.lines.length - 1]!).length;
     return last / first >= 0.25;
   });
   if (fits) return fits;
@@ -236,7 +236,7 @@ export function drawShareCard(input: ShareCardInput): HTMLCanvasElement {
     ctx.fillStyle = '#ffffff';
     ctx.font = `800 48px ${FONT}`;
     ctx.textAlign = 'center';
-    const initial = [...(input.displayName?.trim() || input.handle)][0]?.toUpperCase() ?? '?';
+    const initial = Array.from(input.displayName?.trim() || input.handle)[0]?.toUpperCase() ?? '?';
     ctx.fillText(initial, cx, cy + 17);
     ctx.textAlign = 'left';
   }

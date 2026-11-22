@@ -14,6 +14,24 @@ export interface HoverContent {
   footer?: string;
 }
 
+function place(element: HTMLElement, anchor: Element): void {
+  const rect = anchor.getBoundingClientRect();
+  element.style.visibility = 'hidden';
+  element.setAttribute('data-open', '');
+  const width = element.offsetWidth;
+  const height = element.offsetHeight;
+  const gap = 8;
+  let top = rect.bottom + gap;
+  if (top + height > window.innerHeight - 8) top = rect.top - height - gap;
+  const left = Math.min(
+    Math.max(8, rect.left + rect.width / 2 - width / 2),
+    window.innerWidth - width - 8,
+  );
+  element.style.top = `${Math.max(8, top)}px`;
+  element.style.left = `${left}px`;
+  element.style.visibility = '';
+}
+
 export function createHovercard(options: {
   /** 返回悬停目标对应的内容；不是我们的徽标时返回 null。 */
   resolve: (target: Element) => { anchor: Element; content: HoverContent } | null;
@@ -65,24 +83,6 @@ export function createHovercard(options: {
       element.appendChild(f);
     }
     return element;
-  }
-
-  function place(element: HTMLElement, anchor: Element): void {
-    const rect = anchor.getBoundingClientRect();
-    element.style.visibility = 'hidden';
-    element.setAttribute('data-open', '');
-    const width = element.offsetWidth;
-    const height = element.offsetHeight;
-    const gap = 8;
-    let top = rect.bottom + gap;
-    if (top + height > window.innerHeight - 8) top = rect.top - height - gap;
-    const left = Math.min(
-      Math.max(8, rect.left + rect.width / 2 - width / 2),
-      window.innerWidth - width - 8,
-    );
-    element.style.top = `${Math.max(8, top)}px`;
-    element.style.left = `${left}px`;
-    element.style.visibility = '';
   }
 
   function hide(): void {

@@ -13,10 +13,10 @@
  * 加新供应商：实现 providers/types.ts 的 JudgeProvider，在 providerForSpec 里加一个分支即可。
  */
 import { vendorOpen, VendorError } from '../breaker';
-import { DEFAULT_JUDGE_MODEL, createWorkersAiProvider } from './workers-ai';
 import { createOpenAiCompatibleProvider } from './openai-compatible';
-import { createTypesafeDirectProvider } from './typesafe-direct';
 import type { JudgeInput, JudgeProvider, JudgeResult } from './types';
+import { createTypesafeDirectProvider } from './typesafe-direct';
+import { DEFAULT_JUDGE_MODEL, createWorkersAiProvider } from './workers-ai';
 
 export const DEFAULT_PROVIDER_SPEC = 'workers-ai';
 

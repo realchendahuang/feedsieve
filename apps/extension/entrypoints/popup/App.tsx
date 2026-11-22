@@ -1,18 +1,13 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   parseSnapshotBody,
   type CommunityEntry,
   type WhitelistEntry,
 } from '@feedsieve/community-lists';
 import { shouldPauseDestructive, type XAdapterCapabilities } from '@feedsieve/x-adapter';
-import { ensureVariantTables } from '../../src/lib/detection/keyword-rules';
-import { getBlockedAccounts, subscribeBlocked } from '../../src/lib/community/blocked-accounts';
-import { getAllowlist, subscribeAllowlist } from '../../src/lib/community/allowlist';
-import {
-  getFollowingAllowlist,
-  subscribeFollowingAllowlist,
-} from '../../src/lib/community/following-allowlist';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AI_LIST_KEY, syncAiList, type AiListEntry } from '../../src/lib/ai-check/client';
+import { getAllowlist, subscribeAllowlist } from '../../src/lib/community/allowlist';
+import { getBlockedAccounts, subscribeBlocked } from '../../src/lib/community/blocked-accounts';
 import {
   getCommunityKillSwitch,
   getCommunitySettings,
@@ -22,6 +17,11 @@ import {
   subscribeCommunity,
   type CommunitySettings,
 } from '../../src/lib/community/community-store';
+import {
+  getFollowingAllowlist,
+  subscribeFollowingAllowlist,
+} from '../../src/lib/community/following-allowlist';
+import { ensureVariantTables } from '../../src/lib/detection/keyword-rules';
 import {
   defaultUiLanguage,
   getUiLanguage,
@@ -59,10 +59,9 @@ const CleanView = lazy(() => import('./views/CleanView'));
 const MuteView = lazy(() => import('./views/MuteView'));
 const GlobalView = lazy(() => import('./views/settings/GlobalView'));
 const ModuleSettingsView = lazy(() => import('./views/settings/ModuleSettingsView'));
-import ToastHost from './views/ToastHost';
-import { isProfileUrl } from './views/profile-model';
 import { PANEL_VIEW_REQUEST_KEY, readPanelViewRequest } from '../../src/lib/platform/panel-route';
 import { dismissToast, showToast } from '../../src/lib/platform/toast';
+import { isProfileUrl } from './views/profile-model';
 import {
   AppIcon,
   asPageMarkedList,
@@ -70,6 +69,7 @@ import {
   SkeletonList,
   type PageMarkedItem,
 } from './views/shared';
+import ToastHost from './views/ToastHost';
 
 /**
  * 顶部栏目：功能模块各占一格，同组的模块（水军 / 伪人）合并成「降噪」一格，
@@ -325,12 +325,12 @@ export default function App() {
         return;
       }
       // 批量拉黑按这个顺序：净票高的先处理，同票按 handle
-      const sorted = [...parsed.value.entries].sort(
+      const sorted = parsed.value.entries.toSorted(
         (a, b) => b.net_votes - a.net_votes || a.handle.localeCompare(b.handle),
       );
       setCommunityEntries(sorted);
       setRecommendList(
-        (parsed.value.whitelist ?? []).sort((a, b) => a.handle.localeCompare(b.handle)),
+        (parsed.value.whitelist ?? []).toSorted((a, b) => a.handle.localeCompare(b.handle)),
       );
     },
     [],
@@ -355,11 +355,7 @@ export default function App() {
       const activeTabs = await browser.tabs.query({ active: true, currentWindow: true });
       const tab = activeTabs.find((candidate) => {
         const url = candidate.url ?? '';
-        return (
-          candidate.active === true &&
-          /^https:\/\/(www\.)?x\.com\//.test(url) &&
-          Boolean(candidate.id)
-        );
+        return candidate.active && /^https:\/\/(www\.)?x\.com\//.test(url) && Boolean(candidate.id);
       });
       if (!tab?.id) throw new Error('no x.com receiver');
       return browser.tabs.sendMessage(tab.id, { ...message, targetTabId: tab.id });
@@ -594,7 +590,7 @@ export default function App() {
     modules && isModuleId(view) && !moduleById(view).enabled(modules)
       ? fallbackViewFor(view, modules)
       : view;
-  const activeTab: TopTabId = inNoiseGroup(effectiveView) ? 'noise' : (effectiveView as TopTabId);
+  const activeTab: TopTabId = inNoiseGroup(effectiveView) ? 'noise' : effectiveView;
 
   const effectiveModuleSettingsOpen =
     moduleSettingsOpen &&

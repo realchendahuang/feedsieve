@@ -1,14 +1,10 @@
 import { CATEGORIES } from '@feedsieve/shared';
 import { describe, expect, it } from 'vitest';
-import {
-  isManualReportReason,
-  MANUAL_REPORT_REASONS,
-  manualReasonLabel,
-} from './manual-reasons';
+import { isManualReportReason, MANUAL_REPORT_REASONS, manualReasonLabel } from './manual-reasons';
 
 describe('手动拉黑原因', () => {
   it('覆盖分类词表里的每个分类，一个也不漏', () => {
-    expect([...MANUAL_REPORT_REASONS].sort()).toEqual([...CATEGORIES].sort());
+    expect([...MANUAL_REPORT_REASONS].toSorted()).toEqual([...CATEGORIES].toSorted());
   });
 
   it('只接受分类值，personal / 空值 / 旧字段都不算原因', () => {

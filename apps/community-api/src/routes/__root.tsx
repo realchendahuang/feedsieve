@@ -1,9 +1,9 @@
 import { Outlet, createRootRoute, HeadContent, Scripts } from '@tanstack/react-router';
-import { SiteFooter } from '@/site/components/SiteFooter';
-import { TopLoadingBar } from '@/site/components/TopLoadingBar';
 import { NotFound } from '@/site/components/NotFound';
-import { Toaster } from '@/site/components/ui/toast';
+import { SiteFooter } from '@/site/components/SiteFooter';
 import { ThemeProvider } from '@/site/components/ThemeProvider';
+import { TopLoadingBar } from '@/site/components/TopLoadingBar';
+import { Toaster } from '@/site/components/ui/toast';
 import { THEME_BOOT_SCRIPT } from '@/site/lib/theme';
 import { SITE_NAME, SITE_URL } from '@/site/site';
 import '@/site/styles.css';
@@ -18,9 +18,7 @@ export const Route = createRootRoute({
       // 全站共享的站点级 meta（各页只写页面级 title/og，避免重复标签）
       { property: 'og:site_name', content: SITE_NAME },
     ],
-    links: [
-      { rel: 'icon', href: '/assets/avatar.png', type: 'image/png' },
-    ],
+    links: [{ rel: 'icon', href: '/assets/avatar.png', type: 'image/png' }],
     scripts: [
       // 站点级 JSON-LD：告诉搜索引擎这是什么站点
       {

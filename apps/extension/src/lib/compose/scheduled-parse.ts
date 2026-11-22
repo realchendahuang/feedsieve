@@ -131,7 +131,7 @@ export function parseScheduledList(body: unknown): ScheduledPost[] | null {
   return list
     .map(parseListItem)
     .filter((post): post is ScheduledPost => post !== null)
-    .sort((a, b) => a.executeAt - b.executeAt);
+    .toSorted((a, b) => a.executeAt - b.executeAt);
 }
 
 /** 请求体 → variables（POST JSON 或 GET 查询串都认）。 */
@@ -245,7 +245,7 @@ export function asScheduledEvent(value: unknown): ScheduledEvent | null {
         .slice(0, 500)
         .map(check)
         .filter((p): p is ScheduledPost => p !== null)
-        .sort((a, b) => a.executeAt - b.executeAt),
+        .toSorted((a, b) => a.executeAt - b.executeAt),
     };
   }
   return null;

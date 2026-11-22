@@ -1,17 +1,17 @@
-import { getHotBoards, ingestObservations } from './hot';
-import { ingestRuleHits } from './rule-hits';
-import { chargeProfileRead, getProfile, ingestProfileObservations } from './profiles';
 import { and, countDistinct, eq, sql } from 'drizzle-orm';
-import { describeDbError, getDb, withDb } from './db/client';
-import { accounts, activeLabels, meta } from './db/schema';
-import { bodyLimit } from 'hono/body-limit';
-import { cors } from 'hono/cors';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
-import { isAdminHost } from './lib/hosts';
+import { bodyLimit } from 'hono/body-limit';
+import { cors } from 'hono/cors';
+import { describeDbError, getDb, withDb } from './db/client';
+import { accounts, activeLabels, meta } from './db/schema';
+import { getHotBoards, ingestObservations } from './hot';
 import { hashInstallationId, sha256Hex } from './lib/hash';
+import { isAdminHost } from './lib/hosts';
+import { chargeProfileRead, getProfile, ingestProfileObservations } from './profiles';
 import { POLICY, processReportBatch, publicPolicy } from './reports';
 import { processRescueBatch } from './rescues';
+import { ingestRuleHits } from './rule-hits';
 import {
   PUBLIC_BLOCKLIST_PACK,
   SNAPSHOT_DIRTY_KEY,
@@ -438,7 +438,7 @@ export function createApp() {
           e.handle.toLowerCase(),
         ),
       ),
-    ].sort();
+    ].toSorted();
     c.header('Cache-Control', 'public, max-age=300');
     return c.json({ snapshot_version: roster.snapshot_version, handles });
   });

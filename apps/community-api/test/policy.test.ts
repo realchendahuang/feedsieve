@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import policyYaml from '../../community/policy/v4.yaml?raw';
 import { CONSENSUS_V2_POLICY } from '../src/lib/consensus-v2';
 import { LISTING_POLICY } from '../src/lib/listing';
+import { SCORE_POLICY } from '../src/lib/score';
+import { POLICY } from '../src/reports';
 import { RULE_HIT_POLICY } from '../src/rule-hits';
 import { SNAPSHOT_MIN_INTERVAL_S } from '../src/snapshot';
-import { POLICY } from '../src/reports';
-import { SCORE_POLICY } from '../src/lib/score';
 
 /**
  * 漂移守卫：community/policy/v4.yaml 是公开事实源，

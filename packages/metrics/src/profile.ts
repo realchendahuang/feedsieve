@@ -89,7 +89,7 @@ function isCount(value: unknown): value is number {
 
 export function median(values: readonly number[]): number | null {
   if (values.length === 0) return null;
-  const sorted = [...values].sort((a, b) => a - b);
+  const sorted = values.toSorted((a, b) => a - b);
   const mid = sorted.length >> 1;
   return sorted.length % 2 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
 }
@@ -185,7 +185,7 @@ export function analyzeProfile(
   const formats = [...byFormat.entries()]
     .filter(([, values]) => values.length >= PROFILE_GROUP_MIN)
     .map(([format, values]) => ({ format, count: values.length, medianMultiple: median(values)! }))
-    .sort((a, b) => b.medianMultiple - a.medianMultiple);
+    .toSorted((a, b) => b.medianMultiple - a.medianMultiple);
 
   const grid: number[][][] = Array.from({ length: 7 }, () =>
     Array.from({ length: HEATMAP_SLOTS }, () => []),

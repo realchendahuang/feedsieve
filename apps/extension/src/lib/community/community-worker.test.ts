@@ -1,6 +1,6 @@
+import type { CommunityEntry } from '@feedsieve/community-lists';
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CommunityEntry } from '@feedsieve/community-lists';
 
 const mockRuntimeData = vi.hoisted(() => ({
   snapshot: null as Record<string, unknown> | null,
@@ -10,13 +10,10 @@ vi.mock('../platform/runtime-data', () => ({
   loadRuntimeData: vi.fn(async () => mockRuntimeData.snapshot),
 }));
 
-import { createCommunityWorker } from './community-worker';
+import { COMMUNITY_LOOKUP_MESSAGE, COMMUNITY_RUNTIME_MESSAGE } from './community-protocol';
 import { loadSlimCommunityRuntime } from './community-runtime-client';
 import { requestOfficialPauseCheck, SNAPSHOT_KEY } from './community-settings';
-import {
-  COMMUNITY_LOOKUP_MESSAGE,
-  COMMUNITY_RUNTIME_MESSAGE,
-} from './community-protocol';
+import { createCommunityWorker } from './community-worker';
 
 function makeEntry(overrides: Partial<CommunityEntry> = {}): CommunityEntry {
   return {
@@ -78,7 +75,11 @@ describe('community-worker & community-runtime-client（精简下发 + 命中按
   beforeEach(() => {
     storage = {};
     listeners = [];
-    const leadEntry = makeEntry({ handle: 'spam_lead', campaign_entry_id: 'spam_lead', campaign_size: 4 });
+    const leadEntry = makeEntry({
+      handle: 'spam_lead',
+      campaign_entry_id: 'spam_lead',
+      campaign_size: 4,
+    });
     const memberEntry = makeEntry({
       handle: 'spam_two',
       x_user_id: '1002',
@@ -197,7 +198,7 @@ describe('community-worker & community-runtime-client（精简下发 + 命中按
       fingerprints: ['fedcba9876543210'],
     });
     expect(enrichedBatches).toHaveLength(1);
-    expect([...enrichedBatches[0]!].sort()).toEqual(['fp_match', 'spam_two']);
+    expect([...enrichedBatches[0]!].toSorted()).toEqual(['fp_match', 'spam_two']);
 
     expect(client.community?.index.lookup('spam_two')?.category).toBe('copy_paste');
     expect(client.community?.campaignByFingerprint.get('fedcba9876543210')).toBe('spam_lead');

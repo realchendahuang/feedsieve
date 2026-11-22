@@ -1,8 +1,8 @@
 import { env } from 'cloudflare:workers';
-import { describe, expect, it } from 'vitest';
-import worker from '../src/index';
 import { sql, type SQL } from 'drizzle-orm';
+import { describe, expect, it } from 'vitest';
 import { getDb } from '../src/db/client';
+import worker from '../src/index';
 import { hashInstallationId } from '../src/lib/hash';
 
 const ORIGIN = 'https://api.example.com';
@@ -17,7 +17,7 @@ async function post(path: string, body: unknown): Promise<Record<string, unknown
     env,
   );
   expect(response.status).toBe(200);
-  return (await response.json()) as Record<string, unknown>;
+  return response.json<Record<string, unknown>>();
 }
 
 async function first<T extends Record<string, unknown>>(query: SQL): Promise<T | null> {
@@ -205,7 +205,7 @@ describe('撤回每日配额', () => {
       env,
     );
     expect(capped.status).toBe(429);
-    expect(((await capped.json()) as Record<string, unknown>).error).toBe('rate_limited');
+    expect((await capped.json<Record<string, unknown>>()).error).toBe('rate_limited');
     // 拒绝时不落撤回：标签仍在
     const label = await first(
       sql`SELECT 1 AS present FROM active_labels WHERE installation_id = ${installHash} AND handle = ${handle}`,

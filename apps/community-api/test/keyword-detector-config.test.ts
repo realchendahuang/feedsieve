@@ -1,6 +1,10 @@
 import { env } from 'cloudflare:workers';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
+import {
+  readAgentKeywordDetectorConfig,
+  writeAgentKeywordDetectorConfig,
+} from '../src/agent-admin';
 import { getDb } from '../src/db/client';
 import { adminKeywordPacks, adminKeywordRules, meta } from '../src/db/schema';
 import {
@@ -8,10 +12,6 @@ import {
   publishAdminKeywords,
   setKeywordDetectorConfig,
 } from '../src/keyword-admin';
-import {
-  readAgentKeywordDetectorConfig,
-  writeAgentKeywordDetectorConfig,
-} from '../src/agent-admin';
 
 const CONFIG = { combo: { minNameEmoji: 4 } } as const;
 const BAD_CONFIG = { combo: { unknown_key: 1 } };

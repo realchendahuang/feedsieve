@@ -1,9 +1,9 @@
+import { extractFeedItem } from '@feedsieve/x-adapter';
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest';
+import { REDESIGN_TWEET_HTML } from '../../../../../fixtures/x/timeline/redesign';
 import { createInsightDecorations } from './decorations';
 import { createTweetStatsStore } from './tweet-stats';
-import { REDESIGN_TWEET_HTML } from '../../../../../fixtures/x/timeline/redesign';
-import { extractFeedItem } from '@feedsieve/x-adapter';
 
 const HOUR = 60 * 60 * 1000;
 const NOW = Date.UTC(2026, 9, 29, 12);

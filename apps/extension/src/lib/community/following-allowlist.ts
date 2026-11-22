@@ -43,7 +43,7 @@ function normalizeItems(items: readonly FollowingAllowlistItem[]): FollowingAllo
         item.source === 'full-sync' || existing?.source === 'full-sync' ? 'full-sync' : 'observed',
     });
   }
-  return [...byHandle.values()].sort((a, b) => a.handle.localeCompare(b.handle));
+  return [...byHandle.values()].toSorted((a, b) => a.handle.localeCompare(b.handle));
 }
 
 export async function getFollowingAllowlist(): Promise<FollowingAllowlistItem[]> {
@@ -139,13 +139,8 @@ export function subscribeFollowingAllowlist(
       void getFollowingAllowlist().then(onChange);
     }
   };
-  browser.storage.onChanged.addListener(
-    listener as Parameters<typeof browser.storage.onChanged.addListener>[0],
-  );
-  return () =>
-    browser.storage.onChanged.removeListener(
-      listener as Parameters<typeof browser.storage.onChanged.removeListener>[0],
-    );
+  browser.storage.onChanged.addListener(listener);
+  return () => browser.storage.onChanged.removeListener(listener);
 }
 
 export async function getFollowingSyncState(): Promise<FollowingSyncState> {
@@ -178,13 +173,8 @@ export function subscribeFollowingSyncState(
       void getFollowingSyncState().then(onChange);
     }
   };
-  browser.storage.onChanged.addListener(
-    listener as Parameters<typeof browser.storage.onChanged.addListener>[0],
-  );
-  return () =>
-    browser.storage.onChanged.removeListener(
-      listener as Parameters<typeof browser.storage.onChanged.removeListener>[0],
-    );
+  browser.storage.onChanged.addListener(listener);
+  return () => browser.storage.onChanged.removeListener(listener);
 }
 
 export async function getFollowingSyncDraft(): Promise<
@@ -196,7 +186,8 @@ export async function getFollowingSyncDraft(): Promise<
   const byHandle = new Map<string, { handle: string; xUserId?: string }>();
   for (const raw of value) {
     if (!raw || typeof raw !== 'object') continue;
-    const handle = normalize(String((raw as { handle?: unknown }).handle ?? ''));
+    const rawHandle = (raw as { handle?: unknown }).handle;
+    const handle = typeof rawHandle === 'string' ? normalize(rawHandle) : '';
     if (!handle) continue;
     const xUserId = (raw as { xUserId?: unknown }).xUserId;
     byHandle.set(handle, {
@@ -248,11 +239,6 @@ export function subscribeSelfHandle(onChange: (handle: string | null) => void): 
       void getSelfHandle().then(onChange);
     }
   };
-  browser.storage.onChanged.addListener(
-    listener as Parameters<typeof browser.storage.onChanged.addListener>[0],
-  );
-  return () =>
-    browser.storage.onChanged.removeListener(
-      listener as Parameters<typeof browser.storage.onChanged.addListener>[0],
-    );
+  browser.storage.onChanged.addListener(listener);
+  return () => browser.storage.onChanged.removeListener(listener);
 }

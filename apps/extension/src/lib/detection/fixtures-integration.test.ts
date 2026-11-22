@@ -1,3 +1,4 @@
+import { extractFeedItem } from '@feedsieve/x-adapter';
 // @vitest-environment happy-dom
 // fixtures/x 脱敏样本 → 生产检测管线联动：
 // 必须走 runDetectionPipeline（生产装配 = keyword 词库 + weakSignalCombo），
@@ -5,13 +6,12 @@
 // 生产页面上根本不运行的规则集上给出假信心（2026-09-12 修复）。
 // bio 由 XHR 桥注入 DOM 之外，fixtures 里用显式 bio 表模拟该通道。
 import { describe, expect, it } from 'vitest';
-import { extractFeedItem } from '@feedsieve/x-adapter';
-import { HOME_TIMELINE_HTML } from '../../../../../fixtures/x/timeline/home-timeline';
-import { SEARCH_F_LIVE_HTML } from '../../../../../fixtures/x/timeline/search-f-live';
 import { PROFILE_TIMELINE_HTML } from '../../../../../fixtures/x/profile/profile';
 import { THREAD_HTML } from '../../../../../fixtures/x/replies/thread';
+import { HOME_TIMELINE_HTML } from '../../../../../fixtures/x/timeline/home-timeline';
+import { SEARCH_F_LIVE_HTML } from '../../../../../fixtures/x/timeline/search-f-live';
 import { runDetectionPipeline } from './detection-pipeline';
-import { BUNDLED_KEYWORD_PACK_CATALOG, type KeywordPackCatalog } from './keyword-packs';
+import { BUNDLED_KEYWORD_PACK_CATALOG } from './keyword-packs';
 import { createKeywordHeuristics, DEFAULT_KEYWORD_RULE_SETTINGS } from './keyword-rules';
 
 const keywordHeuristics = createKeywordHeuristics(DEFAULT_KEYWORD_RULE_SETTINGS);
@@ -29,7 +29,7 @@ function runPipeline(input: {
     community: null,
     builtinList: new Set(),
     keywordHeuristics,
-    catalog: BUNDLED_KEYWORD_PACK_CATALOG as KeywordPackCatalog,
+    catalog: BUNDLED_KEYWORD_PACK_CATALOG,
     strength: 'standard',
     uiLanguage: 'zh',
   });
@@ -150,23 +150,20 @@ describe('fixtures/x 生产管线联动（runDetectionPipeline）', () => {
     );
   });
 
-  it('拼音代字家族：纯汉字原话与带调/leet 变体全部命中；正常外语文本不误伤', () => {
-    // 原话（词库新入库）与其展开变体（构建期生成，见 build-keyword-packs pinyinVariants）
-    for (const text of [
-      '没人比她骚',
-      '没人比她sao',
-      '没人比她sǎo',
-      '没人比她sa0',
-      'sǎo货',
-      'sa0货',
-    ]) {
+  // 原话（词库新入库）与其展开变体（构建期生成，见 build-keyword-packs pinyinVariants）
+  it.each(['没人比她骚', '没人比她sao', '没人比她sǎo', '没人比她sa0', 'sǎo货', 'sa0货'])(
+    '拼音代字家族：纯汉字原话与带调/leet 变体命中（%s）',
+    (text) => {
       const result = runPipeline({ handle: 'evade01', text });
-      expect(result.presentation, text).toBe('review');
+      expect(result.presentation).toBe('review');
       // 原话命中词库本体规则（无 -py 后缀），变体命中 -pyN 派生规则
-      expect(result.detection?.ruleId, text).toMatch(
+      expect(result.detection?.ruleId).toMatch(
         /^keyword:official:adult-gray-traffic-(c8a5be76bc38ac44|a8b0aabaa0562b5d)(-py[123])?$/,
       );
-    }
+    },
+  );
+
+  it('拼音代字家族：正常外语文本不误伤', () => {
     // 全局归一化不受影响（约束见 build-keyword-packs PINYIN_SUBSTITUTIONS 注释）
     const clean = runPipeline({ handle: 'traveler', text: 'Sao Paulo 之旅记录' });
     expect(clean.detection).toBeNull();
@@ -204,7 +201,7 @@ describe('fixtures/x 生产管线联动（runDetectionPipeline）', () => {
       community,
       builtinList: new Set(),
       keywordHeuristics,
-      catalog: BUNDLED_KEYWORD_PACK_CATALOG as KeywordPackCatalog,
+      catalog: BUNDLED_KEYWORD_PACK_CATALOG,
       strength: 'standard',
       uiLanguage: 'zh',
     });

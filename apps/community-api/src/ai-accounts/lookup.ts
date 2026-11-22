@@ -89,8 +89,8 @@ export async function lookupAiAccount(
   if (!contested && humanWin) {
     verdict = 'human';
   } else if (!contested && aiWin) {
-    verdict = jevAi ? row!.verdict : 'ai';
-    score = jevAi ? row!.score : null;
+    verdict = jevAi ? row.verdict : 'ai';
+    score = jevAi ? row.score : null;
   } else if (!contested && fresh && row?.confirmed === 1 && row.verdict !== 'insufficient') {
     verdict = row.verdict;
     score = jevAi ? row.score : null;
@@ -161,5 +161,5 @@ export async function listAiAccounts(
     score: number | null;
     listed: boolean;
   }>;
-  return list.map((r) => [r.handle, r.score == null ? null : Number(r.score), r.listed ? 1 : 0]);
+  return list.map((r) => [r.handle, r.score == null ? null : r.score, r.listed ? 1 : 0]);
 }

@@ -1,15 +1,3 @@
-import {
-  LocalCampaignIndex,
-  LOCAL_CAMPAIGN_RULE_ID,
-  campaignCandidateSignal,
-} from '../detection/local-campaign';
-import { normalizeKeywordPhrase } from '../detection/keyword-rules';
-import { PROFILE_INVITATION_RULE_ID } from '../detection/profile-invitation';
-/**
- * 单 article 的扫描管线：提取 → 检测 → 标注/折叠/豁免。
- * 只处理传入的这一个节点；调度（脏集合、分片、防重入）由 PageScanController 负责。
- */
-
 import type { DetectAuthor } from '@feedsieve/detector';
 import {
   contextFromPath,
@@ -17,24 +5,35 @@ import {
   findTweetAvatarImg,
   tweetSelectors,
 } from '@feedsieve/x-adapter';
-import { runDetectionPipeline } from '../detection/detection-pipeline';
+import { toReportableHit, type RuleHitItem } from '../community/rule-hit-uplink';
+/**
+ * 单 article 的扫描管线：提取 → 检测 → 标注/折叠/豁免。
+ * 只处理传入的这一个节点；调度（脏集合、分片、防重入）由 PageScanController 负责。
+ */
 import { recordDetection } from '../detection/detection-log';
+import { runDetectionPipeline } from '../detection/detection-pipeline';
+import { normalizeKeywordPhrase } from '../detection/keyword-rules';
+import {
+  LocalCampaignIndex,
+  LOCAL_CAMPAIGN_RULE_ID,
+  campaignCandidateSignal,
+} from '../detection/local-campaign';
 import {
   scanRevision,
   type PageScanController,
   type PendingBadge,
 } from '../detection/page-scan-controller';
+import { PROFILE_INVITATION_RULE_ID } from '../detection/profile-invitation';
+import type { InsightDecorations } from '../insight/decorations';
 import {
   HIDDEN_TWEET_CELL_ATTRIBUTE,
   hiddenForOtherPost,
   hideCellsSoon,
 } from '../platform/remove-tweets';
-import { MARK_ATTRIBUTE, type ContentState } from './page-state';
 import { markedForOtherPost, type Badges } from './badges';
 import type { BlockedFold } from './blocked-fold';
 import type { ManualActions } from './manual-actions';
-import type { InsightDecorations } from '../insight/decorations';
-import { toReportableHit, type RuleHitItem } from '../community/rule-hit-uplink';
+import { MARK_ATTRIBUTE, type ContentState } from './page-state';
 
 export function createScan(deps: {
   state: ContentState;
@@ -186,8 +185,8 @@ export function createScan(deps: {
       !state.community?.mutedRules?.has(LOCAL_CAMPAIGN_RULE_ID);
     if (campaignEnabled) {
       const directSeed = eligibleSeed(handle) && !!campaignSeedRule?.check(input);
-      for (const author of campaigns.observe(handle, item.text, directSeed)) {
-        controller.invalidateHandle(author);
+      for (const campaignAuthor of campaigns.observe(handle, item.text, directSeed)) {
+        controller.invalidateHandle(campaignAuthor);
       }
     }
 

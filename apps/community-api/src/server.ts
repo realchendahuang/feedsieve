@@ -7,8 +7,8 @@
  * - scheduled：整点 cron 全量编排（清理、规则静音、快照、死账号探活），半点只发快照。
  */
 import { handleWorkerRoutes } from './api';
-import { isAdminHost, isSiteHost } from './lib/hosts';
 import { withDb } from './db/client';
+import { isAdminHost, isSiteHost } from './lib/hosts';
 
 // Nitro 入口的 fetch 在 Cloudflare 上接收 (request, env, ctx)，
 // 其自带类型按通用平台声明为 (request, opts)，这里做一次桥接

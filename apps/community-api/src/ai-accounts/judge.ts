@@ -46,8 +46,8 @@ import {
   type AiVerdict,
   type ReplyEvidence,
 } from './evidence';
-import { judgeAccount, VendorError } from './vendors';
 import { judgeAvailability } from './providers';
+import { judgeAccount, VendorError } from './vendors';
 
 const HANDLE = /^[a-z0-9_]{1,15}$/;
 const POST_ID = /^\d{1,25}$/;
@@ -66,7 +66,7 @@ function gapsFromIds(replies: ReplyEvidence[], fallback: number[]): number[] {
   const at = replies
     .map((r) => Number((BigInt(r.id) >> 22n) + TWITTER_EPOCH))
     .filter((ms) => ms > Number(TWITTER_EPOCH))
-    .sort((a, b) => a - b);
+    .toSorted((a, b) => a - b);
   if (at.length < 2) return fallback;
   return at.slice(1).map((x, i) => Math.round((x - at[i]!) / 1000));
 }
@@ -93,7 +93,7 @@ function side(verdict: AiVerdict): 'ai' | 'human' | 'none' {
 
 function medianGap(gaps: number[]): number | null {
   if (!gaps.length) return null;
-  const sorted = [...gaps].sort((a, b) => a - b);
+  const sorted = gaps.toSorted((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
   return sorted.length % 2 ? sorted[mid]! : Math.round((sorted[mid - 1]! + sorted[mid]!) / 2);
 }
@@ -105,11 +105,11 @@ function cleanReply(raw: unknown): ReplyEvidence | null {
   if (typeof r.id !== 'string' || !POST_ID.test(r.id)) return null;
   if (typeof r.text !== 'string') return null;
   // t.co 短链对判断写法没有信息量，只占 token
-  const text = [...r.text.replace(TCO, '').trim()].slice(0, MAX_TEXT).join('').trim();
+  const text = Array.from(r.text.replace(TCO, '').trim()).slice(0, MAX_TEXT).join('').trim();
   if (!text) return null;
   const parent =
     typeof r.parent === 'string' && r.parent.trim()
-      ? [...r.parent.replace(TCO, '').trim()].slice(0, MAX_PARENT).join('').trim() || null
+      ? Array.from(r.parent.replace(TCO, '').trim()).slice(0, MAX_PARENT).join('').trim() || null
       : null;
   return { id: r.id, parent, text };
 }
@@ -168,7 +168,7 @@ export async function judgeAiAccount(
   // 公开结果页 / OG 图用：昵称截 64 字，头像只认 X 图床
   const displayName =
     typeof body?.display_name === 'string'
-      ? stripNul([...body.display_name.trim()].slice(0, 64).join('')) || null
+      ? stripNul(Array.from(body.display_name.trim()).slice(0, 64).join('')) || null
       : null;
   const avatarUrl =
     typeof body?.avatar_url === 'string' &&

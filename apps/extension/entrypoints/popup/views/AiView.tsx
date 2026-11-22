@@ -1,3 +1,5 @@
+import { flavorOf, type AiVerdict } from '@feedsieve/shared';
+import { profileFromPath } from '@feedsieve/x-adapter';
 /**
  * 「AI 味」视图：当前标签页这个账号的 AI 味结论、我测过的账号。
  * 评论区怎么显示这类账号属于设置，收在齿轮页里（见 settings/AiDisplaySettings）。
@@ -7,10 +9,6 @@
  * 测完这里自动刷新。查询不花 token；只有真的去测才会调判定。
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { profileFromPath } from '@feedsieve/x-adapter';
-import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
-import { flavorOf, type AiVerdict } from '@feedsieve/shared';
-import { formatGap, spreadLabel } from '../../../src/lib/ai-check/share-card';
 import {
   AI_RECORDS_KEY,
   type AiCheckRecord,
@@ -18,12 +16,14 @@ import {
   type AiRhythm,
   type AiVoteOutcome,
 } from '../../../src/lib/ai-check/client';
-import { getSelfHandle } from '../../../src/lib/community/following-allowlist';
+import { formatGap, spreadLabel } from '../../../src/lib/ai-check/share-card';
 import {
   getBlockedAccounts,
   subscribeBlocked,
   type BlockedAccount,
 } from '../../../src/lib/community/blocked-accounts';
+import { getSelfHandle } from '../../../src/lib/community/following-allowlist';
+import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
 import {
   blockQueueProgress,
   getPersistentBlockQueue,
@@ -31,6 +31,7 @@ import {
   type PersistentBlockQueueState,
 } from '../../../src/lib/queue/block-queue-store';
 import { DEFAULT_PRESET, SAFETY_PRESETS } from '../../../src/lib/queue/block-safety';
+import QueuePanel from './QueuePanel';
 import {
   AppIcon,
   EmptyState,
@@ -40,7 +41,6 @@ import {
   SkeletonList,
 } from './shared';
 import { useListPosition } from './use-list-position';
-import QueuePanel from './QueuePanel';
 
 /**
  * 预览里没有头像（扩展不请求主页数据），用 handle 首字母做占位：
@@ -464,13 +464,13 @@ export function AiView({
     setBlocking(true);
     notify(null);
     try {
-      const result = (await sendToXPage({
+      const response = (await sendToXPage({
         type: 'feedsieve:ai-block-start',
         items: aiEligible.map((entry) => ({ handle: entry.handle, category: 'ai_slop' })),
       })) as { status?: string; count?: number } | undefined;
-      if (result?.status !== 'started') throw new Error('ai_queue_not_started');
+      if (response?.status !== 'started') throw new Error('ai_queue_not_started');
       setQueue(await getPersistentBlockQueue());
-      notify(c.aiBlocked(result.count ?? aiEligible.length));
+      notify(c.aiBlocked(response.count ?? aiEligible.length));
     } catch {
       notify(c.needXTab);
     } finally {

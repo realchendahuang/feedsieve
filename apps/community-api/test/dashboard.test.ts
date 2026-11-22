@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:workers';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { count, eq, sql } from 'drizzle-orm';
-import worker from '../src/index';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { getDashboardMetrics } from '../src/dashboard';
 import { getDb } from '../src/db/client';
 import {
   accounts,
@@ -10,7 +10,7 @@ import {
   reports,
   snapshots,
 } from '../src/db/schema';
-import { getDashboardMetrics } from '../src/dashboard';
+import worker from '../src/index';
 import { generateSnapshot, getLatestSnapshotMeta, readSnapshotDirty } from '../src/snapshot';
 import { spreadLatestReport } from './vote-days';
 
@@ -35,7 +35,7 @@ async function report(installationId: string, handle: string, extra: Record<stri
   );
   expect(res.status).toBe(200);
   await spreadLatestReport();
-  return (await res.json()) as { results: { status: string }[]; snapshot_version: string | null };
+  return res.json<{ results: { status: string }[]; snapshot_version: string | null }>();
 }
 
 describe('概览分层指标', () => {
@@ -108,7 +108,7 @@ describe('快照异步化（脏标记）', () => {
     expect(afterReport?.n).toBe(before?.n ?? 0);
 
     // cron 消费：async_user 只有 1 票，内容未变 → 复用版本、清标记、不落新行
-    await worker.scheduled!(undefined as never, env);
+    await worker.scheduled(undefined as never, env);
     expect(await readSnapshotDirty(env)).toBeNull();
     const afterCron = await snapshotCount();
     expect(afterCron?.n).toBe(before?.n ?? 0);
@@ -122,7 +122,7 @@ describe('快照异步化（脏标记）', () => {
 
     const before = await snapshotCount();
     // day-once：今日已有版本（本文件首用例已发布），cron 只顺延、不清脏
-    await worker.scheduled!(undefined as never, env);
+    await worker.scheduled(undefined as never, env);
     expect(await readSnapshotDirty(env)).not.toBeNull();
 
     // 维护者显式发布走即时通道（bypassDailyOnce）：内容立即可见、行数 +1
@@ -132,7 +132,7 @@ describe('快照异步化（脏标记）', () => {
     expect(after?.n).toBe((before?.n ?? 0) + 1);
 
     // 再跑 cron：内容与最新一致 → 复用版本并清脏标记，不落新行
-    await worker.scheduled!(undefined as never, env);
+    await worker.scheduled(undefined as never, env);
     expect(await readSnapshotDirty(env)).toBeNull();
     const afterCron = await snapshotCount();
     expect(afterCron?.n).toBe(after?.n ?? 0);
@@ -144,7 +144,7 @@ describe('快照异步化（脏标记）', () => {
 
   it('getLatestSnapshotMeta 与公开条目数一致', async () => {
     await report('88888888-3008-4008-8008-888888888888', 'meta_user2');
-    await worker.scheduled!(undefined as never, env);
+    await worker.scheduled(undefined as never, env);
 
     const meta = await getLatestSnapshotMeta(env);
     expect(meta?.version).toBeTruthy();

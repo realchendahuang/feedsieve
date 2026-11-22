@@ -4,8 +4,8 @@
  */
 
 import { HIDDEN_TWEET_CELL_ATTRIBUTE } from '../platform/remove-tweets';
-import { MARK_ATTRIBUTE } from './page-state';
 import { ACTION_SLOT_CSS } from './action-slot';
+import { MARK_ATTRIBUTE } from './page-state';
 
 const STYLE_ELEMENT_ID = 'feedsieve-mark-styles';
 const THEME_ATTRIBUTE = 'data-feedsieve-theme';

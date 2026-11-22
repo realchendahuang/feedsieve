@@ -1,13 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { getWhitelistData } from '@/site/data.functions';
-import { pageHead } from '@/site/seo';
 import { ListPageHeader, HelpIcon } from '@/site/pages/lists/lists-common';
 import { WhitelistPanel } from '@/site/pages/lists/WhitelistPanel';
+import { pageHead } from '@/site/seo';
 import { WHITELIST_ISSUE_URL } from '@/site/site';
 
 export const Route = createFileRoute('/_shell/lists/whitelist')({
   head: (ctx) => {
-    const roster = ctx.loaderData as Awaited<ReturnType<typeof getWhitelistData>> | undefined;
+    const roster = ctx.loaderData;
     return pageHead({
       title: '推荐白名单公示',
       description: 'FeedSieve 推荐白名单公开镜像：博主宣言入册，与扩展执行的豁免口径同源。',
@@ -24,7 +24,7 @@ function WhitelistRoute() {
   const roster = Route.useLoaderData();
 
   return (
-    <main className="mx-auto max-w-5xl px-[clamp(18px,2.2vw,34px)] pb-16 pt-8">
+    <main className="mx-auto max-w-5xl px-[clamp(18px,2.2vw,34px)] pt-8 pb-16">
       <ListPageHeader
         title="推荐白名单"
         meta={roster ? `快照 ${roster.snapshot_version}` : undefined}
@@ -39,7 +39,8 @@ function WhitelistRoute() {
               申请入册
             </a>
             <HelpIcon ariaLabel="白名单说明">
-              推荐白名单为维护者入册账号：扩展在任何识别强度下都不会把该账号标出或拉黑。想加入？点「申请入册」提交 Issue。
+              推荐白名单为维护者入册账号：扩展在任何识别强度下都不会把该账号标出或拉黑。想加入？点「申请入册」提交
+              Issue。
             </HelpIcon>
           </>
         }

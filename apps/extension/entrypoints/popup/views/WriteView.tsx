@@ -7,7 +7,7 @@
  * 你在 X 里新建 / 改 / 删预排期帖子时也会顺带更新。全部只存本机。
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
+import { OPEN_SCHEDULED_MESSAGE } from '../../../src/lib/compose/compose-schedule';
 import {
   DEFAULT_SCHEDULE_SETTINGS,
   capacityBetween,
@@ -35,9 +35,9 @@ import {
   upcomingTimes,
   type ScheduledCache,
 } from '../../../src/lib/compose/schedule-store';
-import { OPEN_SCHEDULED_MESSAGE } from '../../../src/lib/compose/compose-schedule';
-import { AppIcon, EmptyState, formatAgo, HelpIcon, IconButton, TipText } from './shared';
+import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
 import ScheduleSetup from './ScheduleSetup';
+import { AppIcon, EmptyState, formatAgo, HelpIcon, IconButton, TipText } from './shared';
 import { useListPosition } from './use-list-position';
 
 const DAYS_SHOWN = 7;
@@ -98,8 +98,7 @@ const COPY = {
     scheduled: 'Scheduled',
     empty: 'Nothing scheduled this week',
     emptyHint: 'In X’s composer, tap the clock and pick “Schedule next” — it shows up here.',
-    emptyHintNone:
-      'Set a rhythm first — then “Schedule next” in X’s composer has a slot to fill.',
+    emptyHintNone: 'Set a rhythm first — then “Schedule next” in X’s composer has a slot to fill.',
     setup: 'Set rhythm',
     setupDone: (n: number) => `${n} a day — done`,
     adjust: 'Edit cadence',
@@ -316,8 +315,8 @@ export function WriteView({
       });
     }
     return [...groups.values()]
-      .map((day) => ({ ...day, items: day.items.sort((a, b) => a.at - b.at) }))
-      .sort((a, b) => a.at - b.at);
+      .map((day) => ({ ...day, items: day.items.toSorted((a, b) => a.at - b.at) }))
+      .toSorted((a, b) => a.at - b.at);
   }, [cache.posts, now]);
 
   const weekWindow = useMemo(() => {

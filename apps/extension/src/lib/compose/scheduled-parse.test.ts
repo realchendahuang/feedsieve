@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { reduceScheduledCache, upcomingTimes, EMPTY_SCHEDULED_CACHE } from './schedule-store';
 import {
   asScheduledEvent,
   graphqlOperation,
@@ -6,7 +7,6 @@ import {
   parseScheduledMutation,
   requestVariables,
 } from './scheduled-parse';
-import { reduceScheduledCache, upcomingTimes, EMPTY_SCHEDULED_CACHE } from './schedule-store';
 
 describe('X 预排期接口解析', () => {
   it('从 URL 取操作名', () => {

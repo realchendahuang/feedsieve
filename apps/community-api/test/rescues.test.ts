@@ -1,9 +1,9 @@
 import { env } from 'cloudflare:workers';
+import { sql, type SQL } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
+import { getDb } from '../src/db/client';
 import worker from '../src/index';
 import { hashInstallationId } from '../src/lib/hash';
-import { sql, type SQL } from 'drizzle-orm';
-import { getDb } from '../src/db/client';
 
 const ORIGIN = 'https://api.example.com';
 
@@ -63,7 +63,7 @@ describe('POST /v1/rescues', () => {
       rescues: [{ handle: '@rescue_me_user' }],
     });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { results: { status: string }[] };
+    const body = await res.json<{ results: { status: string }[] }>();
     expect(body.results[0]!.status).toBe('recorded');
 
     const row = await accountRow('rescue_me_user');
@@ -75,25 +75,25 @@ describe('POST /v1/rescues', () => {
     const id = 'ssssssss-7002-4002-8000-ssssssssssss';
     expect(
       (
-        (await (
+        await (
           await postRescues({ installation_id: id, rescues: [{ handle: 'rescue_dup_user' }] })
-        ).json()) as { results: { status: string }[] }
+        ).json<{ results: { status: string }[] }>()
       ).results[0]!.status,
     ).toBe('recorded');
     expect(
       (
-        (await (
+        await (
           await postRescues({ installation_id: id, rescues: [{ handle: 'rescue_dup_user' }] })
-        ).json()) as { results: { status: string }[] }
+        ).json<{ results: { status: string }[] }>()
       ).results[0]!.status,
     ).toBe('duplicate');
 
-    const unknown = (await (
+    const unknown = await (
       await postRescues({
         installation_id: 'ssssssss-7003-4003-8000-ssssssssssss',
         rescues: [{ handle: 'never_listed' }],
       })
-    ).json()) as { results: { status: string }[] };
+    ).json<{ results: { status: string }[] }>();
     expect(unknown.results[0]!.status).toBe('unknown');
   });
 
@@ -112,7 +112,7 @@ describe('POST /v1/rescues', () => {
       ],
     });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { results: { status: string }[] };
+    const body = await res.json<{ results: { status: string }[] }>();
     expect(body.results[0]!.status).toBe('unknown');
 
     const feedback = await first<{
@@ -145,12 +145,12 @@ describe('POST /v1/rescues', () => {
         })
       ).status,
     ).toBe(200);
-    const invalidSource = (await (
+    const invalidSource = await (
       await postRescues({
         ...base,
         rescues: [{ handle: 'valid_handle', detection_source: 'page-script' }],
       })
-    ).json()) as { results: { status: string; error?: string }[] };
+    ).json<{ results: { status: string; error?: string }[] }>();
     expect(invalidSource.results[0]).toMatchObject({
       status: 'rejected',
       error: 'invalid_detection_source',
@@ -228,7 +228,7 @@ describe('rescues 配额（原子条件 UPSERT）', () => {
       rescues: [{ handle: '@quota_done' }],
     });
     expect(retry.status).toBe(200);
-    expect(((await retry.json()) as { results: { status: string }[] })!.results[0]!.status).toBe(
+    expect((await retry.json<{ results: { status: string }[] }>()).results[0]!.status).toBe(
       'duplicate',
     );
 

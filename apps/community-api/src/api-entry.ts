@@ -1,3 +1,4 @@
+import { withDb } from './db/client';
 /**
  * 测试入口：纯 Hono（无 TanStack Start 虚拟模块依赖）。
  * vitest cloudflare 插件的 Miniflare 起这个入口跑全部 API 集——
@@ -5,7 +6,6 @@
  */
 import { createApp } from './index';
 import { runScheduledCron } from './scheduled';
-import { withDb } from './db/client';
 
 // 路由表与中间件链只构建一次；每请求重建纯属浪费 CPU（env 每次调用传入）。
 const app = createApp();

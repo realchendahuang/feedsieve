@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+// 仓库侧构建脚本的复刻实现：一致性测试钉死它不会与模块漂移
+import { buildKeywordPackManifestMessage } from '../../../scripts/signing-message.mjs';
 import {
   base64ToBytes,
   buildSigningMessage,
@@ -8,20 +10,26 @@ import {
   verifyManifestSignature,
   type ManifestSignature,
 } from './signing';
-// 仓库侧构建脚本的复刻实现：一致性测试钉死它不会与模块漂移
-import { buildKeywordPackManifestMessage } from '../../../scripts/signing-message.mjs';
 
 describe('buildSigningMessage（签名消息）', () => {
   it('仓库脚本的 buildKeywordPackManifestMessage 与本模块逐字节一致', () => {
-    const cases: Array<{ version: string; generatedAt: string | null; sha256: string; rules: number }> = [
-      { version: '2026.09.07.1', generatedAt: '2026-09-07T06:12:45Z', sha256: 'abc123', rules: 778 },
+    const cases: Array<{
+      version: string;
+      generatedAt: string | null;
+      sha256: string;
+      rules: number;
+    }> = [
+      {
+        version: '2026.09.07.1',
+        generatedAt: '2026-09-07T06:12:45Z',
+        sha256: 'abc123',
+        rules: 778,
+      },
       { version: '2026.01.01.0001', generatedAt: null, sha256: '0'.repeat(64), rules: 0 },
       { version: '2025.12.31.999', generatedAt: 'null', sha256: 'deadbeef', rules: 1 },
     ];
     for (const c of cases) {
-      expect(
-        buildKeywordPackManifestMessage(c.version, c.generatedAt, c.sha256, c.rules),
-      ).toBe(
+      expect(buildKeywordPackManifestMessage(c.version, c.generatedAt, c.sha256, c.rules)).toBe(
         buildSigningMessage({
           schemaVersion: 1,
           version: c.version,
@@ -69,17 +77,9 @@ describe('buildSigningMessage（签名消息）', () => {
 
 describe('verifyManifestSignature / signManifestMessage（Ed25519 验签与签名）', () => {
   it('真实密钥对往返：签名可验证，篡改消息后验签失败', async () => {
-    const keyPair = await crypto.subtle.generateKey(
-      { name: 'Ed25519' },
-      true,
-      ['sign', 'verify'],
-    );
-    const pkcs8 = new Uint8Array(
-      await crypto.subtle.exportKey('pkcs8', keyPair.privateKey),
-    );
-    const rawPublic = new Uint8Array(
-      await crypto.subtle.exportKey('raw', keyPair.publicKey),
-    );
+    const keyPair = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+    const pkcs8 = new Uint8Array(await crypto.subtle.exportKey('pkcs8', keyPair.privateKey));
+    const rawPublic = new Uint8Array(await crypto.subtle.exportKey('raw', keyPair.publicKey));
     const trustedKeys = [{ key_id: 'test-key', publicKeyBase64: bytesToBase64(rawPublic) }];
     const message = buildSigningMessage({
       schemaVersion: 1,

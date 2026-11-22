@@ -1,3 +1,4 @@
+import { publicPolicy } from './reports';
 /**
  * 公示数据端（/v1/roster/latest）：官网名单公示页的唯一数据源。
  *
@@ -9,7 +10,6 @@
  * 在任何公开面都不承载可读内容，不进公示响应。
  */
 import { getLatestSnapshot, getLatestSnapshotFile, SNAPSHOT_PACK } from './snapshot';
-import { publicPolicy } from './reports';
 
 export interface RosterBlacklistEntry {
   handle: string;
@@ -55,7 +55,9 @@ export interface RosterPayload {
 }
 
 function asStringArray(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : [];
 }
 
 /**
@@ -118,11 +120,15 @@ export async function getPublicRoster(env: Cloudflare.Env): Promise<RosterPayloa
           : {}),
         first_seen_at: typeof entry.first_seen_at === 'string' ? entry.first_seen_at : '',
         updated_at: typeof entry.updated_at === 'string' ? entry.updated_at : '',
-        ...(asStringArray(entry.aliases).length > 0 ? { aliases: asStringArray(entry.aliases) } : {}),
+        ...(asStringArray(entry.aliases).length > 0
+          ? { aliases: asStringArray(entry.aliases) }
+          : {}),
         ...(asStringArray(entry.evidence_post_ids).length > 0
           ? { evidence_post_ids: asStringArray(entry.evidence_post_ids) }
           : {}),
-        ...(asStringArray(entry.domains).length > 0 ? { domains: asStringArray(entry.domains) } : {}),
+        ...(asStringArray(entry.domains).length > 0
+          ? { domains: asStringArray(entry.domains) }
+          : {}),
       });
     }
   }

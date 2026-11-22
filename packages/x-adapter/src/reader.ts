@@ -1,6 +1,6 @@
-import type { FeedContext, FeedItem } from './types';
 import { extractHandleFromPath } from './handle';
 import { menuSelectors, QUOTE_CARD_SELECTOR, tweetSelectors } from './selectors/selectors';
+import type { FeedContext, FeedItem } from './types';
 
 const POST_ID_RE = /\/status\/(\d+)/;
 const IN_REPLY_TO_RE = /[?&]in_reply_to=(\d+)/;

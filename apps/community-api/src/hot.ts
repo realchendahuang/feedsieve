@@ -1,3 +1,12 @@
+import { detect, HOT_LIST_HEURISTICS } from '@feedsieve/detector';
+import {
+  ageHours,
+  breakoutRatio,
+  heatScore,
+  velocityLevel,
+  velocityPerHour,
+  type ViewObservation,
+} from '@feedsieve/metrics';
 /**
  * 众包全站热榜。
  *
@@ -14,21 +23,12 @@
  * 流速取同一时间桶里各会话的中位数；社区黑名单作者和黄推话术不上榜；同一作者每榜最多 2 条。
  */
 import { and, desc, eq, gte, inArray, lt, notExists, sql } from 'drizzle-orm';
-import {
-  ageHours,
-  breakoutRatio,
-  heatScore,
-  velocityLevel,
-  velocityPerHour,
-  type ViewObservation,
-} from '@feedsieve/metrics';
-import { detect, HOT_LIST_HEURISTICS } from '@feedsieve/detector';
 import { getDb, retryOnConflict } from './db/client';
 import { accounts, hotObservations, hotPosts, meta } from './db/schema';
 import { hashInstallationId, hashIp } from './lib/hash';
 import { compareText, stripNul } from './lib/sql';
-import { chargeUsageInOrder } from './lib/usage';
 import { utcToday } from './lib/time';
+import { chargeUsageInOrder } from './lib/usage';
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
@@ -344,8 +344,8 @@ export async function ingestObservations(
   }
 
   // 按主键排序：并发请求以相同顺序锁行，避免死锁
-  const sortedPosts = [...posts.values()].sort((a, b) => compareText(a.postId, b.postId));
-  const sortedPoints = [...points.values()].sort(
+  const sortedPosts = [...posts.values()].toSorted((a, b) => compareText(a.postId, b.postId));
+  const sortedPoints = [...points.values()].toSorted(
     (a, b) => compareText(a.postId, b.postId) || a.bucket - b.bucket,
   );
 
@@ -417,7 +417,7 @@ export async function ingestObservations(
 }
 
 function median(values: number[]): number {
-  const sorted = [...values].sort((a, b) => a - b);
+  const sorted = values.toSorted((a, b) => a - b);
   const mid = sorted.length >> 1;
   return sorted.length % 2 ? sorted[mid]! : Math.round((sorted[mid - 1]! + sorted[mid]!) / 2);
 }
@@ -588,7 +588,7 @@ export async function computeHotBoards(
     .select({ n: sql<number>`count(distinct ${netKey})::int` })
     .from(hotObservations)
     .where(gte(hotObservations.bucket, Math.floor((now - 2 * HOUR_MS) / BUCKET_MS)));
-  const threshold = reporterThreshold(env, Number(active?.n ?? 0));
+  const threshold = reporterThreshold(env, active?.n ?? 0);
   // 门槛 ≥ 2 时还要求来自至少 2 个网段：一台机器换会话凑不出人数
   const netThreshold = Math.min(threshold, 2);
   // 门槛放进候选查询：不够人数的帖子（包括伪造的天量浏览）占不了候选池
@@ -633,7 +633,7 @@ export async function computeHotBoards(
 
   const rows = new Map<string, HotPostRow>();
   for (const row of [...risingRows, ...dayRows]) {
-    if (!isSpam(row)) rows.set(row.post_id, row as HotPostRow);
+    if (!isSpam(row)) rows.set(row.post_id, row);
   }
   if (rows.size === 0) return { threshold, rising: [], day: [] };
 
@@ -689,7 +689,7 @@ export async function computeHotBoards(
         at: Math.min(now, (bucket + 1) * BUCKET_MS),
         views: median(values),
       }))
-      .sort((a, b) => a.at - b.at);
+      .toSorted((a, b) => a.at - b.at);
     const measured = recentVelocity(row.created_at, points, now);
     if (!measured) continue;
     const { velocity, latest } = measured;

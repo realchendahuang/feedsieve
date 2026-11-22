@@ -3,10 +3,10 @@
 import React, { act } from 'react';
 import ReactDOM from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import HotView, { groupByAuthor } from './HotView';
-import ToastHost from './ToastHost';
-import { asHotPostList } from './shared';
 import { resetToastForTest } from '../../../src/lib/platform/toast';
+import HotView, { groupByAuthor } from './HotView';
+import { asHotPostList } from './shared';
+import ToastHost from './ToastHost';
 
 const mountedRoots: Array<{ unmount: () => void }> = [];
 
@@ -714,7 +714,7 @@ describe('smoother reading', () => {
       if (message.type !== 'feedsieve:hot-posts') return null;
       if (message.sort === 'followers') {
         await new Promise<void>((resolve) => (release = resolve));
-        return [...heatOrder].reverse();
+        return heatOrder.toReversed();
       }
       return heatOrder;
     });
@@ -762,7 +762,9 @@ describe('smoother reading', () => {
     await act(async () => root.querySelector<HTMLButtonElement>('.post-dismiss')!.click());
     expect(handles(root)).toEqual(['@noisy', '@user_423']); // 组里下一条顶上
     expect(stored.hotDismissedV1).toEqual(['1850000000000000421']);
-    const toastButtons = () => [...root.querySelectorAll<HTMLButtonElement>('.toast-notice button')];
+    const toastButtons = () => [
+      ...root.querySelectorAll<HTMLButtonElement>('.toast-notice button'),
+    ];
     expect(toastButtons().map((b) => b.textContent)).toEqual(['撤销', '不看 @noisy']);
     // 顺手不看这个作者
     await act(async () => toastButtons()[1]!.click());

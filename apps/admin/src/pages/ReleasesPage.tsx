@@ -1,8 +1,8 @@
-import React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import React from 'react';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -11,8 +11,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { LoadError, Loading, PageHeader } from '../components/layout';
 import { ConfirmDialog } from '../components/confirm-dialog';
+import { LoadError, Loading, PageHeader } from '../components/layout';
 import { getReleases, rollbackRelease, type Release } from '../lib/api';
 import { errorText } from '../lib/errors';
 
@@ -63,11 +63,16 @@ export function ReleasesPage() {
               {releases.data.map((release) => (
                 <TableRow key={release.id}>
                   <TableCell>
-                    <Badge variant={release.kind === 'accounts' ? 'default' : 'secondary'} className="text-xs">
+                    <Badge
+                      variant={release.kind === 'accounts' ? 'default' : 'secondary'}
+                      className="text-xs"
+                    >
                       {release.kind === 'accounts' ? '名单' : '词库'}
                     </Badge>
                   </TableCell>
-                  <TableCell className="font-semibold text-foreground font-mono text-xs">{release.version}</TableCell>
+                  <TableCell className="font-mono text-xs font-semibold text-foreground">
+                    {release.version}
+                  </TableCell>
                   <TableCell className="text-muted-foreground">{release.actor_email}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {new Date(release.created_at * 1000).toLocaleString('zh-CN')}

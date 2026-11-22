@@ -1,3 +1,4 @@
+import { flavorOf } from '@feedsieve/shared';
 /**
  * AI 味检测重型运行时（懒加载块）：
  * 包含检测卡 UI、投票、证据翻页采集（ReplyCollector）、Canvas 报告图渲染（share-card）
@@ -11,30 +12,8 @@ import {
   profileFromPath,
   tweetSelectors,
 } from '@feedsieve/x-adapter';
-import {
-  MAX_REPLIES,
-  medianGap,
-  MIN_AUTHORS,
-  MIN_REPLIES,
-  ReplyCollector,
-  replyGaps,
-  replySpan,
-  rhythmOf,
-  type ApiTweet,
-  type PageTweet,
-} from './evidence';
-import { flavorOf } from '@feedsieve/shared';
-import { canvasToBlob, loadAvatar } from '../share/canvas-kit';
-import { drawShareCard, formatGap, spreadLabel } from './share-card';
 import { fillReplyComposer } from '../compose/reply-composer';
-import {
-  AI_JUDGE_MESSAGE,
-  AI_OUTCOME_MESSAGE,
-  AI_VOTE_MESSAGE,
-  type AiJudgeOutcome,
-  type AiRhythm,
-  type AiVoteOutcome,
-} from './client';
+import { canvasToBlob, loadAvatar } from '../share/canvas-kit';
 import {
   el,
   ensureAiCheckStyles,
@@ -47,6 +26,27 @@ import {
   type Judged,
   type Known,
 } from './ai-check-shared';
+import {
+  AI_JUDGE_MESSAGE,
+  AI_OUTCOME_MESSAGE,
+  AI_VOTE_MESSAGE,
+  type AiJudgeOutcome,
+  type AiRhythm,
+  type AiVoteOutcome,
+} from './client';
+import {
+  MAX_REPLIES,
+  medianGap,
+  MIN_AUTHORS,
+  MIN_REPLIES,
+  ReplyCollector,
+  replyGaps,
+  replySpan,
+  rhythmOf,
+  type ApiTweet,
+  type PageTweet,
+} from './evidence';
+import { drawShareCard, formatGap, spreadLabel } from './share-card';
 
 const MAX_SCROLL_STEPS = 20;
 const MAX_UPLOAD = MAX_REPLIES * 2;
@@ -162,6 +162,91 @@ const RUNNER_TEXT = {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+function readPage(context = contextFromPath(location.pathname)) {
+  const tweets: Array<PageTweet & { displayName?: string }> = [];
+  for (const article of document.querySelectorAll(tweetSelectors.article)) {
+    const item = extractFeedItem(article, context);
+    if (!item) continue;
+    tweets.push({
+      postId: item.postId,
+      handle: item.author.handle,
+      text: item.text,
+      displayName: item.author.displayName,
+    });
+  }
+  return tweets;
+}
+
+function avatarOnPage(handle: string): string | null {
+  for (const a of document.querySelectorAll<HTMLAnchorElement>('a[href$="/photo"]')) {
+    let pathname: string;
+    try {
+      pathname = new URL(a.getAttribute('href') ?? '', location.origin).pathname;
+    } catch {
+      continue;
+    }
+    if (pathname.toLowerCase() === `/${handle.toLowerCase()}/photo`) {
+      const src = a.querySelector('img')?.src;
+      if (src) return src;
+    }
+  }
+  for (const article of document.querySelectorAll(tweetSelectors.article)) {
+    const item = extractFeedItem(article, 'other');
+    if (item?.author.handle.toLowerCase() !== handle.toLowerCase()) continue;
+    const src = findTweetAvatarImg(article)?.src;
+    if (src) return src;
+  }
+  return null;
+}
+
+function displayNameOn(handle: string): string | undefined {
+  const lower = handle.toLowerCase();
+  const profile = profileFromPath(location.pathname);
+  if (profile?.handle === lower) {
+    const name = document.querySelector('[data-testid="UserName"] span')?.textContent?.trim();
+    if (name) return name;
+  }
+  for (const article of document.querySelectorAll(tweetSelectors.article)) {
+    const item = extractFeedItem(article, 'other');
+    if (item?.author.handle.toLowerCase() === lower && item.author.displayName) {
+      return item.author.displayName;
+    }
+  }
+  if (profile?.handle === lower) {
+    const titleMatch = /^(?:\(\d+\)\s*)?(.+?)\s*\(@([a-z0-9_]{1,15})\)/i.exec(
+      document.title.trim(),
+    );
+    if (titleMatch?.[2]?.toLowerCase() === lower && titleMatch[1]?.trim()) {
+      return titleMatch[1].trim();
+    }
+  }
+  return undefined;
+}
+
+function panel(): HTMLElement | null {
+  return document.getElementById(PANEL_ID);
+}
+
+function toast(container: HTMLElement, message: string): void {
+  container.querySelector('.fs-ai-toast')?.remove();
+  const node = el('div', 'fs-ai-toast', message);
+  container.appendChild(node);
+  setTimeout(() => node.remove(), 2_000);
+}
+
+function countUp(node: HTMLElement, to: number): void {
+  const startAt = performance.now();
+  const unit = el('small', undefined, '%');
+  const frame = (now: number) => {
+    const p = Math.min(1, (now - startAt) / 900);
+    const eased = 1 - (1 - p) ** 3;
+    node.firstChild!.textContent = String(Math.round(to * eased));
+    if (p < 1) requestAnimationFrame(frame);
+  };
+  node.replaceChildren(document.createTextNode('0'), unit);
+  requestAnimationFrame(frame);
+}
+
 export function createAiCheckRunner(host: AiCheckRunnerHost): AiCheckRunner {
   let running: { handle: string; token: number } | null = null;
   let panelHandle: string | null = null;
@@ -173,67 +258,6 @@ export function createAiCheckRunner(host: AiCheckRunnerHost): AiCheckRunner {
   let pendingForce = false;
   let activeCollector: ReplyCollector | null = null;
   const t = () => RUNNER_TEXT[host.getLanguage()];
-
-  function readPage(context = contextFromPath(location.pathname)) {
-    const tweets: Array<PageTweet & { displayName?: string }> = [];
-    for (const article of document.querySelectorAll(tweetSelectors.article)) {
-      const item = extractFeedItem(article, context);
-      if (!item) continue;
-      tweets.push({
-        postId: item.postId,
-        handle: item.author.handle,
-        text: item.text,
-        displayName: item.author.displayName,
-      });
-    }
-    return tweets;
-  }
-
-  function avatarOnPage(handle: string): string | null {
-    for (const a of document.querySelectorAll<HTMLAnchorElement>('a[href$="/photo"]')) {
-      let pathname: string;
-      try {
-        pathname = new URL(a.getAttribute('href') ?? '', location.origin).pathname;
-      } catch {
-        continue;
-      }
-      if (pathname.toLowerCase() === `/${handle.toLowerCase()}/photo`) {
-        const src = a.querySelector('img')?.src;
-        if (src) return src;
-      }
-    }
-    for (const article of document.querySelectorAll(tweetSelectors.article)) {
-      const item = extractFeedItem(article, 'other');
-      if (item?.author.handle.toLowerCase() !== handle.toLowerCase()) continue;
-      const src = findTweetAvatarImg(article)?.src;
-      if (src) return src;
-    }
-    return null;
-  }
-
-  function displayNameOn(handle: string): string | undefined {
-    const lower = handle.toLowerCase();
-    const profile = profileFromPath(location.pathname);
-    if (profile?.handle === lower) {
-      const name = document.querySelector('[data-testid="UserName"] span')?.textContent?.trim();
-      if (name) return name;
-    }
-    for (const article of document.querySelectorAll(tweetSelectors.article)) {
-      const item = extractFeedItem(article, 'other');
-      if (item?.author.handle.toLowerCase() === lower && item.author.displayName) {
-        return item.author.displayName;
-      }
-    }
-    if (profile?.handle === lower) {
-      const titleMatch = /^(?:\(\d+\)\s*)?(.+?)\s*\(@([a-z0-9_]{1,15})\)/i.exec(
-        document.title.trim(),
-      );
-      if (titleMatch?.[2]?.toLowerCase() === lower && titleMatch[1]?.trim()) {
-        return titleMatch[1].trim();
-      }
-    }
-    return undefined;
-  }
 
   function showKnown(handle: string, k: Judged, postId?: string): void {
     showResult({
@@ -255,10 +279,6 @@ export function createAiCheckRunner(host: AiCheckRunnerHost): AiCheckRunner {
       comment: k.comment,
       postId,
     });
-  }
-
-  function panel(): HTMLElement | null {
-    return document.getElementById(PANEL_ID);
   }
 
   function closePanel(): void {
@@ -326,26 +346,6 @@ export function createAiCheckRunner(host: AiCheckRunnerHost): AiCheckRunner {
     retry.type = 'button';
     retry.addEventListener('click', () => void run(handle, true));
     body.appendChild(retry);
-  }
-
-  function toast(container: HTMLElement, message: string): void {
-    container.querySelector('.fs-ai-toast')?.remove();
-    const node = el('div', 'fs-ai-toast', message);
-    container.appendChild(node);
-    setTimeout(() => node.remove(), 2_000);
-  }
-
-  function countUp(node: HTMLElement, to: number): void {
-    const startAt = performance.now();
-    const unit = el('small', undefined, '%');
-    const frame = (now: number) => {
-      const p = Math.min(1, (now - startAt) / 900);
-      const eased = 1 - (1 - p) ** 3;
-      node.firstChild!.textContent = String(Math.round(to * eased));
-      if (p < 1) requestAnimationFrame(frame);
-    };
-    node.replaceChildren(document.createTextNode('0'), unit);
-    requestAnimationFrame(frame);
   }
 
   function tallyText(votes: { ai_count: number; human_count: number; listed: boolean }): string {

@@ -25,21 +25,37 @@ function WhitelistCard({ entry }: { entry: RosterWhitelistEntry }) {
       href={xProfileUrl(entry.handle)}
       target="_blank"
       rel="noopener noreferrer"
-      className="group flex h-full flex-col overflow-hidden rounded-2xl bg-surface shadow-[var(--panel-elev)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/40"
+      className="group flex h-full flex-col overflow-hidden rounded-2xl bg-surface shadow-[var(--panel-elev)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg focus-visible:ring-2 focus-visible:ring-gold/40 focus-visible:outline-none"
     >
-      <div className="bg-gradient-to-r from-gold/15 via-surface to-surface size-full h-14 sm:h-16" aria-hidden="true">
+      <div
+        className="size-full h-14 bg-gradient-to-r from-gold/15 via-surface to-surface sm:h-16"
+        aria-hidden="true"
+      >
         <div className="size-full bg-gradient-to-t from-surface via-surface/30 to-transparent" />
       </div>
       <div className="relative z-10 -mt-6 flex flex-1 flex-col px-4 pb-4">
-        <Avatar url={entry.avatar_url} name={entry.name ?? entry.handle} className="size-12 ring-4 ring-surface" />
+        <Avatar
+          url={entry.avatar_url}
+          name={entry.name ?? entry.handle}
+          className="size-12 ring-4 ring-surface"
+        />
         <div className="mt-2 min-w-0">
-          <div className="truncate text-sm font-semibold leading-tight text-ink">{entry.name ?? `@${entry.handle}`}</div>
-          <div className="mt-0.5 truncate text-xs text-mist group-hover:text-gold">@{entry.handle}</div>
+          <div className="truncate text-sm leading-tight font-semibold text-ink">
+            {entry.name ?? `@${entry.handle}`}
+          </div>
+          <div className="mt-0.5 truncate text-xs text-mist group-hover:text-gold">
+            @{entry.handle}
+          </div>
         </div>
-        <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-mist" style={{ wordBreak: 'break-word' }}>
+        <p
+          className="mt-2 line-clamp-3 text-xs leading-relaxed text-mist"
+          style={{ wordBreak: 'break-word' }}
+        >
           {entry.note}
         </p>
-        <div className="mt-auto pt-2 text-[11px] text-mist tabular-nums">入册 {fmtDate(entry.added_at)}</div>
+        <div className="mt-auto pt-2 text-[11px] text-mist tabular-nums">
+          入册 {fmtDate(entry.added_at)}
+        </div>
       </div>
     </a>
   );

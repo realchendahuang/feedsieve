@@ -1,13 +1,13 @@
-import { and, asc, count, desc, eq, ilike, type SQL } from 'drizzle-orm';
-import { recordAdminAudit, recordRelease } from './admin-accounts';
-import { getDb } from './db/client';
-import { adminKeywordPacks, adminKeywordRules, meta } from './db/schema';
 import {
   buildSigningMessage,
   signManifestMessage,
   type ManifestSignature,
 } from '@feedsieve/community-lists';
 import { validateDetectorConfigOverride } from '@feedsieve/detector';
+import { and, asc, count, desc, eq, ilike, type SQL } from 'drizzle-orm';
+import { recordAdminAudit, recordRelease } from './admin-accounts';
+import { getDb } from './db/client';
+import { adminKeywordPacks, adminKeywordRules, meta } from './db/schema';
 import { sha256Hex } from './lib/hash';
 import { collateC, escapeLike, stripNul } from './lib/sql';
 
@@ -480,7 +480,7 @@ export async function publishAdminKeywords(env: Cloudflare.Env, actorEmail = 'sy
 export const KEYWORD_DETECTOR_CONFIG_META_KEY = 'keyword_detector_config';
 
 /** 读当前配置；无存值或存值非法时返回 null（发布缺省段，客户端回退内置兜底）。 */
-export async function getKeywordDetectorConfig(env: Cloudflare.Env): Promise<unknown | null> {
+export async function getKeywordDetectorConfig(env: Cloudflare.Env): Promise<unknown> {
   const [row] = await getDb(env)
     .select({ value: meta.value })
     .from(meta)
@@ -517,7 +517,7 @@ export function setKeywordDetectorConfig(env: Cloudflare.Env, raw: unknown): Pro
  * 发布时要携带的配置：meta 有值优先；否则继承最近一次发布 body 里携带的
  * 配置（避免一次普通词库发布意外回退参数）；再没有就不带段。
  */
-async function detectorConfigForPublish(env: Cloudflare.Env): Promise<unknown | null> {
+async function detectorConfigForPublish(env: Cloudflare.Env): Promise<unknown> {
   const own = await getKeywordDetectorConfig(env);
   if (own) return own;
   try {

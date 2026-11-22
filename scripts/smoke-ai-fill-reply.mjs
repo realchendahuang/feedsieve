@@ -1,3 +1,7 @@
+import assert from 'node:assert/strict';
+import { cpSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 /**
  * 「AI 味报告卡 → 填入回复框」的端到端冒烟：真 MV3 扩展 + 真 Chromium。
  *
@@ -8,10 +12,6 @@
  * 运行：node scripts/smoke-ai-fill-reply.mjs（先 pnpm build:extension）
  */
 import { chromium } from 'playwright';
-import { cpSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
-import assert from 'node:assert/strict';
 
 const source = resolve('apps/extension/.output/chrome-mv3');
 JSON.parse(readFileSync(join(source, 'manifest.json'), 'utf8'));

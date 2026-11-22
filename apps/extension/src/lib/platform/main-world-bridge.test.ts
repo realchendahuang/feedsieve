@@ -41,12 +41,12 @@ function createWindow(
   fetchImpl: BridgeFetch,
   XhrClass: ReturnType<typeof createXhrClass>,
 ): MainWorldBridgeWindow {
-  return { fetch: fetchImpl, XMLHttpRequest: XhrClass } as unknown as MainWorldBridgeWindow;
+  return { fetch: fetchImpl, XMLHttpRequest: XhrClass };
 }
 
 function createDocument(): { document: MainWorldBridgeDocument; target: EventTarget } {
   const target = new EventTarget();
-  return { document: target as unknown as MainWorldBridgeDocument, target };
+  return { document: target, target };
 }
 
 function jsonResponse(
@@ -104,7 +104,7 @@ describe('installMainWorldBridge', () => {
   it('重复安装返回同一个 handle，不会叠加包裹 fetch', async () => {
     const fetchImpl = vi.fn(async () => jsonResponse({}));
     const XhrClass = createXhrClass();
-    const win = createWindow(fetchImpl as unknown as BridgeFetch, XhrClass);
+    const win = createWindow(fetchImpl, XhrClass);
     const { document } = createDocument();
 
     const first = installMainWorldBridge({ window: win, document });

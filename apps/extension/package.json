@@ -12,7 +12,19 @@
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
     "postinstall": "node scripts/copy-runtime-data.mjs && wxt prepare",
-    "typecheck": "node scripts/copy-runtime-data.mjs && tsc --noEmit"
+    "typecheck": "node scripts/copy-runtime-data.mjs && tsrs --noEmit --fast",
+    "typecheck:strict": "node scripts/copy-runtime-data.mjs && tsrs --noEmit",
+    "typecheck:tsc": "node scripts/copy-runtime-data.mjs && tsc --noEmit"
+  },
+  "dependencies": {
+    "@feedsieve/block-queue": "workspace:*",
+    "@feedsieve/community-lists": "workspace:*",
+    "@feedsieve/detector": "workspace:*",
+    "@feedsieve/metrics": "workspace:*",
+    "@feedsieve/shared": "workspace:*",
+    "@feedsieve/x-adapter": "workspace:*",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   },
   "devDependencies": {
     "@types/react": "^19.2.18",
@@ -20,15 +32,5 @@
     "@wxt-dev/module-react": "^1.2.2",
     "typescript": "^5.9.3",
     "wxt": "^0.21.4"
-  },
-  "dependencies": {
-    "@feedsieve/block-queue": "workspace:*",
-    "@feedsieve/community-lists": "workspace:*",
-    "@feedsieve/shared": "workspace:*",
-    "@feedsieve/detector": "workspace:*",
-    "@feedsieve/metrics": "workspace:*",
-    "@feedsieve/x-adapter": "workspace:*",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8"
   }
 }

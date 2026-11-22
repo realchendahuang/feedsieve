@@ -1,4 +1,3 @@
-import { loadRuntimeData } from '../platform/runtime-data';
 import fs from 'node:fs';
 import { join, resolve } from 'node:path';
 import {
@@ -11,6 +10,7 @@ import {
 } from '@feedsieve/community-lists';
 import { applyDetectorConfigOverride, validateDetectorConfigOverride } from '@feedsieve/detector';
 import { API_BASE } from '../platform/api-base';
+import { loadRuntimeData } from '../platform/runtime-data';
 
 export interface KeywordPackRule {
   id: string;
@@ -277,7 +277,7 @@ function parseManifest(value: unknown): KeywordPackManifest | null {
   return {
     schema_version: 1,
     pack_version: raw.pack_version,
-    generated_at: raw.generated_at as string | null,
+    generated_at: raw.generated_at,
     files: [
       {
         path: 'official.json',
@@ -420,11 +420,6 @@ export function subscribeKeywordPackCatalog(
   const listener = (changes: Record<string, unknown>, areaName: string) => {
     if (areaName === 'local' && changes[STORAGE_KEY]) void getKeywordPackCatalog().then(onChange);
   };
-  browser.storage.onChanged.addListener(
-    listener as Parameters<typeof browser.storage.onChanged.addListener>[0],
-  );
-  return () =>
-    browser.storage.onChanged.removeListener(
-      listener as Parameters<typeof browser.storage.onChanged.removeListener>[0],
-    );
+  browser.storage.onChanged.addListener(listener);
+  return () => browser.storage.onChanged.removeListener(listener);
 }

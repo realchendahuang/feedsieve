@@ -1,10 +1,9 @@
+import type { Detection } from '@feedsieve/detector';
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Detection } from '@feedsieve/detector';
 import type { PendingBadge } from '../detection/page-scan-controller';
 import { bumpStat } from '../stats/local-stats';
 import { createBadges, markedForOtherPost } from './badges';
-import type { ManualActions } from './manual-actions';
 import { createContentState, MARK_ATTRIBUTE } from './page-state';
 
 vi.mock('../stats/local-stats', () => ({ bumpStat: vi.fn(async () => {}) }));
@@ -25,7 +24,7 @@ function setup() {
   const state = createContentState();
   const badges = createBadges({
     state,
-    runBlockNow: vi.fn(async () => undefined) as unknown as ManualActions['runBlockNow'],
+    runBlockNow: vi.fn(async () => undefined),
   });
   return { state, badges };
 }

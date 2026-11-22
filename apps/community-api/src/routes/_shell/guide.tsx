@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { pageHead } from '@/site/seo';
 import GuidePage from '@/site/pages/GuidePage';
+import { pageHead } from '@/site/seo';
 
 export const Route = createFileRoute('/_shell/guide')({
   head: () =>

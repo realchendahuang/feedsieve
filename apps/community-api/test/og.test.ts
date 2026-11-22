@@ -7,9 +7,9 @@ describe('OG 锐评折行', () => {
       '「每条都是先肯定再补一句泛化建议，跨十二个人用同一副骨架，工整得像模板工厂流水线出来的。」';
     const lines = wrapLines(text, 650, 26, 3);
     expect(lines.length).toBeLessThanOrEqual(3);
-    expect(lines.map((line) => [...line].length).reduce((a, b) => a + b, 0)).toBeLessThanOrEqual(
-      [...text].length,
-    );
+    expect(
+      lines.map((line) => Array.from(line).length).reduce((a, b) => a + b, 0),
+    ).toBeLessThanOrEqual(Array.from(text).length);
   });
 
   it('超两行时第二行带省略号', () => {

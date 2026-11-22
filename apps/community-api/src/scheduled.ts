@@ -1,3 +1,9 @@
+import { lt, sql } from 'drizzle-orm';
+import { describeDbError, getDb } from './db/client';
+import { trainingSampleUsage } from './db/schema';
+import { cleanupHotData } from './hot';
+import { cleanupProfileCounters } from './profiles';
+import { autoMuteNoisyRules, cleanupRuleHits } from './rule-hits';
 /**
  * 定时任务编排（自 index.ts 抽出）：快照日更 + 热榜清理 + 死账号探活。
  * 供 server.ts（生产入口）调用；测试走 api-entry（cloudflare vitest 无法加载
@@ -11,12 +17,6 @@ import {
   readSnapshotDirty,
   clearSnapshotDirty,
 } from './snapshot';
-import { lt, sql } from 'drizzle-orm';
-import { describeDbError, getDb } from './db/client';
-import { trainingSampleUsage } from './db/schema';
-import { cleanupHotData } from './hot';
-import { cleanupProfileCounters } from './profiles';
-import { autoMuteNoisyRules, cleanupRuleHits } from './rule-hits';
 
 /** 每小时整点跑全量编排；其余 cron（半点）只发快照，让新上榜的号半小时内下发。 */
 export const FULL_CRON = '0 * * * *';

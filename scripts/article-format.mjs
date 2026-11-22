@@ -77,7 +77,9 @@ export function main(argv = process.argv.slice(2), readStdin = () => readFileSyn
   try {
     markdown = file && file !== '-' ? readFileSync(resolve(file), 'utf8') : readStdin();
   } catch (error) {
-    process.stderr.write(`读不到 ${file}：${error instanceof Error ? error.message : String(error)}\n`);
+    process.stderr.write(
+      `读不到 ${file}：${error instanceof Error ? error.message : String(error)}\n`,
+    );
     return 1;
   }
 

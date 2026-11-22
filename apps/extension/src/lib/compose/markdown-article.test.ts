@@ -107,9 +107,7 @@ describe('本地图片占位符', () => {
     const out = markdownToArticle(
       '![Obsidian 双链关系图谱](images/foo.png)\n\n![网络图](https://a.com/x.png)',
     );
-    expect(out.images).toEqual([
-      { index: 1, src: 'images/foo.png', alt: 'Obsidian 双链关系图谱' },
-    ]);
+    expect(out.images).toEqual([{ index: 1, src: 'images/foo.png', alt: 'Obsidian 双链关系图谱' }]);
     expect(out.html).toBe(
       '<p>🖼 图片 1：images/foo.png · Obsidian 双链关系图谱</p><p><a href="https://a.com/x.png">🖼 网络图</a></p>',
     );
@@ -117,9 +115,7 @@ describe('本地图片占位符', () => {
 
   it('Obsidian 嵌入 ![[图片.png|别名]] 也算本地图片；笔记嵌入原样保留', () => {
     const out = markdownToArticle('![[Pasted image 20240101.png|截图]]\n\n![[某篇笔记]]');
-    expect(out.images).toEqual([
-      { index: 1, src: 'Pasted image 20240101.png', alt: '截图' },
-    ]);
+    expect(out.images).toEqual([{ index: 1, src: 'Pasted image 20240101.png', alt: '截图' }]);
     expect(out.html).toBe('<p>🖼 图片 1：Pasted image 20240101.png · 截图</p><p>![[某篇笔记]]</p>');
   });
 

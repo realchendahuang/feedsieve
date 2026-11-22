@@ -1,4 +1,3 @@
-import { loadRuntimeData } from '../platform/runtime-data';
 /**
  * 社区名单本地状态：快照缓存（last-known-good）与全量索引构建。
  * 纯设置、pause 门控与订阅已拆进 ./community-settings（内容脚本仅依赖该轻量子模块），
@@ -13,6 +12,7 @@ import {
   type StoredSnapshot,
   type SyncSource,
 } from '@feedsieve/community-lists';
+import { loadRuntimeData } from '../platform/runtime-data';
 import {
   COMMUNITY_API_BASE,
   DEFAULT_COMMUNITY_SETTINGS,

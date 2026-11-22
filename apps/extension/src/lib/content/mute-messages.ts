@@ -1,3 +1,4 @@
+import { getMuteSettings, normalizeMutePhrase, type NativeMute } from '../mute/mute-store';
 /**
  * 原生静音词的 content script 消息处理。
  *
@@ -13,7 +14,6 @@ import {
   listNativeMutes,
   type NativeMuteResult,
 } from '../mute/native-mutes';
-import { getMuteSettings, normalizeMutePhrase, type NativeMute } from '../mute/mute-store';
 
 const BUDGET_KEY = 'muteWriteBudgetV1';
 const MIN_INTERVAL_MS = 2_000;
@@ -78,7 +78,9 @@ export function registerMuteMessageHandlers(): void {
     if (type === 'feedsieve:mute-create') {
       const phrase = normalizeMutePhrase(msg?.keyword);
       if (!phrase) return Promise.resolve({ ok: false, code: 'invalid_keyword' });
-      return (async (): Promise<NativeMuteResult<{ mute: unknown; list: unknown }> | { ok: false; code: string }> => {
+      return (async (): Promise<
+        NativeMuteResult<{ mute: unknown; list: unknown }> | { ok: false; code: string }
+      > => {
         const settings = await getMuteSettings();
         if (!settings.consented) return { ok: false, code: 'consent_required' };
         const budget = await readBudget();

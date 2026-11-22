@@ -1,11 +1,11 @@
-import { validateRescue } from './lib/validate';
-import { POLICY } from './reports';
-import { nowSeconds, utcToday } from './lib/time';
-import { collateC, compareText, stripNul } from './lib/sql';
-import { installationHash, refreshAccountsFromLabels, type AccountLabel } from './labels';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { getDb, retryOnConflict } from './db/client';
 import { accounts, activeLabels, installations, rescues } from './db/schema';
+import { installationHash, refreshAccountsFromLabels, type AccountLabel } from './labels';
+import { collateC, compareText, stripNul } from './lib/sql';
+import { nowSeconds, utcToday } from './lib/time';
+import { validateRescue } from './lib/validate';
+import { POLICY } from './reports';
 
 interface ValidRescue {
   handle: string;
@@ -23,7 +23,8 @@ export interface RescueResult {
 }
 
 export type ProcessRescueResult =
-  { ok: true; results: RescueResult[] } | { ok: false; httpStatus: 400 | 413 | 429; error: string };
+  | { ok: true; results: RescueResult[] }
+  | { ok: false; httpStatus: 400 | 413 | 429; error: string };
 
 /**
  * 误标票：认为某条社区标注可能误伤时投出。
@@ -283,8 +284,10 @@ export async function processRescueBatch(
   }
 
   // 多行写入按主键排序：并发请求以相同顺序锁行，避免死锁
-  const sortedRescueRows = [...rescueRows.values()].sort((a, b) => compareText(a.handle, b.handle));
-  labelRows.sort((a, b) => compareText(a.handle, b.handle));
+  const sortedRescueRows = [...rescueRows.values()].toSorted((a, right) =>
+    compareText(a.handle, right.handle),
+  );
+  labelRows.sort((a, right) => compareText(a.handle, right.handle));
   const rescuesUpsert = db
     .insert(rescues)
     .values(sortedRescueRows)

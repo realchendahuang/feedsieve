@@ -1,7 +1,12 @@
-import { describe, expect, it } from 'vitest';
-import { build, buildDetectorConfig, hydrateRuleSources, pinyinVariants } from './build-keyword-packs.mjs';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
+import { describe, expect, it } from 'vitest';
+import {
+  build,
+  buildDetectorConfig,
+  hydrateRuleSources,
+  pinyinVariants,
+} from './build-keyword-packs.mjs';
 
 /**
  * build-keyword-packs.mjs 是签名信任链的输入端（source.json → official.json →
@@ -52,18 +57,35 @@ describe('build (pack catalog builder)', () => {
   });
 
   it('拒绝重复 pack id 与重复 rule id（客户端按 id 去重，重复会让名单塌缩）', () => {
+    expect(() => build({ ...validSource(), packs: [validPack(), validPack()] })).toThrow(
+      /duplicate pack id/,
+    );
     expect(() =>
-      build({ ...validSource(), packs: [validPack(), validPack()] }),
-    ).toThrow(/duplicate pack id/);
-    expect(() =>
-      build(validSource({ packs: [validPack({ rules: [['dup-rule', 'a'], ['dup-rule', 'b']] })] })),
+      build(
+        validSource({
+          packs: [
+            validPack({
+              rules: [
+                ['dup-rule', 'a'],
+                ['dup-rule', 'b'],
+              ],
+            }),
+          ],
+        }),
+      ),
     ).toThrow(/duplicate or invalid rule id/);
   });
 
   it('拒绝首尾空白 / 超长 phrase 与畸形 id', () => {
-    expect(() => build(validSource({ packs: [validPack({ rules: [['ok-rule', ' 加微信 ']] })] }))).toThrow();
-    expect(() => build(validSource({ packs: [validPack({ rules: [['ok-rule', 'x'.repeat(81)]] })] }))).toThrow();
-    expect(() => build(validSource({ packs: [validPack({ rules: [['Bad_ID', '加微信']] })] }))).toThrow();
+    expect(() =>
+      build(validSource({ packs: [validPack({ rules: [['ok-rule', ' 加微信 ']] })] })),
+    ).toThrow();
+    expect(() =>
+      build(validSource({ packs: [validPack({ rules: [['ok-rule', 'x'.repeat(81)]] })] })),
+    ).toThrow();
+    expect(() =>
+      build(validSource({ packs: [validPack({ rules: [['Bad_ID', '加微信']] })] })),
+    ).toThrow();
   });
 
   it('source_refs 排序稳定（同内容不同顺序产出同一 sha256）', () => {
@@ -94,7 +116,9 @@ describe('pinyinVariants (拼音代字家族展开)', () => {
       ['adult-gray-traffic-y-py5', 'yuē炮'],
     ]);
     expect(pinyinVariants([['adult-gray-traffic-z', 'Sao Paulo 旅行']])).toEqual([]);
-    const terms = [{ id: 'adult-terms-local-door', phrase: '同城 + 上门', terms: ['同城', '上门'] }];
+    const terms = [
+      { id: 'adult-terms-local-door', phrase: '同城 + 上门', terms: ['同城', '上门'] },
+    ];
     expect(pinyinVariants(terms)).toEqual([]);
   });
 

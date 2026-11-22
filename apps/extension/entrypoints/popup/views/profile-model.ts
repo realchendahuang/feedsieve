@@ -1,20 +1,20 @@
-/**
- * 「主页」视图的数据处理（纯函数）：校验后台传来的帖子库、跟随标签页找出当前博主、
- * 排序筛选、导出给 AI 的 Markdown 和 CSV。
- */
-import { profileFromPath } from '@feedsieve/x-adapter';
 import type {
   PostScore,
   ProfileAnalysis,
   ProfilePostKind,
   ProfilePostMedia,
 } from '@feedsieve/metrics';
+/**
+ * 「主页」视图的数据处理（纯函数）：校验后台传来的帖子库、跟随标签页找出当前博主、
+ * 排序筛选、导出给 AI 的 Markdown 和 CSV。
+ */
+import { profileFromPath } from '@feedsieve/x-adapter';
+import { cleanText, formatMultipleText } from '../../../src/lib/insight/format';
 import type {
   CatalogAccount,
   CatalogEntry,
   CatalogPost,
 } from '../../../src/lib/insight/profile-catalog';
-import { cleanText, formatMultipleText } from '../../../src/lib/insight/format';
 
 // 分享卡和导出共用同一套格式化：ProfileView 仍从这里取
 export { formatMultipleText };
@@ -118,8 +118,8 @@ export function asCatalogEntry(value: unknown, handle: string): CatalogEntry | n
   if (!account || account.handle !== handle || !HANDLE.test(handle)) return null;
   const cleanAccount: CatalogAccount = { handle };
   for (const key of ['followers', 'followingCount', 'tweets', 'createdAt', 'updatedAt'] as const) {
-    const value = count(account[key]);
-    if (value !== undefined) cleanAccount[key] = value;
+    const parsed = count(account[key]);
+    if (parsed !== undefined) cleanAccount[key] = parsed;
   }
   if (typeof account.displayName === 'string' && account.displayName.trim()) {
     cleanAccount.displayName = account.displayName.trim().slice(0, 64);
@@ -181,7 +181,7 @@ export function visiblePosts(
         (options.includeReplies || post.kind !== 'reply') &&
         (post.createdAt === undefined ? options.range === 'all' : post.createdAt >= since),
     )
-    .sort(
+    .toSorted(
       (a, b) =>
         sortKey(b, analysis.scores.get(b.postId), options.sort) -
           sortKey(a, analysis.scores.get(a.postId), options.sort) ||
@@ -200,7 +200,7 @@ export function topOutliers(
       const score = analysis.scores.get(post.postId);
       return post.kind !== 'reply' && score?.multiple !== null && score !== undefined;
     })
-    .sort(
+    .toSorted(
       (a, b) =>
         (analysis.scores.get(b.postId)!.multiple ?? 0) -
         (analysis.scores.get(a.postId)!.multiple ?? 0),
@@ -219,6 +219,10 @@ export interface MarkdownCopy {
   item: (rank: number, multiple: string, views: string, likes: string, saves: string) => string;
 }
 
+function formatIsoDay(ts: number): string {
+  return new Date(ts).toISOString().slice(0, 10);
+}
+
 /** 「复制 Top 20 给 AI」：带分析要求的 Markdown。 */
 export function outliersMarkdown(
   handle: string,
@@ -227,14 +231,13 @@ export function outliersMarkdown(
   copy: MarkdownCopy,
   options: { now: number; formatNumber: (value: number) => string },
 ): string {
-  const day = (ts: number) => new Date(ts).toISOString().slice(0, 10);
   const lines = [copy.header(handle), ''];
   if (analysis.baseline) {
     lines.push(
       copy.meta(
         options.formatNumber(Math.round(analysis.baseline.medianViews)),
         analysis.baseline.sample,
-        day(options.now),
+        formatIsoDay(options.now),
       ),
       '',
     );
@@ -250,7 +253,7 @@ export function outliersMarkdown(
         post.likes === undefined ? '—' : options.formatNumber(post.likes),
         post.bookmarks === undefined ? '—' : options.formatNumber(post.bookmarks),
       ),
-      `${post.createdAt !== undefined ? `${day(post.createdAt)} · ` : ''}${postUrl(handle, post.postId)}`,
+      `${post.createdAt !== undefined ? `${formatIsoDay(post.createdAt)} · ` : ''}${postUrl(handle, post.postId)}`,
       '',
       cleanText(post.snippet),
       '',

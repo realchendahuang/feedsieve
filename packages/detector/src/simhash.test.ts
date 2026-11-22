@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { contentFingerprint, contentFingerprintV1, fingerprintTextV1 } from './fingerprint';
 import {
   SIMHASH_HAMMING_THRESHOLD,
   hammingDistance,
@@ -9,7 +10,6 @@ import {
   textToSimhash,
   textToSimhashV1,
 } from './simhash';
-import { contentFingerprint, contentFingerprintV1, fingerprintTextV1 } from './fingerprint';
 
 const TEMPLATE =
   '🚀 500 USDT Giveaway! DM @spamking88 Claim on Tron 👉 https://t.co/abc123 follow & repost 🔥';
@@ -93,9 +93,7 @@ describe('simhash 与指纹 API 的关系', () => {
   });
 
   it('fingerprintText 与 textToSimhash 是同一机制（v0.5 起指纹即 SimHash）', () => {
-    expect(contentFingerprint({ text: TEMPLATE })).toBe(
-      simhashToHex(textToSimhash(TEMPLATE)!),
-    );
+    expect(contentFingerprint({ text: TEMPLATE })).toBe(simhashToHex(textToSimhash(TEMPLATE)!));
   });
 });
 
@@ -114,7 +112,9 @@ describe('simhash v1: 版本位与输出形状（v0.8）', () => {
   });
 
   it('v1 与 v0 是不同版本：同一模板的 v1 值不等于 v0 值', () => {
-    expect(contentFingerprintV1({ text: TEMPLATE })).not.toBe(contentFingerprint({ text: TEMPLATE }));
+    expect(contentFingerprintV1({ text: TEMPLATE })).not.toBe(
+      contentFingerprint({ text: TEMPLATE }),
+    );
   });
 });
 
@@ -184,10 +184,38 @@ describe('simhash v1: 哈希分布回归（防熵塌缩，v0.8）', () => {
   // 生产库 225 对假变体（阈值<=2）。本组测试把「位分布均匀」钉进 CI：
   // 任何让分布退化的改动都会在这里失败，而不是上线后污染 campaign 聚类。
   const WORDS = [
-    'giveaway', 'crypto', 'airdrop', '关注我', '私聊', '加微信', 'telegram', '价格',
-    '免费', '领取', '点击', '发财', '老师', '学员', '股票', '合约', '必涨', '福利',
-    '红单', '上车', '大佬', '讲解', '教学', '赚钱', '轻松', '日入', '提现', '秒到',
-    '同城', '上门', '全国空降', '我福不黑不信你看',
+    'giveaway',
+    'crypto',
+    'airdrop',
+    '关注我',
+    '私聊',
+    '加微信',
+    'telegram',
+    '价格',
+    '免费',
+    '领取',
+    '点击',
+    '发财',
+    '老师',
+    '学员',
+    '股票',
+    '合约',
+    '必涨',
+    '福利',
+    '红单',
+    '上车',
+    '大佬',
+    '讲解',
+    '教学',
+    '赚钱',
+    '轻松',
+    '日入',
+    '提现',
+    '秒到',
+    '同城',
+    '上门',
+    '全国空降',
+    '我福不黑不信你看',
   ];
   // 固定种子 LCG：测试确定性，不依赖 Math.random
   let seed = 42;

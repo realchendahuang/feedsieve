@@ -36,7 +36,8 @@ export function createPageTicker(deps: PageTickerDeps = {}): PageTicker {
     ((fn: () => void, ms: number) => globalThis.setInterval(fn, ms) as unknown as number);
   const clear = deps.clearInterval ?? ((handle: number) => globalThis.clearInterval(handle));
   const listen =
-    deps.addEventListener ?? ((type: 'visibilitychange', fn: () => void) => doc.addEventListener(type, fn));
+    deps.addEventListener ??
+    ((type: 'visibilitychange', fn: () => void) => doc.addEventListener(type, fn));
   const unlisten =
     deps.removeEventListener ??
     ((type: 'visibilitychange', fn: () => void) => doc.removeEventListener(type, fn));
@@ -50,7 +51,7 @@ export function createPageTicker(deps: PageTickerDeps = {}): PageTicker {
   function beat(): void {
     // 可见性事件丢了也不在隐藏页里干活
     if (!visible()) return;
-    for (const listener of [...listeners]) {
+    for (const listener of Array.from(listeners)) {
       try {
         listener();
       } catch {

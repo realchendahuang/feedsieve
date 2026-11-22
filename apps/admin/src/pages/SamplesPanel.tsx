@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { SEMANTIC_TAGS, type SampleVerdict } from '@feedsieve/shared';
-import { getSamples, reviewSample, type SampleEntry } from '../lib/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { LoadError, Loading } from '../components/layout';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
-import { LoadError, Loading } from '../components/layout';
+import { getSamples, reviewSample, type SampleEntry } from '../lib/api';
 
 const actions = {
   'manual-spam': '用户标记垃圾',
@@ -135,8 +135,8 @@ function SampleCard({ entry }: { entry: SampleEntry }) {
                 : '待复核'}
         </span>
       </div>
-      <div className="whitespace-pre-wrap break-words">{s.text ?? '正文未采集'}</div>
-      {s.bio && <div className="whitespace-pre-wrap break-words">简介：{s.bio}</div>}
+      <div className="break-words whitespace-pre-wrap">{s.text ?? '正文未采集'}</div>
+      {s.bio && <div className="break-words whitespace-pre-wrap">简介：{s.bio}</div>}
       <div className="text-sm text-muted-foreground">
         {new Date(s.observedAt).toLocaleString('zh-CN')} · 扩展 {s.clientVersion} · 词库{' '}
         {s.catalogVersion ?? '未知'} · {s.detection.ruleId ?? s.detection.source ?? '未命中'}

@@ -6,16 +6,15 @@
  */
 
 import { renderToString } from 'react-dom/server';
-import { handlesToClipboard } from '../src/site/pages/AiSquarePage';
-import { InstallButtons, StoreLinks } from '../src/site/components/InstallButtons';
 import { describe, expect, it } from 'vitest';
-
-import { BlacklistPanel } from '../src/site/pages/lists/BlacklistPanel';
-import { WhitelistPanel } from '../src/site/pages/lists/WhitelistPanel';
-import { RescuePanel } from '../src/site/pages/lists/RescuePanel';
-import { KeywordsPanel } from '../src/site/pages/lists/KeywordsPanel';
-import { ERROR_TEXT } from '../src/site/pages/lists/ApplyPage';
 import type { RosterPayload } from '../src/roster';
+import { InstallButtons, StoreLinks } from '../src/site/components/InstallButtons';
+import { handlesToClipboard } from '../src/site/pages/AiSquarePage';
+import { ERROR_TEXT } from '../src/site/pages/lists/ApplyPage';
+import { BlacklistPanel } from '../src/site/pages/lists/BlacklistPanel';
+import { KeywordsPanel } from '../src/site/pages/lists/KeywordsPanel';
+import { RescuePanel } from '../src/site/pages/lists/RescuePanel';
+import { WhitelistPanel } from '../src/site/pages/lists/WhitelistPanel';
 
 function rosterSample(): RosterPayload {
   return {

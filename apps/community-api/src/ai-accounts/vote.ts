@@ -14,9 +14,9 @@
 import { and, eq, sql } from 'drizzle-orm';
 import { getDb } from '../db/client';
 import { aiAccountVotes } from '../db/schema';
+import { trainingSampleUsage } from '../db/schema';
 import { hashInstallationId } from '../lib/hash';
 import { utcToday } from '../lib/time';
-import { trainingSampleUsage } from '../db/schema';
 
 const HANDLE = /^[a-z0-9_]{1,15}$/;
 /** 进公共名单的最低 ai 独立票数（docs/06 §3.4 / §1 Botblock：≥3 个不同用户）。 */
@@ -33,7 +33,8 @@ export interface AiVoteTally {
 }
 
 export type AiVoteResult =
-  { status: 200; body: AiVoteTally } | { status: 400 | 429; body: { error: string } };
+  | { status: 200; body: AiVoteTally }
+  | { status: 400 | 429; body: { error: string } };
 
 /** 聚合一个账号的当前票数与是否入名单（读时算，judge/snapshot 都能复用）。 */
 export async function tallyVotes(env: Cloudflare.Env, handle: string): Promise<AiVoteTally> {
@@ -44,8 +45,8 @@ export async function tallyVotes(env: Cloudflare.Env, handle: string): Promise<A
     })
     .from(aiAccountVotes)
     .where(eq(aiAccountVotes.handle, handle));
-  const aiCount = Number(row?.ai ?? 0);
-  const humanCount = Number(row?.human ?? 0);
+  const aiCount = row?.ai ?? 0;
+  const humanCount = row?.human ?? 0;
   return {
     handle,
     ai_count: aiCount,

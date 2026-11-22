@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createShareMenu, isShareButton, SHARE_ITEM_ATTRIBUTE } from './share-menu';
-import { scrollToPost } from './locate';
 import { REDESIGN_TWEET_HTML } from '../../../../../fixtures/x/timeline/redesign';
+import { scrollToPost } from './locate';
+import { createShareMenu, isShareButton, SHARE_ITEM_ATTRIBUTE } from './share-menu';
 
 describe('redesign action classification', () => {
   it('recognizes only share, not like/repost/bookmark or analytics, without testids', () => {

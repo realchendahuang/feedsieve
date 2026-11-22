@@ -45,7 +45,7 @@ export interface Rhythm {
 
 const TCO = /https:\/\/t\.co\/\S+/g;
 const cut = (value: string, max: number) =>
-  [...value.replace(TCO, '').trim()].slice(0, max).join('').trim();
+  Array.from(value.replace(TCO, '').trim()).slice(0, max).join('').trim();
 
 /** snowflake 帖子 ID → 发帖时间（毫秒）；不是合法 ID 返回 null。 */
 export function snowflakeMs(id: string): number | null {
@@ -135,7 +135,7 @@ export class ReplyCollector {
     let added = 0;
     const own = tweets
       .filter((t) => t.handle.toLowerCase() === owner && t.inReplyToId && t.postId && t.text)
-      .sort((a, b) => (snowflakeMs(b.postId!) ?? 0) - (snowflakeMs(a.postId!) ?? 0));
+      .toSorted((a, b) => (snowflakeMs(b.postId!) ?? 0) - (snowflakeMs(a.postId!) ?? 0));
     for (const t of own) {
       if (this.full) break;
       if (this.replies.has(t.postId!)) continue;
@@ -166,7 +166,7 @@ export class ReplyCollector {
 
   list(): ReplyEvidence[] {
     // 从新到旧：服务端先判最近的一批
-    return [...this.replies.values()].sort(
+    return [...this.replies.values()].toSorted(
       (a, b) => (snowflakeMs(b.id) ?? 0) - (snowflakeMs(a.id) ?? 0),
     );
   }
@@ -177,12 +177,14 @@ export function replyGaps(replies: readonly ReplyEvidence[]): number[] {
   const at = replies
     .map((r) => snowflakeMs(r.id))
     .filter((v): v is number => v !== null)
-    .sort((a, b) => a - b);
+    .toSorted((a, b) => a - b);
   return at.slice(1).map((x, i) => Math.round((x - at[i]!) / 1000));
 }
 
 export function rhythmOf(replies: readonly ReplyEvidence[], gaps: readonly number[]): Rhythm {
-  const lens = replies.map((r) => [...r.text.replace(/https:\/\/t\.co\/\S+/g, '').trim()].length);
+  const lens = replies.map(
+    (r) => Array.from(r.text.replace(/https:\/\/t\.co\/\S+/g, '').trim()).length,
+  );
   const n = Math.max(lens.length, 1);
   const mean = lens.reduce((s, v) => s + v, 0) / n;
   const sd = Math.sqrt(lens.reduce((s, v) => s + (v - mean) ** 2, 0) / n);
@@ -202,7 +204,7 @@ export function replySpan(replies: readonly ReplyEvidence[]): number | null {
 /** 间隔中位数（秒），报告里显示「平均隔多久回一条」。 */
 export function medianGap(gaps: readonly number[]): number | null {
   if (!gaps.length) return null;
-  const sorted = [...gaps].sort((a, b) => a - b);
+  const sorted = gaps.toSorted((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
   return sorted.length % 2 ? sorted[mid]! : Math.round((sorted[mid - 1]! + sorted[mid]!) / 2);
 }

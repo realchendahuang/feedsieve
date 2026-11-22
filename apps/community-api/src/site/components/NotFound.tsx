@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
 import { Link } from '@tanstack/react-router';
+import { useEffect } from 'react';
 
 /** 全站 404 兜底卡：与站点一致的视觉 + 返回链接。 */
 export function NotFound({ title, description }: { title: string; description?: string }) {
@@ -14,13 +14,13 @@ export function NotFound({ title, description }: { title: string; description?: 
       <div className="mt-6 flex justify-center gap-3">
         <Link
           to="/"
-          className="inline-flex h-9 items-center rounded-full bg-soft-surface px-4 text-sm font-semibold text-mist transition-colors hover:bg-wash-strong hover:text-ink"
+          className="hover:bg-wash-strong inline-flex h-9 items-center rounded-full bg-soft-surface px-4 text-sm font-semibold text-mist transition-colors hover:text-ink"
         >
           返回首页
         </Link>
         <Link
           to="/lists/blacklist"
-          className="inline-flex h-9 items-center rounded-full bg-soft-surface px-4 text-sm font-semibold text-mist transition-colors hover:bg-wash-strong hover:text-ink"
+          className="hover:bg-wash-strong inline-flex h-9 items-center rounded-full bg-soft-surface px-4 text-sm font-semibold text-mist transition-colors hover:text-ink"
         >
           名单公示
         </Link>

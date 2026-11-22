@@ -15,13 +15,13 @@
     "directory": "./dist/client",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": true
+    "run_worker_first": true,
   },
   "account_id": "YOUR_CLOUDFLARE_ACCOUNT_ID",
   "routes": [
     { "pattern": "your-api.example.com", "custom_domain": true },
     { "pattern": "admin.your-api.example.com", "custom_domain": true },
-    { "pattern": "www.example.com", "custom_domain": true }
+    { "pattern": "www.example.com", "custom_domain": true },
   ],
   "vars": {
     // 多域名逗号分隔（SITE_HOST 同理）：域名迁移期把旧域与新域并列，旧客户端不断链
@@ -40,15 +40,15 @@
     {
       "binding": "HYPERDRIVE",
       "id": "<Hyperdrive 配置 ID：wrangler hyperdrive create … --caching-disabled>",
-      "localConnectionString": "postgres://feedsieve:feedsieve_dev_password@127.0.0.1:54330/feedsieve"
-    }
+      "localConnectionString": "postgres://feedsieve:feedsieve_dev_password@127.0.0.1:54330/feedsieve",
+    },
   ],
   "r2_buckets": [
     {
       "binding": "KEYWORD_PACKS",
-      "bucket_name": "feedsieve-keyword-packs"
-    }
+      "bucket_name": "feedsieve-keyword-packs",
+    },
   ],
   // 福滤娃周刊 Worker（feedsieve.win/weekly）：首页「本周 X 精选」读它的公开热帖
-  "services": [{ "binding": "WEEKLY", "service": "fsw-web" }]
+  "services": [{ "binding": "WEEKLY", "service": "fsw-web" }],
 }

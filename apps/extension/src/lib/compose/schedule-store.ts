@@ -86,7 +86,7 @@ export function reduceScheduledCache(
     syncedAt,
     posts: posts
       .filter((p) => p.executeAt > now - PAST_GRACE_MS)
-      .sort((a, b) => a.executeAt - b.executeAt),
+      .toSorted((a, b) => a.executeAt - b.executeAt),
   };
 }
 
@@ -133,7 +133,7 @@ export function asAssignments(value: unknown): ScheduleAssignment[] {
 function liveAssignments(list: ScheduleAssignment[], now: number): ScheduleAssignment[] {
   return list
     .filter((a) => a.at > now - ASSIGNMENT_PAST_MS && a.createdAt > now - ASSIGNMENT_ACTIVE_MS)
-    .sort((a, b) => a.at - b.at);
+    .toSorted((a, b) => a.at - b.at);
 }
 
 export async function getAssignments(now = Date.now()): Promise<ScheduleAssignment[]> {
@@ -223,13 +223,8 @@ function subscribeKey<T>(key: string, parse: (value: unknown) => T, onChange: (v
   const listener = (changes: Record<string, { newValue?: unknown }>, area: string): void => {
     if (area === 'local' && changes[key]) onChange(parse(changes[key].newValue));
   };
-  browser.storage.onChanged.addListener(
-    listener as Parameters<typeof browser.storage.onChanged.addListener>[0],
-  );
-  return () =>
-    browser.storage.onChanged.removeListener(
-      listener as Parameters<typeof browser.storage.onChanged.removeListener>[0],
-    );
+  browser.storage.onChanged.addListener(listener);
+  return () => browser.storage.onChanged.removeListener(listener);
 }
 
 export async function getScheduleSettings(): Promise<ScheduleSettings> {

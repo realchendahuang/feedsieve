@@ -218,7 +218,8 @@ export function createRuleHitUplink(deps: RuleHitUplinkDeps) {
   async function sessionId(): Promise<string> {
     const day = utcDay(now());
     const stored = (await deps.storage.get(SESSION_KEY))[SESSION_KEY] as
-      { day?: string; id?: string } | undefined;
+      | { day?: string; id?: string }
+      | undefined;
     if (stored?.day === day && typeof stored.id === 'string') return stored.id;
     const id = randomId();
     await deps.storage.set({ [SESSION_KEY]: { day, id } });

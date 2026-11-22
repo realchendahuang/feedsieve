@@ -288,7 +288,7 @@ export function createProfileCatalog(deps: {
     if (index) return Promise.resolve(index);
     indexLoad ??= deps.storage
       .get(PROFILE_INDEX_KEY)
-      .catch(() => ({}) as Record<string, unknown>)
+      .catch((): Record<string, unknown> => ({}))
       .then((stored) => {
         const raw = stored[PROFILE_INDEX_KEY];
         const map = new Map<string, number>();
@@ -395,7 +395,7 @@ export function createProfileCatalog(deps: {
     if (profile.loaded.has(shard)) return;
     const stored = await deps.storage
       .get(shardKey(handle, shard))
-      .catch(() => ({}) as Record<string, unknown>);
+      .catch((): Record<string, unknown> => ({}));
     const raw = stored[shardKey(handle, shard)];
     const posts: Record<string, CatalogPost> = {};
     if (raw && typeof raw === 'object') {
@@ -579,10 +579,10 @@ export function createProfileCatalog(deps: {
     const keys = [PROFILE_INDEX_KEY];
     // 没载入内存的博主也要删它的分片：先把元数据读出来拿分片列表
     const metaKeys = [...map.keys()].map(metaKey);
-    const metas =
+    const metas: Record<string, unknown> =
       metaKeys.length > 0
-        ? await deps.storage.get(metaKeys).catch(() => ({}) as Record<string, unknown>)
-        : ({} as Record<string, unknown>);
+        ? await deps.storage.get(metaKeys).catch((): Record<string, unknown> => ({}))
+        : {};
     for (const handle of map.keys()) {
       keys.push(metaKey(handle), PROFILE_KEY_PREFIX + handle);
       const loaded = profiles.get(handle)?.meta.shards;

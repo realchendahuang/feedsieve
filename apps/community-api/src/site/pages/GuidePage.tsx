@@ -16,8 +16,8 @@ import {
   Search,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { CHROME_STORE_URL, FIREFOX_STORE_URL, GITHUB_URL } from '../site';
 import { InstallButtons } from '../components/InstallButtons';
+import { CHROME_STORE_URL, FIREFOX_STORE_URL, GITHUB_URL } from '../site';
 
 /**
  * 教程页：全平台安装、核心理念、四种实战流派、400发防封安全边界、
@@ -32,10 +32,10 @@ export default function GuidePage() {
           <Flame className="size-3.5" />
           <span>福滤娃完整实战与进阶手册</span>
         </div>
-        <h1 className="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl text-ink">
+        <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
           福滤娃使用教程与实战指南
         </h1>
-        <p className="mt-2 text-base text-mist leading-relaxed">
+        <p className="mt-2 text-base leading-relaxed text-mist">
           从安装配置、清理黄推、400
           发防封机制、防误伤，到热帖榜和博主主页洞察，一篇讲清福滤娃怎么用。
         </p>
@@ -57,7 +57,7 @@ export default function GuidePage() {
           <a
             key={id}
             href={`#${id}`}
-            className="rounded-full bg-surface px-3.5 py-1.5 text-xs font-semibold text-mist shadow-sm border border-line/60 transition-all hover:border-ink/20 hover:text-ink"
+            className="rounded-full border border-line/60 bg-surface px-3.5 py-1.5 text-xs font-semibold text-mist shadow-sm transition-all hover:border-ink/20 hover:text-ink"
           >
             {label}
           </a>
@@ -81,7 +81,7 @@ export default function GuidePage() {
                       href={CHROME_STORE_URL}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 font-semibold text-gold hover:underline underline-offset-4"
+                      className="inline-flex items-center gap-1 font-semibold text-gold underline-offset-4 hover:underline"
                     >
                       <span>点「添加至 Chrome」，享受自动后台更新</span>
                       <ExternalLink className="size-3.5" />
@@ -90,7 +90,7 @@ export default function GuidePage() {
                       官方审核 · 自动同步
                     </span>
                   </div>
-                  <p className="text-xs text-mist leading-relaxed">
+                  <p className="text-xs leading-relaxed text-mist">
                     Edge、Brave、Arc、Vivaldi、Opera 等 Chromium 内核浏览器均支持。Edge
                     用户首次打开页面点顶部提示「允许来自其他应用商店的扩展」即可。
                   </p>
@@ -104,7 +104,7 @@ export default function GuidePage() {
                       href={FIREFOX_STORE_URL}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 font-semibold text-gold hover:underline underline-offset-4"
+                      className="inline-flex items-center gap-1 font-semibold text-gold underline-offset-4 hover:underline"
                     >
                       <span>点「添加到 Firefox」，享受自动后台更新</span>
                       <ExternalLink className="size-3.5" />
@@ -113,7 +113,7 @@ export default function GuidePage() {
                       官方审核 · 自动同步
                     </span>
                   </div>
-                  <p className="text-xs text-mist leading-relaxed">
+                  <p className="text-xs leading-relaxed text-mist">
                     Firefox 版与 Chrome 版同一套代码（MV3），侧边栏换成原生 sidebar_action。AMO
                     上另有第三方转载的 0.8.2「feedsieve」条目，不是本项目发布， 请认准「FeedSieve
                     福滤娃」。
@@ -122,7 +122,7 @@ export default function GuidePage() {
               </GuideRow>
 
               <GuideRow label="GitHub Releases 离线包">
-                <div className="space-y-1.5 leading-relaxed text-xs sm:text-sm">
+                <div className="space-y-1.5 text-xs leading-relaxed sm:text-sm">
                   <div>
                     1. 前往{' '}
                     <a
@@ -184,11 +184,11 @@ export default function GuidePage() {
           </table>
         </div>
 
-        <div className="mt-4 rounded-xl border border-line/60 bg-soft-surface p-4 text-xs text-mist leading-relaxed">
+        <div className="mt-4 rounded-xl border border-line/60 bg-soft-surface p-4 text-xs leading-relaxed text-mist">
           <strong className="text-ink">💡 装好后的第一件事：</strong>
           点击浏览器右上角的「拼图图标」🧩，将 <strong>福滤娃 FeedSieve</strong>{' '}
           图标固定（Pin）到浏览器工具栏。此时打开任意{' '}
-          <code className="text-ink font-mono">x.com</code> 页面，扩展会自动激活，
+          <code className="font-mono text-ink">x.com</code> 页面，扩展会自动激活，
           <strong>无需注册任何账号、无需配置任何 API Key</strong>。
         </div>
       </section>
@@ -201,33 +201,33 @@ export default function GuidePage() {
         </div>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl border border-line/70 bg-surface p-5 shadow-[var(--panel-elev)] space-y-2">
-            <h3 className="font-bold text-ink text-sm flex items-center gap-2">
+          <div className="space-y-2 rounded-2xl border border-line/70 bg-surface p-5 shadow-[var(--panel-elev)]">
+            <h3 className="flex items-center gap-2 text-sm font-bold text-ink">
               <CheckCircle2 className="size-4 text-emerald-500" />
               为什么坚持“只框不藏”？
             </h3>
-            <p className="text-xs text-mist leading-relaxed">
+            <p className="text-xs leading-relaxed text-mist">
               很多插件喜欢粗暴地搞 <code className="font-mono">display: none</code>
               ，把你屏幕上的推文节点吞掉。这不仅是掩耳盗铃（换个手机照样骑脸），而且会造成极严重的“信息盲盒”——你根本不知道它吞了什么、为什么吞，甚至可能吞掉正常博主的优质反驳。福滤娃看到什么就标注什么，机器与算法是雷达，最终决定权永远在你自己手里。
             </p>
           </div>
 
-          <div className="rounded-2xl border border-line/70 bg-surface p-5 shadow-[var(--panel-elev)] space-y-2">
-            <h3 className="font-bold text-ink text-sm flex items-center gap-2">
+          <div className="space-y-2 rounded-2xl border border-line/70 bg-surface p-5 shadow-[var(--panel-elev)]">
+            <h3 className="flex items-center gap-2 text-sm font-bold text-ink">
               <CheckCircle2 className="size-4 text-gold" />
               黄框上的徽章看什么？
             </h3>
-            <p className="text-xs text-mist leading-relaxed">
+            <p className="text-xs leading-relaxed text-mist">
               高置信垃圾账号被醒目黄框标出后，推文底部会附带一行黄色依据徽章。例如：
-              <code className="rounded bg-gold/15 px-1.5 py-0.5 text-gold-deep font-semibold">
+              <code className="rounded bg-gold/15 px-1.5 py-0.5 font-semibold text-gold-deep">
                 黄推 / 成人引流 · 命中话术库
               </code>
               、
-              <code className="rounded bg-gold/15 px-1.5 py-0.5 text-gold-deep font-semibold">
+              <code className="rounded bg-gold/15 px-1.5 py-0.5 font-semibold text-gold-deep">
                 搬运套路复读机
               </code>{' '}
               或{' '}
-              <code className="rounded bg-gold/15 px-1.5 py-0.5 text-gold-deep font-semibold">
+              <code className="rounded bg-gold/15 px-1.5 py-0.5 font-semibold text-gold-deep">
                 外链诈骗跳转
               </code>
               。判定依据完全明牌，杜绝莫须有。
@@ -278,36 +278,36 @@ export default function GuidePage() {
           <h2>四、批量拉黑的安全边界（400 发防封风控机制）</h2>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-6 dark:bg-amber-500/10 space-y-4">
+        <div className="mt-4 space-y-4 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-6 dark:bg-amber-500/10">
           <div>
-            <h3 className="font-bold text-ink text-base flex items-center gap-2">
+            <h3 className="flex items-center gap-2 text-base font-bold text-ink">
               <AlertTriangle className="size-4 text-gold" />
               推特天天治不了批量黄推，但对正常用户的高频拉黑抓得极严！
             </h3>
-            <p className="mt-2 text-xs sm:text-sm text-mist leading-relaxed">
+            <p className="mt-2 text-xs leading-relaxed text-mist sm:text-sm">
               拉黑动作走的是你在浏览器当前已登录的合法推特
               Session，这与你手动在网页上点屏蔽是完全相同的数据通道。但推特内部对普通用户的写操作有非常严格的限流阈值。如果脚本毫无顾忌地几秒内发几百个请求，你的大号大概率会被官方暂时限流（429）甚至风控限制。
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3 text-xs">
-            <div className="rounded-xl border border-line/70 bg-surface p-4 space-y-1.5">
+          <div className="grid gap-3 text-xs sm:grid-cols-3">
+            <div className="space-y-1.5 rounded-xl border border-line/70 bg-surface p-4">
               <div className="font-bold text-ink">🎯 400 发 / 24 小时配额</div>
-              <p className="text-mist leading-relaxed">
+              <p className="leading-relaxed text-mist">
                 本地队列严格锁定 24 小时滑动窗口内最多 400
                 发拉黑配额。配额用尽后队列自动休眠暂停，直到窗口释放。大名单请分几天跑完，别指望一晚把全网清零。
               </p>
             </div>
-            <div className="rounded-xl border border-line/70 bg-surface p-4 space-y-1.5">
+            <div className="space-y-1.5 rounded-xl border border-line/70 bg-surface p-4">
               <div className="font-bold text-ink">🎲 拟人化随机时间抖动</div>
-              <p className="text-mist leading-relaxed">
+              <p className="leading-relaxed text-mist">
                 每次批量拉黑之间注入 800ms ~ 2500ms
                 的随机延迟抖动（Jitter），彻底打碎机械高频特征，模拟真实用户的浏览与点击习惯。
               </p>
             </div>
-            <div className="rounded-xl border border-line/70 bg-surface p-4 space-y-1.5">
+            <div className="space-y-1.5 rounded-xl border border-line/70 bg-surface p-4">
               <div className="font-bold text-ink">🛑 429 智能装死熔断</div>
-              <p className="text-mist leading-relaxed">
+              <p className="leading-relaxed text-mist">
                 一旦 X 接口返回 429 Too Many Requests
                 限流响应，扩展立即启动保护熔断进入休眠冷却，绝不拿你的推特大号去硬赌风控底线。
               </p>
@@ -325,13 +325,13 @@ export default function GuidePage() {
 
         <div className="mt-4 space-y-3">
           <div className="rounded-2xl border border-line/70 bg-surface p-5 shadow-[var(--panel-elev)]">
-            <div className="flex items-center gap-2 font-bold text-sm text-ink">
-              <span className="rounded-full bg-emerald-500/15 text-emerald-600 px-2 py-0.5 text-xs">
+            <div className="flex items-center gap-2 text-sm font-bold text-ink">
+              <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs text-emerald-600">
                 第一重
               </span>
               <span>关注列表本地自动豁免（免死金牌）</span>
             </div>
-            <p className="mt-2 text-xs text-mist leading-relaxed">
+            <p className="mt-2 text-xs leading-relaxed text-mist">
               打开扩展设置页，点击「同步关注列表」。扩展会自动将你当前所有的
               Following（关注博主）存入本地免检白名单中。在本地检测流水线中，关注列表拥有
               <strong>最高绝对豁免权</strong>
@@ -340,28 +340,28 @@ export default function GuidePage() {
           </div>
 
           <div className="rounded-2xl border border-line/70 bg-surface p-5 shadow-[var(--panel-elev)]">
-            <div className="flex items-center gap-2 font-bold text-sm text-ink">
-              <span className="rounded-full bg-gold-surface text-gold px-2 py-0.5 text-xs">
+            <div className="flex items-center gap-2 text-sm font-bold text-ink">
+              <span className="rounded-full bg-gold-surface px-2 py-0.5 text-xs text-gold">
                 第二重
               </span>
               <span>已拉黑面板「放回来」秒级撤销</span>
             </div>
-            <p className="mt-2 text-xs text-mist leading-relaxed">
+            <p className="mt-2 text-xs leading-relaxed text-mist">
               扩展弹窗提供独立的「已拉黑」历史列表。所有通过扩展执行的拉黑均有痕迹，支持输入账号关键词快速搜索；点击任意账号右侧的「放回来」按钮，立即撤销拉黑并在推特端恢复正常。
             </p>
           </div>
 
           <div className="rounded-2xl border border-line/70 bg-surface p-5 shadow-[var(--panel-elev)]">
-            <div className="flex items-center gap-2 font-bold text-sm text-ink">
-              <span className="rounded-full bg-sky-500/15 text-sky-600 px-2 py-0.5 text-xs">
+            <div className="flex items-center gap-2 text-sm font-bold text-ink">
+              <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-xs text-sky-600">
                 第三重
               </span>
               <span>社区抢救名单与公开申诉入册</span>
             </div>
-            <p className="mt-2 text-xs text-mist leading-relaxed">
+            <p className="mt-2 text-xs leading-relaxed text-mist">
               社区如果发现某位正常博主被恶意刷票误伤，其他用户在扩展内点击抢救，系统根据净票机制（拉黑票
               − 抢救票 &lt; 3）自动将其从全量黑名单中剔除；博主本人也可以在{' '}
-              <Link to="/lists/apply" className="text-gold font-semibold hover:underline">
+              <Link to="/lists/apply" className="font-semibold text-gold hover:underline">
                 官网申诉页
               </Link>{' '}
               发起申请，经邮箱验证后进入维护者人工复核队列解封。
@@ -571,9 +571,9 @@ export default function GuidePage() {
       </section>
 
       {/* 底部引导 */}
-      <section className="mt-14 rounded-2xl border border-gold/40 bg-gradient-to-b from-gold-surface/30 to-surface p-6 sm:p-8 text-center shadow-[var(--panel-elev)]">
+      <section className="mt-14 rounded-2xl border border-gold/40 bg-gradient-to-b from-gold-surface/30 to-surface p-6 text-center shadow-[var(--panel-elev)] sm:p-8">
         <h3 className="text-xl font-bold text-ink">一切准备就绪，开始体验清爽时间线</h3>
-        <p className="mt-2 text-xs sm:text-sm text-mist">
+        <p className="mt-2 text-xs text-mist sm:text-sm">
           遇到任何未尽疑问或特殊反馈，欢迎前往 GitHub 社区与全球推友交流。
         </p>
         <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
@@ -584,7 +584,7 @@ export default function GuidePage() {
           />
           <Link
             to="/lists/blacklist"
-            className="inline-flex h-10 items-center rounded-full bg-surface px-5 text-xs font-semibold text-ink shadow-sm border border-line/70 hover:bg-wash-strong transition-colors"
+            className="hover:bg-wash-strong inline-flex h-10 items-center rounded-full border border-line/70 bg-surface px-5 text-xs font-semibold text-ink shadow-sm transition-colors"
           >
             查验社区黑名单
           </Link>
@@ -592,7 +592,7 @@ export default function GuidePage() {
             href={GITHUB_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex h-10 items-center rounded-full bg-surface px-5 text-xs font-semibold text-mist hover:text-ink shadow-sm border border-line/70 hover:bg-wash-strong transition-colors"
+            className="hover:bg-wash-strong inline-flex h-10 items-center rounded-full border border-line/70 bg-surface px-5 text-xs font-semibold text-mist shadow-sm transition-colors hover:text-ink"
           >
             GitHub Issues 反馈
           </a>
@@ -617,10 +617,10 @@ function GuideCard({ title, children }: { title: string; children: ReactNode }) 
 function GuideRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <tr className="align-top">
-      <td className="w-1/3 py-4 px-4 font-semibold text-ink sm:w-1/4 text-xs sm:text-sm">
+      <td className="w-1/3 px-4 py-4 text-xs font-semibold text-ink sm:w-1/4 sm:text-sm">
         {label}
       </td>
-      <td className="py-4 px-4 text-mist text-xs sm:text-sm">{children}</td>
+      <td className="px-4 py-4 text-xs text-mist sm:text-sm">{children}</td>
     </tr>
   );
 }
@@ -637,22 +637,22 @@ function StepCard({
   desc: string;
 }) {
   return (
-    <div className="rounded-2xl border border-line/70 bg-surface p-5 shadow-[var(--panel-elev)] transition-all hover:border-ink/20 flex flex-col justify-between">
+    <div className="flex flex-col justify-between rounded-2xl border border-line/70 bg-surface p-5 shadow-[var(--panel-elev)] transition-all hover:border-ink/20">
       <div>
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5">
             <span className="flex size-7 items-center justify-center rounded-lg bg-gold-surface font-mono text-xs font-bold text-gold">
               {step}
             </span>
-            <h3 className="font-bold text-ink text-sm">{title}</h3>
+            <h3 className="text-sm font-bold text-ink">{title}</h3>
           </div>
           {badge && (
-            <span className="rounded-full bg-soft-surface border border-line/60 px-2 py-0.5 text-[10px] font-semibold text-mist">
+            <span className="rounded-full border border-line/60 bg-soft-surface px-2 py-0.5 text-[10px] font-semibold text-mist">
               {badge}
             </span>
           )}
         </div>
-        <p className="mt-2.5 text-xs text-mist leading-relaxed">{desc}</p>
+        <p className="mt-2.5 text-xs leading-relaxed text-mist">{desc}</p>
       </div>
     </div>
   );
@@ -662,7 +662,7 @@ function SettingItem({ title, desc }: { title: string; desc: ReactNode }) {
   return (
     <div className="rounded-2xl border border-line/70 bg-surface p-5 shadow-[var(--panel-elev)]">
       <h3 className="text-sm font-bold text-ink">{title}</h3>
-      <div className="mt-1.5 text-xs text-mist leading-relaxed">{desc}</div>
+      <div className="mt-1.5 text-xs leading-relaxed text-mist">{desc}</div>
     </div>
   );
 }
@@ -670,11 +670,11 @@ function SettingItem({ title, desc }: { title: string; desc: ReactNode }) {
 function FaqItem({ q, a }: { q: string; a: ReactNode }) {
   return (
     <details className="group rounded-2xl border border-line/70 bg-surface p-5 shadow-[var(--panel-elev)] transition-all">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-bold text-sm text-ink select-none">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-bold text-ink select-none">
         <span>{q}</span>
         <ChevronDown className="size-4 shrink-0 text-fog transition-transform duration-200 group-open:rotate-180" />
       </summary>
-      <div className="mt-3 text-xs text-mist leading-relaxed border-t border-line/40 pt-3">{a}</div>
+      <div className="mt-3 border-t border-line/40 pt-3 text-xs leading-relaxed text-mist">{a}</div>
     </details>
   );
 }

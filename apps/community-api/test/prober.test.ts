@@ -1,12 +1,12 @@
 import { env } from 'cloudflare:workers';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { probeAccountHealthScheduled } from '../src/prober';
 import { sql, type SQL } from 'drizzle-orm';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getDb } from '../src/db/client';
+import { probeAccountHealthScheduled } from '../src/prober';
 
 /** UserByScreenName 客户端模拟：activate 发 token，正文按 handle 分四类结果 */
 function stubXResponses(input: Request | string): Response {
-  const url = new URL(String(input));
+  const url = new URL(typeof input === 'string' ? input : input.url);
   if (url.pathname.endsWith('/guest/activate.json')) {
     return new Response(JSON.stringify({ guest_token: 'guest-token-1' }), { status: 200 });
   }

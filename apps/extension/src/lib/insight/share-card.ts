@@ -68,7 +68,7 @@ export function pickSharePosts(posts: readonly CatalogPost[], limit = 3): Catalo
         post.views > 0 &&
         post.createdAt !== undefined,
     )
-    .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
+    .toSorted((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
     .slice(0, limit);
 }
 
@@ -148,7 +148,7 @@ export async function drawProfileShareCard(input: ProfileShareInput): Promise<HT
 
   // 账号：头像 + 名字 + @id + 量级
   const avatarSize = 112;
-  const initial = [...(input.displayName?.trim() || input.handle)][0]?.toUpperCase() ?? '?';
+  const initial = Array.from(input.displayName?.trim() || input.handle)[0]?.toUpperCase() ?? '?';
   drawAvatar(ctx, avatar, PAD, 146, avatarSize, initial, 'rgba(255, 212, 0, 0.7)');
 
   const nameX = PAD + avatarSize + 32;

@@ -1,8 +1,8 @@
-import { Fragment, useMemo, useState } from 'react';
 import { categoryLabel } from '@feedsieve/shared';
+import { Fragment, useMemo, useState } from 'react';
 import type { RosterBlacklistEntry } from '../../../roster';
-import { HandleLink, fmtDate } from './lists-common';
 import { cn } from './../../lib/utils';
+import { HandleLink, fmtDate } from './lists-common';
 
 /**
  * 黑名单公示面板：搜索 + 100/页分页 + 行展开明细（维护者说明 / 证据帖 / 外链 / 历史名）。
@@ -14,7 +14,7 @@ export function BlacklistPanel({ entries }: { entries: RosterBlacklistEntry[] })
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const PAGE_SIZE = 100;
 
-  const sorted = useMemo(() => [...entries].sort((a, b) => b.net_votes - a.net_votes), [entries]);
+  const sorted = useMemo(() => entries.toSorted((a, b) => b.net_votes - a.net_votes), [entries]);
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase().replace(/^@/, '');
     return q ? sorted.filter((e) => e.handle.toLowerCase().includes(q)) : sorted;
@@ -39,7 +39,7 @@ export function BlacklistPanel({ entries }: { entries: RosterBlacklistEntry[] })
           className="h-9 w-56 rounded-full border border-line bg-surface px-4 text-sm outline-none focus:border-gold focus:ring-[3px] focus:ring-ring/30"
         />
       </div>
-      <div className="panel-card overflow-hidden">
+      <div className="overflow-hidden panel-card">
         <table className="w-full text-sm" id="blacklist-table">
           <thead>
             <tr className="border-b border-line/70 text-left text-xs text-mist">
@@ -54,8 +54,12 @@ export function BlacklistPanel({ entries }: { entries: RosterBlacklistEntry[] })
           </thead>
           <tbody>
             {rows.map((entry) => {
-              const expandable =
-                !!(entry.maintainer_note || entry.aliases?.length || entry.evidence_post_ids?.length || entry.domains?.length);
+              const expandable = !!(
+                entry.maintainer_note ||
+                entry.aliases?.length ||
+                entry.evidence_post_ids?.length ||
+                entry.domains?.length
+              );
               // key 挂在 fragment 上：行 + 展开行作为一个可调和单元
               return (
                 <Fragment key={entry.handle}>
@@ -66,21 +70,33 @@ export function BlacklistPanel({ entries }: { entries: RosterBlacklistEntry[] })
                       if (!expandable) return;
                       setOpen((prev) => ({ ...prev, [entry.handle]: !prev[entry.handle] }));
                     }}
-                    className={cn('border-b border-line/40', expandable && 'cursor-pointer hover:bg-wash')}
+                    className={cn(
+                      'border-b border-line/40',
+                      expandable && 'hover:bg-wash cursor-pointer',
+                    )}
                   >
-                    <td className="px-4 py-2.5"><HandleLink handle={entry.handle} /></td>
+                    <td className="px-4 py-2.5">
+                      <HandleLink handle={entry.handle} />
+                    </td>
                     <td className="px-4 py-2.5 text-mist">{categoryLabel(entry.category)}</td>
                     <td className="px-4 py-2.5">
                       {entry.sources.map((src) => (
-                        <span key={src} className="mr-1 rounded-full bg-gold-surface px-2 py-0.5 text-xs font-semibold text-gold">
+                        <span
+                          key={src}
+                          className="mr-1 rounded-full bg-gold-surface px-2 py-0.5 text-xs font-semibold text-gold"
+                        >
                           {src === 'maintainer' ? '维护者' : '社区'}
                         </span>
                       ))}
                     </td>
                     <td className="px-4 py-2.5 text-right tabular-nums">{entry.report_count}</td>
                     <td className="px-4 py-2.5 text-right tabular-nums">{entry.rescue_count}</td>
-                    <td className="px-4 py-2.5 text-right font-bold tabular-nums">{entry.net_votes}</td>
-                    <td className="px-4 py-2.5 text-mist tabular-nums">{fmtDate(entry.updated_at)}</td>
+                    <td className="px-4 py-2.5 text-right font-bold tabular-nums">
+                      {entry.net_votes}
+                    </td>
+                    <td className="px-4 py-2.5 text-mist tabular-nums">
+                      {fmtDate(entry.updated_at)}
+                    </td>
                   </tr>
                   {open[entry.handle] && expandable && (
                     <tr className="border-b border-line/40 bg-soft-surface">
@@ -101,8 +117,12 @@ export function BlacklistPanel({ entries }: { entries: RosterBlacklistEntry[] })
                             ))}
                           </DetailLine>
                         ) : null}
-                        {entry.domains?.length ? <DetailLine label="外链" value={entry.domains.join(' · ')} /> : null}
-                        {entry.aliases?.length ? <DetailLine label="历史名" value={entry.aliases.join(' · ')} /> : null}
+                        {entry.domains?.length ? (
+                          <DetailLine label="外链" value={entry.domains.join(' · ')} />
+                        ) : null}
+                        {entry.aliases?.length ? (
+                          <DetailLine label="历史名" value={entry.aliases.join(' · ')} />
+                        ) : null}
                       </td>
                     </tr>
                   )}
@@ -140,7 +160,15 @@ export function BlacklistPanel({ entries }: { entries: RosterBlacklistEntry[] })
   );
 }
 
-function DetailLine({ label, value, children }: { label: string; value?: string; children?: React.ReactNode }) {
+function DetailLine({
+  label,
+  value,
+  children,
+}: {
+  label: string;
+  value?: string;
+  children?: React.ReactNode;
+}) {
   return (
     <div className="flex items-start gap-2 py-0.5">
       <span className="shrink-0 font-semibold text-mist">{label}</span>

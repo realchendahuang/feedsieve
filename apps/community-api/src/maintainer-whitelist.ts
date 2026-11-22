@@ -129,8 +129,8 @@ export async function upsertMaintainerWhitelist(
   time: number,
 ): Promise<void> {
   // 按主键排序：并发批量 UPSERT 以相同顺序锁行，避免死锁
-  const unique = [...new Map(rows.map((row) => [row.handle, row] as const)).values()].sort((a, b) =>
-    compareText(a.handle, b.handle),
+  const unique = [...new Map(rows.map((row) => [row.handle, row] as const)).values()].toSorted(
+    (a, b) => compareText(a.handle, b.handle),
   );
   if (unique.length === 0) return;
   await db

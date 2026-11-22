@@ -2,9 +2,9 @@
 import React, { act } from 'react';
 import ReactDOM from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { openOfficialPage } from '../../../src/lib/platform/site-links';
 import { accountFromUrl, AiView } from './AiView';
 import { AiDisplaySettings } from './settings/AiDisplaySettings';
-import { openOfficialPage } from '../../../src/lib/platform/site-links';
 
 // 「查看全部 AI 号」只验证跳转目标，不真开标签页
 vi.mock('../../../src/lib/platform/site-links', async (importOriginal) => {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { communityVoteForDetection } from '../content/block-core';
 import { runDetectionPipeline } from './detection-pipeline';
 import { BUNDLED_KEYWORD_PACK_CATALOG } from './keyword-packs';
 import {
@@ -7,7 +8,6 @@ import {
   normalizeKeywordPhrase,
 } from './keyword-rules';
 import { createProfileInvitationRule, PROFILE_INVITATION_RULE_ID } from './profile-invitation';
-import { communityVoteForDetection } from '../content/block-core';
 
 const samples = [
   ['HollyOlexaapsz', '娇妻媚儿（❤️想找单男看我简介🍑', '那一夜你👆没有拒绝我🤝🏻 💪不是人机 7 🌲'],
@@ -41,7 +41,7 @@ describe('nickname invitation evidence in the production pipeline', () => {
   it.each(samples)(
     'marks supplied sample %s as review without requiring a bio or random handle',
     (handle, name, text) => {
-      const result = run(name!, text!, true, handle!);
+      const result = run(name, text, true, handle);
       expect(result.presentation).toBe('review');
       expect(result.category).toBe('adult_gray_traffic');
       expect(result.detection?.ruleId).toBe(PROFILE_INVITATION_RULE_ID);

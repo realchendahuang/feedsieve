@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 import { beforeEach, expect, it, vi } from 'vitest';
+import type { BlockEvidence } from '../detection/detection-pipeline';
 import { createManualActions } from './manual-actions';
 import { createContentState } from './page-state';
-import type { BlockEvidence } from '../detection/detection-pipeline';
 vi.mock('../community/contribute', () => ({ syncLocalLabels: vi.fn(async () => ({})) }));
 vi.mock('../community/allowlist', () => ({ removeAllowed: vi.fn(async () => {}) }));
 vi.mock('../community/following-allowlist', () => ({

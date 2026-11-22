@@ -25,6 +25,7 @@ import {
   type ReplyEvidence,
   type Rhythm,
 } from './evidence';
+import { judgeAvailability } from './providers';
 import {
   AI_QUESTION_VERSION,
   fetchUserReplies,
@@ -32,7 +33,6 @@ import {
   vendorOpen,
   VendorError,
 } from './vendors';
-import { judgeAvailability } from './providers';
 
 const HANDLE = /^[a-z0-9_]{1,15}$/;
 const DAY_S = 86_400;
@@ -328,7 +328,7 @@ export interface AiSampleRow {
 
 /** 按码点截断并去掉 NUL（PG 的 text 不接受 U+0000），与写库口径一致。 */
 function sampleText(value: string, max: number): string {
-  return stripNul([...value].slice(0, max).join('')).trim();
+  return stripNul(Array.from(value).slice(0, max).join('')).trim();
 }
 
 /** snowflake → Unix 秒；ID 解析不出发布时间返回 null。 */
@@ -355,7 +355,7 @@ export function sampleRowsFromReplies(
   const postedAt = new Map(replies.map((reply) => [reply.id, snowflakeSeconds(reply.id)]));
   const timed = replies
     .filter((reply) => postedAt.get(reply.id) != null)
-    .sort((a, b) => (postedAt.get(a.id) as number) - (postedAt.get(b.id) as number));
+    .toSorted((a, b) => (postedAt.get(a.id) as number) - (postedAt.get(b.id) as number));
   // 间隔是相邻两条的差：按时间升序，第 i 条（i≥1）对应 gaps[i-1]
   const gapOf = new Map<string, number>();
   for (let i = 1; i < timed.length; i += 1) {
@@ -408,7 +408,7 @@ export async function saveVerdictSamples(
     unique.push(row);
   }
   const values = unique
-    .sort((a, b) => (a.tweetId < b.tweetId ? -1 : a.tweetId > b.tweetId ? 1 : 0))
+    .toSorted((a, b) => (a.tweetId < b.tweetId ? -1 : a.tweetId > b.tweetId ? 1 : 0))
     .map((row) => ({
       handle,
       tweetId: row.tweetId,
@@ -436,17 +436,15 @@ export async function saveVerdictSamples(
     )
     .limit(MAX_SAMPLES_PER_HANDLE);
   if (keep.length) {
-    await db
-      .delete(aiAccountSamples)
-      .where(
-        and(
-          eq(aiAccountSamples.handle, handle),
-          notInArray(
-            aiAccountSamples.tweetId,
-            keep.map((row) => row.tweetId),
-          ),
+    await db.delete(aiAccountSamples).where(
+      and(
+        eq(aiAccountSamples.handle, handle),
+        notInArray(
+          aiAccountSamples.tweetId,
+          keep.map((row) => row.tweetId),
         ),
-      );
+      ),
+    );
   }
 }
 

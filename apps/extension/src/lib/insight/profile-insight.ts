@@ -65,6 +65,41 @@ export function profileLineParts(summary: ProfileSummary, language: UiLanguage):
   return parts;
 }
 
+function removeLine(): void {
+  for (const line of document.querySelectorAll(`.${PROFILE_LINE_CLASS}`)) line.remove();
+}
+
+/** 找资料卡锚点：优先旧版 data-testid；新版无 testid 时回退到资料卡底部的关注/粉丝链接行。 */
+function findHeaderAnchor(targetHandle: string): Element | null {
+  for (const selector of profileSelectors.headerAnchors) {
+    const node = document.querySelector(selector);
+    if (node) return node;
+  }
+  const lower = targetHandle.toLowerCase();
+  const followingPath = `/${lower}/following`;
+  const followerPaths = new Set([`/${lower}/followers`, `/${lower}/verified_followers`]);
+  const links = [...document.querySelectorAll<HTMLAnchorElement>('a[href^="/"]')].filter(
+    (anchor) =>
+      !anchor.closest('article, [role="tablist"], nav, aside, [data-testid="sidebarColumn"]'),
+  );
+  const followingLink = links.find(
+    (anchor) => anchor.pathname.replace(/\/+$/, '').toLowerCase() === followingPath,
+  );
+  const followerLink = links.find((anchor) =>
+    followerPaths.has(anchor.pathname.replace(/\/+$/, '').toLowerCase()),
+  );
+  if (!followingLink || !followerLink) return null;
+  for (
+    let node: Element | null = followingLink.parentElement;
+    node && node !== document.body;
+    node = node.parentElement
+  ) {
+    if (node.querySelector('[role="tablist"], article, nav, aside')) break;
+    if (node.contains(followerLink)) return node;
+  }
+  return null;
+}
+
 export function createProfileInsight(deps: {
   getLanguage: () => UiLanguage;
   isEnabled: () => boolean;
@@ -97,41 +132,6 @@ export function createProfileInsight(deps: {
     ensureLine();
     misses = summary ? 0 : misses + 1;
     scheduleFetch(!summary && misses <= MAX_RETRIES ? RETRY_MS : REFRESH_MS);
-  }
-
-  function removeLine(): void {
-    for (const line of document.querySelectorAll(`.${PROFILE_LINE_CLASS}`)) line.remove();
-  }
-
-  /** 找资料卡锚点：优先旧版 data-testid；新版无 testid 时回退到资料卡底部的关注/粉丝链接行。 */
-  function findHeaderAnchor(targetHandle: string): Element | null {
-    for (const selector of profileSelectors.headerAnchors) {
-      const node = document.querySelector(selector);
-      if (node) return node;
-    }
-    const lower = targetHandle.toLowerCase();
-    const followingPath = `/${lower}/following`;
-    const followerPaths = new Set([`/${lower}/followers`, `/${lower}/verified_followers`]);
-    const links = [...document.querySelectorAll<HTMLAnchorElement>('a[href^="/"]')].filter(
-      (anchor) =>
-        !anchor.closest('article, [role="tablist"], nav, aside, [data-testid="sidebarColumn"]'),
-    );
-    const followingLink = links.find(
-      (anchor) => anchor.pathname.replace(/\/+$/, '').toLowerCase() === followingPath,
-    );
-    const followerLink = links.find((anchor) =>
-      followerPaths.has(anchor.pathname.replace(/\/+$/, '').toLowerCase()),
-    );
-    if (!followingLink || !followerLink) return null;
-    for (
-      let node: Element | null = followingLink.parentElement;
-      node && node !== document.body;
-      node = node.parentElement
-    ) {
-      if (node.querySelector('[role="tablist"], article, nav, aside')) break;
-      if (node.contains(followerLink)) return node;
-    }
-    return null;
   }
 
   /** 资料卡下的那一行：不存在就插，位置不对就挪，内容变了才改。 */

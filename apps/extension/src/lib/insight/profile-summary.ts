@@ -43,28 +43,38 @@ export function summarizeProfile(entry: CatalogEntry, now: number): ProfileSumma
   };
 }
 
+const nonNegativeFinite = (v: unknown): number | undefined =>
+  typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : undefined;
+
 /** 内容脚本收到的概况：跨消息边界再按形状校验一遍。 */
 export function asProfileSummary(value: unknown): ProfileSummary | null {
   if (!value || typeof value !== 'object') return null;
   const raw = value as Record<string, unknown>;
   if (typeof raw.handle !== 'string' || typeof raw.postCount !== 'number') return null;
-  const num = (v: unknown) =>
-    typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : undefined;
   const b = raw.baseline as Record<string, unknown> | null | undefined;
-  const medianViews = num(b?.medianViews);
+  const medianViews = nonNegativeFinite(b?.medianViews);
   const baseline =
     b && medianViews !== undefined && medianViews > 0
-      ? { medianViews, medianLikes: num(b.medianLikes) ?? 0, sample: num(b.sample) ?? 0 }
+      ? {
+          medianViews,
+          medianLikes: nonNegativeFinite(b.medianLikes) ?? 0,
+          sample: nonNegativeFinite(b.sample) ?? 0,
+        }
       : null;
-  const tier = num(raw.tier);
+  const tier = nonNegativeFinite(raw.tier);
   return {
     handle: raw.handle,
-    ...(num(raw.followers) !== undefined ? { followers: num(raw.followers)! } : {}),
-    ...(num(raw.followingCount) !== undefined ? { followingCount: num(raw.followingCount)! } : {}),
-    tier: tier !== undefined && Number.isInteger(tier) && tier >= 1 && tier <= TIER_MAX ? tier : null,
-    ratio: num(raw.ratio) ?? null,
+    ...(nonNegativeFinite(raw.followers) !== undefined
+      ? { followers: nonNegativeFinite(raw.followers)! }
+      : {}),
+    ...(nonNegativeFinite(raw.followingCount) !== undefined
+      ? { followingCount: nonNegativeFinite(raw.followingCount)! }
+      : {}),
+    tier:
+      tier !== undefined && Number.isInteger(tier) && tier >= 1 && tier <= TIER_MAX ? tier : null,
+    ratio: nonNegativeFinite(raw.ratio) ?? null,
     baseline,
-    outlierRate: num(raw.outlierRate) ?? null,
+    outlierRate: nonNegativeFinite(raw.outlierRate) ?? null,
     postCount: raw.postCount,
   };
 }

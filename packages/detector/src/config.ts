@@ -127,19 +127,20 @@ export function validateDetectorConfigOverride(raw: unknown): boolean {
   return true;
 }
 
+function resetDetectorConfig(): void {
+  for (const [section, values] of Object.entries(DETECTOR_CONFIG)) {
+    Object.assign(detectorConfig[section as keyof typeof DETECTOR_CONFIG] as object, values);
+  }
+}
+
 /**
  * 应用校验后的覆写（就地修改）；校验失败或传 null 时整体回退内置值。
  * 返回是否被接受（false = 已重置为内置）。
  */
 export function applyDetectorConfigOverride(raw: unknown): boolean {
-  const reset = (): void => {
-    for (const [section, values] of Object.entries(DETECTOR_CONFIG)) {
-      Object.assign(detectorConfig[section as keyof typeof DETECTOR_CONFIG] as object, values);
-    }
-  };
   if (raw != null && validateDetectorConfigOverride(raw)) {
     // 每个远程包都是完整的当前覆写；先清掉上一版未在本包出现的字段。
-    reset();
+    resetDetectorConfig();
     for (const [section, values] of Object.entries(raw as Record<string, unknown>)) {
       Object.assign(
         detectorConfig[section as keyof typeof DETECTOR_CONFIG] as object,
@@ -148,7 +149,7 @@ export function applyDetectorConfigOverride(raw: unknown): boolean {
     }
     return true;
   }
-  reset();
+  resetDetectorConfig();
   return false;
 }
 

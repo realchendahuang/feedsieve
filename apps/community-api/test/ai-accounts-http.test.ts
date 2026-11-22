@@ -1,9 +1,9 @@
-import { count, eq, like, or } from 'drizzle-orm';
-import { getDb } from '../src/db/client';
-import { aiAccountVerdicts, meta, trainingSampleUsage } from '../src/db/schema';
 import { env } from 'cloudflare:workers';
+import { count, eq, like, or } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { judgeAiAccount } from '../src/ai-accounts/judge';
+import { getDb } from '../src/db/client';
+import { aiAccountVerdicts, meta, trainingSampleUsage } from '../src/db/schema';
 
 const INSTALL = 'install-http-0001';
 
@@ -32,7 +32,10 @@ function stubHttp(
   const calls: HttpCall[] = [];
   const run = vi.fn(async (input: Request | string | URL, init?: RequestInit) => {
     const url = new URL(String(input instanceof Request ? input.url : input));
-    const body = JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>;
+    const body = JSON.parse(typeof init?.body === 'string' ? init.body : '{}') as Record<
+      string,
+      unknown
+    >;
     calls.push({ url: url.toString(), body });
     const status = options.status ?? 200;
     if (status >= 400) {
@@ -40,7 +43,11 @@ function stubHttp(
     }
     const content =
       options.content === undefined
-        ? JSON.stringify({ probability: options.probability ?? 88, comment: '模板化回复', reason: '写法证据' })
+        ? JSON.stringify({
+            probability: options.probability ?? 88,
+            comment: '模板化回复',
+            reason: '写法证据',
+          })
         : options.content;
     return new Response(
       JSON.stringify({
@@ -92,7 +99,12 @@ describe('OpenAI 兼容 HTTP 判定 provider（DeepSeek / 中转）', () => {
       undefined,
     );
     expect(result.status).toBe(200);
-    expect(result.body).toMatchObject({ handle: 'httpbot', verdict: 'ai', score: 0.88, comment: '模板化回复' });
+    expect(result.body).toMatchObject({
+      handle: 'httpbot',
+      verdict: 'ai',
+      score: 0.88,
+      comment: '模板化回复',
+    });
 
     expect(calls).toHaveLength(1);
     expect(calls[0]!.url).toBe('https://judge.test/v1/chat/completions');
@@ -163,7 +175,7 @@ describe('OpenAI 兼容 HTTP 判定 provider（DeepSeek / 中转）', () => {
       {
         ...env,
         AI_JUDGE_PROVIDERS: 'openai-compatible',
-      } as unknown as Cloudflare.Env,
+      },
       { installation_id: INSTALL, handle: 'nokey', replies: replies(10) },
       undefined,
     );

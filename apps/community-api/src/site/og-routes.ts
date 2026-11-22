@@ -1,3 +1,6 @@
+import { getAiPublic } from '../ai-accounts/public-page';
+import { getPublicRoster } from '../roster';
+import { aiCardOgSvg, siteOgSvg, listCardOgSvg, type ListOgStat } from './og';
 /**
  * OG 分享图路由：/og/site.png、/og/ai/{handle}.png、/og/lists/{page}.png。
  *
@@ -6,9 +9,6 @@
  * 让扩展上报的 /v1/* 冷启动不必为它买单。
  */
 import { renderOgPng, feedSieveLogo } from './og-render';
-import { aiCardOgSvg, siteOgSvg, listCardOgSvg, type ListOgStat } from './og';
-import { getAiPublic } from '../ai-accounts/public-page';
-import { getPublicRoster } from '../roster';
 
 export async function handleOg(
   request: Request,
@@ -87,7 +87,7 @@ export async function handleOg(
 
 /** 头像（只认 pbs.twimg.com）→ data URI，换成 400×400 大图；读不到返回 null 画首字母 */
 async function avatarDataUri(url: string | null): Promise<string | null> {
-  if (!url || !/^https:\/\/pbs\.twimg\.com\//.test(url)) return null;
+  if (!url || !url.startsWith('https://pbs.twimg.com/')) return null;
   const large = url.replace(/_(normal|bigger|mini|x96|200x200)(\.[a-z]+)$/i, '_400x400$2');
   try {
     const res = await fetch(large, { signal: AbortSignal.timeout(3_000) });

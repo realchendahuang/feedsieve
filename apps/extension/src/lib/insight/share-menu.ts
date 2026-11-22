@@ -93,6 +93,48 @@ function collectReplies(main: Element): MarkdownTweet[] {
   return replies;
 }
 
+function closeShareMenu(): void {
+  // 只撤回我们插进去的菜单项，不合成 Escape：X 的 Escape 是全局快捷键，
+  // 会顺手关掉用户正开着的其它浮层（图片查看器、发帖框）。
+  for (const item of document.querySelectorAll(`[${SHARE_ITEM_ATTRIBUTE}]`)) item.remove();
+}
+
+function buildShareItem(
+  template: Element,
+  label: string,
+  iconPath: string,
+  handleClick: () => void,
+) {
+  const item = template.cloneNode(true) as HTMLElement;
+  item.removeAttribute('id');
+  item.querySelectorAll('[id]').forEach((node) => node.removeAttribute('id'));
+  item.setAttribute(SHARE_ITEM_ATTRIBUTE, '');
+  const svg = item.querySelector('svg');
+  if (svg) {
+    const path = document.createElementNS(SVG_NS, 'path');
+    path.setAttribute('d', iconPath);
+    svg.replaceChildren(path);
+  }
+  // 文字放进第一个 span；同层的其他文本节点清空（X 的原生项只有一行文字）
+  const spans = [...item.querySelectorAll('span')];
+  const target = spans.find((span) => span.textContent?.trim()) ?? spans[0];
+  if (target) {
+    target.textContent = label;
+    for (const span of spans) {
+      if (span !== target && !span.contains(target) && !target.contains(span)) span.remove();
+    }
+  } else {
+    item.textContent = label;
+  }
+  item.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    handleClick();
+    closeShareMenu();
+  });
+  return item;
+}
+
 export function createShareMenu(deps: {
   getLanguage: () => UiLanguage;
   /** 模块总开关：关掉后不再接管分享按钮 */
@@ -116,12 +158,6 @@ export function createShareMenu(deps: {
     toastTimer = window.setTimeout(() => element?.remove(), 2_000);
   }
 
-  function closeMenu(): void {
-    // 只撤回我们插进去的菜单项，不合成 Escape：X 的 Escape 是全局快捷键，
-    // 会顺手关掉用户正开着的其它浮层（图片查看器、发帖框）。
-    for (const item of document.querySelectorAll(`[${SHARE_ITEM_ATTRIBUTE}]`)) item.remove();
-  }
-
   async function copy(markdown: string): Promise<void> {
     const zh = deps.getLanguage() === 'zh';
     try {
@@ -132,56 +168,30 @@ export function createShareMenu(deps: {
     }
   }
 
-  function buildItem(template: Element, label: string, iconPath: string, onClick: () => void) {
-    const item = template.cloneNode(true) as HTMLElement;
-    item.removeAttribute('id');
-    item.querySelectorAll('[id]').forEach((node) => node.removeAttribute('id'));
-    item.setAttribute(SHARE_ITEM_ATTRIBUTE, '');
-    const svg = item.querySelector('svg');
-    if (svg) {
-      const path = document.createElementNS(SVG_NS, 'path');
-      path.setAttribute('d', iconPath);
-      svg.replaceChildren(path);
-    }
-    // 文字放进第一个 span；同层的其他文本节点清空（X 的原生项只有一行文字）
-    const spans = [...item.querySelectorAll('span')];
-    const target = spans.find((span) => span.textContent?.trim()) ?? spans[0];
-    if (target) {
-      target.textContent = label;
-      for (const span of spans) {
-        if (span !== target && !span.contains(target) && !target.contains(span)) span.remove();
-      }
-    } else {
-      item.textContent = label;
-    }
-    item.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      onClick();
-      closeMenu();
-    });
-    return item;
-  }
-
   function inject(dropdown: Element, article: Element): void {
     if (dropdown.querySelector(`[${SHARE_ITEM_ATTRIBUTE}]`)) return;
     const template = dropdown.querySelector(menuSelectors.menuItem);
     if (!template?.parentElement) return;
     const zh = deps.getLanguage() === 'zh';
     const items: HTMLElement[] = [
-      buildItem(template, zh ? '复制为 Markdown' : 'Copy as Markdown', MARKDOWN_ICON, () => {
+      buildShareItem(template, zh ? '复制为 Markdown' : 'Copy as Markdown', MARKDOWN_ICON, () => {
         const tweet = readTweet(article);
         if (tweet) void copy(tweetToMarkdown(tweet, deps.getLanguage()));
       }),
     ];
     if (isFocalTweet(article)) {
       items.push(
-        buildItem(template, zh ? '复制帖子与评论' : 'Copy post and replies', THREAD_ICON, () => {
-          const tweet = readTweet(article);
-          if (tweet) {
-            void copy(threadToMarkdown(tweet, collectReplies(article), deps.getLanguage()));
-          }
-        }),
+        buildShareItem(
+          template,
+          zh ? '复制帖子与评论' : 'Copy post and replies',
+          THREAD_ICON,
+          () => {
+            const tweet = readTweet(article);
+            if (tweet) {
+              void copy(threadToMarkdown(tweet, collectReplies(article), deps.getLanguage()));
+            }
+          },
+        ),
       );
     }
     template.parentElement.insertBefore(items[0]!, template);

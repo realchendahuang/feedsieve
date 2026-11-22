@@ -46,7 +46,7 @@ export function buildJudgeMessages(replies: JudgeInput['replies'], gaps: JudgeIn
 /** 模型锐评：去换行/引号、截到 60 字；不是字符串或为空返回 null。 */
 export function cleanComment(raw: unknown): string | null {
   if (typeof raw !== 'string') return null;
-  const text = [...raw.replace(/\r?\n/g, ' ')]
+  const text = Array.from(raw.replace(/\r?\n/g, ' '))
     .slice(0, 60)
     .join('')
     .replace(/^["「『']+|["」』']+$/g, '')

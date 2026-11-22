@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { beforeEach, expect, it, vi } from 'vitest';
-import { openReasonMenu } from './reason-menu';
 import { MANUAL_REPORT_REASONS } from '../community/manual-reasons';
+import { openReasonMenu } from './reason-menu';
 
 beforeEach(() => {
   document.body.innerHTML = '';

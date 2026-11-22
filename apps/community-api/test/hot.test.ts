@@ -3,7 +3,6 @@ import { count, eq, like } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { getDb } from '../src/db/client';
 import { accounts, hotObservations, hotPosts, meta, trainingSampleUsage } from '../src/db/schema';
-import worker from '../src/index';
 import {
   boardDecay,
   capPerAuthor,
@@ -15,6 +14,7 @@ import {
   MIN_REPORTERS,
   reporterThreshold,
 } from '../src/hot';
+import worker from '../src/index';
 
 const NOW = Date.now();
 const MINUTE = 60_000;

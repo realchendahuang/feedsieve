@@ -53,9 +53,7 @@ export const MIN_GRAM_COUNT_V1 = 12;
  * 只有整条 gram 全由停用字/词组成才被剔除，「不黑」「信你」这类混合 gram
  * 照常参与投票，宁可少剔也不误伤模板判别力。
  */
-const STOP_CHARS = new Set(
-  '的了是在我你他她它们有和就都而及与着或也不很还没什吗嘛啊吧呢',
-);
+const STOP_CHARS = new Set('的了是在我你他她它们有和就都而及与着或也不很还没什吗嘛啊吧呢');
 
 /**
  * v1 停用词（英文，精确匹配整条 gram）。归一化剥掉了空格，英文停用词只能以
@@ -63,10 +61,47 @@ const STOP_CHARS = new Set(
  * （如 cat 里的 at），是对英文短文本判别力的已知小损耗，可接受。
  */
 const STOP_WORDS_EN = new Set([
-  'a', 'an', 'am', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
-  'the', 'and', 'or', 'of', 'to', 'for', 'with', 'in', 'on', 'at', 'by',
-  'from', 'it', 'he', 'she', 'we', 'you', 'me', 'my', 'your', 'this',
-  'that', 'these', 'those', 'not', 'so', 'but', 'as', 'if', 'then', 'than',
+  'a',
+  'an',
+  'am',
+  'is',
+  'are',
+  'was',
+  'were',
+  'be',
+  'been',
+  'being',
+  'the',
+  'and',
+  'or',
+  'of',
+  'to',
+  'for',
+  'with',
+  'in',
+  'on',
+  'at',
+  'by',
+  'from',
+  'it',
+  'he',
+  'she',
+  'we',
+  'you',
+  'me',
+  'my',
+  'your',
+  'this',
+  'that',
+  'these',
+  'those',
+  'not',
+  'so',
+  'but',
+  'as',
+  'if',
+  'then',
+  'than',
 ]);
 
 function isStopOnly(gram: string): boolean {
@@ -189,7 +224,7 @@ function voteBits(tokens: string[], hashToken: (token: string) => bigint): bigin
     }
     weights.push({ hash: hashToken(token), weight: w });
   }
-  const bits = new Array<number>(64).fill(0);
+  const bits = Array.from<number>({ length: 64 }).fill(0);
   for (const { hash, weight } of weights) {
     for (let b = 0; b < 64; b++) {
       if ((hash >> BigInt(b)) & 1n) {

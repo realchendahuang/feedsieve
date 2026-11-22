@@ -22,7 +22,7 @@ const LATIN = /[A-Za-z0-9@#_'"()[\]{}<>.,:;!?/\\&%$+=*~`^|-]/;
 function tokenize(text: string): string[] {
   const tokens: string[] = [];
   let word = '';
-  for (const ch of [...text]) {
+  for (const ch of text) {
     if (LATIN.test(ch)) {
       word += ch;
     } else if (ch === ' ') {
@@ -113,7 +113,7 @@ export function roundRect(
  * 顺手把 `_normal` 之类的小图换成 400×400，省得放大发虚。读不到就返回 null，由调用方画首字母。
  */
 export async function loadAvatar(url: string | null | undefined): Promise<ImageBitmap | null> {
-  if (!url || !/^https:\/\/pbs\.twimg\.com\//.test(url)) return null;
+  if (!url || !url.startsWith('https://pbs.twimg.com/')) return null;
   const large = url.replace(/_(normal|bigger|mini|x96|200x200)(\.[a-z]+)(\?.*)?$/i, '_400x400$2');
   try {
     const response = await fetch(large, { credentials: 'omit' });

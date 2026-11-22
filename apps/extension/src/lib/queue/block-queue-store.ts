@@ -81,7 +81,7 @@ function normalizeQueue(value: unknown): PersistentBlockQueueState | null {
   for (const item of raw.tasks) {
     if (!item || typeof item !== 'object') continue;
     const task = item as Partial<PersistentBlockTask>;
-    const handle = normalizeHandle(String(task.handle ?? ''));
+    const handle = normalizeHandle(typeof task.handle === 'string' ? task.handle : '');
     if (!handle || typeof task.category !== 'string') continue;
     const status = ['pending', 'running', 'success', 'failed', 'cancelled'].includes(
       String(task.status),
@@ -251,13 +251,8 @@ export function subscribePersistentBlockQueue(
       void getPersistentBlockQueue().then(onChange);
     }
   };
-  browser.storage.onChanged.addListener(
-    listener as Parameters<typeof browser.storage.onChanged.addListener>[0],
-  );
-  return () =>
-    browser.storage.onChanged.removeListener(
-      listener as Parameters<typeof browser.storage.onChanged.removeListener>[0],
-    );
+  browser.storage.onChanged.addListener(listener);
+  return () => browser.storage.onChanged.removeListener(listener);
 }
 
 export function blockQueueProgress(state: PersistentBlockQueueState | null): {

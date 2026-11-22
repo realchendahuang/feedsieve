@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { PersistentBlockQueueState } from './block-queue-store';
 import {
   applyCancel,
   applyResumeMutations,
@@ -8,7 +9,6 @@ import {
   QUEUE_HEARTBEAT_TTL_MS,
   type QueueSupervisorDeps,
 } from './queue-supervisor';
-import type { PersistentBlockQueueState } from './block-queue-store';
 
 const TTL = QUEUE_HEARTBEAT_TTL_MS;
 

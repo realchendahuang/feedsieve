@@ -1,25 +1,24 @@
-import { useEffect, useState } from 'react';
 import { MARK_STRENGTHS, type MarkStrength, type WhitelistEntry } from '@feedsieve/community-lists';
+import { useEffect, useState } from 'react';
+import type { CommunitySettings } from '../../../../src/lib/community/community-store';
+import type { ScheduleSettings } from '../../../../src/lib/compose/schedule-slots';
 import {
-  getKeywordRuleSettings,
-  isOfficialKeywordCategorySubscribed,
-  subscribeKeywordRules,
-  type KeywordRuleSettings,
-} from '../../../../src/lib/detection/keyword-rules';
+  getScheduleSettings,
+  setScheduleSettings,
+  subscribeScheduleSettings,
+} from '../../../../src/lib/compose/schedule-store';
 import {
   BUNDLED_KEYWORD_PACK_CATALOG,
   getKeywordPackCatalog,
   subscribeKeywordPackCatalog,
   type KeywordPackCatalog,
 } from '../../../../src/lib/detection/keyword-packs';
-import type { CommunitySettings } from '../../../../src/lib/community/community-store';
 import {
-  DEFAULT_PRESET,
-  getSafetyBudgetOverride,
-  SAFETY_PRESETS,
-  setSafetyBudgetOverride,
-} from '../../../../src/lib/queue/block-safety';
-import { UI_COPY, type UiLanguage } from '../../../../src/lib/platform/i18n';
+  getKeywordRuleSettings,
+  isOfficialKeywordCategorySubscribed,
+  subscribeKeywordRules,
+  type KeywordRuleSettings,
+} from '../../../../src/lib/detection/keyword-rules';
 import {
   getInsightBadgesEnabled,
   getProfileLineEnabled,
@@ -28,41 +27,36 @@ import {
   subscribeInsightBadges,
   subscribeProfileLineEnabled,
 } from '../../../../src/lib/insight/insight-settings';
+import { UI_COPY, type UiLanguage } from '../../../../src/lib/platform/i18n';
+import {
+  DEFAULT_PRESET,
+  getSafetyBudgetOverride,
+  SAFETY_PRESETS,
+  setSafetyBudgetOverride,
+} from '../../../../src/lib/queue/block-safety';
+import type { ModuleSettings } from '../../../../src/lib/settings/module-settings';
+import type { ModuleDef } from '../../../../src/lib/settings/modules';
 import {
   getSearchAssistEnabled,
   setSearchAssistEnabled,
   subscribeSearchAssistEnabled,
 } from '../../../../src/lib/settings/search-assist';
 import {
-  getScheduleSettings,
-  setScheduleSettings,
-  subscribeScheduleSettings,
-} from '../../../../src/lib/compose/schedule-store';
-import type { ScheduleSettings } from '../../../../src/lib/compose/schedule-slots';
-import type { ModuleSettings } from '../../../../src/lib/settings/module-settings';
-import type { ModuleDef } from '../../../../src/lib/settings/modules';
-import {
   getUiSettings,
   setUiSettings,
   subscribeUiSettings,
   type UiSettings,
 } from '../../../../src/lib/settings/ui-settings';
-import {
-  SkeletonList,
-  STRENGTH_HINTS,
-  STRENGTH_LABELS,
-  SubpageHeader,
-  Toggle,
-} from '../shared';
 import KeywordsView from '../KeywordsView';
+import { SkeletonList, STRENGTH_HINTS, STRENGTH_LABELS, SubpageHeader, Toggle } from '../shared';
 import { AiDisplaySettings } from './AiDisplaySettings';
-import CadencePage from './CadencePage';
-import BlockedPage from './BlockedPage';
 import AllowlistPage from './AllowlistPage';
+import BlockedPage from './BlockedPage';
+import CadencePage from './CadencePage';
 import FollowingPage from './FollowingPage';
-import type { SubpageSendToXPage } from './types';
 import type { SettingsPage } from './pages';
 import { NavRow, Row } from './shared';
+import type { SubpageSendToXPage } from './types';
 
 interface ModuleSettingsViewProps {
   module: ModuleDef;
@@ -70,10 +64,7 @@ interface ModuleSettingsViewProps {
   language: UiLanguage;
   notify: (message: string | null) => void;
   community: CommunitySettings | null;
-  onUpdateCommunity: (patch: {
-    enabled?: boolean;
-    strength?: MarkStrength;
-  }) => Promise<unknown>;
+  onUpdateCommunity: (patch: { enabled?: boolean; strength?: MarkStrength }) => Promise<unknown>;
   modules: ModuleSettings | null;
   onUpdateModule: (patch: Partial<ModuleSettings>) => void;
   onNavigate: (page: SettingsPage) => void;
@@ -170,9 +161,7 @@ export default function ModuleSettingsView({
     if (!Number.isFinite(value) || value < 1) {
       notify(t.budgetInvalid);
       setBudgetDraft(
-        String(
-          (await getSafetyBudgetOverride()) ?? SAFETY_PRESETS[DEFAULT_PRESET].dailyLimit,
-        ),
+        String((await getSafetyBudgetOverride()) ?? SAFETY_PRESETS[DEFAULT_PRESET].dailyLimit),
       );
       return;
     }
@@ -249,12 +238,7 @@ export default function ModuleSettingsView({
 
   return (
     <div className="view settings-view">
-      <SubpageHeader
-        language={language}
-        title={title}
-        backLabel={backLabel}
-        onBack={onBack}
-      />
+      <SubpageHeader language={language} title={title} backLabel={backLabel} onBack={onBack} />
 
       {page === 'hotSettings' ? (
         <section className="group">

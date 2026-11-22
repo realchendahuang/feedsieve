@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import type { KeywordPublicData } from '../../data.functions';
 import { toast } from '../../components/ui/toast';
+import type { KeywordPublicData } from '../../data.functions';
 
 /**
  * 词库公示面板：搜索 + 词组胶囊 + 匿名贡献表单（自带 SSR 初始数据）。
@@ -13,7 +13,7 @@ export function KeywordsPanel({ data }: { data: KeywordPublicData }) {
 
   const packs = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const sorted = [...data.packs].sort((a, b) => b.rules.length - a.rules.length);
+    const sorted = data.packs.toSorted((a, b) => b.rules.length - a.rules.length);
     if (!q) return sorted;
     return sorted
       .map((pack) => ({
@@ -45,7 +45,9 @@ export function KeywordsPanel({ data }: { data: KeywordPublicData }) {
       });
       const body = (await res.json().catch(() => ({}))) as { results?: Array<{ status: string }> };
       if (!res.ok) throw new Error((body as { error?: string }).error ?? 'network');
-      const recorded = (body.results ?? []).filter((r) => r.status === 'recorded' || r.status === 'duplicate').length;
+      const recorded = (body.results ?? []).filter(
+        (r) => r.status === 'recorded' || r.status === 'duplicate',
+      ).length;
       if (recorded > 0) {
         toast.success(`已提交 ${recorded} 条，审阅通过后进入词库`);
         setContribute('');
@@ -102,7 +104,10 @@ export function KeywordsPanel({ data }: { data: KeywordPublicData }) {
             </div>
             <div className="flex flex-wrap gap-1.5">
               {pack.rules.map((rule) => (
-                <span key={rule.phrase} className="rounded-full bg-soft-surface px-2.5 py-1 text-xs text-mist">
+                <span
+                  key={rule.phrase}
+                  className="rounded-full bg-soft-surface px-2.5 py-1 text-xs text-mist"
+                >
                   {rule.phrase}
                 </span>
               ))}

@@ -30,7 +30,7 @@
     "not_found_handling": "single-page-application",
     // API / OG 图 / SEO 文件与页面（SSR）必须先经 Worker：assets 目录里没有
     // 公示页对应的静态文件，全部路由都从 Worker 出（含 /v1 /api）。
-    "run_worker_first": true
+    "run_worker_first": true,
   },
   "triggers": {
     "crons": ["0 * * * *", "30 * * * *"],
@@ -46,8 +46,8 @@
     {
       "binding": "HYPERDRIVE",
       "id": "00000000000000000000000000000000",
-      "localConnectionString": "postgres://feedsieve:feedsieve_dev_password@127.0.0.1:54330/feedsieve"
-    }
+      "localConnectionString": "postgres://feedsieve:feedsieve_dev_password@127.0.0.1:54330/feedsieve",
+    },
   ],
   "r2_buckets": [
     {

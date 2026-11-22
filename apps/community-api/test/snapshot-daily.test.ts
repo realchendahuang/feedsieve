@@ -1,9 +1,9 @@
 import { env } from 'cloudflare:workers';
-import { describe, expect, it } from 'vitest';
 import { count, like } from 'drizzle-orm';
-import worker from '../src/index';
+import { describe, expect, it } from 'vitest';
 import { getDb } from '../src/db/client';
 import { snapshots } from '../src/db/schema';
+import worker from '../src/index';
 import { generateSnapshot, markSnapshotDirty, readSnapshotDirty } from '../src/snapshot';
 import { spreadLatestReport } from './vote-days';
 
@@ -46,7 +46,7 @@ async function countTodayRows(): Promise<number> {
 
 async function latestVersion(): Promise<string> {
   const latest = await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), env);
-  const manifest = (await latest.json()) as { snapshot_version: string };
+  const manifest = await latest.json<{ snapshot_version: string }>();
   return manifest.snapshot_version;
 }
 

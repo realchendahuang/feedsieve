@@ -31,7 +31,7 @@ describe('keyword-pack R2 distribution', () => {
     const latest = await worker.fetch(new Request(`${ORIGIN}/v1/keyword-packs/latest`), env);
     expect(latest.status).toBe(200);
     expect(latest.headers.get('Cache-Control')).toContain('max-age=300');
-    expect(((await latest.json()) as { pack_version: string }).pack_version).toBe(VERSION);
+    expect((await latest.json<{ pack_version: string }>()).pack_version).toBe(VERSION);
 
     const artifact = await worker.fetch(
       new Request(`${ORIGIN}/v1/keyword-packs/${VERSION}/official.json`),

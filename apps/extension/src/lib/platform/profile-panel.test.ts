@@ -25,9 +25,10 @@ describe('openProfilePanel', () => {
 
   it('没有侧边栏 API 时直接开独立窗口', async () => {
     const openWindow = vi.fn().mockResolvedValue(undefined);
-    await expect(
-      openProfilePanel({ windowId: 7, openWindow, popupUrl: POPUP }),
-    ).resolves.toEqual({ opened: true, via: 'window' });
+    await expect(openProfilePanel({ windowId: 7, openWindow, popupUrl: POPUP })).resolves.toEqual({
+      opened: true,
+      via: 'window',
+    });
   });
 
   it('拿不到 windowId 时直接开独立窗口', async () => {
@@ -70,9 +71,10 @@ describe('openProfilePanel', () => {
   it('标签页也开不了才返回 opened:false', async () => {
     const openWindow = vi.fn().mockRejectedValue(new Error('blocked'));
     const openTab = vi.fn().mockRejectedValue(new Error('blocked'));
-    await expect(
-      openProfilePanel({ openWindow, openTab, popupUrl: POPUP }),
-    ).resolves.toEqual({ opened: false, via: null });
+    await expect(openProfilePanel({ openWindow, openTab, popupUrl: POPUP })).resolves.toEqual({
+      opened: false,
+      via: null,
+    });
   });
 });
 

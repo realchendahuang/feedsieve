@@ -1,10 +1,10 @@
 import { env } from 'cloudflare:workers';
+import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
+import { getDb } from '../src/db/client';
 import worker from '../src/index';
 import { hashInstallationId } from '../src/lib/hash';
 import { POLICY, effectiveDailyLimit } from '../src/reports';
-import { sql } from 'drizzle-orm';
-import { getDb } from '../src/db/client';
 
 const ORIGIN = 'https://api.example.com';
 

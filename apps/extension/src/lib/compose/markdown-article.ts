@@ -174,10 +174,7 @@ function joinLines(lines: string[]): string {
   return out;
 }
 
-function paragraph(
-  lines: string[],
-  onLocalImage?: (alt: string, src: string) => string,
-): string {
+function paragraph(lines: string[], onLocalImage?: (alt: string, src: string) => string): string {
   return joinLines(lines)
     .split('\n')
     .map((part) => inlineToHtml(part, onLocalImage))
@@ -211,6 +208,16 @@ function stripFrontmatter(lines: string[]): { title: string | null; rest: string
   return { title, rest: lines.slice(end + 1) };
 }
 
+const isBlankLine = (line: string | undefined): boolean => line === undefined || line.trim() === '';
+
+const startsArticleBlock = (line: string, next: string | undefined): boolean =>
+  FENCE.test(line) ||
+  HEADING.test(line) ||
+  HR.test(line) ||
+  QUOTE.test(line) ||
+  LIST.test(line) ||
+  (line.includes('|') && next !== undefined && TABLE_SEP.test(next));
+
 export function markdownToArticle(source: string): ArticleConversion {
   const all = source.replace(/\r\n?/g, '\n').replace(/\t/g, '    ').split('\n');
   const front = stripFrontmatter(all);
@@ -225,18 +232,9 @@ export function markdownToArticle(source: string): ArticleConversion {
   let i = 0;
   let sawContent = false;
 
-  const isBlank = (line: string | undefined) => line === undefined || line.trim() === '';
-  const startsBlock = (line: string, next: string | undefined) =>
-    FENCE.test(line) ||
-    HEADING.test(line) ||
-    HR.test(line) ||
-    QUOTE.test(line) ||
-    LIST.test(line) ||
-    (line.includes('|') && next !== undefined && TABLE_SEP.test(next));
-
   while (i < lines.length) {
     const line = lines[i]!;
-    if (isBlank(line)) {
+    if (isBlankLine(line)) {
       i++;
       continue;
     }
@@ -316,10 +314,10 @@ export function markdownToArticle(source: string): ArticleConversion {
           text = text.replace(/^\[ \]\s+/, '☐ ').replace(/^\[[xX]\]\s+/, '☑ ');
           items.push([text]);
           i++;
-        } else if (!isBlank(current) && /^\s{2,}/.test(current) && items.length) {
+        } else if (!isBlankLine(current) && /^\s{2,}/.test(current) && items.length) {
           items[items.length - 1]!.push(current);
           i++;
-        } else if (isBlank(current) && LIST.test(lines[i + 1] ?? '')) {
+        } else if (isBlankLine(current) && LIST.test(lines[i + 1] ?? '')) {
           i++;
         } else break;
       }
@@ -334,10 +332,14 @@ export function markdownToArticle(source: string): ArticleConversion {
     if (line.includes('|') && TABLE_SEP.test(lines[i + 1] ?? '')) {
       const head = splitRow(line);
       i += 2;
-      blocks.push(`<p><strong>${head.map((cell) => inlineToHtml(cell, collectImage)).join(' | ')}</strong></p>`);
-      while (i < lines.length && lines[i]!.includes('|') && !isBlank(lines[i])) {
+      blocks.push(
+        `<p><strong>${head.map((cell) => inlineToHtml(cell, collectImage)).join(' | ')}</strong></p>`,
+      );
+      while (i < lines.length && lines[i]!.includes('|') && !isBlankLine(lines[i])) {
         blocks.push(
-          `<p>${splitRow(lines[i]!).map((cell) => inlineToHtml(cell, collectImage)).join(' | ')}</p>`,
+          `<p>${splitRow(lines[i]!)
+            .map((cell) => inlineToHtml(cell, collectImage))
+            .join(' | ')}</p>`,
         );
         i++;
       }
@@ -348,8 +350,8 @@ export function markdownToArticle(source: string): ArticleConversion {
     const para: string[] = [];
     while (
       i < lines.length &&
-      !isBlank(lines[i]) &&
-      (para.length === 0 || !startsBlock(lines[i]!, lines[i + 1]))
+      !isBlankLine(lines[i]) &&
+      (para.length === 0 || !startsArticleBlock(lines[i]!, lines[i + 1]))
     ) {
       para.push(lines[i]!);
       i++;

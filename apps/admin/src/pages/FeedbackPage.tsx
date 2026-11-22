@@ -1,5 +1,3 @@
-import { SamplesPanel } from './SamplesPanel';
-import { RuleFeedbackPanel } from './RuleFeedbackPanel';
 import { useQuery } from '@tanstack/react-query';
 import {
   Table,
@@ -11,6 +9,8 @@ import {
 } from '@/components/ui/table';
 import { LoadError, Loading, PageHeader } from '../components/layout';
 import { getFeedback } from '../lib/api';
+import { RuleFeedbackPanel } from './RuleFeedbackPanel';
+import { SamplesPanel } from './SamplesPanel';
 
 export function FeedbackPage() {
   const feedback = useQuery({ queryKey: ['feedback'], queryFn: getFeedback });

@@ -14,7 +14,11 @@
 import { extractTweetIdentity, QUOTE_CARD_SELECTOR, tweetSelectors } from '@feedsieve/x-adapter';
 
 export type FillReplyReason =
-  'no_article' | 'no_reply_button' | 'no_editor' | 'draft_not_empty' | 'upload_timeout';
+  | 'no_article'
+  | 'no_reply_button'
+  | 'no_editor'
+  | 'draft_not_empty'
+  | 'upload_timeout';
 
 export type FillReplyOutcome = { ok: true } | { ok: false; reason: FillReplyReason };
 

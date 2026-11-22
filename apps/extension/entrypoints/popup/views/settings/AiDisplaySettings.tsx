@@ -4,12 +4,12 @@
  * 和「水军」的设置一样收在齿轮页里——弹窗的伪人页只留结论和「我测过的」。
  */
 import { useEffect, useState } from 'react';
-import type { UiLanguage } from '../../../../src/lib/platform/i18n';
 import {
   getAiSettings,
   setAiSettings,
   type AiCheckSettings,
 } from '../../../../src/lib/ai-check/client';
+import type { UiLanguage } from '../../../../src/lib/platform/i18n';
 import { Row, Toggle } from '../shared';
 
 const COPY = {

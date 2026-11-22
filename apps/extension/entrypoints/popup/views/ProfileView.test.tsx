@@ -1,10 +1,9 @@
+import { analyzeProfile } from '@feedsieve/metrics';
 // @vitest-environment happy-dom
 // 主页洞察：跟随标签页、账号卡与基线、排序筛选、搜高赞帖、导出。
 import React, { act } from 'react';
 import ReactDOM from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { analyzeProfile } from '@feedsieve/metrics';
-import ProfileView from './ProfileView';
 import {
   asCatalogEntry,
   googleSearchUrl,
@@ -13,6 +12,7 @@ import {
   outliersMarkdown,
   postsCsv,
 } from './profile-model';
+import ProfileView from './ProfileView';
 
 const DAY = 24 * 60 * 60 * 1000;
 const NOW = Date.now();
@@ -396,7 +396,9 @@ describe('ProfileView', () => {
 
   it('主板「主页人气行」默认关闭时在阅人面板给出轻量一键开启开关，打开后持久化并自动收起', async () => {
     const { el, notify } = await render();
-    const toggle = el.querySelector<HTMLInputElement>('.profile-line-prompt input[type="checkbox"]');
+    const toggle = el.querySelector<HTMLInputElement>(
+      '.profile-line-prompt input[type="checkbox"]',
+    );
     expect(toggle).not.toBeNull();
     expect(toggle?.checked).toBe(false);
 

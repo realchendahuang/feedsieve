@@ -1,9 +1,9 @@
-/** Real MV3 cold-start and recovery acceptance. Requires: pnpm exec playwright install chromium */
-import { chromium } from 'playwright';
+import assert from 'node:assert/strict';
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import assert from 'node:assert/strict';
+/** Real MV3 cold-start and recovery acceptance. Requires: pnpm exec playwright install chromium */
+import { chromium } from 'playwright';
 
 const source = resolve('apps/extension/.output/chrome-mv3');
 const manifest = JSON.parse(readFileSync(join(source, 'manifest.json'), 'utf8'));
@@ -71,12 +71,12 @@ async function run(degraded, remoteCached = false) {
     });
     if (remoteCached) {
       const body = readFileSync(join(extension, 'community/keyword-packs/official.json'), 'utf8');
-      await worker.evaluate(async (body) => {
+      await worker.evaluate(async (snapshotBody) => {
         // eslint-disable-next-line no-undef
         await chrome.storage.local.set({
           keywordPacksSnapshotV2: {
-            pack_version: JSON.parse(body).pack_version,
-            body,
+            pack_version: JSON.parse(snapshotBody).pack_version,
+            body: snapshotBody,
             synced_at: Date.now(),
           },
         });

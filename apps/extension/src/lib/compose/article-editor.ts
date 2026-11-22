@@ -13,14 +13,14 @@
  * 不替你点「发布」，内容不离开本机。
  */
 import type { UiLanguage } from '../platform/i18n';
+import { articleToMarkdown } from './article-export';
+import { insertLocalImages, readImageSlots } from './article-images';
 import {
   htmlHasStructure,
   looksLikeMarkdown,
   markdownToArticle,
   textStats,
 } from './markdown-article';
-import { articleToMarkdown } from './article-export';
-import { insertLocalImages, readImageSlots } from './article-images';
 import { saveBackup } from './schedule-store';
 
 const EDITOR_SELECTOR =
@@ -92,11 +92,14 @@ export function readOutline(
   editor: Element,
 ): Array<{ level: 1 | 2; text: string; element: Element }> {
   return [...editor.querySelectorAll('h1[data-block="true"], h2[data-block="true"]')]
-    .map((element) => ({
-      level: (element.tagName === 'H1' ? 1 : 2) as 1 | 2,
-      text: (element.textContent ?? '').trim(),
-      element,
-    }))
+    .map((element) => {
+      const level: 1 | 2 = element.tagName === 'H1' ? 1 : 2;
+      return {
+        level,
+        text: (element.textContent ?? '').trim(),
+        element,
+      };
+    })
     .filter((item) => item.text.length > 0);
 }
 
@@ -169,6 +172,71 @@ export interface ArticleHelperDeps {
   getLanguage: () => UiLanguage;
 }
 
+const onArticlePage = () => ARTICLE_PATH.test(location.pathname);
+const articleId = () => ARTICLE_PATH.exec(location.pathname)?.[1] ?? null;
+const titleValue = () => document.querySelector<HTMLTextAreaElement>(TITLE_SELECTOR)?.value ?? '';
+const editor = () => (onArticlePage() ? document.querySelector(EDITOR_SELECTOR) : null);
+
+function currentMarkdown(editorEl: Element): string {
+  return articleToMarkdown(editorEl, titleValue());
+}
+
+/** 标题框是空的才填（不覆盖你已经写好的标题）；填完把焦点还给正文。 */
+function fillTitle(title: string, editorEl: Element): void {
+  const input = document.querySelector<HTMLTextAreaElement>(TITLE_SELECTOR);
+  if (!input || input.value.trim() !== '') return;
+  input.focus();
+  input.select();
+  // execCommand 走浏览器原生输入，X 的受控组件能收到
+  const ok = document.execCommand('insertText', false, title);
+  if (!ok) input.value = title;
+  (editorEl as HTMLElement).focus();
+}
+
+function convertAndPaste(editorEl: Element, markdown: string): number {
+  const result = markdownToArticle(markdown);
+  if (result.html) pasteHtml(editorEl, result.html, result.text);
+  // 等 X 把这次粘贴提交完再动焦点：粘贴还没渲染时就让编辑器失焦，它会拿粘贴前的内容覆盖回去
+  if (result.title) {
+    const title = result.title;
+    setTimeout(() => fillTitle(title, editorEl), 300);
+  }
+  return result.images.length;
+}
+
+/** 光标放到正文最后（Draft 靠 selectionchange 同步选区，等一下再粘贴）。 */
+async function caretToEnd(editorEl: HTMLElement): Promise<void> {
+  editorEl.focus();
+  const texts = editorEl.querySelectorAll('[data-text="true"]');
+  const last = texts[texts.length - 1];
+  const selection = getSelection();
+  if (!selection) return;
+  const range = document.createRange();
+  if (last?.firstChild) range.setStart(last.firstChild, last.firstChild.textContent?.length ?? 0);
+  else {
+    const blocks = editorEl.querySelectorAll('[data-block="true"]');
+    const node = blocks[blocks.length - 1] ?? editorEl;
+    range.selectNodeContents(node);
+    range.collapse(false);
+  }
+  range.collapse(true);
+  selection.removeAllRanges();
+  selection.addRange(range);
+  await new Promise((resolve) => setTimeout(resolve, 60));
+}
+
+function themeColors(panel: HTMLElement): void {
+  // 跟着 X 的主题：取页面背景色，浅色主题下用浅底深字
+  const bg = getComputedStyle(document.body).backgroundColor;
+  const match = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(bg);
+  const light = match ? Number(match[1]) + Number(match[2]) + Number(match[3]) > 382 : false;
+  panel.style.setProperty(
+    '--fs-article-bg',
+    light ? 'rgba(255, 255, 255, 0.97)' : 'rgba(21, 24, 28, 0.96)',
+  );
+  panel.style.setProperty('--fs-article-fg', light ? '#0f1419' : '#e7e9ea');
+}
+
 export function createArticleHelper(deps: ArticleHelperDeps) {
   let enabled = true;
   let plainUntil = 0;
@@ -180,14 +248,6 @@ export function createArticleHelper(deps: ArticleHelperDeps) {
   let backupTimer: ReturnType<typeof setTimeout> | null = null;
   let started = false;
   const copy = () => COPY[deps.getLanguage()];
-
-  const onArticlePage = () => ARTICLE_PATH.test(location.pathname);
-  const articleId = () => ARTICLE_PATH.exec(location.pathname)?.[1] ?? null;
-  const titleValue = () => document.querySelector<HTMLTextAreaElement>(TITLE_SELECTOR)?.value ?? '';
-
-  function currentMarkdown(editorEl: Element): string {
-    return articleToMarkdown(editorEl, titleValue());
-  }
 
   function scheduleBackup(): void {
     if (backupTimer) clearTimeout(backupTimer);
@@ -212,8 +272,6 @@ export function createArticleHelper(deps: ArticleHelperDeps) {
       .then(() => toast(copy().copied))
       .catch(() => toast(copy().copyFailed));
   }
-  const editor = () => (onArticlePage() ? document.querySelector(EDITOR_SELECTOR) : null);
-
   function toast(text: string): void {
     document.getElementById(TOAST_ID)?.remove();
     const el = document.createElement('div');
@@ -223,29 +281,6 @@ export function createArticleHelper(deps: ArticleHelperDeps) {
     document.body.append(el);
     if (toastTimer) clearTimeout(toastTimer);
     toastTimer = setTimeout(() => el.remove(), 2_500);
-  }
-
-  /** 标题框是空的才填（不覆盖你已经写好的标题）；填完把焦点还给正文。 */
-  function fillTitle(title: string, editorEl: Element): void {
-    const input = document.querySelector<HTMLTextAreaElement>(TITLE_SELECTOR);
-    if (!input || input.value.trim() !== '') return;
-    input.focus();
-    input.select();
-    // execCommand 走浏览器原生输入，X 的受控组件能收到
-    const ok = document.execCommand('insertText', false, title);
-    if (!ok) input.value = title;
-    (editorEl as HTMLElement).focus();
-  }
-
-  function convertAndPaste(editorEl: Element, markdown: string): number {
-    const result = markdownToArticle(markdown);
-    if (result.html) pasteHtml(editorEl, result.html, result.text);
-    // 等 X 把这次粘贴提交完再动焦点：粘贴还没渲染时就让编辑器失焦，它会拿粘贴前的内容覆盖回去
-    if (result.title) {
-      const title = result.title;
-      setTimeout(() => fillTitle(title, editorEl), 300);
-    }
-    return result.images.length;
   }
 
   function onPaste(event: ClipboardEvent): void {
@@ -270,27 +305,6 @@ export function createArticleHelper(deps: ArticleHelperDeps) {
     if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.code === 'KeyV') {
       plainUntil = Date.now() + 1_000;
     }
-  }
-
-  /** 光标放到正文最后（Draft 靠 selectionchange 同步选区，等一下再粘贴）。 */
-  async function caretToEnd(editorEl: HTMLElement): Promise<void> {
-    editorEl.focus();
-    const texts = editorEl.querySelectorAll('[data-text="true"]');
-    const last = texts[texts.length - 1];
-    const selection = getSelection();
-    if (!selection) return;
-    const range = document.createRange();
-    if (last?.firstChild) range.setStart(last.firstChild, last.firstChild.textContent?.length ?? 0);
-    else {
-      const blocks = editorEl.querySelectorAll('[data-block="true"]');
-      const node = blocks[blocks.length - 1] ?? editorEl;
-      range.selectNodeContents(node);
-      range.collapse(false);
-    }
-    range.collapse(true);
-    selection.removeAllRanges();
-    selection.addRange(range);
-    await new Promise((resolve) => setTimeout(resolve, 60));
   }
 
   function importFile(): void {
@@ -354,18 +368,6 @@ export function createArticleHelper(deps: ArticleHelperDeps) {
       toast(copy().imageInsertedLeft(result.inserted, result.remaining));
     else toast(copy().imageInserted(result.inserted));
     scheduleRender();
-  }
-
-  function themeColors(panel: HTMLElement): void {
-    // 跟着 X 的主题：取页面背景色，浅色主题下用浅底深字
-    const bg = getComputedStyle(document.body).backgroundColor;
-    const match = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(bg);
-    const light = match ? Number(match[1]) + Number(match[2]) + Number(match[3]) > 382 : false;
-    panel.style.setProperty(
-      '--fs-article-bg',
-      light ? 'rgba(255, 255, 255, 0.97)' : 'rgba(21, 24, 28, 0.96)',
-    );
-    panel.style.setProperty('--fs-article-fg', light ? '#0f1419' : '#e7e9ea');
   }
 
   function ensurePanel(): HTMLElement {

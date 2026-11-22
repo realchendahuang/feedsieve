@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { getAiSquareData } from '@/site/data.functions';
-import { pageHead } from '@/site/seo';
 import { AiSquarePage } from '@/site/pages/AiSquarePage';
+import { pageHead } from '@/site/seo';
 
 /**
  * AI 号广场：可公示的 AI / 疑似 AI 账号聚合（数据与排序见 ai-accounts/square.ts 的 listAiSquare）。
@@ -10,7 +10,7 @@ import { AiSquarePage } from '@/site/pages/AiSquarePage';
 export const Route = createFileRoute('/_shell/ai/')({
   loader: () => getAiSquareData(),
   head: (ctx) => {
-    const data = ctx.loaderData as Awaited<ReturnType<typeof getAiSquareData>> | undefined;
+    const data = ctx.loaderData;
     return pageHead({
       title: 'AI 回复机器人广场',
       description:

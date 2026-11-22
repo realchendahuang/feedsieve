@@ -52,14 +52,14 @@ const pageMarked = [
 // 本页热帖预览：覆盖 🚀/🔥/普通流速、高破圈、无正文、超长昵称等展示分支
 /** 预览用的博主帖子库：40 条普通帖子 + 几条爆款 + 回复。 */
 const previewProfile = (() => {
-  const now = Date.now();
+  const profileNow = Date.now();
   const day = 24 * 60 * 60 * 1000;
   const posts: Record<string, Record<string, unknown>> = {};
   const add = (i: number, views: number, extra: Record<string, unknown> = {}) => {
     const postId = `21158385954667${String(72000 + i)}`;
     posts[postId] = {
       postId,
-      createdAt: now - (i * 0.7 + 1.2) * day - (i % 24) * 3_600_000,
+      createdAt: profileNow - (i * 0.7 + 1.2) * day - (i % 24) * 3_600_000,
       views,
       likes: Math.round(views / 90),
       retweets: Math.round(views / 900),
@@ -68,8 +68,8 @@ const previewProfile = (() => {
       kind: 'original',
       media: i % 3 === 0 ? 'photo' : i % 5 === 0 ? 'video' : 'none',
       snippet: `第 ${i} 条：关于 AI 工具和独立开发的一些观察，配了一张截图。`,
-      firstSeenAt: now,
-      updatedAt: now,
+      firstSeenAt: profileNow,
+      updatedAt: profileNow,
       ...extra,
     };
   };
@@ -84,8 +84,15 @@ const previewProfile = (() => {
     snippet: '这条说得对。补充一点：冷启动最重要的是找到第一批愿意反馈的人。',
   });
   add(44, 3_000, { kind: 'reply', snippet: '@someone 谢谢！确实是这样。' });
-  add(45, 9_000, { pinned: true, createdAt: now - 200 * day, snippet: '置顶：我是谁、在做什么。' });
-  add(46, 30_000, { createdAt: now - 3 * 3_600_000, snippet: '刚发的：今天把主页洞察做出来了。' });
+  add(45, 9_000, {
+    pinned: true,
+    createdAt: profileNow - 200 * day,
+    snippet: '置顶：我是谁、在做什么。',
+  });
+  add(46, 30_000, {
+    createdAt: profileNow - 3 * 3_600_000,
+    snippet: '刚发的：今天把主页洞察做出来了。',
+  });
   return {
     account: {
       handle: 'demo_creator',
@@ -95,11 +102,11 @@ const previewProfile = (() => {
       followers: 32_400,
       followingCount: 1_210,
       tweets: 8_200,
-      createdAt: now - 6.4 * 365 * day,
+      createdAt: profileNow - 6.4 * 365 * day,
     },
     posts,
-    firstVisitAt: now - 9 * day,
-    lastVisitAt: now,
+    firstVisitAt: profileNow - 9 * day,
+    lastVisitAt: profileNow,
   };
 })();
 
@@ -497,7 +504,8 @@ Object.defineProperty(globalThis, 'browser', {
 
 const nativeFetch = globalThis.fetch.bind(globalThis);
 globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-  if (String(input).includes('/v1/contributions/stats')) {
+  const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+  if (url.includes('/v1/contributions/stats')) {
     return new Response(JSON.stringify({ reports: 36, rescues: 11, adopted: 8 }), {
       status: 200,
       headers: { 'content-type': 'application/json' },

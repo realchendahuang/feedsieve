@@ -62,7 +62,7 @@ export function replyGaps(handle, data) {
         t.in_reply_to_status_id_str,
     )
     .map((t) => Date.parse(t.created_at))
-    .sort((a, b) => a - b);
+    .toSorted((a, b) => a - b);
   return at
     .slice(1)
     .map((x, i) => Math.round((x - at[i]) / 1000))
@@ -355,7 +355,7 @@ async function judgeHttp(replies, gaps, ctx) {
 
 /** 固定并发的 map：账号之间互相独立，HTTP 判定比本地顺序跑快一个量级。 */
 async function mapLimit(list, limit, fn) {
-  const out = new Array(list.length);
+  const out = Array.from({ length: list.length });
   let next = 0;
   async function worker() {
     for (;;) {
@@ -527,7 +527,7 @@ export function sweep(rows, maxFpRate = 0.03) {
   }
   return results
     .filter((r) => r.fpRate <= maxFpRate)
-    .sort(
+    .toSorted(
       (a, b) =>
         b.recall - a.recall ||
         a.humanSuspect - b.humanSuspect ||

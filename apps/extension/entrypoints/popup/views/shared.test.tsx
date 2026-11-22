@@ -11,7 +11,11 @@ function useViewport(width: number, height: number): void {
   Object.defineProperty(window, 'innerHeight', { configurable: true, value: height });
 }
 
-function anchorAt(top: number, left = 94, width = 14): {
+function anchorAt(
+  top: number,
+  left = 94,
+  width = 14,
+): {
   top: number;
   bottom: number;
   left: number;

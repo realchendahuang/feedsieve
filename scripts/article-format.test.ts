@@ -34,13 +34,13 @@ describe('article-format CLI', () => {
     const log = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
     try {
       expect(main([input])).toBe(0);
-      const json = JSON.parse(String(log.mock.calls.map((call) => call[0]).join('')));
+      const json = JSON.parse(log.mock.calls.map((call) => call[0]).join(''));
       expect(json.title).toBe('标题');
       expect(json.html).toBe('<p>正文</p>');
 
       log.mockClear();
       expect(main([input, '--html'])).toBe(0);
-      expect(String(log.mock.calls.map((call) => call[0]).join(''))).toBe('<p>正文</p>\n');
+      expect(log.mock.calls.map((call) => call[0]).join('')).toBe('<p>正文</p>\n');
 
       const out = join(dir, 'out.json');
       log.mockClear();
@@ -56,7 +56,7 @@ describe('article-format CLI', () => {
     const err = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     try {
       expect(main(['--text'], () => '## 小标题\n\n正文')).toBe(0);
-      expect(String(log.mock.calls.map((call) => call[0]).join(''))).toContain('小标题');
+      expect(log.mock.calls.map((call) => call[0]).join('')).toContain('小标题');
       expect(main(['--nope'])).toBe(1);
       expect(err).toHaveBeenCalled();
     } finally {

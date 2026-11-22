@@ -47,7 +47,7 @@ describe('blockedAccounts 记账', () => {
       markBlocked('bob', '102'),
       markBlocked('carol', '103'),
     ]);
-    const handles = (await getBlockedAccounts()).map((a) => a.handle).sort();
+    const handles = (await getBlockedAccounts()).map((a) => a.handle).toSorted();
     expect(handles).toEqual(['alice', 'bob', 'carol']);
   });
 

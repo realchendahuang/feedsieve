@@ -1,11 +1,11 @@
+import { env } from 'cloudflare:workers';
 import { count, eq, like, or } from 'drizzle-orm';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { INSTALL_DAILY_CHECKS, type AiCheckValue } from '../src/ai-accounts/check';
+import { judgeAiAccount } from '../src/ai-accounts/judge';
 import { getDb } from '../src/db/client';
 import { aiAccountVerdicts, meta, trainingSampleUsage } from '../src/db/schema';
-import { env } from 'cloudflare:workers';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import worker from '../src/index';
-import { judgeAiAccount } from '../src/ai-accounts/judge';
-import { INSTALL_DAILY_CHECKS, type AiCheckValue } from '../src/ai-accounts/check';
 
 const INSTALL = 'install-0001-abcdef';
 
@@ -140,7 +140,7 @@ describe('POST /v1/ai-accounts/judge（证据直传）', () => {
     const sent = JSON.stringify(calls.jevBodies[0]);
     expect(sent).not.toContain('bot_one');
     expect(
-      (calls.jevBodies[0]?.input as { state: { reply_gaps_seconds: number[] } }).state
+      (calls.jevBodies[0]?.input as { state: { reply_gaps_seconds: number[] } } | undefined)?.state
         .reply_gaps_seconds,
     ).toHaveLength(9);
 
@@ -200,7 +200,7 @@ describe('POST /v1/ai-accounts/judge（证据直传）', () => {
   it('没有可用的判定 provider（缺 AI binding）返回 503', async () => {
     stubJev();
     const result = await judgeAiAccount(
-      { ...env } as Cloudflare.Env,
+      { ...env },
       { installation_id: INSTALL, handle: 'nokey', replies: replies(10) },
       undefined,
     );
@@ -339,7 +339,7 @@ describe('POST /v1/ai-accounts/judge（证据直传）', () => {
     // @cf 自家模型不走网关：没有 gateway/credits 依赖
     expect(calls.jevBodies[0]!.options).toBeUndefined();
     // Clef 要求 body 里再带一遍短模型名；这是 Cloudflare 模型的 schema，不是 Jev 那种顶层 model 字段
-    expect((calls.jevBodies[0]!.input as Record<string, unknown>).model).toBe('clef');
+    expect(calls.jevBodies[0]!.input.model).toBe('clef');
     const sent = JSON.stringify(calls.jevBodies[0]!.input);
     expect(sent).not.toContain('clefdefault');
     expect(
@@ -409,10 +409,12 @@ describe('POST /v1/ai-accounts/judge（证据直传）', () => {
 
   it('provider 熔断全开时返回 503 paused，且不扣每日额度', async () => {
     stubJev();
-    await getDb(env).insert(meta).values({
-      key: 'vendor_breaker:workers-ai:@cf/cloudflare/clef',
-      value: JSON.stringify({ disabled_until: Date.now() + 60_000 }),
-    });
+    await getDb(env)
+      .insert(meta)
+      .values({
+        key: 'vendor_breaker:workers-ai:@cf/cloudflare/clef',
+        value: JSON.stringify({ disabled_until: Date.now() + 60_000 }),
+      });
     const result = await judgeAiAccount(
       keyed(),
       { installation_id: INSTALL, handle: 'pausedone', replies: replies(10) },

@@ -1,4 +1,12 @@
 import { useEffect, useState } from 'react';
+import { getCommunitySettings } from '../../../src/lib/community/community-store';
+import { contributeKeywordPhrases } from '../../../src/lib/community/contribute';
+import {
+  BUNDLED_KEYWORD_PACK_CATALOG,
+  getKeywordPackCatalog,
+  subscribeKeywordPackCatalog,
+  type KeywordPackCatalog,
+} from '../../../src/lib/detection/keyword-packs';
 import {
   addCustomKeywordRule,
   getKeywordRuleSettings,
@@ -9,14 +17,6 @@ import {
   subscribeKeywordRules,
   type KeywordRuleSettings,
 } from '../../../src/lib/detection/keyword-rules';
-import {
-  BUNDLED_KEYWORD_PACK_CATALOG,
-  getKeywordPackCatalog,
-  subscribeKeywordPackCatalog,
-  type KeywordPackCatalog,
-} from '../../../src/lib/detection/keyword-packs';
-import { getCommunitySettings } from '../../../src/lib/community/community-store';
-import { contributeKeywordPhrases } from '../../../src/lib/community/contribute';
 import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
 import { AppIcon, EmptyState, HelpIcon, OfficialLinkIcon, SkeletonList, Toggle } from './shared';
 
@@ -77,10 +77,11 @@ export default function KeywordsView({ language, notify }: KeywordsViewProps) {
   async function syncPacks(): Promise<void> {
     setSyncing(true);
     try {
-      const result = (await browser.runtime.sendMessage({
-        type: 'feedsieve:keyword-packs-sync',
-        force: true,
-      })) as { outcome?: { status?: string; version?: string } };
+      const result: { outcome?: { status?: string; version?: string } } | undefined =
+        await browser.runtime.sendMessage({
+          type: 'feedsieve:keyword-packs-sync',
+          force: true,
+        });
       await getKeywordPackCatalog().then(setCatalog);
       notify(
         result?.outcome?.status === 'error'

@@ -1,24 +1,23 @@
-import { createTrainingSample } from '../community/training-samples';
+import type { Detection } from '@feedsieve/detector';
 /**
  * 黄框徽章与页面账本的写入：
  * - markCell：cell 打黄框属性 + 记入 pageMarked 账本 + 本地统计
  * - buildBadge：徽章 DOM（理由 + 拉黑 / 误标 / 抢救操作）
  * - flushPendingBadges：同批徽章集中一次挂载，避免逐条改高度
  */
-
-import type { Detection } from '@feedsieve/detector';
-import { getUserId } from '../community/user-ids';
 import { addAllowlist } from '../community/allowlist';
 import { rescueHandle, syncLocalLabels } from '../community/contribute';
-import { mutateWithStableViewport } from '../platform/remove-tweets';
+import { createTrainingSample } from '../community/training-samples';
+import { getUserId } from '../community/user-ids';
 import type { BlockEvidence } from '../detection/detection-pipeline';
 import type { PendingBadge } from '../detection/page-scan-controller';
-import { bumpStat } from '../stats/local-stats';
+import { createIcon } from '../insight/icons';
+import { mutateWithStableViewport } from '../platform/remove-tweets';
 import { bumpDaily } from '../stats/daily-stats';
-import { MARK_ATTRIBUTE, type ContentState } from './page-state';
+import { bumpStat } from '../stats/local-stats';
 import { communityVoteForDetection } from './block-core';
 import type { ManualActions } from './manual-actions';
-import { createIcon } from '../insight/icons';
+import { MARK_ATTRIBUTE, type ContentState } from './page-state';
 
 /** 标注属性值：`来源|postId`。postId 用来识别虚拟列表复用后残留的旧装饰。 */
 function markValue(source: string, postId?: string | null): string {
@@ -42,6 +41,31 @@ export function markedForOtherPost(cell: Element, postId?: string | null): boole
   if (!postId) return false;
   const marked = markPostId(cell.getAttribute(MARK_ATTRIBUTE));
   return marked !== null && marked !== postId;
+}
+
+/**
+ * 徽章会改变 cell 高度；同一批标注集中一次挂载，并套用与隐藏推文同款的
+ * 滚动锚定保护。标注密集的评论区里，逐条挂载正是滚动抽动的来源之一。
+ */
+function flushPendingBadges(pending: PendingBadge[]): void {
+  if (pending.length === 0) return;
+  const insertions: PendingBadge[] = [];
+  const cells = new Set<HTMLElement>();
+  for (const item of pending) {
+    // resetPageDecorations 可能在构建与挂载之间撤销了这枚标注
+    if (!item.cell.isConnected || !item.cell.hasAttribute(MARK_ATTRIBUTE)) continue;
+    if (item.cell.querySelector('.fs-badge')) continue;
+    if (cells.has(item.cell)) continue;
+    cells.add(item.cell);
+    insertions.push(item);
+  }
+  pending.length = 0;
+  if (insertions.length === 0) return;
+  mutateWithStableViewport(cells, () => {
+    for (const { cell, badge } of insertions) {
+      cell.appendChild(badge);
+    }
+  });
 }
 
 export function createBadges(deps: {
@@ -264,31 +288,6 @@ export function createBadges(deps: {
     // 处于文档流内但不进入 article 的 grid，不覆盖、不挤压任何 X 内容。
     // 挂载时机由 flushPendingBadges 批量决定（见 markCell）。
     return badge;
-  }
-
-  /**
-   * 徽章会改变 cell 高度；同一批标注集中一次挂载，并套用与隐藏推文同款的
-   * 滚动锚定保护。标注密集的评论区里，逐条挂载正是滚动抽动的来源之一。
-   */
-  function flushPendingBadges(pending: PendingBadge[]): void {
-    if (pending.length === 0) return;
-    const insertions: PendingBadge[] = [];
-    const cells = new Set<HTMLElement>();
-    for (const item of pending) {
-      // resetPageDecorations 可能在构建与挂载之间撤销了这枚标注
-      if (!item.cell.isConnected || !item.cell.hasAttribute(MARK_ATTRIBUTE)) continue;
-      if (item.cell.querySelector('.fs-badge')) continue;
-      if (cells.has(item.cell)) continue;
-      cells.add(item.cell);
-      insertions.push(item);
-    }
-    pending.length = 0;
-    if (insertions.length === 0) return;
-    mutateWithStableViewport(cells, () => {
-      for (const { cell, badge } of insertions) {
-        cell.appendChild(badge);
-      }
-    });
   }
 
   return { markCell, flushPendingBadges };

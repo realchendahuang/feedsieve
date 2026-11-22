@@ -2,8 +2,8 @@
 import React, { act } from 'react';
 import ReactDOM from 'react-dom/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { WriteView } from './WriteView';
 import { OPEN_SCHEDULED_MESSAGE } from '../../../src/lib/compose/compose-schedule';
+import { WriteView } from './WriteView';
 
 let sendToXPage: ReturnType<typeof vi.fn>;
 let onOpenSettings: () => void;
@@ -37,7 +37,7 @@ beforeEach(() => {
   document.body.replaceChildren();
   sessionStored = {};
   sendToXPage = vi.fn().mockResolvedValue({ ok: true });
-  onOpenSettings = vi.fn() as unknown as () => void;
+  onOpenSettings = vi.fn();
   vi.stubGlobal('browser', {
     storage: {
       session: {
@@ -116,8 +116,9 @@ describe('发帖页只读排期台', () => {
     const saved = (
       browser.storage.local.set as unknown as ReturnType<typeof vi.fn>
     ).mock.calls.find(([payload]) => payload && 'composeScheduleV1' in (payload as object));
+    if (!saved) throw new Error('composeScheduleV1 not saved');
     const windows = (
-      saved?.[0] as unknown as { composeScheduleV1: { windows: Array<{ perHour: number }> } }
+      saved[0] as unknown as { composeScheduleV1: { windows: Array<{ perHour: number }> } }
     ).composeScheduleV1.windows;
     expect(windows.reduce((sum, window) => sum + window.perHour, 0)).toBe(20);
     expect(Math.max(...windows.map((window) => window.perHour))).toBe(2);

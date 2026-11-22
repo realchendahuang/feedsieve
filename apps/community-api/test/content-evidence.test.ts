@@ -1,9 +1,9 @@
 import { env } from 'cloudflare:workers';
+import { sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
+import { getDb } from '../src/db/client';
 import worker from '../src/index';
 import { generateSnapshot, SNAPSHOT_PACK } from '../src/snapshot';
-import { sql } from 'drizzle-orm';
-import { getDb } from '../src/db/client';
 import { spreadLatestReport } from './vote-days';
 
 const ORIGIN = 'https://api.example.com';
@@ -29,9 +29,9 @@ async function report(
   );
   expect(res.status).toBe(200);
   await spreadLatestReport();
-  const body = (await res.json()) as {
+  const body = await res.json<{
     results: { status: string; error?: string }[];
-  };
+  }>();
   return body.results[0]!;
 }
 
@@ -51,14 +51,14 @@ interface Entry {
 async function publishAndGetEntry(handle: string): Promise<Entry | undefined> {
   // bypassDailyOnce：用例验证证据聚合内容正确性；日更时序由 snapshot-daily.test.ts 覆盖
   await generateSnapshot(env, 0, { bypassDailyOnce: true });
-  const latest = (await (
+  const latest = await (
     await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), env)
-  ).json()) as { snapshot_version: string };
+  ).json<{ snapshot_version: string }>();
   const file = await worker.fetch(
     new Request(`${ORIGIN}/v1/snapshots/${latest.snapshot_version}/${SNAPSHOT_PACK}`),
     env,
   );
-  const body = (await file.json()) as { entries: Entry[] };
+  const body = await file.json<{ entries: Entry[] }>();
   return body.entries.find((e) => e.handle === handle);
 }
 
@@ -159,7 +159,7 @@ describe('snapshot content evidence aggregation (v0.4)', () => {
     }
     const entry = await publishAndGetEntry('cap_user');
     expect(entry?.fingerprints).toHaveLength(5);
-    expect(entry?.fingerprints).toEqual([...(entry?.fingerprints ?? [])].sort());
+    expect(entry?.fingerprints).toEqual((entry?.fingerprints ?? []).toSorted());
     expect(entry?.domains).toBeUndefined();
   });
 });

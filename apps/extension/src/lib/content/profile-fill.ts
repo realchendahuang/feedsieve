@@ -165,7 +165,8 @@ export function createProfileFill(
 
   /** 页面在后台时不滚也不查；切回前台再继续。等 visibilitychange，不依赖被节流的定时器。 */
   async function waitForVisible(): Promise<void> {
-    while (document.hidden && !stopRequested) {
+    while (document.hidden) {
+      if (stopRequested) break;
       await new Promise<void>((resolve) => {
         function wake(): void {
           document.removeEventListener('visibilitychange', wake);

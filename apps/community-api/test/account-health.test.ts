@@ -1,8 +1,8 @@
 import { env } from 'cloudflare:workers';
-import { describe, expect, it } from 'vitest';
-import worker from '../src/index';
 import { sql } from 'drizzle-orm';
+import { describe, expect, it } from 'vitest';
 import { getDb } from '../src/db/client';
+import worker from '../src/index';
 
 const ORIGIN = 'https://api.example.com';
 
@@ -40,7 +40,7 @@ async function readHealth(handle: string): Promise<HealthRow | null> {
   const rows = await getDb(env).execute<HealthRow>(
     sql`SELECT handle, state, source, probe_count, confirmed_alive_at, terminal_checked_at FROM account_health WHERE handle = ${handle}`,
   );
-  return (rows[0] ?? null) as HealthRow | null;
+  return rows[0] ?? null;
 }
 
 describe('击杀时刻探活入库（account_health）', () => {
@@ -91,7 +91,7 @@ describe('击杀时刻探活入库（account_health）', () => {
       env,
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { results: Array<{ status: string; error?: string }> };
+    const body = await res.json<{ results: Array<{ status: string; error?: string }> }>();
     expect(body.results[0]).toMatchObject({ status: 'rejected', error: 'invalid_liveness' });
     expect(await readHealth('handle_ok')).toBeNull();
   });

@@ -4,23 +4,15 @@
  * - 对内容脚本只下发精简集合（handles / verified / whitelist / mutedRules；仅「大扫除」档才带 fingerprints / domains）。
  * - 内容脚本真正命中某个社区账号或指纹时，按批 IPC 查询该 1~N 个条目的完整元数据与 Campaign 信息。
  */
-import {
-  buildIndex,
-  type CommunityEntry,
-  type CommunityIndex,
-} from '@feedsieve/community-lists';
-import { SNAPSHOT_KEY, getCommunitySettings } from './community-settings';
-import {
-  getBundledSnapshot,
-  getCommunitySnapshot,
-  parseStoredSnapshot,
-} from './community-store';
+import { buildIndex, type CommunityEntry, type CommunityIndex } from '@feedsieve/community-lists';
 import {
   COMMUNITY_LOOKUP_MESSAGE,
   COMMUNITY_RUNTIME_MESSAGE,
   type CommunityLookupResponse,
   type CommunityRuntimeResponse,
 } from './community-protocol';
+import { SNAPSHOT_KEY, getCommunitySettings } from './community-settings';
+import { getBundledSnapshot, getCommunitySnapshot, parseStoredSnapshot } from './community-store';
 
 interface CachedCommunityState {
   snapshotVersion: string;
@@ -245,15 +237,11 @@ export function createCommunityWorker() {
   };
 
   function register(): void {
-    browser.storage.onChanged.addListener(
-      onStorageChanged as Parameters<typeof browser.storage.onChanged.addListener>[0],
-    );
+    browser.storage.onChanged.addListener(onStorageChanged);
   }
 
   function dispose(): void {
-    browser.storage.onChanged.removeListener(
-      onStorageChanged as Parameters<typeof browser.storage.onChanged.removeListener>[0],
-    );
+    browser.storage.onChanged.removeListener(onStorageChanged);
   }
 
   return {

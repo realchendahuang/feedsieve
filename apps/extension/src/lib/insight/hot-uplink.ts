@@ -1,3 +1,4 @@
+import { resolveConfig } from '@feedsieve/metrics';
 /**
  * 全站热榜的上报（后台 service worker）。
  *
@@ -14,8 +15,7 @@
  * 45 分钟的不重发；一轮最多 200 条，先发流速高的。失败按指数退避，限额用完等服务端给的时间。
  * 待发队列存在 storage.session，service worker 被回收也不丢。
  */
-import type { SanitizedAuthorStat, SanitizedTweetStat } from '../platform/xhr-bridge-guard';
-import { resolveConfig } from '@feedsieve/metrics';
+import type { SanitizedTweetStat } from '../platform/xhr-bridge-guard';
 import type { InsightObservation } from './shared-insight';
 
 const MINUTE_MS = 60_000;
@@ -226,7 +226,8 @@ export function createHotUplink(deps: HotUplinkDeps) {
   async function sessionId(): Promise<string> {
     const day = new Date(now()).toISOString().slice(0, 10);
     const stored = (await deps.storage.get(SESSION_KEY))[SESSION_KEY] as
-      { day?: string; id?: string } | undefined;
+      | { day?: string; id?: string }
+      | undefined;
     if (stored?.day === day && typeof stored.id === 'string') return stored.id;
     const id = randomId();
     await deps.storage.set({ [SESSION_KEY]: { day, id } });
@@ -240,10 +241,10 @@ export function createHotUplink(deps: HotUplinkDeps) {
       if (!observation || observation.shareable !== true || typeof observation.at !== 'number') {
         continue;
       }
-      for (const author of (observation.authors ?? []) as SanitizedAuthorStat[]) {
+      for (const author of observation.authors ?? []) {
         if (typeof author?.followers === 'number') followers.set(author.handle, author.followers);
       }
-      for (const tweet of (observation.tweets ?? []) as SanitizedTweetStat[]) {
+      for (const tweet of observation.tweets ?? []) {
         if (
           !tweet ||
           tweet.protected === true ||
@@ -289,7 +290,7 @@ export function createHotUplink(deps: HotUplinkDeps) {
     pruneSent(at);
     // 只报正在火的：不火的、过期的、没变化的直接丢掉，不再等下一轮（下次再被刷到、火起来了还会进来）
     const hot: Array<{ item: HotUploadItem; velocity: number }> = [];
-    for (const item of [...pending.values()]) {
+    for (const item of Array.from(pending.values())) {
       const velocity = await deps.velocityOf(item.post_id);
       if (
         velocity === null ||
@@ -304,7 +305,7 @@ export function createHotUplink(deps: HotUplinkDeps) {
     }
     if (hot.length === 0) return true;
     const items = hot
-      .sort((a, b) => b.velocity - a.velocity)
+      .toSorted((a, b) => b.velocity - a.velocity)
       .slice(0, HOT_UPLOAD_MAX_PER_ROUND)
       .map(({ item }) => item);
     const id = await sessionId();

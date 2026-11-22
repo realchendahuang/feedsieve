@@ -3,8 +3,8 @@
 import React, { act } from 'react';
 import ReactDOM from 'react-dom/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import App from './App';
 import type { PersistentBlockQueueState } from '../../src/lib/queue/block-queue-store';
+import App from './App';
 
 let storageSet: ReturnType<typeof vi.fn>;
 let runtimeSendMessage: ReturnType<typeof vi.fn>;
@@ -784,7 +784,14 @@ describe('popup App 渲染冒烟', () => {
           },
           preferences: { uiLanguage: 'zh', communityEnabled: true, markStrength: 'standard' },
           uiSettings: { cleanUi: true, hideForYou: true },
-          modules: { hot: true, profile: false, write: true, aiCheck: true, filter: true, shareMenu: true },
+          modules: {
+            hot: true,
+            profile: false,
+            write: true,
+            aiCheck: true,
+            filter: true,
+            shareMenu: true,
+          },
           insight: { badges: false, profileLine: true },
         }),
       ],
@@ -1003,7 +1010,7 @@ describe('popup App 渲染冒烟', () => {
     await new Promise((resolve) => setTimeout(resolve, 30));
 
     tabSendMessage.mockResolvedValueOnce([]);
-    storedQueue = { ...storedQueue!, status: 'completed', updatedAt: 1 };
+    storedQueue = { ...storedQueue, status: 'completed', updatedAt: 1 };
     fireStorageChange({ persistentBlockQueueV1: {} });
     await new Promise((resolve) => setTimeout(resolve, 30));
 

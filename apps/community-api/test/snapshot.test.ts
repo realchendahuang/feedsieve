@@ -1,11 +1,13 @@
-import { env } from 'cloudflare:workers';
-import { describe, expect, it } from 'vitest';
-import worker from '../src/index';
 import {
   buildSigningMessage,
   TRUSTED_KEYS,
   verifyManifestSignature,
 } from '@feedsieve/community-lists';
+import { env } from 'cloudflare:workers';
+import { describe, expect, it } from 'vitest';
+import { getDb } from '../src/db/client';
+import { maintainerBlocklist, maintainerWhitelist, snapshots } from '../src/db/schema';
+import worker from '../src/index';
 import {
   generateSnapshot,
   buildKillSwitch,
@@ -13,8 +15,6 @@ import {
   PUBLIC_BLOCKLIST_PACK,
   SNAPSHOT_PACK,
 } from '../src/snapshot';
-import { getDb } from '../src/db/client';
-import { maintainerBlocklist, maintainerWhitelist, snapshots } from '../src/db/schema';
 import { spreadLatestReport } from './vote-days';
 
 const ORIGIN = 'https://api.example.com';
@@ -100,7 +100,7 @@ describe('snapshot pipeline', () => {
 
     const latest = await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), env);
     expect(latest.status).toBe(200);
-    const manifest = (await latest.json()) as Manifest;
+    const manifest = await latest.json<Manifest>();
     expect(manifest.snapshot_version).toBe(snapshot_version);
   });
 
@@ -122,9 +122,9 @@ describe('snapshot pipeline', () => {
       new Request(
         `${ORIGIN}/v1/snapshots/${
           (
-            (await (
+            await (
               await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), env)
-            ).json()) as Manifest
+            ).json<Manifest>()
           ).snapshot_version
         }/${SNAPSHOT_PACK}`,
       ),
@@ -158,9 +158,9 @@ describe('snapshot pipeline', () => {
     expect(entry.community_score).toBe(0.59);
     expect(entry.evidence_post_ids).toEqual(['18000000000000000']);
 
-    const latest = (await (
+    const latest = await (
       await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), env)
-    ).json()) as Manifest;
+    ).json<Manifest>();
     expect(await sha256HexOf(bodyText)).toBe(latest.files[0]!.sha256);
     expect(fileRes.headers.get('cache-control')).toContain('immutable');
 
@@ -206,9 +206,9 @@ describe('snapshot pipeline', () => {
       new Request(
         `${ORIGIN}/v1/snapshots/${
           (
-            (await (
+            await (
               await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), env)
-            ).json()) as Manifest
+            ).json<Manifest>()
           ).snapshot_version
         }/${SNAPSHOT_PACK}`,
       ),
@@ -248,9 +248,9 @@ describe('snapshot pipeline', () => {
       new Request(
         `${ORIGIN}/v1/snapshots/${
           (
-            (await (
+            await (
               await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), env)
-            ).json()) as Manifest
+            ).json<Manifest>()
           ).snapshot_version
         }/${SNAPSHOT_PACK}`,
       ),
@@ -331,9 +331,9 @@ describe('snapshot pipeline', () => {
       new Request(
         `${ORIGIN}/v1/snapshots/${
           (
-            (await (
+            await (
               await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), env)
-            ).json()) as Manifest
+            ).json<Manifest>()
           ).snapshot_version
         }/${SNAPSHOT_PACK}`,
       ),
@@ -415,9 +415,9 @@ describe('snapshot pipeline', () => {
       expect(check).toEqual({ ok: true });
 
       // 公开端点下发的 manifest 与本地生成的一致（同样带签名）
-      const latest = (await (
+      const latest = await (
         await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), env)
-      ).json()) as Manifest & { signature?: unknown };
+      ).json<Manifest & { signature?: unknown }>();
       expect(latest.signature).toBeDefined();
       expect(latest.snapshot_version).toBe(manifest.snapshot_version);
     },
@@ -443,9 +443,9 @@ describe('snapshot pipeline', () => {
           createdAt: Math.floor(Date.now() / 1000),
         });
 
-      const latest = (await (
+      const latest = await (
         await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), env)
-      ).json()) as Manifest;
+      ).json<Manifest>();
       // 门槛开启时跳过未签名行，仍返回已签名的最新版本
       expect(latest.snapshot_version).toBe(signed.snapshot_version);
       expect(latest.snapshot_version).not.toBe('2099.01.01.1');
@@ -487,7 +487,7 @@ describe('snapshot pipeline', () => {
     // blocklist/latest.json 从 R2 返回最新文件体，与发布版本一致
     const latestBody = await worker.fetch(new Request(`${ORIGIN}/v1/blocklist/latest.json`), env);
     expect(latestBody.status).toBe(200);
-    expect((await latestBody.json()) as { snapshot_version?: string }).toMatchObject({
+    expect(await latestBody.json<{ snapshot_version?: string }>()).toMatchObject({
       snapshot_version,
     });
   });
@@ -520,9 +520,9 @@ describe('snapshot pipeline', () => {
       new Request(
         `${ORIGIN}/v1/snapshots/${
           (
-            (await (
+            await (
               await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), env)
-            ).json()) as Manifest
+            ).json<Manifest>()
           ).snapshot_version
         }/${SNAPSHOT_PACK}`,
       ),

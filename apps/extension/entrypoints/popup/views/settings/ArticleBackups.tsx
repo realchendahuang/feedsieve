@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import type { UiLanguage } from '../../../../src/lib/platform/i18n';
 import {
   getBackups,
   removeBackup,
   subscribeBackups,
   type ArticleBackup,
 } from '../../../../src/lib/compose/schedule-store';
+import type { UiLanguage } from '../../../../src/lib/platform/i18n';
 import { EmptyState, formatAgo, HelpIcon, IconButton, useArmedConfirm } from '../shared';
 
 const COPY = {
@@ -39,6 +39,14 @@ const COPY = {
   },
 } as const;
 
+async function openArticle(id: string): Promise<void> {
+  const url = `https://x.com/compose/articles/edit/${id}`;
+  const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+  if (tab?.id && /^https:\/\/(www\.)?x\.com\//.test(tab.url ?? ''))
+    await browser.tabs.update(tab.id, { url });
+  else await browser.tabs.create({ url });
+}
+
 export default function ArticleBackups({
   language,
   notify,
@@ -50,7 +58,7 @@ export default function ArticleBackups({
   const [backups, setBackups] = useState<ArticleBackup[]>([]);
   const [versionPick, setVersionPick] = useState<Record<string, number>>({});
   // 备份是本机唯一一份，删了不可恢复：按行「再点一次确认」，和水军、禁语一个规矩
-  const armedDelete = useArmedConfirm<string>();
+  const armedDelete = useArmedConfirm();
 
   useEffect(() => {
     void getBackups().then(setBackups);
@@ -62,14 +70,6 @@ export default function ArticleBackups({
       () => notify(c.copied),
       () => undefined,
     );
-  }
-
-  async function openArticle(id: string): Promise<void> {
-    const url = `https://x.com/compose/articles/edit/${id}`;
-    const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
-    if (tab?.id && /^https:\/\/(www\.)?x\.com\//.test(tab.url ?? ''))
-      await browser.tabs.update(tab.id, { url });
-    else await browser.tabs.create({ url });
   }
 
   return (

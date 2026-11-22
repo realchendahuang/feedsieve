@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
+import type { ReactNode } from 'react';
 import { SITE_NAME, GITHUB_URL, CHROME_STORE_URL, FIREFOX_STORE_URL } from '../site';
 
 /**
@@ -11,7 +11,7 @@ export function SiteFooter() {
       <div className="mx-auto max-w-5xl px-[clamp(18px,2.2vw,34px)] py-12">
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-12">
           {/* 左侧：品牌与定位 */}
-          <div className="lg:col-span-6 space-y-3">
+          <div className="space-y-3 lg:col-span-6">
             <div className="flex items-center gap-2.5">
               <img
                 src="/assets/avatar.png"
@@ -22,14 +22,14 @@ export function SiteFooter() {
               />
               <span className="text-base font-bold tracking-tight text-ink">{SITE_NAME}</span>
             </div>
-            <p className="text-sm font-medium text-ink leading-relaxed">
+            <p className="text-sm leading-relaxed font-medium text-ink">
               用了福滤娃，评论区不骚了，好帖也不漏了。
             </p>
-            <p className="max-w-md text-xs text-mist leading-relaxed">
+            <p className="max-w-md text-xs leading-relaxed text-mist">
               开源的中文
               X（Twitter）刷推副驾驶：黄推一眼标出、一键原生拉黑；帖子流速、热帖榜、博主主页爆款分析。只读页面已经加载的数据，登录凭证不出浏览器。
             </p>
-            <div className="pt-1 flex items-center gap-3 text-xs text-fog">
+            <div className="flex items-center gap-3 pt-1 text-xs text-fog">
               <span>MIT License</span>
               <span>·</span>
               <span>开源透明</span>
@@ -39,9 +39,9 @@ export function SiteFooter() {
           </div>
 
           {/* 中间：名单与数据 */}
-          <div className="lg:col-span-3 space-y-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-fog">名单与词库</h3>
-            <ul className="space-y-2 text-sm text-mist font-medium">
+          <div className="space-y-3 lg:col-span-3">
+            <h3 className="text-xs font-semibold tracking-wider text-fog uppercase">名单与词库</h3>
+            <ul className="space-y-2 text-sm font-medium text-mist">
               <li>
                 <FooterLink to="/lists/blacklist">黑名单全量公示</FooterLink>
               </li>
@@ -61,15 +61,15 @@ export function SiteFooter() {
           </div>
 
           {/* 右侧：文档与社区 */}
-          <div className="lg:col-span-3 space-y-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-fog">文档与社区</h3>
-            <ul className="space-y-2 text-sm text-mist font-medium">
+          <div className="space-y-3 lg:col-span-3">
+            <h3 className="text-xs font-semibold tracking-wider text-fog uppercase">文档与社区</h3>
+            <ul className="space-y-2 text-sm font-medium text-mist">
               <li>
                 <a
                   href={CHROME_STORE_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="transition-colors hover:text-ink inline-flex items-center gap-1"
+                  className="inline-flex items-center gap-1 transition-colors hover:text-ink"
                 >
                   Chrome 应用商店
                 </a>
@@ -79,7 +79,7 @@ export function SiteFooter() {
                   href={FIREFOX_STORE_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="transition-colors hover:text-ink inline-flex items-center gap-1"
+                  className="inline-flex items-center gap-1 transition-colors hover:text-ink"
                 >
                   Firefox 附加组件
                 </a>
@@ -142,14 +142,14 @@ export function SiteFooter() {
         </div>
 
         {/* 底栏版权与作者 */}
-        <div className="mt-12 pt-6 border-t border-line/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-mist">
+        <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-line/50 pt-6 text-xs text-mist sm:flex-row">
           <div>
             © 2026 {SITE_NAME} · 由{' '}
             <a
               href="https://x.com/realchendahuang"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-ink font-semibold hover:underline underline-offset-4"
+              className="font-semibold text-ink underline-offset-4 hover:underline"
             >
               @realchendahuang
             </a>{' '}

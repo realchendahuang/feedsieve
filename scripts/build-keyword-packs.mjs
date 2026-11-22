@@ -43,13 +43,20 @@ async function loadSigningKey() {
 async function buildSignedManifest(parsed, sha256) {
   const privateKey = await loadSigningKey();
   if (!privateKey) return null;
-  const message = buildKeywordPackManifestMessage(parsed.pack_version, parsed.generated_at, sha256, countRules(parsed));
+  const message = buildKeywordPackManifestMessage(
+    parsed.pack_version,
+    parsed.generated_at,
+    sha256,
+    countRules(parsed),
+  );
   const sig = nodeSign(null, Buffer.from(message), privateKey).toString('base64');
   return {
     schema_version: 1,
     pack_version: parsed.pack_version,
     generated_at: parsed.generated_at,
-    files: [{ path: 'official.json', sha256, packs: parsed.packs.length, rules: countRules(parsed) }],
+    files: [
+      { path: 'official.json', sha256, packs: parsed.packs.length, rules: countRules(parsed) },
+    ],
     signature: { key_id: SIGNING_KEY_ID, alg: 'ed25519', sig },
   };
 }
@@ -218,7 +225,7 @@ export function build(source) {
       id: pack.id,
       name: localized(pack.name, `packs[${index}].name`),
       description: localized(pack.description, `packs[${index}].description`),
-      source_refs: [...pack.source_refs].sort(),
+      source_refs: pack.source_refs.toSorted((a, b) => (a < b ? -1 : a > b ? 1 : 0)),
       rules,
     };
   });
@@ -238,8 +245,7 @@ export function buildDetectorConfig(source) {
   if (!source.detector_config || typeof source.detector_config !== 'object')
     fail('detector_config');
   for (const [section, values] of Object.entries(source.detector_config)) {
-    if (!values || typeof values !== 'object')
-      fail(`detector_config.${section}`);
+    if (!values || typeof values !== 'object') fail(`detector_config.${section}`);
     for (const [key, value] of Object.entries(values)) {
       if (typeof value !== 'number' || !Number.isInteger(value) || value < 0)
         fail(`detector_config.${section}.${key} must be a non-negative integer`);
@@ -277,7 +283,9 @@ export async function main() {
   if (signedManifest && !check) {
     // 有密钥文件才在构建时嵌入签名；发布脚本对未签名 manifest 拒绝上传。
     const signed = `${JSON.stringify(signedManifest)}\n`;
-    console.log(`signed manifest with key ${signedManifest.signature.key_id} (${signedManifest.signature.sig.slice(0, 12)}…)`);
+    console.log(
+      `signed manifest with key ${signedManifest.signature.key_id} (${signedManifest.signature.sig.slice(0, 12)}…)`,
+    );
     await Promise.all([writeFile(outputPath, output), writeFile(manifestPath, signed)]);
     console.log(`built ${parsed.packs.length} packs / ${rules} rules (${sha256.slice(0, 12)})`);
   } else if (check) {
@@ -285,7 +293,8 @@ export async function main() {
       readFile(outputPath, 'utf8'),
       readFile(manifestPath, 'utf8'),
     ]);
-    if (existingOutput !== output) fail('generated artifacts are stale; run pnpm keyword-packs:build');
+    if (existingOutput !== output)
+      fail('generated artifacts are stale; run pnpm keyword-packs:build');
     // manifest 比对剥离签名：无密钥环境下（CI）也能核对内容；签名另行用内置公钥验证
     const committed = JSON.parse(existingManifest);
     const committedSig = committed?.signature;

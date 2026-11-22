@@ -1,10 +1,10 @@
+import { env } from 'cloudflare:workers';
 import { like } from 'drizzle-orm';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { voteAiAccount, tallyVotes, AI_LIST_MIN_VOTES, VOTE_DAILY } from '../src/ai-accounts/vote';
 import { getDb } from '../src/db/client';
 import { aiAccountVotes, trainingSampleUsage } from '../src/db/schema';
-import { env } from 'cloudflare:workers';
-import { beforeEach, describe, expect, it } from 'vitest';
 import worker from '../src/index';
-import { voteAiAccount, tallyVotes, AI_LIST_MIN_VOTES, VOTE_DAILY } from '../src/ai-accounts/vote';
 
 const H = 'suspectbot';
 
@@ -17,7 +17,7 @@ beforeEach(async () => {
 });
 
 const vote = (installation_id: string, handle: string, v: 'ai' | 'human') =>
-  voteAiAccount({ ...env } as Cloudflare.Env, { installation_id, handle, vote: v });
+  voteAiAccount({ ...env }, { installation_id, handle, vote: v });
 
 describe('POST /v1/ai-accounts/vote', () => {
   it('校验入参', async () => {
@@ -25,11 +25,14 @@ describe('POST /v1/ai-accounts/vote', () => {
     expect((await vote('install-0001-abcdef', 'bad!', 'ai')).status).toBe(400);
     expect(
       (
-        await voteAiAccount({ ...env } as Cloudflare.Env, {
-          installation_id: 'install-0001-abcdef',
-          handle: H,
-          vote: 'maybe',
-        })
+        await voteAiAccount(
+          { ...env },
+          {
+            installation_id: 'install-0001-abcdef',
+            handle: H,
+            vote: 'maybe',
+          },
+        )
       ).status,
     ).toBe(400);
   });
@@ -56,7 +59,7 @@ describe('POST /v1/ai-accounts/vote', () => {
     await vote('install-aaaa-0001', H, 'ai');
     const changed = await vote('install-aaaa-0001', H, 'human');
     expect(changed.body).toMatchObject({ ai_count: 0, human_count: 1 });
-    const tally = await tallyVotes({ ...env } as Cloudflare.Env, H);
+    const tally = await tallyVotes({ ...env }, H);
     expect(tally).toMatchObject({ ai_count: 0, human_count: 1 });
   });
 

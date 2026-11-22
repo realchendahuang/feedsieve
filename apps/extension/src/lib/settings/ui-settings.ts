@@ -92,11 +92,6 @@ export function subscribeUiSettings(onChange: (settings: UiSettings) => void): (
     if (areaName !== 'local' || !changes[UI_SETTINGS_KEY]) return;
     onChange(readUiSettings((changes[UI_SETTINGS_KEY] as { newValue?: unknown }).newValue));
   };
-  browser.storage.onChanged.addListener(
-    listener as Parameters<typeof browser.storage.onChanged.addListener>[0],
-  );
-  return () =>
-    browser.storage.onChanged.removeListener(
-      listener as Parameters<typeof browser.storage.onChanged.removeListener>[0],
-    );
+  browser.storage.onChanged.addListener(listener);
+  return () => browser.storage.onChanged.removeListener(listener);
 }

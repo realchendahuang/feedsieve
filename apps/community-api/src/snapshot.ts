@@ -1,9 +1,3 @@
-import { and, desc, eq, inArray, isNotNull, like, notInArray, sql } from 'drizzle-orm';
-import { describeDbError, getDb } from './db/client';
-import { accountHealth, accounts, meta, snapshots } from './db/schema';
-import { sha256Hex } from './lib/hash';
-import { compareText } from './lib/sql';
-import { computeScore } from './lib/score';
 import {
   buildSigningMessage,
   buildSnapshotDelta,
@@ -13,14 +7,20 @@ import {
   type VerifiedEntry,
   type WhitelistEntry,
 } from '@feedsieve/community-lists';
+import { and, desc, eq, inArray, isNotNull, like, notInArray, sql } from 'drizzle-orm';
+import { inferCategory } from './category-inference';
+import { describeDbError, getDb } from './db/client';
+import { accountHealth, accounts, meta, snapshots } from './db/schema';
+import { loadCommunityAggregates } from './lib/consensus-v2';
+import { sha256Hex } from './lib/hash';
+import { LISTING_POLICY, listingReason } from './lib/listing';
+import { computeScore } from './lib/score';
+import { compareText } from './lib/sql';
 import { listMaintainerEntries } from './maintainer-blocklist';
 import { listMaintainerWhitelist } from './maintainer-whitelist';
+import { autoRateAccounts } from './rating';
 import { publicPolicy } from './reports';
 import { POLICY } from './reports';
-import { autoRateAccounts } from './rating';
-import { inferCategory } from './category-inference';
-import { loadCommunityAggregates } from './lib/consensus-v2';
-import { LISTING_POLICY, listingReason } from './lib/listing';
 import { loadHitSignals, mutedRuleIds, readRuleMutes, topHitCategory } from './rule-hits';
 
 export const SNAPSHOT_SCHEMA_VERSION = 2;
@@ -157,7 +157,7 @@ function clusterCampaigns(
   // 指纹 -> 去重账号集合（排序稳定）
   const fpAccounts = new Map<string, string[]>();
   for (const [fp, handles] of inputs) {
-    const unique = [...new Set(handles)].sort();
+    const unique = [...new Set(handles)].toSorted();
     fpAccounts.set(fp, unique);
   }
   const fps = [...fpAccounts.keys()];
@@ -192,7 +192,7 @@ function clusterCampaigns(
       continue;
     }
     // 代表条目：簇内 report_count 最高（并列取 handle 字典序）
-    const sortedAccounts = [...clusterAccounts].sort((a, b) => {
+    const sortedAccounts = [...clusterAccounts].toSorted((a, b) => {
       const ra = reportCounts.get(a) ?? 0;
       const rb = reportCounts.get(b) ?? 0;
       return rb - ra || a.localeCompare(b);
@@ -706,7 +706,7 @@ export async function generateSnapshot(
     const lastRow = await loadLatestRow();
     if (lastRow && lastVersion) {
       return {
-        version: lastVersion as string,
+        version: lastVersion,
         manifest: JSON.parse(lastRow.manifest_json),
         files: JSON.parse(lastRow.files_json) as Record<string, SnapshotFile>,
         deferred: true,
@@ -969,14 +969,19 @@ export async function cleanupOldSnapshots(
   const versions = old.map((row) => row.version).filter((version) => version !== latest);
   if (versions.length === 0) return 0;
   await db.delete(snapshots).where(inArray(snapshots.version, versions));
-  await Promise.all(
-    versions.map((version) =>
-      env.KEYWORD_PACKS?.delete([
-        `${SNAPSHOT_R2_PREFIX}/${version}/${SNAPSHOT_PACK}`,
-        `${SNAPSHOT_R2_PREFIX}/${version}/${PUBLIC_BLOCKLIST_PACK}`,
-      ]).catch(() => undefined),
-    ),
-  );
+  const keywordPacks = env.KEYWORD_PACKS;
+  if (keywordPacks) {
+    await Promise.all(
+      versions.map((version) =>
+        keywordPacks
+          .delete([
+            `${SNAPSHOT_R2_PREFIX}/${version}/${SNAPSHOT_PACK}`,
+            `${SNAPSHOT_R2_PREFIX}/${version}/${PUBLIC_BLOCKLIST_PACK}`,
+          ])
+          .catch(() => undefined),
+      ),
+    );
+  }
   return versions.length;
 }
 /** 增量比全量的这个比例还大时不给（扩展直接下全量更省事）。 */

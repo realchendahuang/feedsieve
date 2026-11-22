@@ -231,10 +231,7 @@ function sanitizeAuthorStat(
       ? {
           displayName: sanitizeText(profile.displayName, DISPLAY_NAME_MAX),
           avatarUrl: sanitizeImageUrl(profile.avatarUrl),
-          verified:
-            typeof stats.isBlueVerified === 'boolean'
-              ? (stats.isBlueVerified as boolean)
-              : undefined,
+          verified: typeof stats.isBlueVerified === 'boolean' ? stats.isBlueVerified : undefined,
         }
       : {}),
   });
@@ -327,24 +324,24 @@ export function sanitizeBridgePayload(raw: unknown): SanitizedBridgeData | null 
     const author =
       tweet && typeof tweet === 'object' ? (tweet as { author?: unknown }).author : undefined;
     if (!author || typeof author !== 'object') continue;
-    const raw = author as {
+    const authorObj = author as {
       handle?: unknown;
       xUserId?: unknown;
       bio?: unknown;
       following?: unknown;
     };
-    const handle = normalizeStrictHandle(raw.handle);
+    const handle = normalizeStrictHandle(authorObj.handle);
     if (!handle) continue;
-    const xUserId = sanitizeXUserId(raw.xUserId);
+    const xUserId = sanitizeXUserId(authorObj.xUserId);
     if (xUserId) {
       idEntries.push({ handle, xUserId });
     }
-    if (raw.following === true) {
+    if (authorObj.following === true) {
       followedEntries.push({ handle, ...(xUserId ? { xUserId } : {}) });
     }
-    if (typeof raw.bio === 'string' && raw.bio && !seenBios.has(handle)) {
+    if (typeof authorObj.bio === 'string' && authorObj.bio && !seenBios.has(handle)) {
       seenBios.add(handle);
-      bios.push({ handle, bio: raw.bio });
+      bios.push({ handle, bio: authorObj.bio });
     }
     const tweetStat = sanitizeTweetStat(handle, tweet as Record<string, unknown>);
     if (tweetStat) tweetStats.push(tweetStat);
@@ -355,19 +352,20 @@ export function sanitizeBridgePayload(raw: unknown): SanitizedBridgeData | null 
   // 资料端点（UserByScreenName）：只取公开统计
   const users = Array.isArray(data.users) ? data.users : [];
   for (const user of users) {
-    const raw = user && typeof user === 'object' ? (user as Record<string, unknown>) : {};
-    const handle = normalizeStrictHandle(raw.handle);
+    const userObj = user && typeof user === 'object' ? (user as Record<string, unknown>) : {};
+    const handle = normalizeStrictHandle(userObj.handle);
     if (!handle) continue;
-    const authorStat = sanitizeAuthorStat(handle, raw.stats, raw);
+    const authorStat = sanitizeAuthorStat(handle, userObj.stats, userObj);
     if (authorStat) authorStats.push(authorStat);
   }
 
   // list 成员：rest_id 必需（idEntries 的存量来源之一），非法成员整条丢弃
   const listMembers = Array.isArray(data.listMembers) ? data.listMembers : [];
   for (const member of listMembers) {
-    const raw = member && typeof member === 'object' ? (member as Record<string, unknown>) : {};
-    const handle = normalizeStrictHandle(raw.handle);
-    const xUserId = sanitizeXUserId(raw.xUserId);
+    const memberObj =
+      member && typeof member === 'object' ? (member as Record<string, unknown>) : {};
+    const handle = normalizeStrictHandle(memberObj.handle);
+    const xUserId = sanitizeXUserId(memberObj.xUserId);
     if (handle && xUserId) {
       idEntries.push({ handle, xUserId });
     }
@@ -377,10 +375,11 @@ export function sanitizeBridgePayload(raw: unknown): SanitizedBridgeData | null 
   const following: SanitizedBridgeData['following'] = [];
   const rawFollowing = Array.isArray(data.following) ? data.following : [];
   for (const account of rawFollowing) {
-    const raw = account && typeof account === 'object' ? (account as Record<string, unknown>) : {};
-    const handle = normalizeStrictHandle(raw.handle);
+    const accountObj =
+      account && typeof account === 'object' ? (account as Record<string, unknown>) : {};
+    const handle = normalizeStrictHandle(accountObj.handle);
     if (!handle) continue;
-    const xUserId = sanitizeXUserId(raw.xUserId);
+    const xUserId = sanitizeXUserId(accountObj.xUserId);
     following.push({ handle, ...(xUserId ? { xUserId } : {}) });
     followedEntries.push({ handle, ...(xUserId ? { xUserId } : {}) });
     if (xUserId) {

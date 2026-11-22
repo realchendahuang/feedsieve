@@ -37,8 +37,8 @@ import {
   profileFromPath,
   tweetSelectors,
 } from '@feedsieve/x-adapter';
-import type { UiLanguage } from '../platform/i18n';
 import { findAuthorMetaRow } from '../content/author-header';
+import type { UiLanguage } from '../platform/i18n';
 import { INSIGHT_COPY, tierTitle } from './copy';
 import {
   compact,

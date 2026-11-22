@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ParsedApiData } from '@feedsieve/x-adapter';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFollowingSync, type FollowingSyncDeps } from './following-sync';
 
 /**
@@ -16,7 +16,7 @@ function page(
     users: [],
     following: [],
     ...overrides,
-  } as ParsedApiData;
+  };
 }
 
 function account(handle: string, xUserId?: string) {

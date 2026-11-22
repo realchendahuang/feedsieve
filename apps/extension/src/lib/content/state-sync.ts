@@ -6,29 +6,29 @@
  */
 
 import { contextFromPath, extractFeedItem, tweetSelectors } from '@feedsieve/x-adapter';
-import { getBlockedAccounts, subscribeBlocked } from '../community/blocked-accounts';
 import { getAllowlist, subscribeAllowlist } from '../community/allowlist';
+import { getBlockedAccounts, subscribeBlocked } from '../community/blocked-accounts';
+import {
+  loadSlimCommunityRuntime,
+  type LoadedCommunityRuntime,
+} from '../community/community-runtime-client';
+import { getCommunitySettings } from '../community/community-settings';
 import {
   getFollowingAllowlist,
   getSelfHandle,
   subscribeFollowingAllowlist,
   subscribeSelfHandle,
 } from '../community/following-allowlist';
-import { getCommunitySettings } from '../community/community-settings';
-import {
-  loadSlimCommunityRuntime,
-  type LoadedCommunityRuntime,
-} from '../community/community-runtime-client';
+import { getKeywordPackCatalog } from '../detection/keyword-packs';
 import {
   createKeywordHeuristics,
   ensureVariantTables,
   getKeywordRuleSettings,
 } from '../detection/keyword-rules';
-import { getKeywordPackCatalog } from '../detection/keyword-packs';
-import { HIDDEN_TWEET_CELL_ATTRIBUTE, mutateWithStableViewport } from '../platform/remove-tweets';
 import type { PageScanController } from '../detection/page-scan-controller';
-import { MARK_ATTRIBUTE, replaceHandleCache, type ContentState } from './page-state';
+import { HIDDEN_TWEET_CELL_ATTRIBUTE, mutateWithStableViewport } from '../platform/remove-tweets';
 import type { BlockedFold } from './blocked-fold';
+import { MARK_ATTRIBUTE, replaceHandleCache, type ContentState } from './page-state';
 
 export function createStateSync(deps: {
   state: ContentState;
@@ -45,72 +45,76 @@ export function createStateSync(deps: {
   let activeRuntime: LoadedCommunityRuntime | null = null;
   let communitySeq = 0;
 
-  function refreshBlockedCache(): void {
-    const apply = (items: Array<{ handle: string }>): void => {
-      const next = new Set(items.map((item) => item.handle.toLowerCase()));
-      const added = new Set([...next].filter((handle) => !state.blockedCache.has(handle)));
-      const removed = new Set([...state.blockedCache].filter((handle) => !next.has(handle)));
-      state.blockedCache.clear();
-      for (const handle of next) state.blockedCache.add(handle);
+  const applyBlockedCache = (items: Array<{ handle: string }>): void => {
+    const next = new Set(items.map((item) => item.handle.toLowerCase()));
+    const added = new Set([...next].filter((handle) => !state.blockedCache.has(handle)));
+    const removed = new Set([...state.blockedCache].filter((handle) => !next.has(handle)));
+    state.blockedCache.clear();
+    for (const handle of next) state.blockedCache.add(handle);
 
-      // 拉黑不再触发整页徽章拆装。新增项只折叠对应账号的 cell；撤销项仅重扫
-      // 对应账号，让已隐藏的行重新进入正常检测路径。
-      if (added.size > 0) fold.hideNewlyBlockedCells(added);
-      if (removed.size > 0) resetPageDecorationsForHandles(removed);
-    };
+    // 拉黑不再触发整页徽章拆装。新增项只折叠对应账号的 cell；撤销项仅重扫
+    // 对应账号，让已隐藏的行重新进入正常检测路径。
+    if (added.size > 0) fold.hideNewlyBlockedCells(added);
+    if (removed.size > 0) resetPageDecorationsForHandles(removed);
+  };
+
+  function refreshBlockedCache(): void {
     void getBlockedAccounts()
-      .then(apply)
+      .then(applyBlockedCache)
       .catch(() => {
         // storage 异常保持旧缓存
       });
-    subscribeBlocked(apply);
+    subscribeBlocked(applyBlockedCache);
   }
 
+  const applySelfCache = (handle: string | null): void => {
+    if (state.selfHandle === handle) return;
+    state.selfHandle = handle;
+    // selfHandle 首次解析或切换账号：清理自己帖子已有的标注装饰（若有）
+    if (handle) resetPageDecorationsForHandles(new Set([handle]));
+  };
+
   function refreshSelfCache(): void {
-    const apply = (handle: string | null): void => {
-      if (state.selfHandle === handle) return;
-      state.selfHandle = handle;
-      // selfHandle 首次解析或切换账号：清理自己帖子已有的标注装饰（若有）
-      if (handle) resetPageDecorationsForHandles(new Set([handle]));
-    };
     void getSelfHandle()
-      .then(apply)
+      .then(applySelfCache)
       .catch(() => {
         // storage 异常保持旧缓存（未知 = 不跳过，防御性）
       });
     // 切换账号发生在别的 tab 时，本 tab 靠 storage 订阅同步，不能只靠启动读一次
-    subscribeSelfHandle(apply);
+    subscribeSelfHandle(applySelfCache);
   }
 
+  const applyAllowCache = (items: Array<{ handle: string }>): void => {
+    const changed = replaceHandleCache(state.allowCache, items);
+    // 逐账号 DOM 清理之外，再整表对账一遍：即使该账号推文已不在 DOM
+    //（resetPageDecorationsForHandles 找不到 cell 空转），账本也必须清干净。
+    state.pruneProtectedPageMarked();
+    if (changed.size > 0) resetPageDecorationsForHandles(changed);
+  };
+
   function refreshAllowCache(): void {
-    const apply = (items: Array<{ handle: string }>): void => {
-      const changed = replaceHandleCache(state.allowCache, items);
-      // 逐账号 DOM 清理之外，再整表对账一遍：即使该账号推文已不在 DOM
-      //（resetPageDecorationsForHandles 找不到 cell 空转），账本也必须清干净。
-      state.pruneProtectedPageMarked();
-      if (changed.size > 0) resetPageDecorationsForHandles(changed);
-    };
     void getAllowlist()
-      .then(apply)
+      .then(applyAllowCache)
       .catch(() => {
         // storage 异常保持旧缓存
       });
     // 初始订阅：后续白名单变化实时生效（订阅保持到页面卸载）
-    subscribeAllowlist(apply);
+    subscribeAllowlist(applyAllowCache);
   }
 
+  const applyFollowingCache = (items: Array<{ handle: string }>): void => {
+    const changed = replaceHandleCache(state.followingCache, items);
+    state.pruneProtectedPageMarked();
+    if (changed.size > 0) resetPageDecorationsForHandles(changed);
+  };
+
   function refreshFollowingCache(): void {
-    const apply = (items: Array<{ handle: string }>): void => {
-      const changed = replaceHandleCache(state.followingCache, items);
-      state.pruneProtectedPageMarked();
-      if (changed.size > 0) resetPageDecorationsForHandles(changed);
-    };
     void getFollowingAllowlist()
-      .then(apply)
+      .then(applyFollowingCache)
       .catch(() => {
         // storage 异常时保留旧缓存
       });
-    subscribeFollowingAllowlist(apply);
+    subscribeFollowingAllowlist(applyFollowingCache);
   }
 
   async function refreshCommunity(): Promise<void> {

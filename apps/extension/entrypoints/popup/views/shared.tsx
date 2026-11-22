@@ -1,16 +1,24 @@
-import type { BlockEvidence } from '../../../src/lib/detection/detection-evidence';
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
 import {
   STRENGTH_LABELS as canonicalStrengthLabels,
   type MarkStrength,
 } from '@feedsieve/community-lists';
-import type { AllowlistItem } from '../../../src/lib/community/allowlist';
-import { normalizeStrictHandle } from '../../../src/lib/platform/xhr-bridge-guard';
-import { openOfficialPage, SITE_URLS, type SiteList } from '../../../src/lib/platform/site-links';
-import { localizedDetectionReason, UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
-import { formatAgo as sharedFormatAgo } from '@feedsieve/shared';
 import { accountTier, ageHours, replyOpportunity, TIER_LEVELS, TIER_MAX } from '@feedsieve/metrics';
+import { formatAgo as sharedFormatAgo } from '@feedsieve/shared';
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
+import { createPortal } from 'react-dom';
+import type { AllowlistItem } from '../../../src/lib/community/allowlist';
+import type { BlockEvidence } from '../../../src/lib/detection/detection-evidence';
+import { localizedDetectionReason, UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
+import { openOfficialPage, SITE_URLS, type SiteList } from '../../../src/lib/platform/site-links';
+import { normalizeStrictHandle } from '../../../src/lib/platform/xhr-bridge-guard';
 
 export type AppIconName =
   | 'clean'
@@ -264,8 +272,16 @@ export function placeTip(anchor: TipAnchor, box: TipBox | null): TipPlacement {
   const placement: 'top' | 'bottom' = height <= roomBelow || height > roomAbove ? 'bottom' : 'top';
   const top =
     placement === 'bottom'
-      ? clamp(anchor.bottom + TIP_GAP, TIP_EDGE, Math.max(TIP_EDGE, window.innerHeight - height - TIP_EDGE))
-      : clamp(anchor.top - TIP_GAP - height, TIP_EDGE, Math.max(TIP_EDGE, window.innerHeight - height - TIP_EDGE));
+      ? clamp(
+          anchor.bottom + TIP_GAP,
+          TIP_EDGE,
+          Math.max(TIP_EDGE, window.innerHeight - height - TIP_EDGE),
+        )
+      : clamp(
+          anchor.top - TIP_GAP - height,
+          TIP_EDGE,
+          Math.max(TIP_EDGE, window.innerHeight - height - TIP_EDGE),
+        );
   const left = clamp(
     anchor.left + anchor.width / 2 - width / 2,
     TIP_EDGE,
@@ -634,7 +650,9 @@ export function asHotPostList(value: unknown): HotPostItem[] {
       ...(views !== undefined ? { views } : {}),
       ...(followers !== undefined ? { followers } : {}),
       ...(replies !== undefined ? { replies } : {}),
-      ...Object.fromEntries(Object.entries(extra).filter(([, value]) => value !== undefined)),
+      ...Object.fromEntries(
+        Object.entries(extra).filter(([, entryValue]) => entryValue !== undefined),
+      ),
       velocity: nullableNumber(raw.velocity),
       breakout: nullableNumber(raw.breakout),
       tier: tier !== null && Number.isInteger(tier) && tier >= 1 && tier <= TIER_MAX ? tier : null,
@@ -719,9 +737,9 @@ export function asPageBrief(value: unknown): PageBriefItem | null {
   const hot = optionalCount(raw.hot);
   if (seen === undefined || authors === undefined || hot === undefined) return null;
   const tiersRaw = (raw.tiers ?? {}) as Record<string, unknown>;
-  const tiers = TIER_LEVELS.map(
+  const tiers: PageBriefItem['tiers'] = TIER_LEVELS.map(
     (tier) => optionalCount(tiersRaw[tier]) ?? 0,
-  ) as PageBriefItem['tiers'];
+  );
   const top = raw.topBreakout as Record<string, unknown> | null | undefined;
   const topHandle = top ? normalizeStrictHandle(top.handle) : null;
   const topRatio = top ? optionalCount(top.ratio) : undefined;
@@ -766,9 +784,7 @@ export function asPageMarkedList(value: unknown): PageMarkedItem[] {
         : undefined;
     items.push({
       handle,
-      ...(raw.evidence && typeof raw.evidence === 'object'
-        ? { evidence: raw.evidence as BlockEvidence }
-        : {}),
+      ...(raw.evidence && typeof raw.evidence === 'object' ? { evidence: raw.evidence } : {}),
       category: raw.category,
       reason: raw.reason,
       snippet,

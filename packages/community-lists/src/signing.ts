@@ -37,7 +37,7 @@ export interface SigningMessageInput {
 
 /** 确定性签名消息：白名单字段按固定顺序写入，文件清单按 path 排序。 */
 export function buildSigningMessage(input: SigningMessageInput): string {
-  const files = [...input.files].sort((a, b) => a.path.localeCompare(b.path));
+  const files = input.files.toSorted((a, b) => a.path.localeCompare(b.path));
   const lines = [
     'feedsieve-manifest-v1',
     String(input.schemaVersion),

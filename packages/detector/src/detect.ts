@@ -1,12 +1,12 @@
-import type { Detection, DetectionSource } from './types';
-import { DEFAULT_HEURISTICS, type HeuristicRule } from './heuristics';
 import {
   contentFingerprint,
   contentFingerprintV1,
   fingerprintText,
   fingerprintTextV1,
 } from './fingerprint';
+import { DEFAULT_HEURISTICS, type HeuristicRule } from './heuristics';
 import { SIMHASH_HAMMING_THRESHOLD, hammingDistance, isSimhashV1, simhashFromHex } from './simhash';
+import type { Detection, DetectionSource } from './types';
 
 export function normalizeHandle(handle: string): string {
   return handle.trim().replace(/^@+/, '').toLowerCase();

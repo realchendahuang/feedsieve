@@ -70,9 +70,9 @@ export function registerRuntimeDataWorker(): void {
 
 export async function loadRuntimeData(path: DataPath): Promise<unknown> {
   const key = cacheKey(path);
-  const cached = await browser.storage.local.get(key).catch((error) => {
+  const cached = await browser.storage.local.get(key).catch((error): Record<string, unknown> => {
     console.error('[FeedSieve] 随包缓存读取失败，回退后台资源:', error);
-    return {} as Record<string, unknown>;
+    return {};
   });
   const stored = cached[key] as { version?: string; data?: unknown } | undefined;
   if (stored?.version === runtimeVersion() && stored.data !== undefined) {

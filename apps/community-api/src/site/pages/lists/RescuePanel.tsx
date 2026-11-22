@@ -17,14 +17,14 @@ export function RescuePanel({
   const PAGE_SIZE = 50;
   const [page, setPage] = useState(0);
 
-  const sorted = useMemo(() => [...verified].sort((a, b) => b.net_votes - a.net_votes), [verified]);
+  const sorted = useMemo(() => verified.toSorted((a, b) => b.net_votes - a.net_votes), [verified]);
   const pages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const safePage = Math.min(page, pages - 1);
   const rows = sorted.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
 
   return (
     <section>
-      <div className="panel-card overflow-hidden">
+      <div className="overflow-hidden panel-card">
         <table className="w-full text-sm" id="verified-table">
           <thead>
             <tr className="border-b border-line/70 text-left text-xs text-mist">

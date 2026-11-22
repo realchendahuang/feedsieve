@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import readableYaml from '../../../community/lists/blocklist.yaml?raw';
 import manifestJson from '../../../community/lists/manifest.json';
 import officialJson from '../../../community/lists/official.json?raw';
-import readableYaml from '../../../community/lists/blocklist.yaml?raw';
 import { sha256Hex } from './hash';
 import { parseManifest, parseSnapshotBody } from './validate';
 
@@ -11,7 +11,7 @@ describe('bundled public blocklist artifacts', () => {
     expect(parsedManifest.ok).toBe(true);
     if (!parsedManifest.ok) return;
 
-    expect(parsedManifest.value.files.map((file) => file.path).sort()).toEqual([
+    expect(parsedManifest.value.files.map((file) => file.path).toSorted()).toEqual([
       'blocklist.yaml',
       'official.json',
     ]);

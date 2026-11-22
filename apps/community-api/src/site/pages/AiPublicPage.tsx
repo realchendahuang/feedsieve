@@ -1,12 +1,12 @@
-import { Copy, ExternalLink } from 'lucide-react';
 import { categoryLabel } from '@feedsieve/shared';
+import { Copy, ExternalLink } from 'lucide-react';
 import type { AiPublicData } from '@/ai-accounts/public-page';
 import type { AiSquareAudit, AiSquareEntry } from '@/ai-accounts/square';
+import { InstallButtons, StoreLinks } from '../components/InstallButtons';
 import { HelpIcon } from '../components/SiteHeader';
 import { toast } from '../components/ui/toast';
-import { xProfileUrl } from '../site';
-import { InstallButtons, StoreLinks } from '../components/InstallButtons';
 import { initialOf } from '../lib/utils';
+import { xProfileUrl } from '../site';
 
 const TONE = { ai: '#ff4d6d', mixed: '#e09a00', human: '#16b981' } as const;
 
@@ -35,7 +35,7 @@ export function AiPublicPage({
 }) {
   if (!data) {
     return (
-      <main className="mx-auto max-w-3xl px-[clamp(18px,2.2vw,34px)] pb-16 pt-12 text-center">
+      <main className="mx-auto max-w-3xl px-[clamp(18px,2.2vw,34px)] pt-12 pb-16 text-center">
         <p className="text-mist">账号格式不对</p>
       </main>
     );
@@ -52,7 +52,7 @@ export function AiPublicPage({
     const auditAvatar = detail?.avatarUrl ?? data.avatarUrl;
     const evidence = audit.evidencePostIds[0];
     return (
-      <main className="mx-auto max-w-3xl px-[clamp(18px,2.2vw,34px)] pb-16 pt-10">
+      <main className="mx-auto max-w-3xl px-[clamp(18px,2.2vw,34px)] pt-10 pb-16">
         <section className="rounded-[var(--radius)] bg-surface p-[clamp(20px,4vw,40px)] shadow-[var(--panel-elev)]">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-sm font-bold text-gold">维护者审计收录</p>
@@ -68,7 +68,7 @@ export function AiPublicPage({
                 className="size-16 rounded-full object-cover ring-[3px] ring-gold/40"
               />
             ) : (
-              <span className="grid size-16 place-items-center rounded-full bg-wash-strong text-2xl font-bold text-ink ring-[3px] ring-gold/40">
+              <span className="bg-wash-strong grid size-16 place-items-center rounded-full text-2xl font-bold text-ink ring-[3px] ring-gold/40">
                 {initialOf(auditName)}
               </span>
             )}
@@ -144,7 +144,7 @@ export function AiPublicPage({
   const kicker =
     data.state === 'human' ? '社区结论' : data.state === 'contested' ? '社区投票' : 'AI 味检测报告';
   return (
-    <main className="mx-auto max-w-3xl px-[clamp(18px,2.2vw,34px)] pb-16 pt-10">
+    <main className="mx-auto max-w-3xl px-[clamp(18px,2.2vw,34px)] pt-10 pb-16">
       <section className="rounded-[var(--radius)] bg-surface p-[clamp(20px,4vw,40px)] shadow-[var(--panel-elev)]">
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-sm font-bold" style={{ color }}>
@@ -162,7 +162,7 @@ export function AiPublicPage({
             />
           ) : (
             <span
-              className="grid size-16 place-items-center rounded-full bg-wash-strong text-2xl font-bold text-ink"
+              className="bg-wash-strong grid size-16 place-items-center rounded-full text-2xl font-bold text-ink"
               style={{ boxShadow: `0 0 0 3px ${color}` }}
             >
               {initialOf(name)}
@@ -186,7 +186,7 @@ export function AiPublicPage({
           <>
             <p className="mt-8 text-sm font-semibold text-mist">AI 味</p>
             <p
-              className="text-7xl font-black leading-none tracking-tight tabular-nums"
+              className="text-7xl leading-none font-black tracking-tight tabular-nums"
               style={{ color }}
             >
               {flavor.percent}
@@ -464,18 +464,18 @@ function SamplesSection({ entry }: { entry: AiSquareEntry }) {
       ) : (
         <ul className="mt-4 space-y-3">
           {entry.samples.map((sample) => {
-            const truncated = [...sample.text].length >= 120;
+            const truncated = Array.from(sample.text).length >= 120;
             return (
               <li
                 key={sample.tweetId}
                 className="rounded-[var(--radius-sm)] border border-line/60 p-4"
               >
-                <p className="break-words text-sm leading-relaxed text-ink">
+                <p className="text-sm leading-relaxed break-words text-ink">
                   {sample.text}
                   {truncated ? '…' : ''}
                 </p>
                 {sample.parentText ? (
-                  <p className="mt-1 break-words text-xs text-mist">
+                  <p className="mt-1 text-xs break-words text-mist">
                     回复原帖：{sample.parentText}
                   </p>
                 ) : null}

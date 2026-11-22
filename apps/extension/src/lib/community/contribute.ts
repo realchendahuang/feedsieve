@@ -1,3 +1,6 @@
+import { categoryForKeywordRuleId } from '../detection/keyword-rules';
+import { getAllowlist, type FalsePositiveEvidence } from './allowlist';
+import { getBlockedAccounts } from './blocked-accounts';
 /**
  * 社区贡献上报（Phase F；v0.4 载荷扩容）。
  *
@@ -10,9 +13,6 @@
  * 网络失败进本地积压队列，由 background 在启动时补交（尽力而为）。
  */
 import { COMMUNITY_API_BASE, getCommunitySettings } from './community-settings';
-import { getAllowlist, type FalsePositiveEvidence } from './allowlist';
-import { getBlockedAccounts } from './blocked-accounts';
-import { categoryForKeywordRuleId } from '../detection/keyword-rules';
 
 export interface ContributionItem {
   handle: string;
@@ -493,10 +493,10 @@ function labelSignature(label: LocalLabel): string {
           label.xUserId ?? '',
           label.category,
           label.contentFingerprint ?? '',
-          [...(label.linkDomains ?? [])].sort(),
+          [...(label.linkDomains ?? [])].toSorted(),
           label.detectionSource ?? '',
           label.ruleId ?? '',
-          [...(label.signalIds ?? [])].sort(),
+          [...(label.signalIds ?? [])].toSorted(),
           label.evidencePostId ?? '',
           label.liveness ?? '',
           // 判定材料变了要重同步：服务端随票更新原文/昵称/简介

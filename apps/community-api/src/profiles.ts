@@ -1,3 +1,4 @@
+import { snowflakeTime } from '@feedsieve/metrics';
 /**
  * 主页洞察的众包帖子库：一个人看过的博主帖子，其他人打开同一个主页时直接拿到。
  *
@@ -34,7 +35,6 @@
  * 图片地址去前缀；只给 creator_id 建索引，数字更新走 HOT 不碰索引。
  */
 import { and, eq, inArray, like, lt, lte, sql, type AnyColumn } from 'drizzle-orm';
-import { snowflakeTime } from '@feedsieve/metrics';
 import { getDb, retryOnConflict } from './db/client';
 import {
   accounts as communityAccounts,
@@ -45,8 +45,8 @@ import {
 import { hotSalt } from './hot';
 import { hashInstallationId, hashIp } from './lib/hash';
 import { compareText, stripNul } from './lib/sql';
-import { chargeUsageInOrder } from './lib/usage';
 import { utcToday } from './lib/time';
+import { chargeUsageInOrder } from './lib/usage';
 
 /** 一次请求最多这么多条帖子 / 账号。 */
 export const MAX_PROFILE_POSTS_PER_REQUEST = 200;
@@ -253,7 +253,7 @@ function foldPosts(posts: ProfilePostInput[]): ProfilePostInput[] {
     }
   }
   // 按主键（数值）排序：并发请求以相同顺序锁行，避免死锁
-  return [...folded.values()].sort((a, b) => {
+  return [...folded.values()].toSorted((a, b) => {
     const x = BigInt(a.postId);
     const y = BigInt(b.postId);
     return x < y ? -1 : x > y ? 1 : 0;
@@ -266,7 +266,7 @@ function foldAccounts(accounts: ProfileAccountInput[]): ProfileAccountInput[] {
     const known = folded.get(account.handle);
     folded.set(account.handle, known ? { ...known, ...pick({ ...account }) } : { ...account });
   }
-  return [...folded.values()].sort((a, b) => compareText(a.handle, b.handle));
+  return [...folded.values()].toSorted((a, b) => compareText(a.handle, b.handle));
 }
 
 type IngestResult =
@@ -324,7 +324,7 @@ export async function ingestProfileObservations(
     const perHandle = new Map<string, number>();
     for (const post of posts) perHandle.set(post.handle, (perHandle.get(post.handle) ?? 0) + 1);
     const refused = new Set<string>();
-    for (const [handle, units] of [...perHandle].sort((x, y) => compareText(x[0], y[0]))) {
+    for (const [handle, units] of [...perHandle].toSorted((x, y) => compareText(x[0], y[0]))) {
       const identity = `profile-ip-handle:${ipHash}:${handle}`;
       if (!(await chargeUsageInOrder(db, day, units, [[identity, IP_HANDLE_DAILY_LIMIT]]))) {
         refused.add(handle);
@@ -419,7 +419,7 @@ export async function ingestProfileObservations(
         joinedAt: null,
         updatedAt: now,
       })),
-  ].sort((x, y) => compareText(x.handle, y.handle));
+  ].toSorted((x, y) => compareText(x.handle, y.handle));
 
   await retryOnConflict(async () => {
     // 先写资料（拿到作者编号），再写帖子

@@ -4,12 +4,12 @@ import {
   subscribeBlocked,
   type BlockedAccount,
 } from '../../../../src/lib/community/blocked-accounts';
-import { UI_COPY, type UiLanguage } from '../../../../src/lib/platform/i18n';
 import {
   MANUAL_REPORT_REASONS,
   manualReasonLabel,
   type ManualReportReason,
 } from '../../../../src/lib/community/manual-reasons';
+import { UI_COPY, type UiLanguage } from '../../../../src/lib/platform/i18n';
 import type { UnblockBatchResult } from '../../../../src/lib/queue/run-unblock-batch';
 import {
   EmptyState,

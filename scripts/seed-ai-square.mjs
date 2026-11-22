@@ -15,7 +15,8 @@
 import { execFileSync } from 'node:child_process';
 
 const DB_URL =
-  process.env.DATABASE_URL ?? 'postgres://feedsieve:feedsieve_dev_password@127.0.0.1:54330/feedsieve';
+  process.env.DATABASE_URL ??
+  'postgres://feedsieve:feedsieve_dev_password@127.0.0.1:54330/feedsieve';
 const API = 'https://feedsieve.win';
 const DRY = process.argv.includes('--dry-run');
 const TWITTER_EPOCH = 1288834974657n;
@@ -175,7 +176,9 @@ async function main() {
           `) ON CONFLICT (handle, tweet_id) DO NOTHING;`,
       );
     }
-    console.log(`  ✓ ${handle}（${verdict} ${value.score ?? '无分'}，${aiCount} 票，${sampleCount} 条样本）`);
+    console.log(
+      `  ✓ ${handle}（${verdict} ${value.score ?? '无分'}，${aiCount} 票，${sampleCount} 条样本）`,
+    );
   }
 
   const script = ['BEGIN;', ...statements, 'COMMIT;'].join('\n');

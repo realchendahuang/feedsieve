@@ -12,7 +12,9 @@ const clientDir = path.resolve(dirname, '../dist/client');
 const adminDir = path.resolve(dirname, '../../admin/dist');
 
 if (!existsSync(adminDir)) {
-  console.error('[merge-client-assets] ../admin/dist 不存在：先 `pnpm --filter @feedsieve/admin build`');
+  console.error(
+    '[merge-client-assets] ../admin/dist 不存在：先 `pnpm --filter @feedsieve/admin build`',
+  );
   process.exit(1);
 }
 

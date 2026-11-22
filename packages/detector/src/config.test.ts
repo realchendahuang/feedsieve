@@ -33,7 +33,7 @@ describe('detector 运行时配置覆写', () => {
       '{"garbledHandle":{"minLetterRun":8}}',
     ];
     for (const bad of reject) {
-      expect(validateDetectorConfigOverride(bad as unknown)).toBe(false);
+      expect(validateDetectorConfigOverride(bad)).toBe(false);
     }
     // 拒绝后回退内置，不留半套杂值
     const accepted = applyDetectorConfigOverride({ combo: { minNameEmoji: 99 } });

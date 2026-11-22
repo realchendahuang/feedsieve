@@ -9,8 +9,8 @@
  * UserByScreenName 调用（同 queryId、同 features/fieldToggles 串）。
  */
 
-import { readCsrfToken, X_WEB_BEARER } from './block';
 import { noteResolveTrace } from '../status';
+import { readCsrfToken, X_WEB_BEARER } from './block';
 
 /** TBWL 实测可用的 queryId（对应 web 客户端 UserByScreenName 查询）。 */
 const USER_BY_SCREEN_NAME_QUERY_ID = '32pL5BWe9WKeSK1MoPvFQQ';
@@ -33,7 +33,12 @@ const FIELD_TOGGLES = encodeURIComponent('{"withAuxiliaryUserLabels":false}');
  *                   绝不能伪装成「查无此人」
  */
 export type ResolveUserIdFailureCode =
-  'no_user' | 'rate_limited' | 'http_error' | 'network_error' | 'no_csrf' | 'parse';
+  | 'no_user'
+  | 'rate_limited'
+  | 'http_error'
+  | 'network_error'
+  | 'no_csrf'
+  | 'parse';
 
 export type ResolveUserIdOutcome =
   | { ok: true; xUserId: string }
@@ -94,7 +99,7 @@ export async function resolveUserIdByHandle(
     // X 偶尔用 200 承载失败（限流 errors code 88 等）；其余 errors 按契约异常处理
     if (Array.isArray(body.errors) && body.errors.length > 0) {
       const rateLimited = body.errors.some(
-        (error) => error?.code === 88 || /rate limit/i.test(String(error?.message ?? '')),
+        (error) => error?.code === 88 || /rate limit/i.test(error?.message ?? ''),
       );
       if (rateLimited) {
         noteResolveTrace('rate_limited');
@@ -115,7 +120,7 @@ export async function resolveUserIdByHandle(
       return { ok: false, code: 'parse' };
     }
     noteResolveTrace('ok');
-    return { ok: true, xUserId: String(user.result.rest_id) };
+    return { ok: true, xUserId: user.result.rest_id };
   } catch {
     noteResolveTrace('network');
     return { ok: false, code: 'network_error' };

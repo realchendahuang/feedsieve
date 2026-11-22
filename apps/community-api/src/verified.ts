@@ -1,3 +1,7 @@
+import { and, asc, desc, gte, ilike, sql, type SQL } from 'drizzle-orm';
+import { getDb } from './db/client';
+import { accounts } from './db/schema';
+import { collateC, escapeLike } from './lib/sql';
 /**
  * 社区白名单（verified，只读）：被社区验证为「误标正常」的账号。
  *
@@ -6,10 +10,6 @@
  * 读写边界同候选池：只读浏览，不提供改写入口。
  */
 import { POLICY } from './reports';
-import { and, asc, desc, gte, ilike, sql, type SQL } from 'drizzle-orm';
-import { getDb } from './db/client';
-import { accounts } from './db/schema';
-import { collateC, escapeLike } from './lib/sql';
 
 export interface VerifiedAccount {
   handle: string;

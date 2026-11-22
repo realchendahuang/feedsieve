@@ -1,3 +1,4 @@
+import { detect, HOT_LIST_HEURISTICS } from '@feedsieve/detector';
 /**
  * 本标签页的推文指标与作者统计（内存，不持久化，不上传）。
  *
@@ -22,7 +23,6 @@ import {
   type ReplyOpportunity,
   type ViewObservation,
 } from '@feedsieve/metrics';
-import { detect, HOT_LIST_HEURISTICS } from '@feedsieve/detector';
 import type { SanitizedAuthorStat, SanitizedTweetStat } from '../platform/xhr-bridge-guard';
 
 /** 内存上限：长时间刷推时按最早写入的条目淘汰。 */
@@ -48,7 +48,7 @@ export const ADAPTIVE_FLOOR_PER_HOUR = 300;
 export function hotThreshold(velocities: readonly number[], base: number): number {
   if (velocities.length < ADAPTIVE_MIN_SAMPLES) return base;
   if (velocities.filter((v) => v >= base).length >= ADAPTIVE_MIN_HOT) return base;
-  const sorted = [...velocities].sort((a, b) => a - b);
+  const sorted = velocities.toSorted((a, b) => a - b);
   const line = sorted[Math.floor(sorted.length * ADAPTIVE_QUANTILE)]!;
   return Math.min(base, Math.max(ADAPTIVE_FLOOR_PER_HOUR, line));
 }
@@ -482,7 +482,7 @@ export function createTweetStatsStore(
         (sort !== 'recent' || item.seenAt !== undefined),
     );
     return out
-      .sort(
+      .toSorted(
         (a, b) =>
           hotSortKey(b, sort) - hotSortKey(a, sort) ||
           hotSortKey(b, 'heat') - hotSortKey(a, 'heat'),
@@ -497,20 +497,20 @@ export function createTweetStatsStore(
   function brief(now: number): PageBrief {
     const { items, threshold } = windowInsights(now);
     const velocities: number[] = [];
-    const authors = new Set<string>();
+    const uniqueAuthors = new Set<string>();
     const tiers = Object.fromEntries(TIER_LEVELS.map((tier) => [tier, 0])) as PageBrief['tiers'];
-    let seen = 0;
+    let seenCount = 0;
     let hot = 0;
     let topBreakout: PageBrief['topBreakout'] = null;
     for (const item of items) {
-      seen += 1;
+      seenCount += 1;
       if (item.velocity !== null) velocities.push(item.velocity);
       if (isHot(item, threshold)) hot += 1;
       if (item.breakout !== null && (!topBreakout || item.breakout > topBreakout.ratio)) {
         topBreakout = { ratio: item.breakout, handle: item.handle, postId: item.postId };
       }
-      if (!authors.has(item.handle)) {
-        authors.add(item.handle);
+      if (!uniqueAuthors.has(item.handle)) {
+        uniqueAuthors.add(item.handle);
         const tier = accountTier(item.followers, config);
         if (tier !== null) tiers[tier] += 1;
       }
@@ -523,7 +523,15 @@ export function createTweetStatsStore(
         : velocities.length % 2
           ? velocities[mid]!
           : (velocities[mid - 1]! + velocities[mid]!) / 2;
-    return { seen, authors: authors.size, hot, threshold, medianVelocity, topBreakout, tiers };
+    return {
+      seen: seenCount,
+      authors: uniqueAuthors.size,
+      hot,
+      threshold,
+      medianVelocity,
+      topBreakout,
+      tiers,
+    };
   }
 
   /** 导出全部条目；插入顺序即淘汰顺序，导入后保持不变。 */

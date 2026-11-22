@@ -130,13 +130,15 @@ function timelineState(latest: OpTrace): OpState {
   return latest.ok ? 'working' : 'degraded';
 }
 
+function authFailed(kind: TraceKind): boolean {
+  return freshTraces(kind).some(
+    (trace) => trace.reason === 'auth_required' || trace.reason === 'missing_csrf',
+  );
+}
+
 /** 读当前能力快照（调用时取 15 分钟窗口内的观测 + 当前 cookie 状态）。 */
 export function readCapabilities(): XAdapterCapabilities {
   const csrfAvailable = readCsrfToken() !== null;
-  const authFailed = (kind: TraceKind): boolean =>
-    freshTraces(kind).some(
-      (trace) => trace.reason === 'auth_required' || trace.reason === 'missing_csrf',
-    );
   return {
     sessionUsable: csrfAvailable && !authFailed('block') && !authFailed('resolve'),
     csrfAvailable,

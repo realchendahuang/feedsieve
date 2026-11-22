@@ -10,7 +10,7 @@
 // 输出 submit 进仓库；映射只在 normalizeKeywordPhrase 两侧统一应用，幂等由收敛循环保证。
 
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
-import OpenCC from 'opencc-js';
+import { Converter } from 'opencc-js';
 
 const OUTPUT = new URL('../apps/extension/src/lib/detection/variant-tables.json', import.meta.url);
 const CJK_RADICALS_URL = 'https://www.unicode.org/Public/UCD/latest/ucd/CJKRadicals.txt';
@@ -59,7 +59,10 @@ function parseConfusables(text) {
     const source = parseInt(sourceField, 16);
     if (!Number.isFinite(source)) continue;
     const target = String.fromCodePoint(
-      ...targetField.split(/\s+/).map((code) => parseInt(code, 16)).filter(Number.isFinite),
+      ...targetField
+        .split(/\s+/)
+        .map((code) => parseInt(code, 16))
+        .filter(Number.isFinite),
     );
     if (!/^[0-9a-z]+$/.test(target)) continue;
     map[String.fromCodePoint(source)] = target;
@@ -67,7 +70,7 @@ function parseConfusables(text) {
   return map;
 }
 
-const toSimplified = OpenCC.Converter({ from: 't', to: 'cn' });
+const toSimplified = Converter({ from: 't', to: 'cn' });
 const tradSimp = {};
 // 统一表意主区 + 扩展 A 的常用段；兼容区（F900）由 NFKC 先行归并，不入本表。
 for (let cp = 0x3400; cp <= 0x9fff; cp += 1) {

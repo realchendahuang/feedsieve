@@ -44,7 +44,7 @@ async function stats(installationId: string): Promise<Record<string, number>> {
     env,
   );
   expect(res.status).toBe(200);
-  return (await res.json()) as Record<string, number>;
+  return res.json<Record<string, number>>();
 }
 
 describe('POST /v1/contributions/stats', () => {

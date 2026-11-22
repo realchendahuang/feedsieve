@@ -326,7 +326,13 @@ export const UI_COPY = {
     personalConfigRules: (count: number) => `单条官方规则将更新 ${count} 项`,
     personalConfigPreferences: (count: number) => `显示偏好将更新 ${count} 项`,
     personalConfigSection: (
-      section: 'uiSettings' | 'composeSchedule' | 'modules' | 'searchAssist' | 'insight' | 'aiDisplay',
+      section:
+        | 'uiSettings'
+        | 'composeSchedule'
+        | 'modules'
+        | 'searchAssist'
+        | 'insight'
+        | 'aiDisplay',
       count: number,
     ) => {
       switch (section) {
@@ -778,7 +784,13 @@ export const UI_COPY = {
     personalConfigRules: (count: number) => `${count} official rules will change`,
     personalConfigPreferences: (count: number) => `${count} display preferences will change`,
     personalConfigSection: (
-      section: 'uiSettings' | 'composeSchedule' | 'modules' | 'searchAssist' | 'insight' | 'aiDisplay',
+      section:
+        | 'uiSettings'
+        | 'composeSchedule'
+        | 'modules'
+        | 'searchAssist'
+        | 'insight'
+        | 'aiDisplay',
       count: number,
     ) => {
       switch (section) {
@@ -944,13 +956,8 @@ export function subscribeUiLanguage(onChange: (language: UiLanguage) => void): (
       onChange(next);
     }
   };
-  browser.storage.onChanged.addListener(
-    listener as Parameters<typeof browser.storage.onChanged.addListener>[0],
-  );
-  return () =>
-    browser.storage.onChanged.removeListener(
-      listener as Parameters<typeof browser.storage.onChanged.removeListener>[0],
-    );
+  browser.storage.onChanged.addListener(listener);
+  return () => browser.storage.onChanged.removeListener(listener);
 }
 
 // （分类标签已收敛到 @feedsieve/shared，见文件头部 categoryLabel 委托）

@@ -2,10 +2,10 @@
  * 帖子卡片的零件（热帖、主页洞察共用）：X 推文同款的头像、蓝标、量级、动作栏、相对时间。
  */
 import { useState } from 'react';
-import type { UiLanguage } from '../../../src/lib/platform/i18n';
-import { UI_COPY } from '../../../src/lib/platform/i18n';
 import { compact, formatCount } from '../../../src/lib/insight/format';
 import { iconParts, TIER_ICONS, type IconName } from '../../../src/lib/insight/icons';
+import type { UiLanguage } from '../../../src/lib/platform/i18n';
+import { UI_COPY } from '../../../src/lib/platform/i18n';
 
 type Tier = 1 | 2 | 3 | 4 | 5 | 6;
 

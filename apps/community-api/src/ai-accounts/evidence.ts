@@ -74,7 +74,7 @@ const TCO_LINK = /https:\/\/t\.co\/\S+/g;
 
 /** 按码点截断，并去掉截断产生的孤立代理项（模型 API 会拒绝非法 Unicode）。 */
 function cut(value: string, max: number): string {
-  return [...value]
+  return Array.from(value)
     .slice(0, max)
     .join('')
     .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '\uFFFD');
@@ -114,7 +114,7 @@ export function replyGaps(handle: string, data: VendorTimeline): number[] {
   const at = ownReplies(handle, data)
     .map((t) => Date.parse(t.created_at))
     .filter(Number.isFinite)
-    .sort((a, b) => a - b);
+    .toSorted((a, b) => a - b);
   return at
     .slice(1)
     .map((x, i) => Math.round((x - (at[i] as number)) / 1000))
@@ -124,7 +124,7 @@ export function replyGaps(handle: string, data: VendorTimeline): number[] {
 export function rhythm(handle: string, data: VendorTimeline): Rhythm {
   const gaps = replyGaps(handle, data);
   const lens = ownReplies(handle, data).map(
-    (t) => [...t.text.replace(LEADING_MENTIONS, '').replace(TCO_LINK, '').trim()].length,
+    (t) => Array.from(t.text.replace(LEADING_MENTIONS, '').replace(TCO_LINK, '').trim()).length,
   );
   return rhythmFrom(lens, gaps);
 }
@@ -135,7 +135,7 @@ export function rhythm(handle: string, data: VendorTimeline): Rhythm {
  */
 export function rhythmFromReplies(replies: ReplyEvidence[], gaps: number[]): Rhythm {
   const lens = replies.map(
-    (r) => [...r.text.replace(LEADING_MENTIONS, '').replace(TCO_LINK, '').trim()].length,
+    (r) => Array.from(r.text.replace(LEADING_MENTIONS, '').replace(TCO_LINK, '').trim()).length,
   );
   return rhythmFrom(lens, gaps);
 }

@@ -151,14 +151,21 @@ export interface EngagementInput {
   quotes?: number;
 }
 
+function countOrZero(value: number | undefined): number {
+  return isCount(value) ? value : 0;
+}
+
+function clamp01(value: number): number {
+  return Math.min(Math.max(value, 0), 1);
+}
+
 function weightedEngagement(input: EngagementInput, config: MetricsConfig): number {
   const w = config.engagementWeights;
-  const n = (value: number | undefined) => (isCount(value) ? value : 0);
   return (
-    w.like * n(input.likes) +
-    w.reply * n(input.replies) +
-    w.retweet * n(input.retweets) +
-    w.quote * n(input.quotes)
+    w.like * countOrZero(input.likes) +
+    w.reply * countOrZero(input.replies) +
+    w.retweet * countOrZero(input.retweets) +
+    w.quote * countOrZero(input.quotes)
   );
 }
 
@@ -221,19 +228,18 @@ export function viralScore(
   if (!isCount(input.views) || input.views === 0) return null;
   const config = resolveConfig(overrides);
   const { viralCaps: caps, viralWeights: weights } = config;
-  const clamp = (value: number) => Math.min(Math.max(value, 0), 1);
 
   const projected = projectedViews(input.views, input.ageHours, config) ?? input.views;
   const prior = Math.max(0, config.viralPriorViews);
   const confidence = input.views / (input.views + prior);
-  const viewsPart = clamp(
+  const viewsPart = clamp01(
     (Math.log10(Math.max(projected, 1)) - Math.log10(VIRAL_VIEWS_FLOOR)) /
       (Math.log10(caps.projectedViews) - Math.log10(VIRAL_VIEWS_FLOOR)),
   );
   const smoothedRate = weightedEngagement(input, config) / (input.views + prior);
-  const engagementPart = clamp(smoothedRate / caps.weightedEngagement);
+  const engagementPart = clamp01(smoothedRate / caps.weightedEngagement);
   const breakout = breakoutRatio(projected, input.followers, config);
-  const breakoutPart = breakout === null ? 0 : clamp(breakout / caps.breakout) * confidence;
+  const breakoutPart = breakout === null ? 0 : clamp01(breakout / caps.breakout) * confidence;
 
   const score =
     viewsPart * weights.projectedViews +

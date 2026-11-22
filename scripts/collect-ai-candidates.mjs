@@ -115,8 +115,8 @@ const labeled = new Set(
 const pool = Object.values(candidates).filter((c) => !labeled.has(c.handle.toLowerCase()));
 const multi = pool
   .filter((c) => c.posts.length >= 2)
-  .sort((a, b) => b.posts.length - a.posts.length);
-const single = pool.filter((c) => c.posts.length < 2).sort(() => Math.random() - 0.5);
+  .toSorted((a, b) => b.posts.length - a.posts.length);
+const single = pool.filter((c) => c.posts.length < 2).toSorted(() => Math.random() - 0.5);
 const picked = [...multi, ...single].slice(0, MAX_ACCOUNTS);
 
 let fetched = 0;

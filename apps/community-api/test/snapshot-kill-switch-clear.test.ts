@@ -1,8 +1,8 @@
 import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
-import worker from '../src/index';
 import { getDb } from '../src/db/client';
 import { snapshots } from '../src/db/schema';
+import worker from '../src/index';
 import { getSnapshotFile, killSwitchNeedsPublish, SNAPSHOT_PACK } from '../src/snapshot';
 
 const ORIGIN = 'https://api.example.com';
@@ -59,9 +59,9 @@ describe('stale kill_switch archive cleanup', () => {
     expect(await killSwitchNeedsPublish(env)).toBe(true);
     await worker.scheduled({ scheduledTime: Date.now() } as never, env);
 
-    const latest = (await (
+    const latest = await (
       await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), env)
-    ).json()) as { snapshot_version: string };
+    ).json<{ snapshot_version: string }>();
     expect(latest.snapshot_version).toMatch(/^\d{4}\.\d{2}\.\d{2}\.\d+$/);
     expect(latest.snapshot_version).not.toBe(staleVersion);
 

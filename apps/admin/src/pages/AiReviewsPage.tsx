@@ -133,7 +133,7 @@ function ReviewRow({
               {VERDICT_LABELS[item.verdict] ?? item.verdict}
             </Badge>
             {item.score !== null ? (
-              <span className="tabular-nums text-muted-foreground">
+              <span className="text-muted-foreground tabular-nums">
                 {Math.round(item.score * 100)}%
               </span>
             ) : null}

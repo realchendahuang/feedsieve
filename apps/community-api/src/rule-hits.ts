@@ -1,3 +1,4 @@
+import { isCategory } from '@feedsieve/shared';
 /**
  * 规则命中众包（黄推识别的被动信号）。
  *
@@ -21,14 +22,13 @@
  * 21 天后删除。
  */
 import { eq, lt, sql } from 'drizzle-orm';
-import { isCategory } from '@feedsieve/shared';
 import { getDb, retryOnConflict } from './db/client';
 import { installations, meta, rescues, ruleHits } from './db/schema';
+import { hotSalt, ipNet } from './hot';
 import { hashInstallationId, hashIp } from './lib/hash';
 import { compareText } from './lib/sql';
-import { chargeUsageInOrder } from './lib/usage';
 import { utcToday } from './lib/time';
-import { hotSalt, ipNet } from './hot';
+import { chargeUsageInOrder } from './lib/usage';
 
 const DAY_S = 86_400;
 
@@ -164,7 +164,7 @@ export async function ingestRuleHits(
   const unique = new Map<string, RuleHit>();
   for (const hit of parsed) unique.set(`${hit.handle}\u0000${hit.ruleId}`, hit);
   const rows = [...unique.values()]
-    .sort((a, b) => compareText(a.handle, b.handle) || compareText(a.ruleId, b.ruleId))
+    .toSorted((a, b) => compareText(a.handle, b.handle) || compareText(a.ruleId, b.ruleId))
     .map((hit) => ({
       handle: hit.handle,
       ruleId: hit.ruleId,
@@ -251,7 +251,7 @@ export function mutedRuleIds(mutes: Record<string, RuleMuteRecord>): string[] {
   return Object.entries(mutes)
     .filter(([, record]) => record.state === 'muted')
     .map(([ruleId]) => ruleId)
-    .sort(compareText);
+    .toSorted(compareText);
 }
 
 export async function loadRuleFeedback(
@@ -320,14 +320,14 @@ export async function loadRuleFeedback(
   };
   for (const hit of hitRows) {
     const item = row(hit.rule_id);
-    item.hit_accounts = Number(hit.accounts);
-    item.hit_nets = Number(hit.nets);
+    item.hit_accounts = hit.accounts;
+    item.hit_nets = hit.nets;
   }
   for (const rescue of rescueRows) {
     if (!RULE_ID_RE.test(rescue.rule_id)) continue;
     const item = row(rescue.rule_id);
-    item.rescue_accounts = Number(rescue.accounts);
-    item.rescue_installs = Number(rescue.installs);
+    item.rescue_accounts = rescue.accounts;
+    item.rescue_installs = rescue.installs;
   }
   for (const [ruleId] of Object.entries(mutes)) row(ruleId);
   for (const item of byRule.values()) {
@@ -336,7 +336,7 @@ export async function loadRuleFeedback(
         ? Math.round(Math.min(1, item.rescue_accounts / item.hit_accounts) * 1000) / 1000
         : null;
   }
-  return [...byRule.values()].sort(
+  return [...byRule.values()].toSorted(
     (a, b) =>
       (b.fp_rate ?? -1) - (a.fp_rate ?? -1) ||
       b.hit_accounts - a.hit_accounts ||
@@ -571,12 +571,12 @@ export async function loadHitSignals(
   };
   for (const row of accountRows) {
     const item = signal(row.handle);
-    item.nets = Number(row.nets);
-    item.rules = Number(row.rules);
+    item.nets = row.nets;
+    item.rules = row.rules;
   }
   for (const row of categoryRows) {
-    if (Number(row.nets) < 2) continue;
-    signal(row.handle).categories.set(row.category, Number(row.nets));
+    if (row.nets < 2) continue;
+    signal(row.handle).categories.set(row.category, row.nets);
   }
   for (const row of campaignRows) signal(row.handle).campaign = true;
   return signals;
@@ -597,7 +597,7 @@ export function isCorroborated(
 /** 命中最多的分类（≥ 2 个网段才算），并列按分类名字节序。 */
 export function topHitCategory(signal: HitSignal | undefined): string | null {
   if (!signal) return null;
-  const top = [...signal.categories.entries()].sort(
+  const top = [...signal.categories.entries()].toSorted(
     (a, b) => b[1] - a[1] || compareText(a[0], b[0]),
   )[0];
   return top ? top[0] : null;

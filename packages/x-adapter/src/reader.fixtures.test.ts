@@ -1,12 +1,12 @@
 // @vitest-environment happy-dom
 // fixtures/x 脱敏样本 → reader 契约测试：selector 改动必须过这关
 import { describe, expect, it } from 'vitest';
-import { extractFeedItem } from './reader';
-import { contextFromPath } from './handle';
+import { PROFILE_TIMELINE_HTML } from '../../../fixtures/x/profile/profile';
+import { THREAD_HTML } from '../../../fixtures/x/replies/thread';
 import { HOME_TIMELINE_HTML } from '../../../fixtures/x/timeline/home-timeline';
 import { SEARCH_F_LIVE_HTML } from '../../../fixtures/x/timeline/search-f-live';
-import { THREAD_HTML } from '../../../fixtures/x/replies/thread';
-import { PROFILE_TIMELINE_HTML } from '../../../fixtures/x/profile/profile';
+import { contextFromPath } from './handle';
+import { extractFeedItem } from './reader';
 
 /** 把 fixture 里的 article 逐个取出。 */
 function articles(html: string): Element[] {

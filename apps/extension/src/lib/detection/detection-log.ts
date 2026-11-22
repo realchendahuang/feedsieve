@@ -64,7 +64,7 @@ export function todayKey(now: Date = new Date()): string {
 /** 串行化 read-modify-write：并发 record 不会丢日志/丢计数。 */
 let queue: Promise<unknown> = Promise.resolve();
 function serialize<T>(fn: () => Promise<T>): Promise<T> {
-  const next = queue.then(fn, fn) as Promise<T>;
+  const next: Promise<T> = queue.then(fn, fn);
   queue = next.catch(() => {});
   return next;
 }

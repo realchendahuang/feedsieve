@@ -13,7 +13,13 @@ export default function ApplyPage() {
   const [kind, setKind] = useState<'whitelist' | 'appeal'>(
     params?.get('kind') === 'appeal' ? 'appeal' : 'whitelist',
   );
-  const [handle, setHandle] = useState(() => params?.get('handle')?.replace(/[^A-Za-z0-9_]/g, '').slice(0, 15) ?? '');
+  const [handle, setHandle] = useState(
+    () =>
+      params
+        ?.get('handle')
+        ?.replace(/[^A-Za-z0-9_]/g, '')
+        .slice(0, 15) ?? '',
+  );
   const [email, setEmail] = useState('');
   const [statement, setStatement] = useState('');
   const [code, setCode] = useState('');
@@ -70,7 +76,11 @@ export default function ApplyPage() {
       <h1 className="text-2xl font-bold tracking-tight">提交申请</h1>
 
       {phase === 'form' ? (
-        <form onSubmit={submitApplication} id="apply-form" className="panel-card mt-6 space-y-4 p-6">
+        <form
+          onSubmit={submitApplication}
+          id="apply-form"
+          className="mt-6 space-y-4 panel-card p-6"
+        >
           <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="申请类型">
             <KindCard
               value="whitelist"
@@ -123,13 +133,17 @@ export default function ApplyPage() {
             提交
           </button>
           {msg && (
-            <p id="apply-msg" role="status" className={msg.error ? 'text-sm text-destructive' : 'text-sm text-mist'}>
+            <p
+              id="apply-msg"
+              role="status"
+              className={msg.error ? 'text-sm text-destructive' : 'text-sm text-mist'}
+            >
               {msg.text}
             </p>
           )}
         </form>
       ) : (
-        <form onSubmit={submitVerify} id="verify-form" className="panel-card mt-6 space-y-4 p-6">
+        <form onSubmit={submitVerify} id="verify-form" className="mt-6 space-y-4 panel-card p-6">
           <div className="flex gap-2">
             <input
               id="verify-code"
@@ -152,13 +166,16 @@ export default function ApplyPage() {
             </button>
           </div>
           {msg && (
-            <p id="verify-msg" role="status" className={msg.error ? 'text-sm text-destructive' : 'text-sm text-mist'}>
+            <p
+              id="verify-msg"
+              role="status"
+              className={msg.error ? 'text-sm text-destructive' : 'text-sm text-mist'}
+            >
               {msg.text}
             </p>
           )}
         </form>
       )}
-
     </main>
   );
 }
@@ -183,7 +200,14 @@ function KindCard({
         checked ? 'border-gold bg-gold-surface' : 'border-line hover:bg-soft-surface'
       }`}
     >
-      <input type="radio" name="kind" value={value} checked={checked} onChange={onChange} className="sr-only" />
+      <input
+        type="radio"
+        name="kind"
+        value={value}
+        checked={checked}
+        onChange={onChange}
+        className="sr-only"
+      />
       <span className="block font-semibold">{title}</span>
       <span className="mt-0.5 block text-xs text-mist">{desc}</span>
     </label>

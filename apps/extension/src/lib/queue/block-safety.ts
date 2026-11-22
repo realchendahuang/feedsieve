@@ -233,7 +233,7 @@ export function normalizeLedger(value: unknown): SafetyLedger | null {
         // 截断必须以 max(budget, dailyLimit) 为界：预算自适应爬升后 budget 可以
         // 大于 dailyLimit，若只留 dailyLimit 条，usedInWindow 永远到不了 budget，
         // shouldPauseForQuota 从预算爬升那天起就永远不触发（友情提醒静默失效）。
-        .sort((a, b) => a - b)
+        .toSorted((a, b) => a - b)
         .slice(-Math.max(budget, dailyLimit))
     : [];
   return {
@@ -272,7 +272,7 @@ function normalizeStore(value: unknown): SafetyLedgerStore | null {
   }
   const active =
     typeof ledgers[raw.activeAccountKey] === 'undefined'
-      ? Object.entries(ledgers).sort((a, b) => b[1].updatedAt - a[1].updatedAt)[0]?.[0]
+      ? Object.entries(ledgers).toSorted((a, b) => b[1].updatedAt - a[1].updatedAt)[0]?.[0]
       : raw.activeAccountKey;
   if (!active) return null;
   return { activeAccountKey: active, ledgers };
@@ -368,7 +368,7 @@ export async function loadSafetyLedger(accountKey?: string | null): Promise<Safe
       await writeStore({
         ...(store ?? { activeAccountKey: accountKey, ledgers: {} }),
         activeAccountKey: accountKey,
-        ledgers: { ...(store?.ledgers ?? {}), [accountKey]: next },
+        ledgers: { ...store?.ledgers, [accountKey]: next },
       });
     }
     return next;
@@ -430,13 +430,8 @@ export function subscribeSafetyLedger(onChange: (ledger: SafetyLedger) => void):
       void loadSafetyLedger().then(onChange);
     }
   };
-  browser.storage.onChanged.addListener(
-    listener as Parameters<typeof browser.storage.onChanged.addListener>[0],
-  );
-  return () =>
-    browser.storage.onChanged.removeListener(
-      listener as Parameters<typeof browser.storage.onChanged.removeListener>[0],
-    );
+  browser.storage.onChanged.addListener(listener);
+  return () => browser.storage.onChanged.removeListener(listener);
 }
 
 function readCookie(name: string): string | null {

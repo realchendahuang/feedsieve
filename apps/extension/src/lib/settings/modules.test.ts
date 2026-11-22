@@ -4,13 +4,7 @@ import { enabledModules, isModuleId, MODULES, moduleById } from './modules';
 
 describe('模块注册表', () => {
   it('固定顺序：热帖 → 主页 → 发帖 → 水军 → 伪人（与降噪组内顺序一致）', () => {
-    expect(MODULES.map((module) => module.id)).toEqual([
-      'hot',
-      'profile',
-      'write',
-      'filter',
-      'ai',
-    ]);
+    expect(MODULES.map((module) => module.id)).toEqual(['hot', 'profile', 'write', 'filter', 'ai']);
   });
 
   it('按模块开关过滤；拿不到设置时先按全开处理，避免首帧空栏', () => {
@@ -47,9 +41,7 @@ describe('模块注册表', () => {
       'aiSettings',
     ]);
     expect(moduleById('ai').enabled({ ...DEFAULT_MODULE_SETTINGS, aiCheck: false })).toBe(false);
-    expect(moduleById('filter').enabled({ ...DEFAULT_MODULE_SETTINGS, filter: false })).toBe(
-      false,
-    );
+    expect(moduleById('filter').enabled({ ...DEFAULT_MODULE_SETTINGS, filter: false })).toBe(false);
   });
 
   it('只认已注册的模块 id', () => {

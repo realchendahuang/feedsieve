@@ -1,0 +1,61 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "semi": true,
+  "singleQuote": true,
+  "tabWidth": 2,
+  "trailingComma": "all",
+  "printWidth": 100,
+  "sortImports": {
+    "newlinesBetween": false
+  },
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/.output/**",
+    "**/.wxt/**",
+    "**/.wrangler/**",
+    "**/.tanstack/**",
+    "**/coverage/**",
+    "apps/community-api/drizzle/**",
+    "**/routeTree.gen.ts",
+    "**/*.gen.*",
+    "docs/**",
+    "*.md",
+    "**/README.md",
+    ".github/**",
+    ".agents/**",
+    ".zcode/**",
+    ".secrets/**",
+    "pnpm-lock.yaml",
+    "third_party/**",
+    "fixtures/**",
+    "community/**",
+    "orbital/**",
+    "assets/**",
+    "packages/detector/corpus/**",
+    "apps/extension/public/community/**",
+    "apps/extension/src/lib/detection/variant-tables.json",
+    "apps/extension/stats.html",
+    "apps/admin/src/components/ui/**",
+    "apps/community-api/src/site/components/ui/**"
+  ],
+  "overrides": [
+    {
+      "files": ["apps/admin/**"],
+      "options": {
+        "sortTailwindcss": {
+          "stylesheet": "./apps/admin/src/styles.css",
+          "functions": ["cn", "cva", "clsx"]
+        }
+      }
+    },
+    {
+      "files": ["apps/community-api/**"],
+      "options": {
+        "sortTailwindcss": {
+          "stylesheet": "./apps/community-api/src/site/styles.css",
+          "functions": ["cn", "cva", "clsx"]
+        }
+      }
+    }
+  ]
+}

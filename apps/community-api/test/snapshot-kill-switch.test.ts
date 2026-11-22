@@ -24,11 +24,11 @@ describe('official kill switch live channel', () => {
       envWithKillSwitch(' 接口排查中 '),
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = await res.json<{
       destructive_actions_disabled: boolean;
       reason?: string;
       disabled_since?: string;
-    };
+    }>();
     expect(body.destructive_actions_disabled).toBe(true);
     expect(body.reason).toBe('接口排查中');
     expect(typeof body.disabled_since).toBe('string');
@@ -44,9 +44,9 @@ describe('official kill switch live channel', () => {
 
     await worker.scheduled({ scheduledTime: Date.now() } as never, envOn);
 
-    const latest = (await (
+    const latest = await (
       await worker.fetch(new Request(`${ORIGIN}/v1/snapshots/latest`), env)
-    ).json()) as { snapshot_version: string };
+    ).json<{ snapshot_version: string }>();
     expect(latest.snapshot_version).toMatch(/^\d{4}\.\d{2}\.\d{2}\.\d+$/);
 
     const body = JSON.parse(

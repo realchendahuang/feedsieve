@@ -1,31 +1,26 @@
+import type { MarkStrength } from '@feedsieve/community-lists';
 import { useRef, useState, type ChangeEvent } from 'react';
-import type { KeywordRuleSettings } from '../../../../src/lib/detection/keyword-rules';
-import { replaceKeywordRuleSettings } from '../../../../src/lib/detection/keyword-rules';
-import type { KeywordPackCatalog } from '../../../../src/lib/detection/keyword-packs';
+import { getAiSettings, setAiSettings } from '../../../../src/lib/ai-check/client';
 import type { CommunitySettings } from '../../../../src/lib/community/community-settings';
-import { getUiSettings, setUiSettings } from '../../../../src/lib/settings/ui-settings';
 import {
   getScheduleSettings,
   setScheduleSettings,
 } from '../../../../src/lib/compose/schedule-store';
-import {
-  getModuleSettings,
-  setModuleSettings,
-  type ModuleSettings,
-} from '../../../../src/lib/settings/module-settings';
-import {
-  getSearchAssistEnabled,
-  getSearchAssistPrefs,
-  setSearchAssistEnabled,
-  setSearchAssistPrefs,
-} from '../../../../src/lib/settings/search-assist';
+import type { KeywordPackCatalog } from '../../../../src/lib/detection/keyword-packs';
+import type { KeywordRuleSettings } from '../../../../src/lib/detection/keyword-rules';
+import { replaceKeywordRuleSettings } from '../../../../src/lib/detection/keyword-rules';
 import {
   getInsightBadgesEnabled,
   getProfileLineEnabled,
   setInsightBadgesEnabled,
   setProfileLineEnabled,
 } from '../../../../src/lib/insight/insight-settings';
-import { getAiSettings, setAiSettings } from '../../../../src/lib/ai-check/client';
+import { setUiLanguage, UI_COPY, type UiLanguage } from '../../../../src/lib/platform/i18n';
+import {
+  getModuleSettings,
+  setModuleSettings,
+  type ModuleSettings,
+} from '../../../../src/lib/settings/module-settings';
 import {
   createPersonalConfigDocument,
   MAX_PERSONAL_CONFIG_BYTES,
@@ -37,8 +32,13 @@ import {
   type PersonalConfigImportResult,
   type PersonalConfigParseError,
 } from '../../../../src/lib/settings/personal-config';
-import { setUiLanguage, UI_COPY, type UiLanguage } from '../../../../src/lib/platform/i18n';
-import type { MarkStrength } from '@feedsieve/community-lists';
+import {
+  getSearchAssistEnabled,
+  getSearchAssistPrefs,
+  setSearchAssistEnabled,
+  setSearchAssistPrefs,
+} from '../../../../src/lib/settings/search-assist';
+import { getUiSettings, setUiSettings } from '../../../../src/lib/settings/ui-settings';
 import { HelpIcon, STRENGTH_LABELS } from '../shared';
 
 interface PreviewState {

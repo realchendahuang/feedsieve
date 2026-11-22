@@ -6,14 +6,14 @@
  *   缓存并通知调用方平滑更新徽章理由与页面账本。
  */
 import type { CommunityEntry } from '@feedsieve/community-lists';
-import type { CommunitySettings } from './community-settings';
-import type { RuntimeCommunity } from './community-store';
 import {
   COMMUNITY_LOOKUP_MESSAGE,
   COMMUNITY_RUNTIME_MESSAGE,
   type CommunityLookupResponse,
   type CommunityRuntimeResponse,
 } from './community-protocol';
+import type { CommunitySettings } from './community-settings';
+import type { RuntimeCommunity } from './community-store';
 
 export interface LoadedCommunityRuntime {
   community: RuntimeCommunity | null;
@@ -29,10 +29,21 @@ function normalizeHandle(handle: string): string {
   return handle.trim().replace(/^@+/, '').toLowerCase();
 }
 
-export async function loadSlimCommunityRuntime(options: {
-  send?: (message: unknown) => Promise<unknown>;
-  onEnriched?: (handles: ReadonlySet<string>) => void;
-} = {}): Promise<LoadedCommunityRuntime> {
+function addWaiter(target: Map<string, Set<string>>, fp: string, handle?: string): void {
+  let waiters = target.get(fp);
+  if (!waiters) {
+    waiters = new Set<string>();
+    target.set(fp, waiters);
+  }
+  if (handle) waiters.add(handle);
+}
+
+export async function loadSlimCommunityRuntime(
+  options: {
+    send?: (message: unknown) => Promise<unknown>;
+    onEnriched?: (handles: ReadonlySet<string>) => void;
+  } = {},
+): Promise<LoadedCommunityRuntime> {
   const send = options.send ?? ((message: unknown) => browser.runtime.sendMessage(message));
   const response = (await send({
     type: COMMUNITY_RUNTIME_MESSAGE,
@@ -111,15 +122,6 @@ export async function loadSlimCommunityRuntime(options: {
     version: payload.version,
     ...(payload.killSwitch ? { killSwitch: payload.killSwitch } : {}),
     mutedRules,
-  };
-
-  const addWaiter = (target: Map<string, Set<string>>, fp: string, handle?: string): void => {
-    let waiters = target.get(fp);
-    if (!waiters) {
-      waiters = new Set<string>();
-      target.set(fp, waiters);
-    }
-    if (handle) waiters.add(handle);
   };
 
   const flushLookup = (): void => {

@@ -59,7 +59,14 @@ const CONTEXT_BY_PREFIX: ReadonlyArray<readonly [RegExp, FeedContext]> = [
 
 /** 个人主页上的 Tab；`other` 是关注 / 粉丝列表等不是帖子的页面。 */
 export type ProfileTab =
-  'posts' | 'replies' | 'reposts' | 'subs' | 'media' | 'highlights' | 'articles' | 'other';
+  | 'posts'
+  | 'replies'
+  | 'reposts'
+  | 'subs'
+  | 'media'
+  | 'highlights'
+  | 'articles'
+  | 'other';
 
 const PROFILE_TABS: Record<string, ProfileTab> = {
   '': 'posts',

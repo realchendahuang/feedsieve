@@ -1,12 +1,12 @@
-import { env } from 'cloudflare:workers';
-import { count, eq, and } from 'drizzle-orm';
-import { describe, expect, it } from 'vitest';
 import {
   buildSigningMessage,
   compareManifestVersions,
   TRUSTED_KEYS,
   verifyManifestSignature,
 } from '@feedsieve/community-lists';
+import { env } from 'cloudflare:workers';
+import { count, eq, and } from 'drizzle-orm';
+import { describe, expect, it } from 'vitest';
 import {
   deactivateAdminAccountDraft,
   listAdminAccountDrafts,
@@ -21,7 +21,6 @@ import {
   adminKeywordRules,
   adminReleases,
 } from '../src/db/schema';
-import { listMaintainerEntries } from '../src/maintainer-blocklist';
 import {
   importKeywordCatalog,
   listAdminKeywords,
@@ -30,6 +29,7 @@ import {
   saveAdminKeywordPack,
   saveAdminKeywordRule,
 } from '../src/keyword-admin';
+import { listMaintainerEntries } from '../src/maintainer-blocklist';
 
 const VERSION = '2026.09.02.5';
 

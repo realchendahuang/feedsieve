@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link, Outlet } from '@tanstack/react-router';
 import {
   ClipboardList,
@@ -12,6 +11,7 @@ import {
   UserRoundX,
   UserSearch,
 } from 'lucide-react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -38,7 +38,7 @@ export function Layout() {
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(ellipse_70%_50%_at_50%_-10%,rgba(245,158,11,0.06),transparent)]" />
       <aside className="relative flex shrink-0 flex-row items-center gap-4 border-b bg-sidebar/90 px-4 py-3 backdrop-blur-md md:w-56 md:flex-col md:items-stretch md:gap-7 md:border-r md:border-b-0 md:px-3.5 md:py-6">
         <div className="flex items-center gap-3 px-1 py-1">
-          <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 text-white shadow-md shadow-amber-500/25 ring-1 ring-amber-400/40">
+          <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 text-white shadow-md ring-1 shadow-amber-500/25 ring-amber-400/40">
             <svg
               aria-hidden="true"
               className="size-5"
@@ -58,7 +58,7 @@ export function Layout() {
               <span className="text-base font-extrabold tracking-tight text-foreground">
                 FeedSieve
               </span>
-              <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[9.5px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">
+              <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[9.5px] font-bold tracking-wider text-amber-700 uppercase dark:text-amber-400">
                 Admin
               </span>
             </div>
@@ -67,7 +67,7 @@ export function Layout() {
         <nav aria-label="管理导航" className="flex gap-1 overflow-x-auto md:flex-col">
           {navigation.map(({ to, label, icon: Icon }) => (
             <Link key={to} to={to} className={navItemClass}>
-              <Icon className="size-4 transition-colors group-data-[status=active]:text-amber-600 dark:group-data-[status=active]:text-amber-400 group-hover:text-amber-700" />
+              <Icon className="size-4 transition-colors group-hover:text-amber-700 group-data-[status=active]:text-amber-600 dark:group-data-[status=active]:text-amber-400" />
               {label}
             </Link>
           ))}
@@ -84,7 +84,7 @@ export function Layout() {
 
 export function PageHeader({ title, children }: { title: string; children?: React.ReactNode }) {
   return (
-    <header className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-border/60">
+    <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-3">
       <h1 className="text-2xl font-extrabold tracking-tight text-foreground">{title}</h1>
       {children ? <div className="flex flex-wrap items-center gap-2">{children}</div> : null}
     </header>
@@ -101,7 +101,7 @@ export function Hint({ text }: { text: string }) {
       >
         <CircleAlert className="size-3.5" />
       </TooltipTrigger>
-      <TooltipContent className="bg-zinc-900 text-zinc-100 border-zinc-800 shadow-lg text-xs py-1.5 px-2.5 max-w-xs">
+      <TooltipContent className="max-w-xs border-zinc-800 bg-zinc-900 px-2.5 py-1.5 text-xs text-zinc-100 shadow-lg">
         {text}
       </TooltipContent>
     </Tooltip>

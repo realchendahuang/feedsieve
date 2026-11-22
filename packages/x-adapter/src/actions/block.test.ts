@@ -66,7 +66,7 @@ describe('runNativeAction', () => {
   it('returns network_error when fetch throws', async () => {
     document.cookie = 'ct0=csrf-token-123';
     const failing = vi.fn().mockRejectedValue(new Error('offline'));
-    const result = await runNativeAction('block', '1', failing as unknown as typeof fetch);
+    const result = await runNativeAction('block', '1', failing);
     expect(result).toMatchObject({ ok: false, code: 'network_error', message: 'offline' });
   });
 
@@ -80,7 +80,7 @@ describe('runNativeAction', () => {
       status: 403,
       clone: () => ({ text: async () => body }),
     });
-    const result = await runNativeAction('block', '1', fetchMock as unknown as typeof fetch);
+    const result = await runNativeAction('block', '1', fetchMock);
     expect(result).toMatchObject({ ok: false, code: 'challenge', statusCode: 403 });
   });
 
@@ -95,7 +95,7 @@ describe('runNativeAction', () => {
         },
       }),
     });
-    const result = await runNativeAction('block', '1', fetchMock as unknown as typeof fetch);
+    const result = await runNativeAction('block', '1', fetchMock);
     expect(result).toMatchObject({ ok: false, code: 'auth_required', statusCode: 403 });
   });
 });

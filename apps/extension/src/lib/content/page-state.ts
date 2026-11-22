@@ -10,10 +10,10 @@
  */
 
 import type { MarkStrength } from '@feedsieve/community-lists';
+import type { RuntimeCommunity } from '../community/community-store';
 import type { BlockEvidence } from '../detection/detection-pipeline';
 import { BUNDLED_KEYWORD_PACK_CATALOG, type KeywordPackCatalog } from '../detection/keyword-packs';
 import type { createKeywordHeuristics } from '../detection/keyword-rules';
-import type { RuntimeCommunity } from '../community/community-store';
 import type { UiLanguage } from '../platform/i18n';
 
 /** 黄框标注在 DOM 上的锚点属性：cellInnerDiv 外层格子的标记 + CSS 选择器共用。 */
@@ -133,7 +133,7 @@ export function createContentState(): ContentState {
     },
     pruneProtectedPageMarked() {
       let pruned = false;
-      for (const handle of [...pageMarked.keys()]) {
+      for (const handle of Array.from(pageMarked.keys())) {
         if (allowCache.has(handle) || followingCache.has(handle)) {
           pageMarked.delete(handle);
           pruned = true;

@@ -1,5 +1,5 @@
-import React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import React from 'react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -54,9 +54,12 @@ const KIND_LABELS: Record<string, string> = {
 export function ApplicationsPage() {
   const queryClient = useQueryClient();
   const [status, setStatus] = React.useState<(typeof STATUS_OPTIONS)[number]['value']>('all');
-  const [review, setReview] = React.useState<{ id: number; handle: string; kind: string; statement: string } | null>(
-    null,
-  );
+  const [review, setReview] = React.useState<{
+    id: number;
+    handle: string;
+    kind: string;
+    statement: string;
+  } | null>(null);
   const [note, setNote] = React.useState('');
 
   const response = useQuery({
@@ -66,8 +69,15 @@ export function ApplicationsPage() {
   const entries = response.data?.entries ?? [];
 
   const decide = useMutation({
-    mutationFn: ({ id, decision, note }: { id: number; decision: 'approved' | 'rejected'; note?: string }) =>
-      decideApplication(id, decision, note),
+    mutationFn: ({
+      id,
+      decision,
+      note: reviewNote,
+    }: {
+      id: number;
+      decision: 'approved' | 'rejected';
+      note?: string;
+    }) => decideApplication(id, decision, reviewNote),
     onSuccess: (_data, variables) => {
       toast.success(variables.decision === 'approved' ? '已通过' : '已拒绝');
       setReview(null);
@@ -127,8 +137,13 @@ export function ApplicationsPage() {
               {entries.map((entry) => (
                 <TableRow key={entry.id}>
                   <TableCell className="font-semibold text-foreground">@{entry.handle}</TableCell>
-                  <TableCell className="text-muted-foreground">{KIND_LABELS[entry.kind] ?? entry.kind}</TableCell>
-                  <TableCell className="max-w-xs truncate text-muted-foreground" title={entry.statement}>
+                  <TableCell className="text-muted-foreground">
+                    {KIND_LABELS[entry.kind] ?? entry.kind}
+                  </TableCell>
+                  <TableCell
+                    className="max-w-xs truncate text-muted-foreground"
+                    title={entry.statement}
+                  >
                     {entry.statement}
                   </TableCell>
                   <TableCell>
@@ -139,7 +154,9 @@ export function ApplicationsPage() {
                       {STATUS_LABELS[entry.status] ?? entry.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{formatAgo(entry.created_at)}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {formatAgo(entry.created_at)}
+                  </TableCell>
                   <TableCell className="text-right">
                     {entry.status === 'pending' || entry.status === 'verified' ? (
                       <Button variant="ghost" size="sm" onClick={() => openReview(entry)}>

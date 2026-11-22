@@ -1,3 +1,4 @@
+import { resolveConfig, velocityLevel } from '@feedsieve/metrics';
 import {
   useCallback,
   useEffect,
@@ -7,19 +8,27 @@ import {
   type MouseEvent,
   type ReactNode,
 } from 'react';
-import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
-import { showToast as pushToast, type ToastAction } from '../../../src/lib/platform/toast';
 import { formatCount, formatVelocity, velocityLabel } from '../../../src/lib/insight/format';
-import { INSIGHT_UPDATED_MESSAGE } from '../../../src/lib/insight/shared-insight';
 import { INSIGHT_READ_MESSAGE } from '../../../src/lib/insight/read-tracker';
-import { API_BASE } from '../../../src/lib/platform/api-base';
+import { INSIGHT_UPDATED_MESSAGE } from '../../../src/lib/insight/shared-insight';
 import {
   hotSortKey,
   isHotSort,
   HOT_SORTS,
   type HotSort,
 } from '../../../src/lib/insight/tweet-stats';
-import { resolveConfig, velocityLevel } from '@feedsieve/metrics';
+import { API_BASE } from '../../../src/lib/platform/api-base';
+import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
+import { showToast as pushToast, type ToastAction } from '../../../src/lib/platform/toast';
+import {
+  Avatar,
+  LineIcon,
+  PostActions,
+  readableText,
+  shortAgo,
+  TierPill,
+  VerifiedMark,
+} from './post-parts';
 import {
   AppIcon,
   asGlobalHotList,
@@ -33,15 +42,6 @@ import {
   type HotPostItem,
   type PageBriefItem,
 } from './shared';
-import {
-  Avatar,
-  LineIcon,
-  PostActions,
-  readableText,
-  shortAgo,
-  TierPill,
-  VerifiedMark,
-} from './post-parts';
 
 export { LineIcon };
 
@@ -93,7 +93,7 @@ function sortGlobal(list: GlobalHotList, sort: HotSort): HotPostItem[] {
         sort,
       ),
     }));
-  return ranked.sort((a, b) => b.key - a.key).map(({ item }) => item);
+  return ranked.toSorted((a, b) => b.key - a.key).map(({ item }) => item);
 }
 
 interface HotViewProps {
@@ -372,6 +372,14 @@ function isTypingTarget(target: EventTarget | null): boolean {
   );
 }
 
+/** 热帖的瞬时提示：纯提示 1.5 秒；带「撤销 / 不看」的留 4 秒。走 App 的统一吐司通道。 */
+function showToast(text: string, actions?: ToastAction[]): void {
+  pushToast(text, {
+    duration: actions?.length ? UNDO_TOAST_MS : TOAST_MS,
+    ...(actions?.length ? { actions } : {}),
+  });
+}
+
 export default function HotView({ language, sendToXPage, onOpenSettings }: HotViewProps) {
   const t = UI_COPY[language];
   const [sort, setSort] = useState<HotSort>('heat');
@@ -428,10 +436,10 @@ export default function HotView({ language, sendToXPage, onOpenSettings }: HotVi
     void Promise.all([
       browser.storage.local
         .get([LANG_KEY, HIDE_READ_KEY, SORT_KEY, DISMISSED_KEY, MUTED_KEY])
-        .catch(() => ({}) as Record<string, unknown>),
+        .catch((): Record<string, unknown> => ({})),
       session
-        ? session.get([LAST_LIST_KEY, POSITIONS_KEY]).catch(() => ({}) as Record<string, unknown>)
-        : Promise.resolve({} as Record<string, unknown>),
+        ? session.get([LAST_LIST_KEY, POSITIONS_KEY]).catch((): Record<string, unknown> => ({}))
+        : Promise.resolve<Record<string, unknown>>({}),
     ]).then(([stored, last]) => {
       if (stored[LANG_KEY] === 'zh' || stored[LANG_KEY] === 'all') setLangFilter(stored[LANG_KEY]);
       if (typeof stored[HIDE_READ_KEY] === 'boolean') setHideRead(stored[HIDE_READ_KEY]);
@@ -540,14 +548,6 @@ export default function HotView({ language, sendToXPage, onOpenSettings }: HotVi
       window.clearInterval(timer);
     };
   }, [scope, globalReload]);
-
-  /** 热帖的瞬时提示：纯提示 1.5 秒；带「撤销 / 不看」的留 4 秒。走 App 的统一吐司通道。 */
-  function showToast(text: string, actions?: ToastAction[]): void {
-    pushToast(text, {
-      duration: actions?.length ? UNDO_TOAST_MS : TOAST_MS,
-      ...(actions?.length ? { actions } : {}),
-    });
-  }
 
   function markRead(postId: string): void {
     setVisited((prev) => new Set(prev).add(postId));
@@ -959,7 +959,7 @@ export default function HotView({ language, sendToXPage, onOpenSettings }: HotVi
       onPointerLeave={leaveList}
       onFocus={() => setFocusInside(true)}
       onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+        if (!event.currentTarget.contains(event.relatedTarget)) {
           setFocusInside(false);
         }
       }}
@@ -1216,7 +1216,6 @@ export default function HotView({ language, sendToXPage, onOpenSettings }: HotVi
           {hasMore ? <li ref={sentinelRef} className="list-sentinel" aria-hidden="true" /> : null}
         </ol>
       )}
-
     </div>
   );
 }

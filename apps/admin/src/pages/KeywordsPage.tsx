@@ -1,10 +1,10 @@
-import React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm, Controller } from 'react-hook-form';
-import { z } from 'zod';
-import { toast } from 'sonner';
 import { Search } from 'lucide-react';
+import React from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { toast } from 'sonner';
+import { z } from 'zod';
 import {
   Accordion,
   AccordionContent,
@@ -37,7 +37,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
 import { ConfirmDialog } from '../components/confirm-dialog';
+import { Hint, LoadError, Loading, PageHeader } from '../components/layout';
 import {
   getDetectorConfig,
   getKeywords,
@@ -51,11 +53,12 @@ import {
   type KeywordRule,
 } from '../lib/api';
 import { errorText } from '../lib/errors';
-import { Textarea } from '@/components/ui/textarea';
-import { Hint, LoadError, Loading, PageHeader } from '../components/layout';
 
 const splitTerms = (value: string): string[] =>
-  value.split(/[,，]/).map((term) => term.trim()).filter(Boolean);
+  value
+    .split(/[,，]/)
+    .map((term) => term.trim())
+    .filter(Boolean);
 
 const packSchema = z.object({
   name_zh: z.string().refine((value) => value.trim().length > 0, '分类名称必填'),
@@ -79,13 +82,25 @@ const ruleSchema = z
     const terms = splitTerms(values.terms);
     if (!terms.length) return true;
     const maxGap = Number(values.max_gap.trim());
-    return terms.length >= 2 && terms.length <= 5 && Number.isInteger(maxGap) && maxGap >= 0 && maxGap <= 32;
+    return (
+      terms.length >= 2 &&
+      terms.length <= 5 &&
+      Number.isInteger(maxGap) &&
+      maxGap >= 0 &&
+      maxGap <= 32
+    );
   }, '分词需要 2-5 个；最大间隔为 0-32 的整数');
 
 type PackFormValues = z.infer<typeof packSchema>;
 type RuleFormValues = z.infer<typeof ruleSchema>;
 
-const blankPack = (): PackFormValues => ({ name_zh: '', name_en: '', description_zh: '', description_en: '', source_refs: '' });
+const blankPack = (): PackFormValues => ({
+  name_zh: '',
+  name_en: '',
+  description_zh: '',
+  description_en: '',
+  source_refs: '',
+});
 const blankRule = (): RuleFormValues => ({ pack_id: '', phrase: '', terms: '', max_gap: '' });
 
 function packToForm(pack: KeywordPack): PackFormValues {
@@ -214,9 +229,7 @@ function RuleEditorDialog({
 }) {
   const form = useForm<RuleFormValues, unknown, RuleFormValues>({
     resolver: zodResolver(ruleSchema),
-    defaultValues: rule
-      ? ruleToForm(rule)
-      : { ...blankRule(), pack_id: packs[0]?.id ?? '' },
+    defaultValues: rule ? ruleToForm(rule) : { ...blankRule(), pack_id: packs[0]?.id ?? '' },
   });
   const errors = form.formState.errors;
   return (
@@ -264,7 +277,9 @@ function RuleEditorDialog({
           <Input id="rule-max-gap" inputMode="numeric" {...form.register('max_gap')} />
         </div>
       </div>
-      {errors.root?.message ? <p className="text-xs font-medium text-destructive">{errors.root.message}</p> : null}
+      {errors.root?.message ? (
+        <p className="text-xs font-medium text-destructive">{errors.root.message}</p>
+      ) : null}
     </DialogShell>
   );
 }
@@ -349,7 +364,9 @@ export function KeywordsPage() {
     mutationFn: importKeywordCatalog,
     onSuccess: async (result) => {
       await invalidate();
-      toast.success(result.imported ? `已导入 ${result.packs} 分类 ${result.rules} 规则` : '无可导入内容');
+      toast.success(
+        result.imported ? `已导入 ${result.packs} 分类 ${result.rules} 规则` : '无可导入内容',
+      );
     },
     onError: (error) => toast.error(errorText(error)),
   });
@@ -374,10 +391,7 @@ export function KeywordsPage() {
   return (
     <section>
       <PageHeader title="关键词词库">
-        <Button
-          variant="outline"
-          onClick={() => setPackEditor({ open: true, pack: null })}
-        >
+        <Button variant="outline" onClick={() => setPackEditor({ open: true, pack: null })}>
           新增分类
         </Button>
         <Button
@@ -399,7 +413,11 @@ export function KeywordsPage() {
           />
         </div>
         {showImport ? (
-          <Button variant="outline" disabled={importMutation.isPending} onClick={() => importMutation.mutate()}>
+          <Button
+            variant="outline"
+            disabled={importMutation.isPending}
+            onClick={() => importMutation.mutate()}
+          >
             导入公开词库
           </Button>
         ) : null}
@@ -414,7 +432,12 @@ export function KeywordsPage() {
           {needle ? '无匹配' : '词库为空'}
         </div>
       ) : (
-        <Accordion type="multiple" className="mt-4" value={accordionValue} onValueChange={setOpenIds}>
+        <Accordion
+          type="multiple"
+          className="mt-4"
+          value={accordionValue}
+          onValueChange={setOpenIds}
+        >
           {visiblePacks.map((pack) => {
             const packRules = needle
               ? rulesFor(pack.id).filter((rule) => rule.phrase.toLowerCase().includes(needle))
@@ -431,7 +454,11 @@ export function KeywordsPage() {
                     </Badge>
                   </AccordionTrigger>
                   <div className="flex shrink-0 gap-1 pl-2">
-                    <Button variant="ghost" size="sm" onClick={() => setPackEditor({ open: true, pack })}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setPackEditor({ open: true, pack })}
+                    >
                       编辑
                     </Button>
                     <Button
@@ -439,7 +466,9 @@ export function KeywordsPage() {
                       size="sm"
                       className="text-destructive hover:text-destructive"
                       disabled={removeMutation.isPending}
-                      onClick={() => setRemoving({ kind: 'pack', id: pack.id, label: pack.name_zh })}
+                      onClick={() =>
+                        setRemoving({ kind: 'pack', id: pack.id, label: pack.name_zh })
+                      }
                     >
                       移除
                     </Button>
@@ -484,7 +513,13 @@ export function KeywordsPage() {
                                       size="sm"
                                       className="text-destructive hover:text-destructive"
                                       disabled={removeMutation.isPending}
-                                      onClick={() => setRemoving({ kind: 'rule', id: rule.id, label: rule.phrase })}
+                                      onClick={() =>
+                                        setRemoving({
+                                          kind: 'rule',
+                                          id: rule.id,
+                                          label: rule.phrase,
+                                        })
+                                      }
                                     >
                                       移除
                                     </Button>
@@ -558,7 +593,7 @@ function DetectorConfigSection() {
   const current = draft ?? pretty;
 
   const saveMutation = useMutation({
-    mutationFn: (value: unknown | null) => saveDetectorConfig(value),
+    mutationFn: (value: unknown) => saveDetectorConfig(value),
     onSuccess: async (result) => {
       await queryClient.invalidateQueries({ queryKey: ['detector-config'] });
       setDraft(null);
@@ -567,7 +602,7 @@ function DetectorConfigSection() {
     onError: (error) => toast.error(errorText(error)),
   });
 
-  function submit(payload: unknown | null): void {
+  function submit(payload: unknown): void {
     if (saveMutation.isPending) return;
     if (payload !== null && (typeof payload !== 'object' || Array.isArray(payload))) {
       toast.error('参数必须是对象或 null');

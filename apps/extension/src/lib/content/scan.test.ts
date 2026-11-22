@@ -1,15 +1,15 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { REDESIGN_TWEET_HTML } from '../../../../../fixtures/x/timeline/redesign';
 import type { RuntimeCommunity } from '../community/community-store';
 import { recordDetection } from '../detection/detection-log';
 import { PageScanController, SCAN_DEBOUNCE_MS } from '../detection/page-scan-controller';
+import { HIDDEN_TWEET_CELL_ATTRIBUTE, hideCellsSoon } from '../platform/remove-tweets';
 import { bumpStat } from '../stats/local-stats';
 import { createBadges } from './badges';
 import { createManualActions } from './manual-actions';
 import { createContentState, MARK_ATTRIBUTE } from './page-state';
 import { createScan } from './scan';
-import { HIDDEN_TWEET_CELL_ATTRIBUTE, hideCellsSoon } from '../platform/remove-tweets';
-import { REDESIGN_TWEET_HTML } from '../../../../../fixtures/x/timeline/redesign';
 
 vi.mock('../detection/detection-log', () => ({ recordDetection: vi.fn(async () => {}) }));
 vi.mock('../stats/local-stats', () => ({ bumpStat: vi.fn(async () => {}) }));
@@ -176,7 +176,7 @@ describe('scanOne：X 重渲染后的装饰自愈', () => {
         check: (input: { text?: string }) =>
           input.text?.includes('free crypto') ? '自定义词命中' : null,
       },
-    ] as unknown as typeof ctx.state.keywordHeuristics;
+    ];
     const { cell, article } = tweet({
       handle: 'spam_bot',
       postId: '111',

@@ -40,7 +40,8 @@ async function guestToken() {
     headers: {
       Authorization: X_WEB_BEARER,
       'x-client-transaction-id': '1',
-      'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36',
+      'user-agent':
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36',
     },
   });
   if (!res.ok) throw new Error(`guest activate HTTP ${res.status}`);
@@ -57,7 +58,9 @@ async function guestToken() {
 }
 
 async function fetchProfile(handle, guest) {
-  const variables = encodeURIComponent(JSON.stringify({ screen_name: handle, withSafetyModeUserFields: true }));
+  const variables = encodeURIComponent(
+    JSON.stringify({ screen_name: handle, withSafetyModeUserFields: true }),
+  );
   const url =
     `https://x.com/i/api/graphql/${USER_BY_SCREEN_NAME_QUERY_ID}/UserByScreenName` +
     `?variables=${variables}&features=${USER_FEATURES}&fieldToggles=${FIELD_TOGGLES}`;
@@ -173,7 +176,11 @@ export async function main({ dryRun = false } = {}) {
   }
   if (!dryRun && pending.size !== rescues.length) writeFileSync(abs, lines.join('\n'));
   const changed = rescues.length - pending.size;
-  console.log(dryRun ? `[dry] 预览 ${changed}/${rescues.length} 条` : `回填 ${changed}/${rescues.length} 条（${SOURCE_FILE}）——发布前跑 sh scripts/publish-community-whitelist.sh --check 校验 note 长度`);
+  console.log(
+    dryRun
+      ? `[dry] 预览 ${changed}/${rescues.length} 条`
+      : `回填 ${changed}/${rescues.length} 条（${SOURCE_FILE}）——发布前跑 sh scripts/publish-community-whitelist.sh --check 校验 note 长度`,
+  );
   return changed;
 }
 

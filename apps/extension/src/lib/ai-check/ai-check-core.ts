@@ -1,3 +1,4 @@
+import { flavorOf } from '@feedsieve/shared';
 /**
  * AI 味检测轻量核心（常驻内容脚本）：
  * 仅负责页面标注 / 折叠条 / 回复机器人入口 / 主页「AI 味」Tab 与 X 接口数据缓冲。
@@ -11,21 +12,6 @@ import {
   profileFromPath,
   tweetSelectors,
 } from '@feedsieve/x-adapter';
-import { flavorOf } from '@feedsieve/shared';
-import type { ApiTweet } from './evidence';
-import {
-  AI_LIST_KEY,
-  AI_LIST_SYNC_MESSAGE,
-  AI_LOOKUP_MESSAGE,
-  AI_RECORDS_KEY,
-  AI_SETTINGS_KEY,
-  DEFAULT_AI_SETTINGS,
-  normalizeAiSettings,
-  type AiCheckRecord,
-  type AiCheckSettings,
-  type AiListState,
-  type AiLookupOutcome,
-} from './client';
 import { actionIcon } from '../content/action-slot';
 import { findAuthorMetaRow } from '../content/author-header';
 import {
@@ -45,6 +31,20 @@ import {
   type AiCheckRunnerHost,
   type Known,
 } from './ai-check-shared';
+import {
+  AI_LIST_KEY,
+  AI_LIST_SYNC_MESSAGE,
+  AI_LOOKUP_MESSAGE,
+  AI_RECORDS_KEY,
+  AI_SETTINGS_KEY,
+  DEFAULT_AI_SETTINGS,
+  normalizeAiSettings,
+  type AiCheckRecord,
+  type AiCheckSettings,
+  type AiListState,
+  type AiLookupOutcome,
+} from './client';
+import type { ApiTweet } from './evidence';
 
 /** 名单 / 设置 / 单条查询接连回来时，装饰合并成一次（不每条都全页重画）。 */
 const DECORATE_THROTTLE_MS = 150;
@@ -91,6 +91,93 @@ function fromRecord(record: AiCheckRecord, myVote: 'ai' | 'human' | null): Known
 
 export interface AiCheckCoreDeps extends AiCheckDeps {
   loadRunner: () => AiCheckRunnerFactory | Promise<AiCheckRunnerFactory>;
+}
+
+function isBlue(article: Element): boolean {
+  const area = findTweetAuthorArea(article);
+  return !!area?.querySelector(tweetSelectors.verifiedBadge);
+}
+
+function hasReplyContext(article: Element): boolean {
+  const name = findTweetAuthorArea(article);
+  if (!name) return false;
+  const text = (article.textContent ?? '').replace(/\s+/g, ' ');
+  const nameText = (name.textContent ?? '').replace(/\s+/g, ' ');
+  const at = text.indexOf(nameText);
+  const head = at >= 0 ? text.slice(at + nameText.length, at + nameText.length + 120) : '';
+  return /(?:回复|Replying to)\s*@/i.test(head);
+}
+
+function nameRowOf(article: Element): Element | null {
+  const area = findTweetAuthorArea(article);
+  if (!area) return null;
+  return findAuthorMetaRow(area) ?? area;
+}
+
+function hasFlexDirection(elNode: Element, direction: 'column' | 'row'): boolean {
+  if (typeof getComputedStyle !== 'function') return false;
+  const style = getComputedStyle(elNode);
+  return (
+    (style.display === 'flex' || style.display === 'inline-flex') &&
+    style.flexDirection.startsWith(direction)
+  );
+}
+
+function canClimbHandleWrapper(parent: Element, area: Element): boolean {
+  if (parent === area) return false;
+  const nonEntry = [...parent.children].filter((c) => !c.classList.contains('fs-ai-entry'));
+  if (nonEntry.length > 1) return false;
+  if (parent.tagName === 'SPAN') return true;
+  const grand = parent.parentElement;
+  if (hasFlexDirection(parent, 'column')) {
+    return !(grand === area && hasFlexDirection(area, 'column'));
+  }
+  if (hasFlexDirection(parent, 'row')) return false;
+  if (!grand || grand === area) return false;
+  return [...grand.children].filter((c) => !c.classList.contains('fs-ai-entry')).length > 1;
+}
+
+function entrySlotOf(
+  article: Element,
+  handle: string,
+): { parent: Element; before: ChildNode | null } | null {
+  const area = findTweetAuthorArea(article);
+  if (!area) return null;
+  const atHandle = `@${handle.toLowerCase()}`;
+  const handleNode = [...area.querySelectorAll('a, span')].find(
+    (node) =>
+      !node.classList.contains('fs-ai-entry') &&
+      (node.textContent ?? '').trim().toLowerCase() === atHandle,
+  );
+  if (handleNode) {
+    let slot: Element = handleNode;
+    while (slot.parentElement && canClimbHandleWrapper(slot.parentElement, area)) {
+      slot = slot.parentElement;
+    }
+    if (slot.parentElement) {
+      return { parent: slot.parentElement, before: slot };
+    }
+  }
+  const row = nameRowOf(article);
+  return row ? { parent: row, before: row.firstChild } : null;
+}
+
+function repliesTab(handle: string): HTMLAnchorElement | null {
+  const target = `/${handle.toLowerCase()}/with_replies`;
+  const root = document.querySelector('[data-testid="primaryColumn"]') ?? document;
+  for (const a of root.querySelectorAll<HTMLAnchorElement>(
+    '[role="tablist"] a[role="tab"], a[role="tab"]',
+  )) {
+    if (a.hasAttribute(TAB_ATTR) || a.closest(`[${TAB_ATTR}]`)) continue;
+    let pathname: string;
+    try {
+      pathname = new URL(a.getAttribute('href') ?? '', location.origin).pathname;
+    } catch {
+      continue;
+    }
+    if (pathname.replace(/\/+$/, '').toLowerCase() === target) return a;
+  }
+  return null;
 }
 
 export function createAiCheckCore(deps: AiCheckCoreDeps) {
@@ -281,11 +368,6 @@ export function createAiCheckCore(deps: AiCheckCoreDeps) {
     return null;
   }
 
-  function isBlue(article: Element): boolean {
-    const area = findTweetAuthorArea(article);
-    return !!area?.querySelector(tweetSelectors.verifiedBadge);
-  }
-
   function inScope(article: Element): boolean {
     if (settings.scope === 'all') return true;
     return settings.scope === 'blue' ? isBlue(article) : !isBlue(article);
@@ -295,70 +377,6 @@ export function createAiCheckCore(deps: AiCheckCoreDeps) {
     if (deps.isAllowlisted?.(handle) === true) return true;
     if (deps.isFollowing?.(handle) === true) return !settings.markFollowing;
     return deps.isProtected?.(handle) === true;
-  }
-
-  function hasReplyContext(article: Element): boolean {
-    const name = findTweetAuthorArea(article);
-    if (!name) return false;
-    const text = (article.textContent ?? '').replace(/\s+/g, ' ');
-    const nameText = (name.textContent ?? '').replace(/\s+/g, ' ');
-    const at = text.indexOf(nameText);
-    const head = at >= 0 ? text.slice(at + nameText.length, at + nameText.length + 120) : '';
-    return /(?:回复|Replying to)\s*@/i.test(head);
-  }
-
-  function nameRowOf(article: Element): Element | null {
-    const area = findTweetAuthorArea(article);
-    if (!area) return null;
-    return findAuthorMetaRow(area) ?? area;
-  }
-
-  function hasFlexDirection(elNode: Element, direction: 'column' | 'row'): boolean {
-    if (typeof getComputedStyle !== 'function') return false;
-    const style = getComputedStyle(elNode);
-    return (
-      (style.display === 'flex' || style.display === 'inline-flex') &&
-      style.flexDirection.startsWith(direction)
-    );
-  }
-
-  function canClimbHandleWrapper(parent: Element, area: Element): boolean {
-    if (parent === area) return false;
-    const nonEntry = [...parent.children].filter((c) => !c.classList.contains('fs-ai-entry'));
-    if (nonEntry.length > 1) return false;
-    if (parent.tagName === 'SPAN') return true;
-    const grand = parent.parentElement;
-    if (hasFlexDirection(parent, 'column')) {
-      return !(grand === area && hasFlexDirection(area, 'column'));
-    }
-    if (hasFlexDirection(parent, 'row')) return false;
-    if (!grand || grand === area) return false;
-    return [...grand.children].filter((c) => !c.classList.contains('fs-ai-entry')).length > 1;
-  }
-
-  function entrySlotOf(
-    article: Element,
-    handle: string,
-  ): { parent: Element; before: ChildNode | null } | null {
-    const area = findTweetAuthorArea(article);
-    if (!area) return null;
-    const atHandle = `@${handle.toLowerCase()}`;
-    const handleNode = [...area.querySelectorAll('a, span')].find(
-      (node) =>
-        !node.classList.contains('fs-ai-entry') &&
-        (node.textContent ?? '').trim().toLowerCase() === atHandle,
-    );
-    if (handleNode) {
-      let slot: Element = handleNode;
-      while (slot.parentElement && canClimbHandleWrapper(slot.parentElement, area)) {
-        slot = slot.parentElement;
-      }
-      if (slot.parentElement) {
-        return { parent: slot.parentElement, before: slot };
-      }
-    }
-    const row = nameRowOf(article);
-    return row ? { parent: row, before: row.firstChild } : null;
   }
 
   function buildMarkPill(
@@ -540,24 +558,6 @@ export function createAiCheckCore(deps: AiCheckCoreDeps) {
     openInNewTab(handle, false, postId);
   }
 
-  function repliesTab(handle: string): HTMLAnchorElement | null {
-    const target = `/${handle.toLowerCase()}/with_replies`;
-    const root = document.querySelector('[data-testid="primaryColumn"]') ?? document;
-    for (const a of root.querySelectorAll<HTMLAnchorElement>(
-      '[role="tablist"] a[role="tab"], a[role="tab"]',
-    )) {
-      if (a.hasAttribute(TAB_ATTR) || a.closest(`[${TAB_ATTR}]`)) continue;
-      let pathname: string;
-      try {
-        pathname = new URL(a.getAttribute('href') ?? '', location.origin).pathname;
-      } catch {
-        continue;
-      }
-      if (pathname.replace(/\/+$/, '').toLowerCase() === target) return a;
-    }
-    return null;
-  }
-
   function tabLabel(handle: string): Node[] {
     const k = known.get(handle);
     const nodes: Node[] = [document.createTextNode(t().tab)];
@@ -589,7 +589,7 @@ export function createAiCheckCore(deps: AiCheckCoreDeps) {
       tab = item.cloneNode(true) as HTMLElement;
       tab.setAttribute(TAB_ATTR, handle);
       tab.querySelectorAll('[id]').forEach((n) => n.removeAttribute('id'));
-      const anchor = (tab.matches('a') ? tab : tab.querySelector('a')) as HTMLAnchorElement | null;
+      const anchor = tab.matches('a') ? tab : tab.querySelector('a');
       anchor?.setAttribute('href', `/${handle}/with_replies`);
       anchor?.setAttribute('aria-selected', 'false');
       tab.addEventListener(

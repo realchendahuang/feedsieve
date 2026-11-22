@@ -1,4 +1,11 @@
+import { env } from 'cloudflare:workers';
 import { like, or } from 'drizzle-orm';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { judgeAiAccount } from '../src/ai-accounts/judge';
+import { listAiAccounts, lookupAiAccount } from '../src/ai-accounts/lookup';
+import { getAiPublic } from '../src/ai-accounts/public-page';
+import { listAiReviews, recordClientOutcome } from '../src/ai-accounts/review';
+import { voteAiAccount } from '../src/ai-accounts/vote';
 import { getDb } from '../src/db/client';
 import {
   adminAuditLog,
@@ -8,14 +15,7 @@ import {
   meta,
   trainingSampleUsage,
 } from '../src/db/schema';
-import { env } from 'cloudflare:workers';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import worker from '../src/index';
-import { judgeAiAccount } from '../src/ai-accounts/judge';
-import { listAiAccounts, lookupAiAccount } from '../src/ai-accounts/lookup';
-import { voteAiAccount } from '../src/ai-accounts/vote';
-import { listAiReviews, recordClientOutcome } from '../src/ai-accounts/review';
-import { getAiPublic } from '../src/ai-accounts/public-page';
 
 const A = 'install-aaaa-000001';
 const B = 'install-bbbb-000002';
@@ -123,11 +123,14 @@ describe('AI 判定交叉验证', () => {
     await judge(A, 'appealed');
     await judge(B, 'appealed');
     for (const id of ['install-h1-0000001', 'install-h2-0000002', 'install-h3-0000003']) {
-      await voteAiAccount({ ...env } as Cloudflare.Env, {
-        installation_id: id,
-        handle: 'appealed',
-        vote: 'human',
-      });
+      await voteAiAccount(
+        { ...env },
+        {
+          installation_id: id,
+          handle: 'appealed',
+          vote: 'human',
+        },
+      );
     }
     expect(await lookupAiAccount(env, 'appealed')).toMatchObject({
       public: true,
@@ -145,11 +148,14 @@ describe('AI 判定交叉验证', () => {
     await judge(A, 'human_jev');
     await judge(B, 'human_jev');
     for (const id of ['install-a1-0000021', 'install-a2-0000022', 'install-a3-0000023']) {
-      await voteAiAccount({ ...env } as Cloudflare.Env, {
-        installation_id: id,
-        handle: 'human_jev',
-        vote: 'ai',
-      });
+      await voteAiAccount(
+        { ...env },
+        {
+          installation_id: id,
+          handle: 'human_jev',
+          vote: 'ai',
+        },
+      );
     }
     expect(await lookupAiAccount(env, 'human_jev')).toMatchObject({
       public: true,
@@ -165,18 +171,24 @@ describe('AI 判定交叉验证', () => {
     await judge(A, 'tied');
     await judge(B, 'tied');
     for (const id of ['install-a1-0000001', 'install-a2-0000002', 'install-a3-0000003']) {
-      await voteAiAccount({ ...env } as Cloudflare.Env, {
-        installation_id: id,
-        handle: 'tied',
-        vote: 'ai',
-      });
+      await voteAiAccount(
+        { ...env },
+        {
+          installation_id: id,
+          handle: 'tied',
+          vote: 'ai',
+        },
+      );
     }
     for (const id of ['install-h1-0000011', 'install-h2-0000012', 'install-h3-0000013']) {
-      await voteAiAccount({ ...env } as Cloudflare.Env, {
-        installation_id: id,
-        handle: 'tied',
-        vote: 'human',
-      });
+      await voteAiAccount(
+        { ...env },
+        {
+          installation_id: id,
+          handle: 'tied',
+          vote: 'human',
+        },
+      );
     }
     expect(await lookupAiAccount(env, 'tied')).toMatchObject({
       public: false,
@@ -211,11 +223,14 @@ describe('AI 判定交叉验证', () => {
 
   it('社区投票进名单的账号也会下发（没有判定时分数为 null）', async () => {
     for (const id of ['install-v1-0000001', 'install-v2-0000002', 'install-v3-0000003']) {
-      await voteAiAccount({ ...env } as Cloudflare.Env, {
-        installation_id: id,
-        handle: 'voted',
-        vote: 'ai',
-      });
+      await voteAiAccount(
+        { ...env },
+        {
+          installation_id: id,
+          handle: 'voted',
+          vote: 'ai',
+        },
+      );
     }
     expect(await listAiAccounts(env)).toEqual([['voted', null, 1]]);
   });

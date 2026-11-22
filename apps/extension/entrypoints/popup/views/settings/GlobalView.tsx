@@ -1,16 +1,16 @@
-import { useEffect, useState } from 'react';
 import type { MarkStrength } from '@feedsieve/community-lists';
+import { useEffect, useState } from 'react';
 import type { CommunitySettings } from '../../../../src/lib/community/community-store';
-import type { KeywordRuleSettings } from '../../../../src/lib/detection/keyword-rules';
-import { getKeywordRuleSettings } from '../../../../src/lib/detection/keyword-rules';
 import {
   BUNDLED_KEYWORD_PACK_CATALOG,
   getKeywordPackCatalog,
   type KeywordPackCatalog,
 } from '../../../../src/lib/detection/keyword-packs';
-import { MODULES, type ModuleDef } from '../../../../src/lib/settings/modules';
-import type { ModuleSettings } from '../../../../src/lib/settings/module-settings';
+import type { KeywordRuleSettings } from '../../../../src/lib/detection/keyword-rules';
+import { getKeywordRuleSettings } from '../../../../src/lib/detection/keyword-rules';
 import { setUiLanguage, UI_COPY, type UiLanguage } from '../../../../src/lib/platform/i18n';
+import type { ModuleSettings } from '../../../../src/lib/settings/module-settings';
+import { MODULES, type ModuleDef } from '../../../../src/lib/settings/modules';
 import { SkeletonList, SubpageHeader, Toggle } from '../shared';
 import ArticleBackups from './ArticleBackups';
 import BackupRow from './BackupRow';
@@ -99,10 +99,11 @@ export default function GlobalView({
   async function syncNow(): Promise<void> {
     setSyncing(true);
     try {
-      const res = (await browser.runtime.sendMessage({
-        type: 'feedsieve:community-sync',
-        force: true,
-      })) as { outcome?: { status: string; version?: string; error?: string } };
+      const res: { outcome?: { status: string; version?: string; error?: string } } | undefined =
+        await browser.runtime.sendMessage({
+          type: 'feedsieve:community-sync',
+          force: true,
+        });
       const outcome = res?.outcome;
       if (outcome?.status === 'updated' || outcome?.status === 'unchanged') {
         await onSyncCommunity();

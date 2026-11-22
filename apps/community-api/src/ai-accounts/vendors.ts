@@ -6,8 +6,8 @@
  * Jev 或决策类模型。熔断状态存 meta 表（与 prober 同模式），连续失败后暂停一段时间。
  */
 import { recordVendor, VendorError } from './breaker';
-import questionFile from './question.json';
 import type { VendorTimeline } from './evidence';
+import questionFile from './question.json';
 
 export { VendorError, recordVendor, vendorOpen } from './breaker';
 export { judgeAccount } from './providers';

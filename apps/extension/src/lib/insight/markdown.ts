@@ -12,11 +12,12 @@ export interface MarkdownTweet {
   createdAt?: number;
 }
 
+const padTwo = (n: number): string => String(n).padStart(2, '0');
+
 /** 本地时区的 `2026-10-29 23:34`。 */
 export function formatLocalTime(ms: number): string {
   const d = new Date(ms);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${d.getFullYear()}-${padTwo(d.getMonth() + 1)}-${padTwo(d.getDate())} ${padTwo(d.getHours())}:${padTwo(d.getMinutes())}`;
 }
 
 /** Markdown 行内特殊字符转义（昵称里常见 * _ [ ] 等）。 */

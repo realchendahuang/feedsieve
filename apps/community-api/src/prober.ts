@@ -99,7 +99,7 @@ async function activateGuestToken(): Promise<string | null> {
       console.warn('[community-api] guest activate failed:', response.status);
       return null;
     }
-    const body = (await response.json()) as { guest_token?: string };
+    const body = await response.json<{ guest_token?: string }>();
     return typeof body.guest_token === 'string' ? body.guest_token : null;
   } catch {
     return null;
@@ -138,13 +138,13 @@ async function probeOne(
     if (!response.ok) {
       return { result: 'unknown', xUserId: null };
     }
-    const body = (await response.json()) as {
+    const body = await response.json<{
       errors?: Array<{ code?: number; message?: string }>;
       data?: { user?: { result?: { __typename?: string; rest_id?: string } } };
-    };
+    }>();
     if (Array.isArray(body.errors) && body.errors.length > 0) {
       const limited = body.errors.some(
-        (error) => error?.code === 88 || /rate limit/i.test(String(error?.message ?? '')),
+        (error) => error?.code === 88 || /rate limit/i.test(error?.message ?? ''),
       );
       if (limited) {
         return { result: 'unknown', xUserId: null };
@@ -152,9 +152,7 @@ async function probeOne(
       // Guest 端对注销/封禁账号用 errors 表达（"User has been suspended" 等）；
       // 只有能从消息判断账号不再存在的才收敛成 dead，其余形状一律 unknown。
       const gone = body.errors.some((error) =>
-        /suspend(ed)|not exist|unavailable|hasn['']t posted|deleted/i.test(
-          String(error?.message ?? ''),
-        ),
+        /suspend(ed)|not exist|unavailable|hasn['']t posted|deleted/i.test(error?.message ?? ''),
       );
       return { result: gone ? 'dead' : 'unknown', xUserId: null };
     }
@@ -166,7 +164,7 @@ async function probeOne(
     if (!result) {
       return { result: 'unknown', xUserId: null };
     }
-    const restId = result.rest_id ? String(result.rest_id) : null;
+    const restId = result.rest_id || null;
     if (result.__typename === 'User' && restId) {
       // rest_id 每次都是权威回填：探测顺手把 id 写准
       return { result: 'alive', xUserId: restId };

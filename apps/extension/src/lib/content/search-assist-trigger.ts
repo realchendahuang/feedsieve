@@ -6,14 +6,8 @@
 import { createHovercard } from '../insight/hovercard';
 import type { UiLanguage } from '../platform/i18n';
 import type { SearchAssistPrefs } from '../settings/search-assist';
-import type {
-  SearchAssistDialogController,
-  SearchAssistDialogDeps,
-} from './search-assist-dialog';
-import {
-  SEARCH_ASSIST_SHARED_COPY,
-  SEARCH_ASSIST_TRIGGER_CLASS,
-} from './search-assist-shared';
+import type { SearchAssistDialogController, SearchAssistDialogDeps } from './search-assist-dialog';
+import { SEARCH_ASSIST_SHARED_COPY, SEARCH_ASSIST_TRIGGER_CLASS } from './search-assist-shared';
 
 const SEARCH_FORM_SELECTORS = [
   '[data-testid="sidebarColumn"] form[role="search"]',

@@ -10,11 +10,6 @@
  */
 
 import { asc, desc } from 'drizzle-orm';
-import { collateC } from './lib/sql';
-import { getDb } from './db/client';
-import { accounts, adminAuditLog } from './db/schema';
-import { listMaintainerEntries } from './maintainer-blocklist';
-import { publicErrorCode } from './lib/public-error';
 import {
   deactivateAdminAccountDraft,
   getAdminRelease,
@@ -24,6 +19,9 @@ import {
   rollbackAdminAccountRelease,
   saveAdminAccountDraft,
 } from './admin-accounts';
+import { getDashboardMetrics } from './dashboard';
+import { getDb } from './db/client';
+import { accounts, adminAuditLog } from './db/schema';
 import {
   disableAdminKeyword,
   getKeywordDetectorConfig,
@@ -35,9 +33,11 @@ import {
   saveAdminKeywordRule,
   setKeywordDetectorConfig,
 } from './keyword-admin';
-import { getDashboardMetrics } from './dashboard';
-import { buildKillSwitch, getLatestSnapshotVersion } from './snapshot';
 import { refreshAccountsFromLabels } from './labels';
+import { publicErrorCode } from './lib/public-error';
+import { collateC } from './lib/sql';
+import { listMaintainerEntries } from './maintainer-blocklist';
+import { buildKillSwitch, getLatestSnapshotVersion } from './snapshot';
 
 /** id 短写（业务名），secret 至少 16 位，避免弱密钥。 */
 const AGENT_KEY_PAIR = /^([A-Za-z0-9_-]{1,32}):(.{16,128})$/;
@@ -208,7 +208,8 @@ export async function upsertAgentKeywordRule(
 }
 
 export type AgentKeywordRemoveResult =
-  { ok: true; changed: boolean } | { ok: false; error: string };
+  | { ok: true; changed: boolean }
+  | { ok: false; error: string };
 
 /** 停用词库分类/规则（幂等）。 */
 export async function removeAgentKeyword(
@@ -230,12 +231,13 @@ export async function publishAgentKeywords(env: Cloudflare.Env, actor: string) {
 /** 读取天级判定参数（null = 未设置，客户端回退内置兜底）。 */
 export async function readAgentKeywordDetectorConfig(
   env: Cloudflare.Env,
-): Promise<{ detector_config: unknown | null }> {
+): Promise<{ detector_config: unknown }> {
   return { detector_config: await getKeywordDetectorConfig(env) };
 }
 
 export type AgentDetectorConfigWriteResult =
-  { ok: true; saved: boolean } | { ok: false; error: string };
+  | { ok: true; saved: boolean }
+  | { ok: false; error: string };
 
 /** 写入天级判定参数（null = 清除）；非法值 fail closed，不落库。 */
 export async function writeAgentKeywordDetectorConfig(

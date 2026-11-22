@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { pageHead } from '@/site/seo';
-import HomePage from '@/site/pages/HomePage';
 import { getWeeklyPicks } from '@/site/data.functions';
+import HomePage from '@/site/pages/HomePage';
+import { pageHead } from '@/site/seo';
 
 export const Route = createFileRoute('/_shell/')({
   // 周刊热帖拿不到时为 null，首页不显示该模块

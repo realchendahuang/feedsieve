@@ -64,13 +64,13 @@ export function actionIcon(name: keyof typeof ACTION_ICONS): SVGSVGElement {
 function singleButtonTemplate(candidate: Element): Element | null {
   if (/\d/.test(candidate.textContent ?? '')) return null;
   const buttons = candidate.matches('button')
-    ? [candidate as HTMLButtonElement]
+    ? [candidate]
     : [...candidate.querySelectorAll('button')];
   if (buttons.length === 1) {
     return buttons[0]!.querySelector('svg') ? candidate : null;
   }
   if (buttons.length > 1) {
-    for (const sub of [...candidate.children].reverse()) {
+    for (const sub of [...candidate.children].toReversed()) {
       const hit = singleButtonTemplate(sub);
       if (hit) return hit;
     }
@@ -80,7 +80,7 @@ function singleButtonTemplate(candidate: Element): Element | null {
 
 function nativeTemplate(group: Element): Element | null {
   const children = [...group.children].filter((c) => !c.hasAttribute(ACTION_SLOT_ATTR));
-  for (const child of children.reverse()) {
+  for (const child of children.toReversed()) {
     // 不复制带数字的（回复 / 转发 / 点赞 / 浏览），复制分享 / 收藏这类单颗纯图标按钮；
     // 新版 X 把书签与分享包在同一个右侧 flex 容器里，需下钻取单颗按钮，不能整组复制出两颗按钮。
     const hit = singleButtonTemplate(child);
@@ -98,9 +98,8 @@ export function createActionSlot(group: Element, kind: string, label: string): A
   holder.className = 'fs-act-ico';
 
   const native = template?.cloneNode(true) as HTMLElement | undefined;
-  const nativeButton = native?.matches('button')
-    ? (native as HTMLButtonElement)
-    : native?.querySelector('button');
+  const nativeButton =
+    native instanceof HTMLButtonElement ? native : native?.querySelector('button');
   const nativeSvg = nativeButton?.querySelector('svg');
   if (native && nativeButton && nativeSvg) {
     if (native === nativeButton) {
@@ -111,7 +110,7 @@ export function createActionSlot(group: Element, kind: string, label: string): A
     }
     button = nativeButton;
     for (const node of [root, ...root.querySelectorAll('*')]) {
-      for (const attr of [...node.attributes]) {
+      for (const attr of Array.from(node.attributes)) {
         if (attr.name === 'id' || attr.name === 'href' || attr.name.startsWith('aria-')) {
           node.removeAttribute(attr.name);
         }

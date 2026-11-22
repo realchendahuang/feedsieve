@@ -1,12 +1,12 @@
-import React from 'react';
+import { HANDLE_INPUT_RE } from '@feedsieve/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm, Controller } from 'react-hook-form';
 import { useSearch } from '@tanstack/react-router';
-import { z } from 'zod';
-import { toast } from 'sonner';
-import { HANDLE_INPUT_RE } from '@feedsieve/shared';
 import { Plus, Search } from 'lucide-react';
+import React from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { toast } from 'sonner';
+import { z } from 'zod';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -34,8 +34,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import { LoadError, Loading, PageHeader } from '../components/layout';
 import { ConfirmDialog } from '../components/confirm-dialog';
+import { LoadError, Loading, PageHeader } from '../components/layout';
 import { getAccounts, removeAccount, saveAccount, type AccountEntry } from '../lib/api';
 import { errorText } from '../lib/errors';
 
@@ -175,8 +175,9 @@ export function AccountsPage() {
   const [removing, setRemoving] = React.useState<AccountEntry | null>(null);
 
   // 社区候选「转维护」：带 draft/category 跳转过来时自动打开预填的新增对话框。
-  const search = useSearch({ strict: false }) as { draft?: string | null; category?: string | null };
-  const draft = typeof search.draft === 'string' ? search.draft.replace(/^@+/, '').toLowerCase() : null;
+  const search = useSearch({ strict: false });
+  const draft =
+    typeof search.draft === 'string' ? search.draft.replace(/^@+/, '').toLowerCase() : null;
   const handledDraft = React.useRef<string | null>(null);
   React.useEffect(() => {
     if (!draft || !/^[a-z0-9_]{1,15}$/.test(draft) || handledDraft.current === draft) {
@@ -279,7 +280,7 @@ export function AccountsPage() {
                 <TableRow key={entry.handle}>
                   <TableCell className="font-semibold text-foreground">@{entry.handle}</TableCell>
                   <TableCell>
-                    <Badge variant="secondary" className="font-normal text-xs">
+                    <Badge variant="secondary" className="text-xs font-normal">
                       {entry.category}
                     </Badge>
                   </TableCell>

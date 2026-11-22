@@ -90,7 +90,10 @@ export function extractKeywordCandidates(text, { top = 30 } = {}) {
 
   return [...counts.entries()]
     .map(([phrase, count]) => ({ phrase, count }))
-    .sort((a, b) => b.count - a.count || b.phrase.length - a.phrase.length || a.phrase.localeCompare(b.phrase))
+    .toSorted(
+      (a, b) =>
+        b.count - a.count || b.phrase.length - a.phrase.length || a.phrase.localeCompare(b.phrase),
+    )
     .slice(0, top);
 }
 

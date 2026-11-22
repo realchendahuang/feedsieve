@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { runQueuedBlocks, type QueueRunnerOptions, type QueueSession, type TaskRunRecord } from './runner';
+import {
+  runQueuedBlocks,
+  type QueueRunnerOptions,
+  type QueueSession,
+  type TaskRunRecord,
+} from './runner';
 
 interface FakeTask extends TaskRunRecord {
   category: string;
@@ -48,7 +53,7 @@ function makeHarness(
     ...overrides,
   };
   return {
-    session: session!,
+    session: session,
     get perform() {
       return perform;
     },
@@ -81,14 +86,23 @@ describe('runQueuedBlocks（持久化队列 runner）', () => {
       .mockResolvedValueOnce({ ok: false, code: 'network_error' });
     await h.run();
     expect(h.perform).toHaveBeenCalledTimes(3); // 首试 + 2 次重试（MAX_TRANSIENT_ATTEMPTS=3）
-    expect(h.session.tasks[0]).toMatchObject({ status: 'failed', attempts: 3, lastErrorCode: 'network_error' });
+    expect(h.session.tasks[0]).toMatchObject({
+      status: 'failed',
+      attempts: 3,
+      lastErrorCode: 'network_error',
+    });
     expect(h.session.status).toBe('completed');
   });
 
   it('transient 重试后成功：attempts 累计但最终 success，retryAt 清除', async () => {
     const h = makeHarness([task('recovers')]);
     h.perform
-      .mockResolvedValueOnce({ ok: false, code: 'rate_limited', httpStatus: 429, retryAfterMs: 1000 })
+      .mockResolvedValueOnce({
+        ok: false,
+        code: 'rate_limited',
+        httpStatus: 429,
+        retryAfterMs: 1000,
+      })
       .mockResolvedValueOnce({ ok: true });
     await h.run();
     const t = h.session.tasks[0]!;

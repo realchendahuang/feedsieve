@@ -131,7 +131,8 @@ export function describeDbError(error: unknown): string {
   if (!(error instanceof DrizzleQueryError))
     return error instanceof Error ? error.message : String(error);
   const cause = error.cause as
-    { name?: string; code?: string; constraint_name?: string; message?: string } | undefined;
+    | { name?: string; code?: string; constraint_name?: string; message?: string }
+    | undefined;
   if (!cause) return 'DrizzleQueryError';
   return [cause.name, cause.code, cause.constraint_name, cause.message].filter(Boolean).join(' ');
 }

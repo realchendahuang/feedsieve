@@ -47,9 +47,9 @@ export interface QueueRunnerOptions<T extends TaskRunRecord> {
   /** 成功收尾（宿主侧页面副作用等），在任务标记 success 之后调用。 */
   onSuccess?(task: T): Promise<void> | void;
   /** 成功后相邻任务间隔（ms）——供宿主注入「base + 抖动」节奏；默认 PACE_FLOOR_MS。 */
-  successPaceMs?(): number;
-  now?(): number;
-  sleep?(ms: number): Promise<void>;
+  successPaceMs?: () => number;
+  now?: () => number;
+  sleep?: (ms: number) => Promise<void>;
 }
 
 // 纯逻辑包不依赖 DOM/node 类型；运行时宿主（浏览器 SW / Node 测试）都提供 setTimeout

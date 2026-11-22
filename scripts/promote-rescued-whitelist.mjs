@@ -24,7 +24,8 @@ const DEFAULT_SOURCE = 'https://feedsieve.win/v1/roster/latest';
 export function planEntries(roster) {
   const out = [];
   for (const verified of roster?.whitelist?.verified ?? []) {
-    if (typeof verified.handle !== 'string' || /^[A-Za-z0-9_]{1,15}$/.test(verified.handle) === false) continue;
+    if (typeof verified.handle !== 'string' || !/^[A-Za-z0-9_]{1,15}$/.test(verified.handle))
+      continue;
     const net = Math.trunc(verified.net_votes ?? 0);
     const rescueCount = Math.trunc(verified.rescue_count ?? 0);
     const version = roster?.snapshot_version ?? '';
@@ -52,19 +53,25 @@ export async function main({ dryRun = false, sourceUrl = DEFAULT_SOURCE } = {}) 
   const skipped = all.length - fresh.length;
 
   if (dryRun) {
-    console.log(`抢救 ${all.length} 条 · 已入册 ${skipped} 条 · 本轮新增 ${fresh.length} 条（快照 ${roster?.snapshot_version}）`);
+    console.log(
+      `抢救 ${all.length} 条 · 已入册 ${skipped} 条 · 本轮新增 ${fresh.length} 条（快照 ${roster?.snapshot_version}）`,
+    );
     for (const entry of fresh) console.log(`[dry] + @${entry.handle} · ${entry.note}`);
     return { fresh: fresh.length, skipped, snapshot: roster?.snapshot_version };
   }
 
   if (fresh.length === 0) {
-    console.log(`没有需要新增的（抢救 ${all.length} 条均已入册，快照 ${roster?.snapshot_version}）`);
+    console.log(
+      `没有需要新增的（抢救 ${all.length} 条均已入册，快照 ${roster?.snapshot_version}）`,
+    );
     return { fresh: 0, skipped, snapshot: roster?.snapshot_version };
   }
 
   const block = fresh.map((entry) => `# 社区抢救迁移\n${entryBlock(entry)}`).join('\n');
   writeFileSync(abs, `${yaml.replace(/\s*$/, '')}\n${block}\n`);
-  console.log(`已写入 ${fresh.length} 条候选到 ${SOURCE_FILE}（跳过已入册 ${skipped} 条）。\n下一步：看 diff → sh scripts/publish-community-whitelist.sh`);
+  console.log(
+    `已写入 ${fresh.length} 条候选到 ${SOURCE_FILE}（跳过已入册 ${skipped} 条）。\n下一步：看 diff → sh scripts/publish-community-whitelist.sh`,
+  );
   return { fresh: fresh.length, skipped, snapshot: roster?.snapshot_version };
 }
 

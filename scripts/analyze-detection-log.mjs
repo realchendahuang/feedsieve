@@ -31,7 +31,7 @@ function argNum(argv, name, fallback) {
 
 /** 按日→ruleId 计数重排成规则→[日期, 次数] 的时间线。 */
 export function ruleTimeline(stats) {
-  const days = Object.keys(stats).sort();
+  const days = Object.keys(stats).toSorted();
   const rules = new Map();
   for (const [day, byRule] of Object.entries(stats)) {
     for (const [ruleId, count] of Object.entries(byRule)) {
@@ -59,9 +59,13 @@ export function topRules(stats, recentDays) {
         .reduce((sum, [, c]) => sum + c, 0);
       return { ruleId, total, recent: recentTotal, last: timeline.at(-1) };
     })
-    .sort((a, b) => b.recent - a.recent || b.total - a.total)
+    .toSorted((a, b) => b.recent - a.recent || b.total - a.total)
     .slice(0, 15);
   return { span: cutoff, rows };
+}
+
+function sortEntriesDesc(m) {
+  return [...m.entries()].toSorted((a, b) => b[1] - a[1]).map(([k, v]) => `${k}=${v}`);
 }
 
 /** 最近 200 条命中里的手写画像：来源 / 分类 / 高频号。 */
@@ -75,9 +79,11 @@ export function entryFacets(log) {
     byCategory.set(cat, (byCategory.get(cat) ?? 0) + 1);
     byHandle.set(entry.handle, (byHandle.get(entry.handle) ?? 0) + 1);
   }
-  const sortDesc = (m) =>
-    [...m.entries()].sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}=${v}`);
-  return { sources: sortDesc(bySource), categories: sortDesc(byCategory), handles: sortDesc(byHandle).slice(0, 10) };
+  return {
+    sources: sortEntriesDesc(bySource),
+    categories: sortEntriesDesc(byCategory),
+    handles: sortEntriesDesc(byHandle).slice(0, 10),
+  };
 }
 
 function main() {
@@ -93,11 +99,15 @@ function main() {
   const days = argNum(argv, 'days', 14);
   const { detectionLogV1: log = [], detectionRuleStatsV1: stats = {} } = parsed;
 
-  console.log(`本地检测日志 · 逐条命中 ${log.length} 条 · 按日统计覆盖 ${ruleTimeline(stats).days.length} 天`);
+  console.log(
+    `本地检测日志 · 逐条命中 ${log.length} 条 · 按日统计覆盖 ${ruleTimeline(stats).days.length} 天`,
+  );
   const { span, rows } = topRules(stats, days);
   console.log(`\n── 规则热度（近 ${span.length} 日 ${span[0] ?? '-'} ~ ${span.at(-1) ?? '-'}）──`);
   for (const { ruleId, total, recent, last } of rows) {
-    console.log(`${String(recent).padStart(4)} /${String(total).padStart(5)}  ${ruleId.padEnd(44)} 最近日 ${last?.[0] ?? '-'}`);
+    console.log(
+      `${String(recent).padStart(4)} /${String(total).padStart(5)}  ${ruleId.padEnd(44)} 最近日 ${last?.[0] ?? '-'}`,
+    );
   }
   const facets = entryFacets(log);
   console.log(`\n── 最近 ${log.length} 条命中画像 ──`);

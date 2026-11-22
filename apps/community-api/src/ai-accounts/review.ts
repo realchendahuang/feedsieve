@@ -115,8 +115,8 @@ export async function listAiReviews(env: Cloudflare.Env): Promise<AiReviewQueue>
       score: v?.score ?? null,
       confirmed: v?.confirmed === 1,
       judged_at: v?.judgedAt ?? null,
-      ai_count: Number(t?.ai ?? 0),
-      human_count: Number(t?.human ?? 0),
+      ai_count: t?.ai ?? 0,
+      human_count: t?.human ?? 0,
       appeals: appealRows
         .filter((a) => a.handle.toLowerCase() === handle)
         .map((a) => ({ id: a.id, statement: a.statement, created_at: a.createdAt })),
@@ -140,9 +140,7 @@ async function recentOutcomes(env: Cloudflare.Env): Promise<Record<string, numbe
       and(like(trainingSampleUsage.identity, 'ai-outcome:%'), gte(trainingSampleUsage.day, since)),
     )
     .groupBy(trainingSampleUsage.identity);
-  return Object.fromEntries(
-    rows.map((r) => [r.identity.slice('ai-outcome:'.length), Number(r.total)]),
-  );
+  return Object.fromEntries(rows.map((r) => [r.identity.slice('ai-outcome:'.length), r.total]));
 }
 
 export async function decideAiReview(

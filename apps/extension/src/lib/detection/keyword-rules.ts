@@ -1,15 +1,15 @@
-import { createMentionInvitationRule, MENTION_INVITATION_RULE_ID } from './mention-invitation';
-import { LOCAL_CAMPAIGN_RULE_ID } from './local-campaign';
-import { createProfileInvitationRule, PROFILE_INVITATION_RULE_ID } from './profile-invitation';
-import { loadRuntimeData } from '../platform/runtime-data';
 import fs from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { HeuristicRule } from '@feedsieve/detector';
+import { loadRuntimeData } from '../platform/runtime-data';
 import {
   BUNDLED_KEYWORD_PACK_CATALOG,
   type KeywordPackCatalog,
   type KeywordPackRule,
 } from './keyword-packs';
+import { LOCAL_CAMPAIGN_RULE_ID } from './local-campaign';
+import { createMentionInvitationRule, MENTION_INVITATION_RULE_ID } from './mention-invitation';
+import { createProfileInvitationRule, PROFILE_INVITATION_RULE_ID } from './profile-invitation';
 
 /** 用户可控制的本地关键词规则。命中只显示黄框，不自动拉黑，也不回灌社区。 */
 export type KeywordCategory = string;
@@ -37,7 +37,7 @@ export interface ActiveKeywordRule {
   id: string;
   source: 'official' | 'custom';
   phrase: string;
-  category: KeywordCategory | 'other';
+  category: KeywordCategory;
   terms?: string[];
   maxGap?: number;
 }
@@ -585,11 +585,6 @@ export function subscribeKeywordRules(
     if (areaName !== 'local' || !changes[STORAGE_KEY]) return;
     onChange(normalizeSettings((changes[STORAGE_KEY] as { newValue?: unknown }).newValue));
   };
-  browser.storage.onChanged.addListener(
-    listener as Parameters<typeof browser.storage.onChanged.addListener>[0],
-  );
-  return () =>
-    browser.storage.onChanged.removeListener(
-      listener as Parameters<typeof browser.storage.onChanged.removeListener>[0],
-    );
+  browser.storage.onChanged.addListener(listener);
+  return () => browser.storage.onChanged.removeListener(listener);
 }

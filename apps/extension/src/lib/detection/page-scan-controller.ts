@@ -184,7 +184,7 @@ export class PageScanController {
 
   /** 全量清理回收节点：之后没人再扫到的 handle 也要能随 GC 释放。 */
   private pruneDisconnected(): void {
-    for (const handle of [...this.articlesByHandle.keys()]) this.pruneHandle(handle);
+    for (const handle of Array.from(this.articlesByHandle.keys())) this.pruneHandle(handle);
   }
 
   /** 只清 revision 快照（提取失败路径：索引保持）。 */

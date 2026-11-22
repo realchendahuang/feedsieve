@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import { detectorConfig } from '@feedsieve/detector';
+import { describe, expect, it } from 'vitest';
 import type { RuntimeCommunity } from '../community/community-store';
 import { runDetectionPipeline } from './detection-pipeline';
 

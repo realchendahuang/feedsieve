@@ -16,9 +16,9 @@ import { normalizeHandle, isApplicationKind } from '@feedsieve/shared';
 import { and, desc, eq, inArray, lt, sql } from 'drizzle-orm';
 import { getDb } from './db/client';
 import { applicationIpUsage, applications, emailCodes } from './db/schema';
+import { emailCodeHash, generateEmailCode } from './lib/email-code';
 import { hashIp, sha256Hex } from './lib/hash';
 import { stripNul } from './lib/sql';
-import { emailCodeHash, generateEmailCode } from './lib/email-code';
 import { hashEmail, isValidEmail, normalizeEmail, sendMail } from './mail';
 
 export const APPLICATION = {
@@ -47,7 +47,8 @@ export interface ApplicationResult {
 }
 
 type ApplicationCallResult<T> =
-  { ok: true; value: T } | { ok: false; httpStatus: 400 | 404 | 409 | 429 | 503; error: string };
+  | { ok: true; value: T }
+  | { ok: false; httpStatus: 400 | 404 | 409 | 429 | 503; error: string };
 
 interface ApplicationRow {
   id: number;
@@ -84,7 +85,7 @@ export async function submitApplication(
   }
   if (!ip) return { ok: false, httpStatus: 400, error: 'ip_missing' };
 
-  const email = normalizeEmail(b.email as string);
+  const email = normalizeEmail(b.email);
   const emailHash = await hashEmail(env.INSTALLATION_SALT, email);
   const ipHash = await hashIp(env.INSTALLATION_SALT, ip);
   const now = Math.floor(Date.now() / 1000);
@@ -213,7 +214,7 @@ export async function verifyApplication(
   if (typeof code !== 'string' || !/^\d{6}$/.test(code)) {
     return { ok: false, httpStatus: 400, error: 'invalid_code' };
   }
-  const emailHash = await hashEmail(env.INSTALLATION_SALT, normalizeEmail(b.email as string));
+  const emailHash = await hashEmail(env.INSTALLATION_SALT, normalizeEmail(b.email));
   const now = Math.floor(Date.now() / 1000);
 
   const db = getDb(env);

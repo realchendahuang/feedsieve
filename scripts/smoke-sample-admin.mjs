@@ -1,9 +1,9 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { createServer } from 'node:http';
+import { resolve, extname } from 'node:path';
 /** Isolated rendered admin acceptance; all API responses are fixtures, never production writes. */
 import { chromium } from 'playwright';
-import { createServer } from 'node:http';
-import { readFileSync } from 'node:fs';
-import { resolve, extname } from 'node:path';
-import assert from 'node:assert/strict';
 const dir = resolve('apps/admin/dist');
 const server = createServer((req, res) => {
   const path = req.url?.startsWith('/assets/') ? req.url : '/index.html';
@@ -19,7 +19,7 @@ const server = createServer((req, res) => {
     res.end();
   }
 });
-await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+await new Promise((done) => server.listen(0, '127.0.0.1', done));
 const origin = `http://127.0.0.1:${server.address().port}`;
 const browser = await chromium.launch({ headless: true });
 try {
@@ -79,7 +79,7 @@ try {
   await page.getByLabel('复核依据').fill('引用广告并否定招揽，不是作者自己的广告。');
   await page.getByRole('button', { name: '保存复核', exact: true }).click();
   await page.getByText('已审：正常', { exact: true }).waitFor();
-  assert.deepEqual(saved.tags.sort(), ['negation', 'quotation']);
+  assert.deepEqual(saved.tags.toSorted(), ['negation', 'quotation']);
   assert.equal(saved.verdict, 'normal');
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: '导出样本', exact: true }).click();

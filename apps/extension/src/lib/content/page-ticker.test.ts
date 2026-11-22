@@ -34,11 +34,11 @@ function harness() {
     },
   });
   const fire = (): void => {
-    for (const fn of [...timers.values()]) fn();
+    for (const fn of Array.from(timers.values())) fn();
   };
   const setHidden = (hidden: boolean): void => {
     state.hidden = hidden;
-    for (const fn of [...(events.get('visibilitychange') ?? [])]) fn();
+    for (const fn of Array.from(events.get('visibilitychange') ?? [])) fn();
   };
   return { ticker, fire, setHidden, timers };
 }

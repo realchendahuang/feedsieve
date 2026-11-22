@@ -1,16 +1,26 @@
 {
   "name": "feedsieve",
   "private": true,
-  "type": "module",
-  "packageManager": "pnpm@11.11.0",
-  "engines": {
-    "node": ">=22"
+  "homepage": "https://feedsieve.win",
+  "bugs": {
+    "url": "https://github.com/realchendahuang/feedsieve/issues"
   },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/realchendahuang/feedsieve.git"
+  },
+  "type": "module",
   "scripts": {
     "prepare": "git config core.hooksPath .githooks || true",
-    "lint": "eslint .",
-    "format": "prettier --write .",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
     "typecheck": "pnpm -r run typecheck",
+    "typecheck:strict": "pnpm -r run typecheck:strict",
+    "typecheck:tsc": "pnpm -r run typecheck:tsc",
+    "check": "pnpm typecheck && pnpm lint && pnpm fmt:check && pnpm test",
     "test": "vitest run",
     "test:watch": "vitest",
     "keyword-packs:build": "node scripts/build-keyword-packs.mjs",
@@ -26,25 +36,17 @@
     "variant-tables:build": "node scripts/build-variant-tables.mjs"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "eslint": "^10.9.1",
-    "eslint-plugin-react-hooks": "^7.1.1",
-    "globals": "^17.11.0",
     "happy-dom": "^21.0.4",
     "opencc-js": "^1.4.2",
+    "oxfmt": "^0.79.0",
+    "oxlint": "^1.94.0",
     "playwright": "1.62.1",
-    "prettier": "^3.9.6",
+    "tsrs": "7.1.0-beta.tsrs4",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.68.0",
     "vitest": "^4.1.12"
   },
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/realchendahuang/feedsieve.git"
+  "engines": {
+    "node": ">=22"
   },
-  "homepage": "https://feedsieve.win",
-  "bugs": {
-    "url": "https://github.com/realchendahuang/feedsieve/issues"
-  }
+  "packageManager": "pnpm@11.11.0"
 }

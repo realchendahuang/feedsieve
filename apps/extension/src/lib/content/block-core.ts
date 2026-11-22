@@ -1,18 +1,17 @@
-import { createTrainingSample } from '../community/training-samples';
+import { resolveUserIdByHandle, runNativeAction } from '@feedsieve/x-adapter';
 /**
  * 单账号拉黑核心链路：blockOne（顺手拉黑 / 徽章拉黑 / 手动拉黑 / 队列执行共用的
  * 唯一实现）与「是否给社区加票」的唯一口径 communityVoteForDetection。
  */
-
-import { resolveUserIdByHandle, runNativeAction } from '@feedsieve/x-adapter';
 import { markBlocked } from '../community/blocked-accounts';
-import { getUserId, saveUserIds } from '../community/user-ids';
-import { contributeBlocks } from '../community/contribute';
 import { requestOfficialPauseCheck } from '../community/community-settings';
-import { bumpStat } from '../stats/local-stats';
-import { bumpDaily } from '../stats/daily-stats';
+import { contributeBlocks } from '../community/contribute';
+import { createTrainingSample } from '../community/training-samples';
+import { getUserId, saveUserIds } from '../community/user-ids';
 import { STRICT_HANDLE_RE } from '../platform/xhr-bridge-guard';
 import { currentAccountKey, recordSafetyEvent } from '../queue/block-safety';
+import { bumpDaily } from '../stats/daily-stats';
+import { bumpStat } from '../stats/local-stats';
 import type { ContentState, PageMarkedAccount } from './page-state';
 
 /**

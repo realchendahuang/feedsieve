@@ -207,7 +207,7 @@ describe('CleanView 滚动位置', () => {
             killSwitchActive: false,
             communityEligible: [],
             communityLoading: false,
-        onOpenSettings: vi.fn(),
+            onOpenSettings: vi.fn(),
           }),
         );
       });

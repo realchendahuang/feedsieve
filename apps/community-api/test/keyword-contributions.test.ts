@@ -1,11 +1,11 @@
 import { env } from 'cloudflare:workers';
 import { and, count, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import worker from '../src/index';
 import { getDb } from '../src/db/client';
 import { adminKeywordRules, keywordContributions } from '../src/db/schema';
-import { hashIp } from '../src/lib/hash';
+import worker from '../src/index';
 import { decideKeywordContributions, listKeywordContributions } from '../src/keyword-contributions';
+import { hashIp } from '../src/lib/hash';
 
 const ORIGIN = 'https://api.example.com';
 const TEST_SALT = 'override-salt-0123456789';
@@ -36,11 +36,16 @@ describe('keyword contributions', () => {
   it('校验安装 ID 与短语载荷', async () => {
     expect((await postContributions('short', ['广告'])).status).toBe(400);
     expect((await postContributions('install-contribute-a', [])).status).toBe(400);
-    expect((await postContributions('install-contribute-a', new Array(21).fill('x'))).status).toBe(
-      413,
-    );
+    expect(
+      (
+        await postContributions(
+          'install-contribute-a',
+          Array.from({ length: 21 }, () => 'x'),
+        )
+      ).status,
+    ).toBe(413);
     const bad = await postContributions('install-contribute-a', ['   ']);
-    const badBody = (await bad.json()) as { results: { status: string; error?: string }[] };
+    const badBody = await bad.json<{ results: { status: string; error?: string }[] }>();
     expect(badBody.results[0]).toMatchObject({
       status: 'rejected',
       error: 'invalid_phrase_length',
@@ -50,7 +55,7 @@ describe('keyword contributions', () => {
   it('记录、去重幂等，待审列表可见', async () => {
     const first = await postContributions('install-contribute-1', ['同城上门', '  同城上门  ']);
     expect(first.status).toBe(200);
-    const body = (await first.json()) as { results: { phrase: string; status: string }[] };
+    const body = await first.json<{ results: { phrase: string; status: string }[] }>();
     expect(body.results).toEqual([
       { phrase: '同城上门', status: 'recorded' },
       { phrase: '同城上门', status: 'duplicate' },
@@ -58,13 +63,13 @@ describe('keyword contributions', () => {
 
     // 重试整个请求保持幂等：同样短语第二次是 duplicate
     const retry = await postContributions('install-contribute-1', ['同城上门']);
-    expect(((await retry.json()) as { results: { status: string }[] }).results[0]?.status).toBe(
+    expect((await retry.json<{ results: { status: string }[] }>()).results[0]?.status).toBe(
       'duplicate',
     );
 
     // 同一 norm_phrase 不同安装是两个独立贡献行
     const second = await postContributions('install-contribute-2', [' 同城上门 ']);
-    expect(((await second.json()) as { results: { status: string }[] }).results[0]?.status).toBe(
+    expect((await second.json<{ results: { status: string }[] }>()).results[0]?.status).toBe(
       'recorded',
     );
 
@@ -108,7 +113,14 @@ describe('keyword contributions', () => {
       ).status,
     ).toBe(400);
     // 网页单次上限 10
-    expect((await postWebContributions('198.51.100.1', new Array(11).fill('x'))).status).toBe(413);
+    expect(
+      (
+        await postWebContributions(
+          '198.51.100.1',
+          Array.from({ length: 11 }, () => 'x'),
+        )
+      ).status,
+    ).toBe(413);
 
     // 与 lib/hash.ts 域分离口径一致：网页 IP 走独立 ip: 前缀哈希
     const webKey = `web-${await hashIp(TEST_SALT, '198.51.100.1')}`;

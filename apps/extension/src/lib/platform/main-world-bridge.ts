@@ -28,7 +28,6 @@
  */
 
 import { mayMatchEndpoint, parseXApiResponse } from '@feedsieve/x-adapter';
-import { createParseThrottle, type ParseThrottle } from './xhr-bridge-guard';
 import {
   graphqlOperation,
   isScheduledOperation,
@@ -37,6 +36,7 @@ import {
   requestVariables,
   type ScheduledEvent,
 } from '../compose/scheduled-parse';
+import { createParseThrottle, type ParseThrottle } from './xhr-bridge-guard';
 
 /** MAIN world 解析结果事件（ISOLATED world 的 xhr-ingest 消费）。 */
 export const XHR_ITEMS_EVENT = 'feedsieve:xhr-items';
@@ -97,6 +97,11 @@ export interface MainWorldBridgeOptions {
   now?: () => number;
   maxBodyBytes?: number;
   maxInflightParses?: number;
+}
+
+function isJsonContentType(contentType: string): boolean {
+  const lower = contentType.toLowerCase();
+  return lower.includes('json') || lower.includes('text/plain');
 }
 
 /**
@@ -196,11 +201,6 @@ export function installMainWorldBridge(options: MainWorldBridgeOptions): MainWor
     } catch {
       noteError();
     }
-  };
-
-  const isJsonContentType = (contentType: string): boolean => {
-    const lower = contentType.toLowerCase();
-    return lower.includes('json') || lower.includes('text/plain');
   };
 
   /** 只读一次 body：两条解析链路共用同一个克隆；任何不满足条件的响应直接跳过。 */
@@ -315,7 +315,7 @@ export function installMainWorldBridge(options: MainWorldBridgeOptions): MainWor
     const current = win.fetch;
     if (typeof current === 'function') {
       originalFetch = current;
-      const wrapped: BridgeFetch = function patchedFetch(
+      const wrapped: BridgeFetch = function wrapFetch(
         this: unknown,
         ...args: Parameters<BridgeFetch>
       ) {
@@ -326,7 +326,7 @@ export function installMainWorldBridge(options: MainWorldBridgeOptions): MainWor
           inspectFetchResponse(response, args);
           return response;
         });
-      } as BridgeFetch;
+      };
       patchedFetch = wrapped;
       win.fetch = wrapped;
     }
@@ -392,7 +392,7 @@ export function installMainWorldBridge(options: MainWorldBridgeOptions): MainWor
     const send = proto?.send;
     if (proto && typeof send === 'function') {
       originalSend = send;
-      const wrapped: BridgeSend = function patchedSend(this: XMLHttpRequest, ...args: unknown[]) {
+      const wrapped: BridgeSend = function wrapSend(this: XMLHttpRequest, ...args: unknown[]) {
         try {
           const requestBody = typeof args[0] === 'string' ? args[0] : null;
           this.addEventListener('load', () => {

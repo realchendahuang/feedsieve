@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { UiLanguage } from '../../../src/lib/platform/i18n';
 import { OFFICIAL_MUTE_PACKS } from '../../../src/lib/mute/block-packs';
 import { MUTE_COPY } from '../../../src/lib/mute/copy';
 import {
@@ -19,6 +18,7 @@ import {
   type MuteSettings,
   type NativeMute,
 } from '../../../src/lib/mute/mute-store';
+import type { UiLanguage } from '../../../src/lib/platform/i18n';
 import {
   AppIcon,
   EmptyState,
@@ -78,7 +78,12 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
   const loadedRef = useRef(false);
 
   const callTab = useCallback(
-    async (message: { type: string; keyword?: string; ids?: string[]; force?: boolean }): Promise<NativeReply> => {
+    async (message: {
+      type: string;
+      keyword?: string;
+      ids?: string[];
+      force?: boolean;
+    }): Promise<NativeReply> => {
       try {
         const reply = (await sendToXPage(message)) as NativeReply | undefined | null;
         // 弹窗没开在 x.com 页面、内容脚本没就绪、或别的扩展抢答时可能拿回空值：
@@ -102,8 +107,11 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
   const refresh = useCallback(
     async (force = false): Promise<void> => {
       setLoadState({ status: 'loading' });
-      const reply = await callTab({ type: 'feedsieve:mute-list', ...(force ? { force: true } : {}) });
-      const list = Array.isArray(reply.data) ? (reply.data as NativeMute[]) : null;
+      const reply = await callTab({
+        type: 'feedsieve:mute-list',
+        ...(force ? { force: true } : {}),
+      });
+      const list = Array.isArray(reply.data) ? reply.data : null;
       if (!reply.ok || !list) {
         setLoadState({ status: 'error', code: reply.code ?? 'native_unavailable' });
         return;
@@ -144,7 +152,8 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
 
   function errorText(code: string | null): string | null {
     if (!code) return null;
-    if (code === 'invalid' || code === 'invalid_keyword' || code === 'invalid_ids') return t.invalid;
+    if (code === 'invalid' || code === 'invalid_keyword' || code === 'invalid_ids')
+      return t.invalid;
     if (code === 'daily_limit') return t.dailyLimit;
     if (code === 'no_tab') return t.noTab;
     if (code === 'auth_required' || code === 'missing_csrf') return t.authRequired;
@@ -260,7 +269,7 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
     }
     const current = settingsRef.current;
     if (current && !current.consented) {
-      setPendingWrite({ run: async () => void (await performEdit(rule, normalized)) });
+      setPendingWrite({ run: async () => await performEdit(rule, normalized) });
       return;
     }
     await performEdit(rule, normalized);
@@ -276,7 +285,9 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
     }
     const created = await callTab({ type: 'feedsieve:mute-create', keyword: normalized });
     const mute =
-      created.ok && created.data && !Array.isArray(created.data) ? created.data.mute ?? null : null;
+      created.ok && created.data && !Array.isArray(created.data)
+        ? (created.data.mute ?? null)
+        : null;
     if (!mute) {
       setBusy(null);
       notify(created.code ? errorText(created.code) : t.writeFailed);
@@ -319,11 +330,11 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
     [rules, mineQueryKey],
   );
 
-  const libraryWords = useMemo(
-    () => OFFICIAL_MUTE_PACKS.flatMap((entry) => entry.words),
-    [],
+  const libraryWords = useMemo(() => OFFICIAL_MUTE_PACKS.flatMap((entry) => entry.words), []);
+  const addedKeys = useMemo(
+    () => new Set(rules.map((rule) => mutePhraseKey(rule.phrase))),
+    [rules],
   );
-  const addedKeys = useMemo(() => new Set(rules.map((rule) => mutePhraseKey(rule.phrase))), [rules]);
   const addedTotal = libraryWords.filter((word) => addedKeys.has(mutePhraseKey(word))).length;
 
   const filteredPacks = useMemo(() => {
@@ -445,7 +456,11 @@ export default function MuteView({ language, notify, sendToXPage }: MuteViewProp
             <strong>{t.consentTitle}</strong>
             <p>{t.consentBody}</p>
             <div className="mute-consent-actions">
-              <button type="button" className="secondary-button" onClick={() => void confirmConsent()}>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => void confirmConsent()}
+              >
                 {t.consentOk}
               </button>
               <button type="button" className="text-button" onClick={() => setPendingWrite(null)}>

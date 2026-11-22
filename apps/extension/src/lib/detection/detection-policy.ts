@@ -1,5 +1,5 @@
-import type { Detection } from '@feedsieve/detector';
 import type { CommunityEntry, MarkStrength } from '@feedsieve/community-lists';
+import type { Detection } from '@feedsieve/detector';
 
 /**
  * 扩展端的安全政策层。Detector 保留纯逻辑和规则单测，

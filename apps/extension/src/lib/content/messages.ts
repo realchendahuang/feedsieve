@@ -7,18 +7,18 @@
  */
 
 import { readCapabilities } from '@feedsieve/x-adapter';
-import { runUnblockBatch } from '../queue/run-unblock-batch';
-import { sanitizeQueueItem } from '../queue/block-queue-store';
 import { syncLocalLabels } from '../community/contribute';
-import type { QueueSupervisor } from '../queue/queue-supervisor';
 import type { FollowingSync } from '../community/following-sync';
-import type { ContentState } from './page-state';
-import { communityVoteForDetection } from './block-core';
 import { isManualReportReason } from '../community/manual-reasons';
+import { scrollToPost } from '../insight/locate';
+import { sanitizeQueueItem } from '../queue/block-queue-store';
+import type { QueueSupervisor } from '../queue/queue-supervisor';
+import { runUnblockBatch } from '../queue/run-unblock-batch';
+import { communityVoteForDetection } from './block-core';
 import type { BlockQueueRunner } from './block-queue';
 import type { ManualActions } from './manual-actions';
+import type { ContentState } from './page-state';
 import type { ProfileFill } from './profile-fill';
-import { scrollToPost } from '../insight/locate';
 
 export function registerContentMessageHandlers(deps: {
   state: ContentState;
@@ -60,7 +60,11 @@ export function registerContentMessageHandlers(deps: {
     // 一键拉黑 = 当前页面黄框账号（支持剔除误删项后仅拉黑选中的账号）
     if (type === 'feedsieve:run-page-block') {
       const targetHandles = Array.isArray(msg?.handles)
-        ? new Set(msg.handles.map((h: string) => String(h).toLowerCase()))
+        ? new Set(
+            msg.handles
+              .filter((h): h is string => typeof h === 'string')
+              .map((h) => h.toLowerCase()),
+          )
         : null;
       const toBlock = [...state.pageMarked.values()].filter(
         (item) => !targetHandles || targetHandles.has(item.handle.toLowerCase()),

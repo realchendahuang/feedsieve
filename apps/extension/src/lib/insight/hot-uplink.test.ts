@@ -79,7 +79,7 @@ describe('createHotUplink', () => {
       ]),
     );
     expect(post).toHaveBeenCalledTimes(1);
-    expect(post.mock.calls[0]![0]!.observations.map((item) => item.post_id)).toEqual(['1']);
+    expect(post.mock.calls[0]![0].observations.map((item) => item.post_id)).toEqual(['1']);
     // 不火的不留着等下一轮
     expect(uplink.pendingCount()).toBe(0);
   });
@@ -114,7 +114,7 @@ describe('createHotUplink', () => {
     const restarted = make();
     await restarted.observe(observation([{ postId: '2', handle: 'alice' }]));
     expect(post).toHaveBeenCalledTimes(1);
-    expect(post.mock.calls[0]![0]!.observations.map((item) => item.post_id)).toEqual(['1', '2']);
+    expect(post.mock.calls[0]![0].observations.map((item) => item.post_id)).toEqual(['1', '2']);
   });
 
   it('waits 15 minutes between uploads by default', () => {
@@ -137,7 +137,7 @@ describe('createHotUplink', () => {
       ]),
     );
     expect(post).toHaveBeenCalledTimes(1);
-    const body = post.mock.calls[0]![0]!;
+    const body = post.mock.calls[0]![0];
     expect(body.session_id).toBe('session-0000000000000001');
     expect(body.observations).toEqual([
       {
@@ -178,7 +178,7 @@ describe('createHotUplink', () => {
     advance(HOT_UPLOAD_INTERVAL_MS);
     await uplink.observe(observation([{ postId: '2', handle: 'alice' }]));
     expect(post).toHaveBeenCalledTimes(2);
-    const views = post.mock.calls[1]![0]!.observations.map((item) => item.views);
+    const views = post.mock.calls[1]![0].observations.map((item) => item.views);
     expect(views).toEqual([3_000, 1_000]);
   });
 
@@ -243,7 +243,7 @@ describe('createHotUplink', () => {
         authors: [],
       },
     ]);
-    expect(post.mock.calls[1]![0]!.observations.map((item) => item.post_id)).toEqual(['3']);
+    expect(post.mock.calls[1]![0].observations.map((item) => item.post_id)).toEqual(['3']);
   });
 
   it('does not resend a post whose numbers barely moved', async () => {

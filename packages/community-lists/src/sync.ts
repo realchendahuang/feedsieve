@@ -1,6 +1,5 @@
-import { sha256Hex } from './hash';
 import { applySnapshotDelta } from './delta';
-import { parseManifest, parseSnapshotBody } from './validate';
+import { sha256Hex } from './hash';
 import {
   buildSigningMessage,
   compareManifestVersions,
@@ -9,6 +8,7 @@ import {
 } from './signing';
 import { TRUSTED_KEYS } from './trusted-keys';
 import type { StoredSnapshot } from './types';
+import { parseManifest, parseSnapshotBody } from './validate';
 
 /**
  * 两次检查 manifest 的最短间隔。服务端每 30 分钟可能发一版，版本变了优先走增量

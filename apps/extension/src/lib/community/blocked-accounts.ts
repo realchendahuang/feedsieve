@@ -1,13 +1,12 @@
 import type { TrainingSample } from '@feedsieve/shared';
-import { enqueueTrainingSample } from './training-samples';
+import { enqueueStorageWrite } from '../platform/storage-mutex';
 /**
  * 已拉黑账号记录（一键撤销 Unblock 的数据源）。
  *
  * 拉黑成功即记账（顺手拉黑 / 一键拉黑共用同一入口），popup 据此提供撤销入口。
  * chrome.storage.local 持久化。
  */
-
-import { enqueueStorageWrite } from '../platform/storage-mutex';
+import { enqueueTrainingSample } from './training-samples';
 
 export interface BlockedAccount {
   handle: string;

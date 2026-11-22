@@ -1,3 +1,4 @@
+import type { AiVerdict } from '@feedsieve/shared';
 /**
  * AI 味检测的后台端：转发判定 / 投票 / 查询到福滤娃服务器，同步社区 AI 号名单，
  * 并在本机记下查过谁、自己测出的结果和投过的票。
@@ -10,7 +11,6 @@
  */
 import { COMMUNITY_API_BASE, getCommunitySettings } from '../community/community-settings';
 import { getInstallationId } from '../community/contribute';
-import type { AiVerdict } from '@feedsieve/shared';
 import type { ReplyEvidence } from './evidence';
 
 export const AI_JUDGE_MESSAGE = 'feedsieve:ai-judge';
@@ -171,7 +171,7 @@ async function writeRecord(handle: string, patch: Partial<AiCheckRecord>): Promi
 }
 
 export async function listAiChecks(): Promise<AiCheckRecord[]> {
-  return Object.values(await readRecords()).sort((a, b) => b.judgedAt - a.judgedAt);
+  return Object.values(await readRecords()).toSorted((a, b) => b.judgedAt - a.judgedAt);
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -215,7 +215,8 @@ export async function judgeAiAccount(
       return { ok: false, error: 'network' };
     }
     const json = (await response.json().catch(() => null)) as
-      (AiJudgeValue & { error?: string; verdict?: string }) | null;
+      | (AiJudgeValue & { error?: string; verdict?: string })
+      | null;
     if (response.status === 202) {
       await sleep(3_000);
       continue;
@@ -310,7 +311,8 @@ export async function syncAiList(
   fetchImpl: Fetch = fetch,
 ): Promise<AiListState | null> {
   const stored = (await browser.storage.local.get(AI_LIST_KEY))[AI_LIST_KEY] as
-    AiListState | undefined;
+    | AiListState
+    | undefined;
   if (!force && stored && Date.now() - stored.at < LIST_SYNC_MS) return stored;
   if (!(await getCommunitySettings()).autoContribute) return stored ?? null;
   try {

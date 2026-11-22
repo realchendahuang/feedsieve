@@ -71,14 +71,20 @@ describe('静音词镜像与首次写入确认', () => {
     const first = addMuteRule({ consented: true, rules: [] }, native('11', '加微信'), 5);
     expect(first.ok).toBe(true);
     if (!first.ok) return;
-    expect(first.settings.rules[0]).toMatchObject({ phrase: '加微信', nativeId: '11', createdAt: 5 });
+    expect(first.settings.rules[0]).toMatchObject({
+      phrase: '加微信',
+      nativeId: '11',
+      createdAt: 5,
+    });
 
     const duplicate = addMuteRule(first.settings, native('12', '加微信'));
     expect(duplicate).toEqual({ ok: false, code: 'duplicate' });
 
     const full = {
       consented: true,
-      rules: Array.from({ length: MAX_MUTE_RULES }, (_, index) => rule(String(index), `词${index}`, String(index))),
+      rules: Array.from({ length: MAX_MUTE_RULES }, (_, index) =>
+        rule(String(index), `词${index}`, String(index)),
+      ),
     };
     expect(addMuteRule(full, native('999', '新词'))).toEqual({ ok: false, code: 'limit' });
   });
@@ -90,7 +96,10 @@ describe('静音词镜像与首次写入确认', () => {
   });
 
   it('删除只移除指定条目', () => {
-    const settings = { consented: true, rules: [rule('a', '加微信', '11'), rule('b', '刷单', '12')] };
+    const settings = {
+      consented: true,
+      rules: [rule('a', '加微信', '11'), rule('b', '刷单', '12')],
+    };
     expect(removeMuteRule(settings, 'a').rules.map((entry) => entry.phrase)).toEqual(['刷单']);
   });
 });

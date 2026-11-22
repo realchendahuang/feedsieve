@@ -115,9 +115,7 @@ export function evenWindows(perDay: number, startHour: number, endHour: number):
     // 够分：每小时最多一条，尽量摊开
     for (let i = 0; i < wanted; i += 1) {
       const index =
-        wanted === 1
-          ? Math.floor((span - 1) / 2)
-          : Math.round((i * (span - 1)) / (wanted - 1));
+        wanted === 1 ? Math.floor((span - 1) / 2) : Math.round((i * (span - 1)) / (wanted - 1));
       if (index >= 0 && index < span) counts[index] = 1;
     }
   } else {
@@ -176,10 +174,11 @@ export function parseClockEnd(value: unknown): number | null {
   return parseClock(value);
 }
 
+const padTwo = (n: number): string => String(n).padStart(2, '0');
+
 export function formatClock(minutes: number): string {
   if (minutes >= 24 * 60) return '24:00';
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
+  return `${padTwo(Math.floor(minutes / 60))}:${padTwo(minutes % 60)}`;
 }
 
 function normalizeDays(value: unknown, fallback: number[] = ALL_DAYS): number[] {
@@ -190,7 +189,7 @@ function normalizeDays(value: unknown, fallback: number[] = ALL_DAYS): number[] 
         (day): day is number => Number.isInteger(day) && Number(day) >= 0 && Number(day) <= 6,
       ),
     ),
-  ].sort((a, b) => a - b);
+  ].toSorted((a, b) => a - b);
 }
 
 function clampPerHour(value: unknown, fallback = 1): number {
@@ -239,7 +238,7 @@ function windowsFromTimes(times: unknown, days: number[]): ScheduleWindow[] {
     counts.set(hour, (counts.get(hour) ?? 0) + 1);
   }
   return [...counts.entries()]
-    .sort(([a], [b]) => a - b)
+    .toSorted(([a], [b]) => a - b)
     .map(([hour, count], index) => ({
       id: `migrated-${index + 1}`,
       days: [...days],
@@ -281,7 +280,7 @@ export function normalizeScheduleSettings(raw: unknown): ScheduleSettings {
   }
   const value = raw as Record<string, unknown>;
   const bool = (key: keyof ScheduleSettings): boolean =>
-    typeof value[key] === 'boolean' ? (value[key] as boolean) : (base[key] as boolean);
+    typeof value[key] === 'boolean' ? value[key] : (base[key] as boolean);
   const fallbackDays = normalizeDays(value.days);
   const usedIds = new Set<string>();
   const windows = Array.isArray(value.windows)
@@ -324,7 +323,7 @@ function mergeRanges(ranges: Array<{ start: number; end: number }>): Array<{
   start: number;
   end: number;
 }> {
-  const sorted = [...ranges].sort((a, b) => a.start - b.start);
+  const sorted = [...ranges].toSorted((a, b) => a.start - b.start);
   const out: Array<{ start: number; end: number }> = [];
   for (const range of sorted) {
     const last = out[out.length - 1];
@@ -497,7 +496,7 @@ export function capacityDays(
     day.used += plan.used;
     day.free += plan.free;
   }
-  return [...days.values()].sort((a, b) => a.at - b.at);
+  return [...days.values()].toSorted((a, b) => a.at - b.at);
 }
 
 /** 今天起 days 天的容量汇总。 */
@@ -534,10 +533,10 @@ export function recommendTimes(
     scored.push({ slot, score: values.reduce((a, b) => a + b, 0) / values.length });
   }
   return scored
-    .sort((a, b) => b.score - a.score || a.slot - b.slot)
+    .toSorted((a, b) => b.score - a.score || a.slot - b.slot)
     .slice(0, count)
     .map(({ slot }) => formatClock((slot * slotHours + 1) * 60))
-    .sort();
+    .toSorted();
 }
 
 const WEEKDAYS: Record<UiLanguage, string[]> = {

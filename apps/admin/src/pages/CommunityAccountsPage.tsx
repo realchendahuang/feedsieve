@@ -1,7 +1,7 @@
-import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -157,7 +157,9 @@ export function CommunityAccountsPage() {
                     <TableCell className="text-right">
                       <span
                         className={
-                          entry.listed ? 'font-bold text-emerald-600 dark:text-emerald-400' : 'font-semibold'
+                          entry.listed
+                            ? 'font-bold text-emerald-600 dark:text-emerald-400'
+                            : 'font-semibold'
                         }
                       >
                         {entry.net_votes}
@@ -170,7 +172,9 @@ export function CommunityAccountsPage() {
                       {entry.allowed_installs}
                     </TableCell>
                     <TableCell className="text-right text-muted-foreground">
-                      {entry.fingerprints > 0 || entry.domains > 0 ? `${entry.fingerprints}/${entry.domains}` : '—'}
+                      {entry.fingerprints > 0 || entry.domains > 0
+                        ? `${entry.fingerprints}/${entry.domains}`
+                        : '—'}
                     </TableCell>
                     <TableCell className="text-right text-muted-foreground">
                       {entry.hit_networks_7d > 0 ? entry.hit_networks_7d : '—'}

@@ -7,17 +7,17 @@
  * 在任何 publish / cron 评估前调用，保证快照只反映最新逻辑。
  */
 import { sql } from 'drizzle-orm';
-import { getDb, retryOnConflict } from './db/client';
-import { compareText } from './lib/sql';
-import { accounts } from './db/schema';
-import { POLICY } from './reports';
 import { syncConsensusEvents, type ConsensusTransition } from './consensus-events';
+import { getDb, retryOnConflict } from './db/client';
+import { accounts } from './db/schema';
 import {
   computeConsensusV2,
   EMPTY_CONSENSUS_V2_INPUT,
   loadAllConsensusV2Inputs,
   type CommunityAggregates,
 } from './lib/consensus-v2';
+import { compareText } from './lib/sql';
+import { POLICY } from './reports';
 
 /** 单条 UPDATE … FROM (VALUES …) 的行数上限：5 个参数 × 1000 行，远低于 PG 的 65535 */
 const UPDATE_CHUNK = 1000;

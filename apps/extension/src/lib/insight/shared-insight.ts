@@ -144,7 +144,7 @@ export function createSharedInsight(deps: {
           typeof (item as InsightObservation).at === 'number' &&
           Number.isFinite((item as InsightObservation).at),
       )
-      .sort((a, b) => a.at - b.at);
+      .toSorted((a, b) => a.at - b.at);
     for (const observation of valid) {
       const at = Math.min(current, Math.max(current - MAX_OBSERVATION_AGE_MS, observation.at));
       for (const author of Array.isArray(observation.authors) ? observation.authors : []) {

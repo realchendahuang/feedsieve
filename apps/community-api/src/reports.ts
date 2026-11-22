@@ -1,12 +1,12 @@
-import { validateReport, type ValidReport } from './lib/validate';
-import { hashIp } from './lib/hash';
-import { collateC, compareText, stripNul } from './lib/sql';
-import { nowSeconds, utcToday } from './lib/time';
-import { healthUpsertQuery, type HealthObservation } from './lib/account-health';
-import { installationHash, refreshAccountsFromLabels, type AccountLabel } from './labels';
 import { asc, and, eq, inArray, sql } from 'drizzle-orm';
 import { getDb, retryOnConflict } from './db/client';
 import { accounts, activeLabels, installations, reports } from './db/schema';
+import { installationHash, refreshAccountsFromLabels, type AccountLabel } from './labels';
+import { healthUpsertQuery, type HealthObservation } from './lib/account-health';
+import { hashIp } from './lib/hash';
+import { collateC, compareText, stripNul } from './lib/sql';
+import { nowSeconds, utcToday } from './lib/time';
+import { validateReport, type ValidReport } from './lib/validate';
 
 // Phase D 会把阈值搬进 policy 文件/端点；先集中放这里
 export const POLICY = {
@@ -90,7 +90,8 @@ export interface ReportResult {
 }
 
 export type ProcessBatchResult =
-  { ok: true; results: ReportResult[] } | { ok: false; httpStatus: 400 | 413 | 429; error: string };
+  | { ok: true; results: ReportResult[] }
+  | { ok: false; httpStatus: 400 | 413 | 429; error: string };
 
 export async function processReportBatch(
   env: Cloudflare.Env,
@@ -448,9 +449,11 @@ export async function processReportBatch(
   }
 
   // 多行写入按主键排序：并发请求以相同顺序锁行，避免死锁
-  const sortedReportRows = [...reportRows.values()].sort((a, b) => compareText(a.handle, b.handle));
-  accountRows.sort((a, b) => compareText(a.handle, b.handle));
-  labelRows.sort((a, b) => compareText(a.handle, b.handle));
+  const sortedReportRows = [...reportRows.values()].toSorted((a, right) =>
+    compareText(a.handle, right.handle),
+  );
+  accountRows.sort((a, right) => compareText(a.handle, right.handle));
+  labelRows.sort((a, right) => compareText(a.handle, right.handle));
 
   const writes = [
     sql`r AS ${db

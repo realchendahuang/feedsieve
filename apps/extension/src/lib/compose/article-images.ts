@@ -59,11 +59,12 @@ export function matchImageFiles(
   const result: Array<number | null> = slots.map((slot) => {
     const key = slot.name.trim().toLowerCase();
     const candidates = byName.get(key);
-    while (candidates?.length) {
-      const index = candidates.shift()!;
-      if (!used.has(index)) {
-        used.add(index);
-        return index;
+    if (candidates) {
+      for (let index = candidates.shift(); index !== undefined; index = candidates.shift()) {
+        if (!used.has(index)) {
+          used.add(index);
+          return index;
+        }
       }
     }
     return null;
@@ -259,7 +260,11 @@ async function insertOne(
   host.dispatchEvent(
     new ClipboardEvent('paste', { clipboardData: transfer, bubbles: true, cancelable: true }),
   );
-  const uploaded = await waitFor(() => countImageBlocks(host) > beforeImages, uploadTimeoutMs, sleep);
+  const uploaded = await waitFor(
+    () => countImageBlocks(host) > beforeImages,
+    uploadTimeoutMs,
+    sleep,
+  );
   if (!uploaded) throw new Error('image_not_inserted');
   await sleep(300);
   // 上传完成后 React 会重渲染，旧节点可能已经不在文档里：按占位编号重新找

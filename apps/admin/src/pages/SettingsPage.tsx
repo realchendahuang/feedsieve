@@ -14,14 +14,14 @@ export function SettingsPage() {
       ) : me.isError ? (
         <LoadError error={me.error} onRetry={() => void me.refetch()} />
       ) : (
-        <Card className="mt-6 max-w-md shadow-xs border-border/80">
+        <Card className="mt-6 max-w-md border-border/80 shadow-xs">
           <CardContent className="flex items-center gap-3.5 p-5">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+            <div className="flex size-10 items-center justify-center rounded-xl border border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400">
               <Mail className="size-5" />
             </div>
             <div className="space-y-0.5">
               <div className="text-xs font-medium text-muted-foreground">维护者身份</div>
-              <div className="break-all text-sm font-semibold text-foreground">{me.data.email}</div>
+              <div className="text-sm font-semibold break-all text-foreground">{me.data.email}</div>
             </div>
           </CardContent>
         </Card>

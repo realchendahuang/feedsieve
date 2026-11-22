@@ -7,6 +7,9 @@
  */
 
 import { runQueuedBlocks } from '@feedsieve/block-queue';
+import { requestOfficialPauseCheck } from '../community/community-settings';
+import type { BlockEvidence } from '../detection/detection-pipeline';
+import { hideCellsSoon } from '../platform/remove-tweets';
 import {
   createPersistentBlockQueue,
   getPersistentBlockQueue,
@@ -23,12 +26,9 @@ import {
   shouldPauseForQuota,
   type SafetyPreset,
 } from '../queue/block-safety';
-import { requestOfficialPauseCheck } from '../community/community-settings';
-import { hideCellsSoon } from '../platform/remove-tweets';
-import type { BlockEvidence } from '../detection/detection-pipeline';
-import type { ContentState } from './page-state';
 import type { BlockCore } from './block-core';
 import type { BlockedFold } from './blocked-fold';
+import type { ContentState } from './page-state';
 
 /** 安全档位缓存：每次账本读取时刷新，供 successPaceMs 同步注入（runner 的 pace 是同步函数）。 */
 let safetyPresetCache: SafetyPreset = DEFAULT_PRESET;

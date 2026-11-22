@@ -70,7 +70,7 @@ function asCandidate(
   return {
     ...row,
     net_votes: row.report_count - row.rescue_count,
-    sources: row.sources ? row.sources.split(',').filter(Boolean).sort() : [],
+    sources: row.sources ? row.sources.split(',').filter(Boolean).toSorted() : [],
   };
 }
 

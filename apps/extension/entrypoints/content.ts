@@ -1,68 +1,67 @@
 import { noteTimelineHealth } from '@feedsieve/x-adapter';
-import { PageScanController, type ScanCallbacks } from '../src/lib/detection/page-scan-controller';
-import { createKeywordHeuristics, subscribeKeywordRules } from '../src/lib/detection/keyword-rules';
+import { createAiCheckCore } from '../src/lib/ai-check/ai-check-core';
+import { subscribeCommunity } from '../src/lib/community/community-settings';
+import { createFollowingSync } from '../src/lib/community/following-sync';
+import { createRuleHitQueue, RULE_HIT_MESSAGE } from '../src/lib/community/rule-hit-uplink';
+import type { createArticleHelper } from '../src/lib/compose/article-editor';
+import { createComposeSchedule } from '../src/lib/compose/compose-schedule';
+import { getScheduleSettings, subscribeScheduleSettings } from '../src/lib/compose/schedule-store';
+import { createBadges } from '../src/lib/content/badges';
+import { createBlockOne } from '../src/lib/content/block-core';
+import { createBlockQueueRunner } from '../src/lib/content/block-queue';
+import { createBlockedFold } from '../src/lib/content/blocked-fold';
+import { createCleanUi } from '../src/lib/content/clean-ui';
+import { loadLazyModule } from '../src/lib/content/lazy-chunk';
+import { createManualActions } from '../src/lib/content/manual-actions';
+import { registerContentMessageHandlers } from '../src/lib/content/messages';
+import { registerMuteMessageHandlers } from '../src/lib/content/mute-messages';
+import { createContentState, MARK_ATTRIBUTE } from '../src/lib/content/page-state';
+import { createPageTicker } from '../src/lib/content/page-ticker';
+import { createProfileFill, PROFILE_FILL_UPDATED_MESSAGE } from '../src/lib/content/profile-fill';
+import { createScan } from '../src/lib/content/scan';
+import { createSearchAssistTrigger } from '../src/lib/content/search-assist-trigger';
+import { createStateSync } from '../src/lib/content/state-sync';
+import { ensureStyles, unwatchPageTheme } from '../src/lib/content/styles';
+import { createXhrIngest } from '../src/lib/content/xhr-ingest';
 import {
   KEYWORD_PACK_SYNC_MAX_AGE_MS,
   subscribeKeywordPackCatalog,
 } from '../src/lib/detection/keyword-packs';
-import { subscribeCommunity } from '../src/lib/community/community-settings';
-import { createFollowingSync } from '../src/lib/community/following-sync';
-import { createQueueSupervisor, QUEUE_HEARTBEAT_KEY } from '../src/lib/queue/queue-supervisor';
-import {
-  getPersistentBlockQueue,
-  setPersistentBlockQueue,
-  type PersistentBlockQueueState,
-} from '../src/lib/queue/block-queue-store';
-import { getUiLanguage, subscribeUiLanguage } from '../src/lib/platform/i18n';
-import { createContentState, MARK_ATTRIBUTE } from '../src/lib/content/page-state';
-import { cancelPendingHides, HIDDEN_TWEET_CELL_ATTRIBUTE } from '../src/lib/platform/remove-tweets';
-import { createBlockOne } from '../src/lib/content/block-core';
-import { createBlockedFold } from '../src/lib/content/blocked-fold';
-import { createManualActions } from '../src/lib/content/manual-actions';
-import { createBadges } from '../src/lib/content/badges';
-import { createScan } from '../src/lib/content/scan';
-import { createRuleHitQueue, RULE_HIT_MESSAGE } from '../src/lib/community/rule-hit-uplink';
-import { createStateSync } from '../src/lib/content/state-sync';
-import { createXhrIngest } from '../src/lib/content/xhr-ingest';
-import { createBlockQueueRunner } from '../src/lib/content/block-queue';
-import { registerContentMessageHandlers } from '../src/lib/content/messages';
-import { ensureStyles, unwatchPageTheme } from '../src/lib/content/styles';
-import { createTweetStatsStore } from '../src/lib/insight/tweet-stats';
-import { createInsightUplink, INSIGHT_OBSERVE_MESSAGE } from '../src/lib/insight/shared-insight';
-import {
-  createReadTracker,
-  INSIGHT_READ_MESSAGE,
-  INSIGHT_SEEN_MESSAGE,
-} from '../src/lib/insight/read-tracker';
+import { createKeywordHeuristics, subscribeKeywordRules } from '../src/lib/detection/keyword-rules';
+import { PageScanController, type ScanCallbacks } from '../src/lib/detection/page-scan-controller';
 import { createInsightDecorations } from '../src/lib/insight/decorations';
-import { createProfileInsight } from '../src/lib/insight/profile-insight';
-import { createShareMenu } from '../src/lib/insight/share-menu';
-import { createCleanUi } from '../src/lib/content/clean-ui';
-import { createPageTicker } from '../src/lib/content/page-ticker';
-import { createProfileFill, PROFILE_FILL_UPDATED_MESSAGE } from '../src/lib/content/profile-fill';
-import { createSearchAssistTrigger } from '../src/lib/content/search-assist-trigger';
-import { registerMuteMessageHandlers } from '../src/lib/content/mute-messages';
-import {
-  getSearchAssistEnabled,
-  subscribeSearchAssistEnabled,
-} from '../src/lib/settings/search-assist';
-import { createAiCheckCore } from '../src/lib/ai-check/ai-check-core';
-import { createComposeSchedule } from '../src/lib/compose/compose-schedule';
-import type { createArticleHelper } from '../src/lib/compose/article-editor';
-import { loadLazyModule } from '../src/lib/content/lazy-chunk';
-import { getScheduleSettings, subscribeScheduleSettings } from '../src/lib/compose/schedule-store';
 import {
   getInsightBadgesEnabled,
   getProfileLineEnabled,
   subscribeInsightBadges,
   subscribeProfileLineEnabled,
 } from '../src/lib/insight/insight-settings';
+import { createProfileInsight } from '../src/lib/insight/profile-insight';
+import {
+  createReadTracker,
+  INSIGHT_READ_MESSAGE,
+  INSIGHT_SEEN_MESSAGE,
+} from '../src/lib/insight/read-tracker';
+import { createShareMenu } from '../src/lib/insight/share-menu';
+import { createInsightUplink, INSIGHT_OBSERVE_MESSAGE } from '../src/lib/insight/shared-insight';
+import { createTweetStatsStore } from '../src/lib/insight/tweet-stats';
+import { getUiLanguage, subscribeUiLanguage } from '../src/lib/platform/i18n';
+import { cancelPendingHides, HIDDEN_TWEET_CELL_ATTRIBUTE } from '../src/lib/platform/remove-tweets';
+import {
+  getPersistentBlockQueue,
+  setPersistentBlockQueue,
+} from '../src/lib/queue/block-queue-store';
+import { createQueueSupervisor, QUEUE_HEARTBEAT_KEY } from '../src/lib/queue/queue-supervisor';
 import {
   DEFAULT_MODULE_SETTINGS,
   getModuleSettings,
   subscribeModuleSettings,
   type ModuleSettings,
 } from '../src/lib/settings/module-settings';
+import {
+  getSearchAssistEnabled,
+  subscribeSearchAssistEnabled,
+} from '../src/lib/settings/search-assist';
 
 /**
  * Phase 1 content script：黄框标注（带理由）。一键拉黑 = 当前页面全部黄框账号。
@@ -350,7 +349,7 @@ export default defineContentScript({
     const queueRunner = createBlockQueueRunner({ state, blockOne, fold, runQueue });
     const queueSupervisor = createQueueSupervisor({
       load: getPersistentBlockQueue,
-      save: (session) => setPersistentBlockQueue(session as PersistentBlockQueueState),
+      save: (session) => setPersistentBlockQueue(session),
       readHeartbeat: async () => {
         const result = await browser.storage.local.get(QUEUE_HEARTBEAT_KEY);
         return result[QUEUE_HEARTBEAT_KEY];

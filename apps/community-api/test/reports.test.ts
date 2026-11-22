@@ -1,9 +1,9 @@
 import { env } from 'cloudflare:workers';
+import { sql, type SQL } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
+import { getDb } from '../src/db/client';
 import worker from '../src/index';
 import { hashInstallationId, hashIp } from '../src/lib/hash';
-import { sql, type SQL } from 'drizzle-orm';
-import { getDb } from '../src/db/client';
 
 const ORIGIN = 'https://api.example.com';
 
@@ -29,7 +29,7 @@ async function postOne(installationId: string, handle: string) {
     reports: [report(handle)],
   });
   expect(res.status).toBe(200);
-  const body = (await res.json()) as { results: { status: string }[] };
+  const body = await res.json<{ results: { status: string }[] }>();
   return body.results[0];
 }
 
@@ -97,9 +97,9 @@ describe('POST /v1/reports', () => {
       ],
     });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = await res.json<{
       results: { handle: string; status: string; error?: string }[];
-    };
+    }>();
     expect(body.results[0]!.status).toBe('recorded');
     expect(body.results[1]!.status).toBe('rejected');
     expect(body.results[1]!.error).toBe('invalid_handle');
@@ -117,7 +117,7 @@ describe('POST /v1/reports', () => {
       ],
     });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { results: { status: string; error?: string }[] };
+    const body = await res.json<{ results: { status: string; error?: string }[] }>();
     expect(body.results[0]!.status).toBe('recorded');
     expect(body.results[1]!.status).toBe('recorded');
     expect(body.results[2]!.status).toBe('rejected');
@@ -145,7 +145,7 @@ describe('POST /v1/reports', () => {
       ],
     });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { results: { status: string; error?: string }[] };
+    const body = await res.json<{ results: { status: string; error?: string }[] }>();
     expect(body.results.map((item) => [item.status, item.error])).toEqual([
       ['recorded', undefined],
       ['rejected', 'invalid_rule_id'],
@@ -178,7 +178,7 @@ describe('POST /v1/reports', () => {
       ],
     });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { results: { status: string; error?: string }[] };
+    const body = await res.json<{ results: { status: string; error?: string }[] }>();
     expect(body.results[0]!.status).toBe('recorded');
     for (let i = 1; i <= 10; i += 1) {
       expect(body.results[i]!.status).toBe('rejected');
@@ -213,7 +213,7 @@ describe('POST /v1/reports', () => {
       ],
     });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { results: { status: string; error?: string }[] };
+    const body = await res.json<{ results: { status: string; error?: string }[] }>();
     expect(body.results[0]!.status).toBe('recorded');
     // 去掉 NUL 后为空的文本与纯空白一样按非法拒收
     expect(body.results[1]).toMatchObject({ status: 'rejected', error: 'invalid_tweet_text' });
@@ -307,7 +307,7 @@ describe('POST /v1/reports', () => {
       ],
     });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { results: { status: string; error?: string }[] };
+    const body = await res.json<{ results: { status: string; error?: string }[] }>();
     expect(body.results.map((r) => r.status)).toEqual([
       'recorded',
       'duplicate',

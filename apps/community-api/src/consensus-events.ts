@@ -5,8 +5,8 @@
  */
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { getDb } from './db/client';
-import { compareText } from './lib/sql';
 import { consensusEvents, maintainerWhitelist } from './db/schema';
+import { compareText } from './lib/sql';
 
 /** 单条语句的 handle 上限：远低于 PG 的 65535 参数上限，真遇到几千个账号时才会分片 */
 const CHUNK = 1000;

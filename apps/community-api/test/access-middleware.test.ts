@@ -13,8 +13,8 @@
  */
 
 import { env } from 'cloudflare:workers';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { SignJWT } from 'jose';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import worker from '../src/index';
 
 const ADMIN_ORIGIN = 'https://admin.feedsieve-api.chendahuang.com';
@@ -34,10 +34,10 @@ let fixture: JwtFixture | undefined;
 let originalFetch: typeof fetch;
 
 async function generateEs256KeyPair(): Promise<CryptoKeyPair> {
-  return (await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, [
+  return await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, [
     'sign',
     'verify',
-  ])) as CryptoKeyPair;
+  ]);
 }
 
 async function signToken(email: string, audience: string, key: CryptoKey): Promise<string> {
@@ -52,10 +52,7 @@ async function signToken(email: string, audience: string, key: CryptoKey): Promi
 
 // workers-types 的 generateKey 对 Ed25519 重载返回联合类型，显式断言成密钥对
 async function generateEd25519KeyPair(): Promise<CryptoKeyPair> {
-  return (await crypto.subtle.generateKey({ name: 'Ed25519' }, true, [
-    'sign',
-    'verify',
-  ])) as CryptoKeyPair;
+  return await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
 }
 
 beforeAll(async () => {
@@ -75,7 +72,9 @@ beforeAll(async () => {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      if (String(input).startsWith(JWKS_PREFIX)) {
+      const url =
+        typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+      if (url.startsWith(JWKS_PREFIX)) {
         return new Response(JSON.stringify(jwks), {
           headers: { 'content-type': 'application/json' },
         });
@@ -180,7 +179,10 @@ describe('管理后台 Access 中间件（HTTP 层）', () => {
 describe('管理端 CSRF 防线（POST）', () => {
   // 有效身份 + 通过 CSRF 门槛的最小探针：/api/admin/accounts 空对象体 →
   // 到达处理器后 400 invalid_handle；只要不是 403/415/401 即证明两道门都放行了。
-  async function adminPost(headers: Record<string, string>, envOverride?: Cloudflare.Env): Promise<Response> {
+  async function adminPost(
+    headers: Record<string, string>,
+    envOverride?: Cloudflare.Env,
+  ): Promise<Response> {
     return worker.fetch(
       new Request(`${ADMIN_ORIGIN}/api/admin/accounts`, {
         method: 'POST',

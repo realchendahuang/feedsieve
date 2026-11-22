@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
 import type { WhitelistEntry } from '@feedsieve/community-lists';
+import { useEffect, useState } from 'react';
 import {
   addAllowlist,
   getAllowlist,

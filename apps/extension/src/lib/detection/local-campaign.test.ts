@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { LocalCampaignIndex, hasLongNumericPayload, campaignTemplate } from './local-campaign';
 import { normalizeKeywordPhrase } from './keyword-rules';
+import { LocalCampaignIndex, hasLongNumericPayload, campaignTemplate } from './local-campaign';
 
 const a = '那一夜你👆没有拒绝我🤝🏻 💪不是人机 7 🌲';
 const b = '那一夜你👆没有拒绝我😁 🧒不是人机 🌲 😚';

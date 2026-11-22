@@ -1,6 +1,6 @@
-import { flushTrainingSamples } from '../src/lib/community/training-samples';
-import { registerRuntimeDataWorker } from '../src/lib/platform/runtime-data';
 import { syncCommunitySnapshot } from '@feedsieve/community-lists';
+import { handleAiCheckMessage } from '../src/lib/ai-check/client';
+import { upgradeBlockedCategories } from '../src/lib/community/category-upgrade';
 import {
   COMMUNITY_API_BASE,
   COMMUNITY_SYNC_SOURCES,
@@ -8,34 +8,53 @@ import {
   snapshotStore,
   type OfficialPauseState,
 } from '../src/lib/community/community-store';
-import { flushContributions } from '../src/lib/community/contribute';
-import { upgradeBlockedCategories } from '../src/lib/community/category-upgrade';
+import { getCommunitySettings } from '../src/lib/community/community-store';
 import { createCommunityWorker } from '../src/lib/community/community-worker';
+import { flushContributions } from '../src/lib/community/contribute';
+import { getSelfHandle } from '../src/lib/community/following-allowlist';
+import { createRuleHitUplink, RULE_HIT_MESSAGE } from '../src/lib/community/rule-hit-uplink';
+import { flushTrainingSamples } from '../src/lib/community/training-samples';
 import { syncKeywordPackCatalog } from '../src/lib/detection/keyword-packs';
-import { getChromeSidePanel } from '../src/lib/platform/sidepanel';
-import { openProfilePanel, profileHandleFromUrl } from '../src/lib/platform/profile-panel';
+import { createHotUplink } from '../src/lib/insight/hot-uplink';
+import { createProfileCatalog, PROFILE_UPDATED_MESSAGE } from '../src/lib/insight/profile-catalog';
+import { summarizeProfile } from '../src/lib/insight/profile-summary';
+import { createProfileSync } from '../src/lib/insight/profile-sync';
+import { INSIGHT_READ_MESSAGE, INSIGHT_SEEN_MESSAGE } from '../src/lib/insight/read-tracker';
 import {
   createSharedInsight,
   INSIGHT_OBSERVE_MESSAGE,
   INSIGHT_UPDATED_MESSAGE,
 } from '../src/lib/insight/shared-insight';
-import { createHotUplink } from '../src/lib/insight/hot-uplink';
-import { createRuleHitUplink, RULE_HIT_MESSAGE } from '../src/lib/community/rule-hit-uplink';
-import { createProfileSync } from '../src/lib/insight/profile-sync';
 import { isHotSort } from '../src/lib/insight/tweet-stats';
-import { createProfileCatalog, PROFILE_UPDATED_MESSAGE } from '../src/lib/insight/profile-catalog';
-import { summarizeProfile } from '../src/lib/insight/profile-summary';
 import { PANEL_VIEW_REQUEST_KEY } from '../src/lib/platform/panel-route';
-import { INSIGHT_READ_MESSAGE, INSIGHT_SEEN_MESSAGE } from '../src/lib/insight/read-tracker';
-import { getSelfHandle } from '../src/lib/community/following-allowlist';
-import { getCommunitySettings } from '../src/lib/community/community-store';
+import { openProfilePanel, profileHandleFromUrl } from '../src/lib/platform/profile-panel';
+import { registerRuntimeDataWorker } from '../src/lib/platform/runtime-data';
+import { getChromeSidePanel } from '../src/lib/platform/sidepanel';
 import {
   DEFAULT_MODULE_SETTINGS,
   getModuleSettings,
   subscribeModuleSettings,
   type ModuleSettings,
 } from '../src/lib/settings/module-settings';
-import { handleAiCheckMessage } from '../src/lib/ai-check/client';
+
+function sync(force: boolean) {
+  return syncCommunitySnapshot({
+    sources: COMMUNITY_SYNC_SOURCES,
+    fetchImpl: (url) => fetch(url),
+    store: snapshotStore,
+    force,
+  });
+}
+
+function syncKeywordPacks(force: boolean) {
+  return syncKeywordPackCatalog({ force });
+}
+
+function flushContributionsWithUpgrade(): Promise<void> {
+  return upgradeBlockedCategories()
+    .catch(() => 0)
+    .then(() => flushContributions());
+}
 
 export default defineBackground(() => {
   registerRuntimeDataWorker();
@@ -172,9 +191,7 @@ export default defineBackground(() => {
     if (msg?.type === INSIGHT_OBSERVE_MESSAGE) {
       // 热帖 / 主页都关掉时不再收观测；只剩其中一个时只跑对应的链路
       if (!modules.hot && !modules.profile) return Promise.resolve({ recorded: 0 });
-      const recorded = modules.hot
-        ? sharedInsight.ingest(msg.observations)
-        : Promise.resolve(0);
+      const recorded = modules.hot ? sharedInsight.ingest(msg.observations) : Promise.resolve(0);
       return recorded.then((count) => {
         if (modules.hot) {
           void hotUplink.observe(msg.observations).catch(() => undefined);
@@ -220,12 +237,12 @@ export default defineBackground(() => {
       // sidePanel.open 要求用户手势；内容脚本转发过来时部分浏览器不认。
       // 打不开就退回独立小窗口；手机上连 windows API 都没有，最后退回标签页，
       // 不能静默失败（见 profile-panel.ts）
-      const handle = profileHandleFromUrl(sender.tab?.url);
+      const profileHandle = profileHandleFromUrl(sender.tab?.url);
       return openProfilePanel({
         sidePanel: getChromeSidePanel(),
         windowId: sender.tab?.windowId,
         popupUrl: browser.runtime.getURL(
-          `/popup.html?view=profile&panel=1${handle ? `&handle=${encodeURIComponent(handle)}` : ''}`,
+          `/popup.html?view=profile&panel=1${profileHandle ? `&handle=${encodeURIComponent(profileHandle)}` : ''}`,
         ),
         openWindow: (url) =>
           browser.windows.create({ url, type: 'popup', width: 420, height: 680 }),
@@ -324,25 +341,6 @@ export default defineBackground(() => {
     return state;
   }
 
-  function sync(force: boolean) {
-    return syncCommunitySnapshot({
-      sources: COMMUNITY_SYNC_SOURCES,
-      fetchImpl: (url) => fetch(url),
-      store: snapshotStore,
-      force,
-    });
-  }
-
-  function syncKeywordPacks(force: boolean) {
-    return syncKeywordPackCatalog({ force });
-  }
-
-  function flushContributionsWithUpgrade(): Promise<void> {
-    return upgradeBlockedCategories()
-      .catch(() => 0)
-      .then(() => flushContributions());
-  }
-
   browser.runtime.onInstalled.addListener((details) => {
     console.info(`[FeedSieve] installed (${details.reason})`);
     // 安装/更新后立即拉一次社区快照和关键词包。
@@ -395,7 +393,10 @@ export default defineBackground(() => {
       }));
     }
     if (msg?.type === 'feedsieve:labels-sync') {
-      return flushContributionsWithUpgrade().then(() => ({ type: 'feedsieve:labels-sync', ok: true }));
+      return flushContributionsWithUpgrade().then(() => ({
+        type: 'feedsieve:labels-sync',
+        ok: true,
+      }));
     }
     return undefined;
   });

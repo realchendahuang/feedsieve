@@ -339,6 +339,35 @@ export function isPromoteButton(el: Element): boolean {
   return true;
 }
 
+function ensureStyle(): void {
+  if (document.getElementById(STYLE_ID)) return;
+  const style = document.createElement('style');
+  style.id = STYLE_ID;
+  style.textContent = CLEAN_UI_CSS;
+  document.documentElement.appendChild(style);
+}
+
+function clearMarks(): void {
+  for (const el of document.querySelectorAll(`[${MARK_ATTR}]`)) el.removeAttribute(MARK_ATTR);
+}
+
+function applyFlags(next: UiSettings): void {
+  const root = document.documentElement;
+  const on = next.cleanUi;
+  root.toggleAttribute('data-fs-clean-font', on && next.systemFont);
+  root.toggleAttribute('data-fs-clean-promoted', on && next.hidePromoted);
+  root.toggleAttribute('data-fs-clean-promote-btn', on && next.hidePromoteButton);
+  root.toggleAttribute('data-fs-clean-grok', on && next.hideGrok);
+  root.toggleAttribute('data-fs-clean-foryou', on && next.hideForYou);
+  root.toggleAttribute('data-fs-clean-trends', on && next.hideTrends);
+  root.toggleAttribute('data-fs-clean-follow', on && next.hideWhoToFollow);
+  root.toggleAttribute('data-fs-clean-premium', on && next.dimPremiumReplies);
+}
+
+function mark(el: Element | null, kind: string): void {
+  el?.setAttribute(MARK_ATTR, kind);
+}
+
 export function createCleanUi() {
   let settings: UiSettings | null = null;
   let observer: MutationObserver | null = null;
@@ -349,14 +378,6 @@ export function createCleanUi() {
   let lastPath = location.pathname;
   let unsubscribe: (() => void) | null = null;
   let active = false;
-
-  function ensureStyle(): void {
-    if (document.getElementById(STYLE_ID)) return;
-    const style = document.createElement('style');
-    style.id = STYLE_ID;
-    style.textContent = CLEAN_UI_CSS;
-    document.documentElement.appendChild(style);
-  }
 
   /**
    * 观察器跟着总开关走：默认关闭时不该常驻监听整页 DOM，设置关掉后也不该继续跑，
@@ -374,23 +395,6 @@ export function createCleanUi() {
     if (!observing) return;
     observer?.disconnect();
     observing = false;
-  }
-
-  function clearMarks(): void {
-    for (const el of document.querySelectorAll(`[${MARK_ATTR}]`)) el.removeAttribute(MARK_ATTR);
-  }
-
-  function applyFlags(next: UiSettings): void {
-    const root = document.documentElement;
-    const on = next.cleanUi;
-    root.toggleAttribute('data-fs-clean-font', on && next.systemFont);
-    root.toggleAttribute('data-fs-clean-promoted', on && next.hidePromoted);
-    root.toggleAttribute('data-fs-clean-promote-btn', on && next.hidePromoteButton);
-    root.toggleAttribute('data-fs-clean-grok', on && next.hideGrok);
-    root.toggleAttribute('data-fs-clean-foryou', on && next.hideForYou);
-    root.toggleAttribute('data-fs-clean-trends', on && next.hideTrends);
-    root.toggleAttribute('data-fs-clean-follow', on && next.hideWhoToFollow);
-    root.toggleAttribute('data-fs-clean-premium', on && next.dimPremiumReplies);
   }
 
   function scan(): void {
@@ -556,10 +560,6 @@ export function createCleanUi() {
         }
       }
     }
-  }
-
-  function mark(el: Element | null, kind: string): void {
-    el?.setAttribute(MARK_ATTR, kind);
   }
 
   function schedule(): void {

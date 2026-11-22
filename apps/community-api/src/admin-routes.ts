@@ -5,11 +5,7 @@
  * index.ts 用动态 import 挂载，扩展上报的启动路径不再求值。
  */
 
-import { loadRuleFeedback, RULE_HIT_POLICY, setRuleMute } from './rule-hits';
 import { asc, count, desc, eq, sql } from 'drizzle-orm';
-import { getDb } from './db/client';
-import { accounts, rescues } from './db/schema';
-import { listTrainingSamples, reviewTrainingSample } from './training-samples';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import {
@@ -22,23 +18,6 @@ import {
   rollbackAdminAccountRelease,
   saveAdminAccountDraft,
 } from './admin-accounts';
-import { isAdminHost } from './lib/hosts';
-import { publicErrorCode } from './lib/public-error';
-import { decideApplication, listApplications } from './applications';
-import { listCommunityCandidates } from './candidates';
-import { listVerifiedAccounts } from './verified';
-import { getDashboardMetrics } from './dashboard';
-import {
-  disableAdminKeyword,
-  getKeywordDetectorConfig,
-  importKeywordCatalog,
-  listAdminKeywords,
-  publishAdminKeywords,
-  rollbackAdminKeywordRelease,
-  saveAdminKeywordPack,
-  saveAdminKeywordRule,
-  setKeywordDetectorConfig,
-} from './keyword-admin';
 import {
   agentKeyIdentity,
   agentStatus,
@@ -59,10 +38,31 @@ import {
   readAgentKeywordDetectorConfig,
   writeAgentKeywordDetectorConfig,
 } from './agent-admin';
-import { MAINTAINER_CATEGORIES } from './maintainer-blocklist';
 import { decideAiReview, listAiReviews } from './ai-accounts/review';
+import { decideApplication, listApplications } from './applications';
+import { listCommunityCandidates } from './candidates';
+import { getDashboardMetrics } from './dashboard';
+import { getDb } from './db/client';
+import { accounts, rescues } from './db/schema';
+import {
+  disableAdminKeyword,
+  getKeywordDetectorConfig,
+  importKeywordCatalog,
+  listAdminKeywords,
+  publishAdminKeywords,
+  rollbackAdminKeywordRelease,
+  saveAdminKeywordPack,
+  saveAdminKeywordRule,
+  setKeywordDetectorConfig,
+} from './keyword-admin';
 import { decideKeywordContributions, listKeywordContributions } from './keyword-contributions';
+import { isAdminHost } from './lib/hosts';
+import { publicErrorCode } from './lib/public-error';
+import { MAINTAINER_CATEGORIES } from './maintainer-blocklist';
+import { loadRuleFeedback, RULE_HIT_POLICY, setRuleMute } from './rule-hits';
 import { markSnapshotDirty } from './snapshot';
+import { listTrainingSamples, reviewTrainingSample } from './training-samples';
+import { listVerifiedAccounts } from './verified';
 
 type AdminContext = Context<{
   Bindings: Cloudflare.Env;
@@ -378,7 +378,8 @@ export function createAdminApp() {
   });
   app.post('/api/admin/keywords/detector-config', async (c) => {
     const body = (await c.req.json().catch(() => undefined)) as
-      { detector_config?: unknown } | undefined;
+      | { detector_config?: unknown }
+      | undefined;
     const value = body?.detector_config;
     if (
       !body ||

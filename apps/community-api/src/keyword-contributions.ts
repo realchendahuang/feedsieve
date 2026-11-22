@@ -37,7 +37,7 @@ export interface ProcessKeywordContributionInput {
   ip: string | null;
 }
 
-function normPhrase(value: string): string {
+function normalizePhrase(value: string): string {
   return value
     .trim()
     .normalize('NFKC')
@@ -51,7 +51,7 @@ function validatedPhrase(raw: unknown): { display: string; norm: string } | { er
   if (display.length < 1 || display.length > MAX_PHRASE_LENGTH) {
     return { error: 'invalid_phrase_length' };
   }
-  return { display, norm: normPhrase(display) };
+  return { display, norm: normalizePhrase(display) };
 }
 
 export async function processKeywordContributions(
@@ -168,7 +168,7 @@ export async function processKeywordContributions(
     .values(
       // 按主键排序：并发批量写入以相同顺序锁行，避免死锁
       [...valid]
-        .sort((a, b) => compareText(a.norm, b.norm))
+        .toSorted((left, right) => compareText(left.norm, right.norm))
         .map((item) => ({
           normPhrase: item.norm,
           installationId: submissionKey,

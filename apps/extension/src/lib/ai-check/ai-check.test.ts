@@ -1,3 +1,4 @@
+import { flavorOf } from '@feedsieve/shared';
 import { describe, expect, it } from 'vitest';
 import {
   medianGap,
@@ -8,7 +9,6 @@ import {
   snowflakeMs,
   type PageTweet,
 } from './evidence';
-import { flavorOf } from '@feedsieve/shared';
 import { formatGap } from './share-card';
 
 const EPOCH = 1288834974657;

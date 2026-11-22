@@ -26,12 +26,18 @@ assert.ok(manifest.background?.scripts?.length > 0, 'background.scripts 为空')
 assert.equal(manifest.background?.service_worker, undefined);
 
 // Firefox 没有 sidePanel：权限里不能有，界面走 sidebar_action。
-assert.deepEqual([...manifest.permissions].sort(), ['storage', 'unlimitedStorage']);
+assert.deepEqual(
+  [...manifest.permissions].toSorted((a, b) => (a < b ? -1 : a > b ? 1 : 0)),
+  ['storage', 'unlimitedStorage'],
+);
 assert.equal(manifest.permissions.includes('sidePanel'), false);
 assert.equal(manifest.side_panel, undefined);
 assert.equal(manifest.sidebar_action?.default_panel, 'popup.html');
 
-assert.deepEqual([...manifest.host_permissions].sort(), ['https://x.com/*']);
+assert.deepEqual(
+  [...manifest.host_permissions].toSorted((a, b) => (a < b ? -1 : a > b ? 1 : 0)),
+  ['https://x.com/*'],
+);
 
 const bridge = manifest.content_scripts?.find((script) => script.world === 'MAIN');
 assert.ok(bridge, 'MAIN world 网络桥缺失');

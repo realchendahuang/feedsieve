@@ -79,14 +79,12 @@ function setup(options: { allowed?: boolean; responses?: unknown[] } = {}) {
       return new Response(JSON.stringify(body), { status: 200 });
     },
   );
-  const post = vi.fn(async (body: {
-    session_id: string;
-    posts: ProfileUploadPost[];
-    accounts: unknown[];
-  }) => {
-    uploads.push(body);
-    return new Response('{}', { status: 200 });
-  });
+  const post = vi.fn(
+    async (body: { session_id: string; posts: ProfileUploadPost[]; accounts: unknown[] }) => {
+      uploads.push(body);
+      return new Response('{}', { status: 200 });
+    },
+  );
   const sync = createProfileSync({
     catalog,
     isAllowed: async () => options.allowed ?? true,
@@ -163,7 +161,7 @@ describe('createProfileSync', () => {
     await vi.runAllTimersAsync();
     expect(t.fetchProfile).toHaveBeenCalledWith('alice', undefined);
     const entry = (await t.catalog.get('alice'))!;
-    expect(Object.keys(entry.posts).sort()).toEqual(['10', '11']);
+    expect(Object.keys(entry.posts).toSorted()).toEqual(['10', '11']);
     expect(entry.posts['10']).toMatchObject({ views: 9_000, syncedViews: 9_000, synced: true });
     expect(entry.account.followers).toBe(5_000);
     expect(entry.remoteCursor).toBe('1_10');
@@ -225,7 +223,7 @@ describe('createProfileSync', () => {
     await t.observe({ tweets: [tweet('12', 50)] });
     expect(t.uploads).toHaveLength(1);
     // 10 号服务端已经有 9000，本机 9100 只涨了 1%：不报
-    expect(t.uploads[0]!.posts.map((p) => p.post_id).sort()).toEqual(['11', '12']);
+    expect(t.uploads[0]!.posts.map((p) => p.post_id).toSorted()).toEqual(['11', '12']);
     expect(t.uploads[0]!.posts.every((p) => p.handle === 'alice')).toBe(true);
 
     // 报过的不再报；涨够了再报

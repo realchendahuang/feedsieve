@@ -1,3 +1,4 @@
+import type { CatalogEntry, CatalogPost, RemoteProfile } from './profile-catalog';
 /**
  * 主页洞察众包（后台 service worker）：一个人看过的博主帖子，其他人打开同一个主页时直接拿到。
  *
@@ -20,7 +21,6 @@
  * 拉取时服务端能看到 IP 和博主 handle（不记录对应关系），受保护的博主不去拉。
  */
 import type { InsightObservation } from './shared-insight';
-import type { CatalogEntry, CatalogPost, RemoteProfile } from './profile-catalog';
 
 export const PROFILE_UPLOAD_INTERVAL_MS = 5 * 60 * 1000;
 export const PROFILE_FIRST_UPLOAD_DELAY_MS = 60 * 1000;
@@ -160,7 +160,8 @@ export function createProfileSync(deps: ProfileSyncDeps) {
     loaded ??= (deps.stateStorage?.get(STATE_KEY) ?? Promise.resolve<Record<string, unknown>>({}))
       .then((result) => {
         const state = result[STATE_KEY] as
-          { lastUploadAt?: unknown; pending?: unknown } | undefined;
+          | { lastUploadAt?: unknown; pending?: unknown }
+          | undefined;
         if (typeof state?.lastUploadAt === 'number') lastUploadAt = state.lastUploadAt;
         if (Array.isArray(state?.pending)) {
           for (const handle of state.pending) if (typeof handle === 'string') pending.add(handle);
@@ -187,7 +188,8 @@ export function createProfileSync(deps: ProfileSyncDeps) {
   async function sessionId(scope: 'default' | 'self' = 'default'): Promise<string> {
     const day = new Date(now()).toISOString().slice(0, 10);
     const stored = (await deps.storage.get(SESSION_KEY))[SESSION_KEY] as
-      { day?: string; id?: string; selfId?: string } | undefined;
+      | { day?: string; id?: string; selfId?: string }
+      | undefined;
     if (stored?.day === day) {
       if (scope === 'self' && typeof stored.selfId === 'string') return stored.selfId;
       if (scope === 'default' && typeof stored.id === 'string') return stored.id;

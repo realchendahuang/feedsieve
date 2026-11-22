@@ -556,7 +556,7 @@ describe('clean-ui 选择器', () => {
       // 模拟 X 播放视频 / 输入：每 100ms 一次 DOM 变化。老实现每次都重置 400ms
       // 定时器，scan 永远等不到；新实现第一轮 400ms 一到就跑
       for (let i = 0; i < 8; i += 1) {
-        observer.callback([], observer as unknown as MutationObserver);
+        observer.callback([], observer);
         await vi.advanceTimersByTimeAsync(100);
         if (i === 3) {
           expect(document.getElementById('feedsieve-clean-ui-styles')).toBeTruthy();
@@ -733,9 +733,9 @@ describe('clean-ui 选择器', () => {
       text: '推广回复',
     });
     // 去掉自身时间戳，换上推广标签 + 引用主帖的卡片
-    quotingPromotedReply.querySelector('a[href*="/status/"]')!.replaceWith(
-      Object.assign(document.createElement('span'), { textContent: '推广' }),
-    );
+    quotingPromotedReply
+      .querySelector('a[href*="/status/"]')!
+      .replaceWith(Object.assign(document.createElement('span'), { textContent: '推广' }));
     quotingPromotedReply.insertAdjacentHTML(
       'beforeend',
       '<div role="link"><a href="/focal_op/status/1800000000000000222">引用主帖</a></div>',

@@ -1,8 +1,7 @@
+import { applySnapshotDelta, sha256Hex } from '@feedsieve/community-lists';
 import { env } from 'cloudflare:workers';
 import { count, eq, like } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { applySnapshotDelta, sha256Hex } from '@feedsieve/community-lists';
-import worker from '../src/index';
 import { getDb } from '../src/db/client';
 import {
   accountHealth,
@@ -13,6 +12,8 @@ import {
   ruleHits,
   trainingSampleUsage,
 } from '../src/db/schema';
+import worker from '../src/index';
+import { listingReason } from '../src/lib/listing';
 import {
   autoMuteNoisyRules,
   cleanupRuleHits,
@@ -26,7 +27,6 @@ import {
   setRuleMute,
   shouldAutoMute,
 } from '../src/rule-hits';
-import { listingReason } from '../src/lib/listing';
 import { generateSnapshot, getSnapshotFile, SNAPSHOT_PACK } from '../src/snapshot';
 
 const ORIGIN = 'https://api.example.com';
@@ -530,7 +530,7 @@ describe('GET /v1/snapshots/delta/:from/:to', () => {
     );
     expect(response.status).toBe(200);
     expect(response.headers.get('cache-control')).toContain('immutable');
-    const delta = (await response.json()) as { entries: { upsert: Array<{ handle: string }> } };
+    const delta = await response.json<{ entries: { upsert: Array<{ handle: string }> } }>();
     expect(delta.entries.upsert.map((entry) => entry.handle)).toContain('delta_two');
     const base = (await getSnapshotFile(env, first.version, SNAPSHOT_PACK))!;
     const rebuilt = applySnapshotDelta(base, delta)!;

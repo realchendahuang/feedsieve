@@ -1,12 +1,12 @@
 import { parseTrainingSample, parseSampleReview } from '@feedsieve/shared';
-import { alias } from 'drizzle-orm/pg-core';
 import { eq, gt, lte, and, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { getDb } from './db/client';
 import { trainingSampleReviews, trainingSamples } from './db/schema';
 import { hashInstallationId, hashIp, sha256Hex } from './lib/hash';
+import { compareText, stripNul } from './lib/sql';
 import { nowSeconds, utcToday } from './lib/time';
 import { chargeUsageInOrder } from './lib/usage';
-import { compareText, stripNul } from './lib/sql';
 
 export async function ingestTrainingSamples(env: Cloudflare.Env, raw: unknown, ip?: string) {
   const b = raw as Record<string, unknown> | null;
@@ -24,11 +24,11 @@ export async function ingestTrainingSamples(env: Cloudflare.Env, raw: unknown, i
   const now = nowSeconds();
   const rejected: Array<{ eventId: string | null; error: string }> = [];
   const samples = b.samples
-    .map((raw) => {
-      const sample = parseTrainingSample(raw);
+    .map((item) => {
+      const sample = parseTrainingSample(item);
       if (sample && sample.actedAt <= now * 1000 + 300_000) return sample;
       const id =
-        raw && typeof raw === 'object' ? (raw as Record<string, unknown>).eventId : undefined;
+        item && typeof item === 'object' ? (item as Record<string, unknown>).eventId : undefined;
       rejected.push({
         eventId: typeof id === 'string' && id.length === 36 ? id : null,
         error: 'invalid_sample',
@@ -65,7 +65,7 @@ export async function ingestTrainingSamples(env: Cloudflare.Env, raw: unknown, i
         payload: JSON.stringify(s),
       })),
     )
-  ).sort((a, b) => compareText(a.eventId, b.eventId));
+  ).toSorted((left, right) => compareText(left.eventId, right.eventId));
   await db
     .insert(trainingSamples)
     .values(rows)
@@ -122,8 +122,8 @@ export async function listTrainingSamples(
     .where(and(gt(trainingSamples.id, after), lte(trainingSamples.id, maxId)))
     .orderBy(trainingSamples.id)
     .limit(Math.min(200, Math.max(1, limit)));
-  const entries = rows.map(({ payload, tags, ...r }) => ({
-    ...r,
+  const entries = rows.map(({ payload, tags, ...rest }) => ({
+    ...rest,
     tags: tags ? JSON.parse(tags) : [],
     sample: JSON.parse(payload),
   }));

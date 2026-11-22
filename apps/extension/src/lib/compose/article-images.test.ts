@@ -31,7 +31,9 @@ describe('文章本地图片', () => {
     const files = [{ name: 'bar.png' }, { name: 'foo.png' }, { name: '随手改名.jpg' }];
     expect(matchImageFiles(slots, files)).toEqual([1, 0, 2]);
     expect(matchImageFiles(slots, [])).toEqual([null, null, null]);
-    expect(matchImageFiles([{ name: 'a.png' }], [{ name: 'b.png' }, { name: 'c.png' }])).toEqual([0]);
+    expect(matchImageFiles([{ name: 'a.png' }], [{ name: 'b.png' }, { name: 'c.png' }])).toEqual([
+      0,
+    ]);
   });
 
   it('没选到对应文件时不动编辑器，只报 unmatched', async () => {

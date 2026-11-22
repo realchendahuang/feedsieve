@@ -106,11 +106,11 @@ export function applySnapshotDelta(baseBody: string, raw: unknown): string | nul
     }
     const base = JSON.parse(baseBody) as Record<string, unknown>;
     if (base.snapshot_version !== delta.from) return null;
-    const entries = applyList(rows(base.entries), delta.entries).sort((a, b) =>
+    const entries = applyList(rows(base.entries), delta.entries).toSorted((a, b) =>
       byteCompare(a.handle, b.handle),
     );
     const verified = delta.verified
-      ? applyList(rows(base.verified), delta.verified).sort((a, b) =>
+      ? applyList(rows(base.verified), delta.verified).toSorted((a, b) =>
           byteCompare(a.handle, b.handle),
         )
       : undefined;

@@ -1,9 +1,9 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest';
 import { articleToMarkdown } from './article-export';
+import { fillScheduleFields, findScheduleFields, readScheduleFields } from './compose-schedule';
 import { markdownToArticle } from './markdown-article';
 import { draftKey, reduceBackups, tweetLength } from './schedule-store';
-import { fillScheduleFields, findScheduleFields, readScheduleFields } from './compose-schedule';
 
 describe('X 计字', () => {
   it('西文 1、中文 2、链接 23', () => {

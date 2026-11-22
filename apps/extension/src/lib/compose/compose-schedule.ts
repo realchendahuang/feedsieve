@@ -20,7 +20,6 @@ import {
   slotLabel,
   type ScheduleSettings,
 } from './schedule-slots';
-import { asScheduledEvent } from './scheduled-parse';
 import {
   applyScheduledEvent,
   EMPTY_SCHEDULED_CACHE,
@@ -39,6 +38,7 @@ import {
   type ScheduleAssignment,
   type ScheduledCache,
 } from './schedule-store';
+import { asScheduledEvent } from './scheduled-parse';
 
 export const OPEN_SCHEDULED_MESSAGE = 'feedsieve:open-scheduled';
 export const SCHEDULED_BRIDGE_EVENT = 'feedsieve:scheduled';
@@ -176,15 +176,17 @@ function isTwelveHour(fields: ScheduleFields): boolean {
   return fields.meridiem !== null && Math.max(...numericValues(fields.hour)) <= 12;
 }
 
+const selectInt = (s: HTMLSelectElement): number | null =>
+  /^\d+$/.test(s.value) ? Number(s.value) : null;
+
 /** 下拉框当前选中的时间（本地时区），没选全返回 null。 */
 export function readScheduleFields(fields: ScheduleFields): number | null {
-  const n = (s: HTMLSelectElement) => (/^\d+$/.test(s.value) ? Number(s.value) : null);
   const [y, mo, d, h, mi] = [
-    n(fields.year),
-    n(fields.month),
-    n(fields.day),
-    n(fields.hour),
-    n(fields.minute),
+    selectInt(fields.year),
+    selectInt(fields.month),
+    selectInt(fields.day),
+    selectInt(fields.hour),
+    selectInt(fields.minute),
   ];
   if (y === null || mo === null || d === null || h === null || mi === null) return null;
   let hour = h;
@@ -198,16 +200,16 @@ export function readScheduleFields(fields: ScheduleFields): number | null {
   return new Date(y, mo - 1, d, hour, mi).getTime();
 }
 
-const nativeSelectValue = Object.getOwnPropertyDescriptor(
+const nativeSelectDescriptor = Object.getOwnPropertyDescriptor(
   HTMLSelectElement.prototype,
   'value',
-)?.set;
+);
 
 /** 写值并派发 change：X 是 React 受控组件，直接改 value 它不知道，要走原生 setter 再发事件。 */
 function setSelect(select: HTMLSelectElement, value: string): boolean {
   if (![...select.options].some((option) => option.value === value)) return false;
   if (select.value === value) return true;
-  if (nativeSelectValue) nativeSelectValue.call(select, value);
+  if (nativeSelectDescriptor?.set) nativeSelectDescriptor.set.call(select, value);
   else select.value = value;
   select.dispatchEvent(new Event('input', { bubbles: true }));
   select.dispatchEvent(new Event('change', { bubbles: true }));
@@ -295,6 +297,30 @@ export interface ComposeScheduleDeps {
   /** 当前登录的 X 账号（小写 handle） */
   getAccount: () => string | null;
   now?: () => number;
+}
+
+function setWarn(bar: HTMLElement, text: string): void {
+  const warn = bar.querySelector('.fs-sched-warn');
+  if (warn) warn.textContent = text;
+}
+
+function dialogTime(dialog: Element): number | null {
+  const fields = findScheduleFields(dialog);
+  return fields ? readScheduleFields(fields) : null;
+}
+
+function shiftDialogTime(dialog: Element, minutes: number): number | null {
+  const current = dialogTime(dialog);
+  return current === null ? null : current + minutes * MINUTE_MS;
+}
+
+function onScheduleMessage(message: unknown): Promise<unknown> | undefined {
+  const msg = message as { type?: string } | null;
+  if (msg?.type === OPEN_SCHEDULED_MESSAGE) {
+    openScheduledList();
+    return Promise.resolve({ ok: true });
+  }
+  return undefined;
 }
 
 export function createComposeSchedule(deps: ComposeScheduleDeps) {
@@ -413,16 +439,6 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
     }
   }
 
-  function setWarn(bar: HTMLElement, text: string): void {
-    const warn = bar.querySelector('.fs-sched-warn');
-    if (warn) warn.textContent = text;
-  }
-
-  function dialogTime(dialog: Element): number | null {
-    const fields = findScheduleFields(dialog);
-    return fields ? readScheduleFields(fields) : null;
-  }
-
   function ensureBar(dialog: Element): void {
     if (dialog.querySelector(`[${BAR_ATTR}]`)) return;
     const fields = findScheduleFields(dialog);
@@ -471,8 +487,8 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
       items.push({ label: `${c.same} · ${slotLabel(lastPick, t, language)}`, at: () => lastPick });
     }
     items.push(
-      { label: c.minus15, at: () => shift(dialog, -15) },
-      { label: c.plus15, at: () => shift(dialog, 15) },
+      { label: c.minus15, at: () => shiftDialogTime(dialog, -15) },
+      { label: c.plus15, at: () => shiftDialogTime(dialog, 15) },
     );
     bar.replaceChildren(
       ...items.map((item) => {
@@ -492,11 +508,6 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
       Object.assign(document.createElement('div'), { className: 'fs-sched-warn' }),
     );
     checkConflict(dialog, bar);
-  }
-
-  function shift(dialog: Element, minutes: number): number | null {
-    const current = dialogTime(dialog);
-    return current === null ? null : current + minutes * MINUTE_MS;
   }
 
   function checkConflict(dialog: Element, bar: HTMLElement): void {
@@ -578,15 +589,6 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
     void applyScheduledEvent(scheduled, deps.getAccount(), now()).catch(() => undefined);
   }
 
-  function onMessage(message: unknown): Promise<unknown> | undefined {
-    const msg = message as { type?: string } | null;
-    if (msg?.type === OPEN_SCHEDULED_MESSAGE) {
-      openScheduledList();
-      return Promise.resolve({ ok: true });
-    }
-    return undefined;
-  }
-
   function start(): void {
     ensureComposeStyles();
     void getScheduleSettings().then((value) => {
@@ -627,12 +629,12 @@ export function createComposeSchedule(deps: ComposeScheduleDeps) {
     document.addEventListener(SCHEDULED_BRIDGE_EVENT, onBridge);
     document.addEventListener('click', onClick, true);
     document.addEventListener('keydown', onKeydown, true);
-    browser.runtime.onMessage.addListener(onMessage);
+    browser.runtime.onMessage.addListener(onScheduleMessage);
     cleanups.push(() => {
       document.removeEventListener(SCHEDULED_BRIDGE_EVENT, onBridge);
       document.removeEventListener('click', onClick, true);
       document.removeEventListener('keydown', onKeydown, true);
-      browser.runtime.onMessage.removeListener(onMessage);
+      browser.runtime.onMessage.removeListener(onScheduleMessage);
     });
     observer = new MutationObserver(scheduleScan);
     observer.observe(document.body, { childList: true, subtree: true });

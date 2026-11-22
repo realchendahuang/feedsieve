@@ -1,9 +1,9 @@
 import { env } from 'cloudflare:workers';
-import { describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
-import worker from '../src/index';
+import { describe, expect, it } from 'vitest';
 import { getDb } from '../src/db/client';
 import { accounts } from '../src/db/schema';
+import worker from '../src/index';
 
 const ORIGIN = 'https://api.example.com';
 
@@ -12,11 +12,11 @@ describe('GET /healthz', () => {
     const response = await worker.fetch(new Request(`${ORIGIN}/healthz`), env);
     expect(response.status).toBe(200);
 
-    const body = (await response.json()) as {
+    const body = await response.json<{
       ok: boolean;
       service: string;
       time: string;
-    };
+    }>();
     expect(body.ok).toBe(true);
     expect(body.service).toBe('feedsieve-community-api');
     expect(Number.isNaN(Date.parse(body.time))).toBe(false);

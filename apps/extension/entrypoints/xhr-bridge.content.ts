@@ -1,6 +1,5 @@
 import {
   installMainWorldBridge,
-  type MainWorldBridgeDocument,
   type MainWorldBridgeWindow,
 } from '../src/lib/platform/main-world-bridge';
 
@@ -22,7 +21,7 @@ export default defineContentScript({
   main() {
     installMainWorldBridge({
       window: window as unknown as MainWorldBridgeWindow,
-      document: document as unknown as MainWorldBridgeDocument,
+      document: document,
     });
   },
 });

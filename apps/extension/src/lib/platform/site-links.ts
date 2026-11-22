@@ -19,7 +19,7 @@ export const SITE_URLS = {
 
 export type SiteList = keyof typeof SITE_URLS;
 
-export async function openOfficialPage(url: SiteList | string): Promise<void> {
+export async function openOfficialPage(url: SiteList | (string & {})): Promise<void> {
   const target = SITE_URLS[url as keyof typeof SITE_URLS] ?? url;
   await browser.tabs.create({ url: target });
 }

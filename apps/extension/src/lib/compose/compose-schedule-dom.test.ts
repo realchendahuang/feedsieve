@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi } from 'vitest';
+import { pasteHtml, readOutline } from './article-editor';
 import {
   createComposeSchedule,
   fillScheduleFields,
@@ -7,7 +8,6 @@ import {
   readScheduleFields,
   roundUp5,
 } from './compose-schedule';
-import { pasteHtml, readOutline } from './article-editor';
 
 /** 按 2026-10-31 实测的 X「安排表」结构：五个带标签的下拉框，月 / 日 / 年 / 时 / 分。 */
 function scheduleDialog(): HTMLElement {

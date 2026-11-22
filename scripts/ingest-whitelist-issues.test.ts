@@ -35,7 +35,15 @@ describe('parseIssueBody', () => {
 
 describe('normalizeEntry', () => {
   it('完整表单 → 合规条目，@ 与空白规范化', () => {
-    const out = normalizeEntry(FORM('@Kosx_Note ', '子扬', ' 做 AI 内容记录\n公开真实复盘 ', 'https://pbs.twimg.com/profile_images/1/ok_400x400.jpg', '12'));
+    const out = normalizeEntry(
+      FORM(
+        '@Kosx_Note ',
+        '子扬',
+        ' 做 AI 内容记录\n公开真实复盘 ',
+        'https://pbs.twimg.com/profile_images/1/ok_400x400.jpg',
+        '12',
+      ),
+    );
     expect(out).toEqual({
       ok: true,
       entry: {
@@ -49,10 +57,18 @@ describe('normalizeEntry', () => {
   });
 
   it('缺 note / 非法 handle / 非 pbs 头像 / 伪数字 ID → 各自报错', () => {
-    expect(normalizeEntry(FORM('ok handle!', '', '说明说明说明')).errors.join('\n')).toContain('handle 非法');
+    expect(normalizeEntry(FORM('ok handle!', '', '说明说明说明')).errors.join('\n')).toContain(
+      'handle 非法',
+    );
     expect(normalizeEntry(FORM('ok_handle', '', '好')).errors.join('\n')).toContain('4-240');
-    expect(normalizeEntry(FORM('ok_handle', '', '说明说明说明', 'https://evil.example/a.jpg')).errors.join('\n')).toContain('pbs.twimg.com');
-    expect(normalizeEntry(FORM('ok_handle', '', '说明说明说明', '', '12a')).errors.join('\n')).toContain('数字 ID');
+    expect(
+      normalizeEntry(
+        FORM('ok_handle', '', '说明说明说明', 'https://evil.example/a.jpg'),
+      ).errors.join('\n'),
+    ).toContain('pbs.twimg.com');
+    expect(
+      normalizeEntry(FORM('ok_handle', '', '说明说明说明', '', '12a')).errors.join('\n'),
+    ).toContain('数字 ID');
   });
 
   it('选填字段缺省不进条目', () => {
@@ -62,7 +78,9 @@ describe('normalizeEntry', () => {
   });
 
   it('拒收引号/反斜杠（双引号会破坏 publish 解析器的行格式）', () => {
-    expect(normalizeEntry(FORM('ok_handle', '昵"称', '一二三四五六')).errors.join('\n')).toContain('显示昵称');
+    expect(normalizeEntry(FORM('ok_handle', '昵"称', '一二三四五六')).errors.join('\n')).toContain(
+      '显示昵称',
+    );
   });
 });
 

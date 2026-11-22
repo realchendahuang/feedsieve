@@ -382,8 +382,7 @@ describe('parseXApiResponse', () => {
   it('returns empty result for unknown endpoints and garbage', () => {
     expect(parseXApiResponse('https://x.com/i/api/other', {}).matchedEndpoints).toEqual([]);
     expect(
-      parseXApiResponse('https://x.com/i/api/graphql/HomeTimeline', 'not-an-object' as never)
-        .tweets,
+      parseXApiResponse('https://x.com/i/api/graphql/HomeTimeline', 'not-an-object').tweets,
     ).toEqual([]);
     expect(parseXApiResponse('https://x.com/i/api/graphql/HomeTimeline', null).tweets).toEqual([]);
     // 畸形条目安全跳过，不 throw

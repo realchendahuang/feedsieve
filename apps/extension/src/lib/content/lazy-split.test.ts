@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createSearchAssistTrigger } from './search-assist-trigger';
 import { createAiCheckCore } from '../ai-check/ai-check-core';
 import { DEFAULT_SEARCH_ASSIST_PREFS } from '../settings/search-assist';
+import { createSearchAssistTrigger } from './search-assist-trigger';
 
 describe('content script 按需拆包轻入口', () => {
   beforeEach(() => {

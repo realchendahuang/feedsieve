@@ -71,7 +71,10 @@ export default function ScheduleSetup({
 
   const max = maxPerDay(startHour, endHour);
   const count = Math.min(perDay, max);
-  const windows = useMemo(() => evenWindows(count, startHour, endHour), [count, startHour, endHour]);
+  const windows = useMemo(
+    () => evenWindows(count, startHour, endHour),
+    [count, startHour, endHour],
+  );
   const perHourList = windows.map((window) => window.perHour);
   const perHourMin = perHourList.length ? Math.min(...perHourList) : 1;
   const perHourMax = perHourList.length ? Math.max(...perHourList) : 1;
@@ -194,8 +197,16 @@ export default function ScheduleSetup({
 
         <p className="setup-preview">
           {count <= LIST_TIMES_UP_TO && count <= span
-            ? c.preview(count, windows.map((window) => window.start))
-            : c.summary(count, formatClock(startHour * 60), formatClock(endHour * 60), perHourLabel)}
+            ? c.preview(
+                count,
+                windows.map((window) => window.start),
+              )
+            : c.summary(
+                count,
+                formatClock(startHour * 60),
+                formatClock(endHour * 60),
+                perHourLabel,
+              )}
         </p>
         {perDay > max ? <p className="setup-note">{c.tooMany(max)}</p> : null}
         <p className="setup-note">{c.guide}</p>

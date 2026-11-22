@@ -16,7 +16,7 @@ describe('resolveUserIdByHandle', () => {
       }),
     });
 
-    const outcome = await resolveUserIdByHandle('spamking88', fetchMock as unknown as typeof fetch);
+    const outcome = await resolveUserIdByHandle('spamking88', fetchMock);
 
     expect(outcome).toEqual({ ok: true, xUserId: '900000000000000001' });
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];

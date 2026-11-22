@@ -75,13 +75,8 @@ export function subscribeCommunity(onChange: () => void): () => void {
       onChange();
     }
   };
-  browser.storage.onChanged.addListener(
-    listener as Parameters<typeof browser.storage.onChanged.addListener>[0],
-  );
-  return () =>
-    browser.storage.onChanged.removeListener(
-      listener as Parameters<typeof browser.storage.onChanged.removeListener>[0],
-    );
+  browser.storage.onChanged.addListener(listener);
+  return () => browser.storage.onChanged.removeListener(listener);
 }
 
 /** 官方暂停开关实时状态：browser 侧所有破坏性操作门控用的统一形状。 */
@@ -128,9 +123,10 @@ async function getStoredKillSwitchLight(): Promise<OfficialPauseState> {
  */
 export async function requestOfficialPauseCheck(): Promise<OfficialPauseState> {
   try {
-    const res = (await browser.runtime.sendMessage({
-      type: 'feedsieve:official-pause-check',
-    })) as { paused?: unknown; reason?: string; disabledSince?: string } | null | undefined;
+    const res: { paused?: unknown; reason?: string; disabledSince?: string } | null | undefined =
+      await browser.runtime.sendMessage({
+        type: 'feedsieve:official-pause-check',
+      });
     if (res && typeof res.paused === 'boolean') {
       return res.paused
         ? {

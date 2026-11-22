@@ -1,6 +1,8 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 
-export interface AccessIdentity { email: string }
+export interface AccessIdentity {
+  email: string;
+}
 
 // 每请求重建 createRemoteJWKSet 会丢掉 jose 的密钥缓存（每次管理请求都打
 // 一次远端 JWKS 拉取/校验）。按 URL 记忆化，进程内共享同一套密钥缓存。
@@ -15,7 +17,10 @@ function remoteJwks(url: string): ReturnType<typeof createRemoteJWKSet> {
   return jwks;
 }
 
-export async function verifyAccess(request: Request, env: Cloudflare.Env): Promise<AccessIdentity | null> {
+export async function verifyAccess(
+  request: Request,
+  env: Cloudflare.Env,
+): Promise<AccessIdentity | null> {
   const token = request.headers.get('Cf-Access-Jwt-Assertion');
   if (!token || !env.ACCESS_AUD || !env.ACCESS_JWKS_URL) return null;
   try {
@@ -28,9 +33,13 @@ export async function verifyAccess(request: Request, env: Cloudflare.Env): Promi
       // token 不得跨应用复用
       ...(env.ACCESS_TEAM_DOMAIN ? { issuer: `https://${env.ACCESS_TEAM_DOMAIN}` } : {}),
     });
-    const email = typeof result.payload.email === 'string' ? result.payload.email.toLowerCase() : '';
+    const email =
+      typeof result.payload.email === 'string' ? result.payload.email.toLowerCase() : '';
     // 白名单漏配（未设置/全空白）= 后台对全团队开放，必须 fail closed
-    const allowed = (env.ACCESS_ALLOWED_EMAILS ?? '').split(',').map((value) => value.trim().toLowerCase()).filter(Boolean);
+    const allowed = (env.ACCESS_ALLOWED_EMAILS ?? '')
+      .split(',')
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean);
     return email && allowed.length > 0 && allowed.includes(email) ? { email } : null;
   } catch {
     return null;

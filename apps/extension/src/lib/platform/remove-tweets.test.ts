@@ -31,20 +31,20 @@ function tweetCell(handle: string, postId: string): HTMLElement {
   return cell;
 }
 
-  it('引用帖里的 status 链接不会抢走格子归属（认时间戳那条）', () => {
-    vi.useFakeTimers();
-    const cell = tweetCell('spamking88', '777');
-    const article = cell.querySelector('article')!;
-    article.insertAdjacentHTML('afterbegin', '<div><a href="/quoted/status/999">quoted</a></div>');
-    article.insertAdjacentHTML(
-      'beforeend',
-      '<a href="/spamking88/status/777"><time datetime="2026-11-06T00:00:00Z">1h</time></a>',
-    );
-    document.body.append(cell);
-    hideCellsSoon([cell], 0);
-    vi.advanceTimersByTime(0);
-    expect(cell.getAttribute(HIDDEN_TWEET_CELL_ATTRIBUTE)).toBe('777');
-  });
+it('引用帖里的 status 链接不会抢走格子归属（认时间戳那条）', () => {
+  vi.useFakeTimers();
+  const cell = tweetCell('spamking88', '777');
+  const article = cell.querySelector('article')!;
+  article.insertAdjacentHTML('afterbegin', '<div><a href="/quoted/status/999">quoted</a></div>');
+  article.insertAdjacentHTML(
+    'beforeend',
+    '<a href="/spamking88/status/777"><time datetime="2026-11-06T00:00:00Z">1h</time></a>',
+  );
+  document.body.append(cell);
+  hideCellsSoon([cell], 0);
+  vi.advanceTimersByTime(0);
+  expect(cell.getAttribute(HIDDEN_TWEET_CELL_ATTRIBUTE)).toBe('777');
+});
 
 describe('隐藏格子的归属校验', () => {
   it('隐藏时记下这条推文的 status id', () => {

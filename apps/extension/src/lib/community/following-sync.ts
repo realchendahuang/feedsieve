@@ -43,7 +43,8 @@ export interface FollowingSyncDeps {
 }
 
 export type FollowingSyncStartResult =
-  { status: 'navigating'; url: string } | { status: 'error'; error: string };
+  | { status: 'navigating'; url: string }
+  | { status: 'error'; error: string };
 
 const defaultSleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));

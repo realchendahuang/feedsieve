@@ -1,3 +1,4 @@
+import { flavorOf, type Flavor } from '@feedsieve/shared';
 /**
  * 公开结果页（feedsieve.win/ai/:handle）与它的 OG 预览图共用的取数。
  *
@@ -5,7 +6,6 @@
  * 社区票数持平的显示「争议中」，都不给分数——分享出去的链接不能变成伪造证据的扩音器。
  */
 import { eq } from 'drizzle-orm';
-import { flavorOf, type Flavor } from '@feedsieve/shared';
 import { getDb } from '../db/client';
 import { aiAccountVerdicts, profileAccounts } from '../db/schema';
 import { lookupAiAccount, type AiLookupValue } from './lookup';

@@ -1,12 +1,14 @@
 {
   "name": "@feedsieve/admin",
-  "private": true,
   "version": "0.1.0",
+  "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsrs --noEmit --fast",
+    "typecheck:strict": "tsrs --noEmit",
+    "typecheck:tsc": "tsc --noEmit"
   },
   "dependencies": {
     "@feedsieve/shared": "workspace:*",

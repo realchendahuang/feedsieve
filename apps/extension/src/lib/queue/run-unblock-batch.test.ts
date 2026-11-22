@@ -19,11 +19,11 @@ vi.mock('./block-safety', () => ({
   currentAccountKey: vi.fn(() => 'acc-1'),
 }));
 
+import { resolveUserIdByHandle, runNativeAction } from '@feedsieve/x-adapter';
 import { getBlockedAccounts, removeBlockedAccount } from '../community/blocked-accounts';
+import { getUserId } from '../community/user-ids';
 import { bumpDaily } from '../stats/daily-stats';
 import { bumpStat } from '../stats/local-stats';
-import { getUserId } from '../community/user-ids';
-import { resolveUserIdByHandle, runNativeAction } from '@feedsieve/x-adapter';
 import { recordSafetyEvent } from './block-safety';
 
 const mockedGetBlocked = vi.mocked(getBlockedAccounts);

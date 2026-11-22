@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { REDESIGN_TWEET_HTML } from '../../../../../fixtures/x/timeline/redesign';
 import {
   PageScanController,
   scanRevision,
@@ -7,7 +8,6 @@ import {
   type PendingBadge,
   type ScanCallbacks,
 } from './page-scan-controller';
-import { REDESIGN_TWEET_HTML } from '../../../../../fixtures/x/timeline/redesign';
 
 /** X 的 article 选择器（selectors.ts 同源，保证测试构造的 DOM 真的会被扫描）。 */
 function tweetArticle(): Element {

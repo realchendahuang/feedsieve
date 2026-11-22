@@ -11,8 +11,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { afterAll, describe, expect, it } from 'vitest';
 import { detect } from './detect';
-import { DEFAULT_HEURISTICS, RUNTIME_HEURISTICS } from './heuristics';
 import type { DetectAuthor } from './detect';
+import { DEFAULT_HEURISTICS, RUNTIME_HEURISTICS } from './heuristics';
 
 interface CorpusCase {
   id: string;

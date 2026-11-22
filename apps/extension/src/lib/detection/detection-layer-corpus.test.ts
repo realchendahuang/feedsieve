@@ -1,3 +1,4 @@
+import type { CommunityEntry } from '@feedsieve/community-lists';
 // @vitest-environment happy-dom
 /**
  * 检测管线分层金标（review 层 vs 批拉层）。
@@ -8,14 +9,13 @@
  */
 import { contentFingerprint, type DetectInput } from '@feedsieve/detector';
 import { afterAll, describe, expect, it } from 'vitest';
+import type { RuntimeCommunity } from '../community/community-store';
 import {
   communityHitReason,
   runDetectionPipeline,
   type DetectionPipelineInput,
 } from './detection-pipeline';
 import { BUNDLED_KEYWORD_PACK_CATALOG } from './keyword-packs';
-import type { RuntimeCommunity } from '../community/community-store';
-import type { CommunityEntry } from '@feedsieve/community-lists';
 
 const ENTRY: CommunityEntry = {
   handle: 'inlist_user',
@@ -232,7 +232,7 @@ describe('检测管线分层金标', () => {
           ? 'review'
           : 'ignore'
     ] += 1;
-    expect(result.presentation, c.id).toBe(c.expected.presentation);
+    expect(result.presentation).toBe(c.expected.presentation);
     if (c.expected.source) {
       expect(result.detection?.source).toBe(c.expected.source);
     }

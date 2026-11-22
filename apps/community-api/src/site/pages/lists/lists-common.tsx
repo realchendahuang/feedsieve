@@ -1,8 +1,8 @@
-import type { ReactNode } from 'react';
 import { Link, useLocation } from '@tanstack/react-router';
-import { cn } from './../../lib/utils';
-import { HelpIcon } from './../../components/SiteHeader';
+import type { ReactNode } from 'react';
 import { xProfileUrl } from '../../site';
+import { HelpIcon } from './../../components/SiteHeader';
+import { cn } from './../../lib/utils';
 
 /** 公示家族子导航（真路由替代旧 hash tabs）：当前路由高亮。 */
 const TABS = [
@@ -60,11 +60,7 @@ export function ListPageHeader({
         </div>
         {aside != null && <div className="flex flex-wrap items-center gap-3">{aside}</div>}
       </div>
-      {tabs != null && (
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          {tabs}
-        </div>
-      )}
+      {tabs != null && <div className="mt-4 flex flex-wrap items-center gap-3">{tabs}</div>}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import type { ManifestSignature } from './signing';
 import type {
   CommunitySource,
   SnapshotBody,
@@ -5,7 +6,6 @@ import type {
   VerifiedEntry,
   WhitelistEntry,
 } from './types';
-import type { ManifestSignature } from './signing';
 
 const SOURCES: readonly CommunitySource[] = ['community', 'maintainer'];
 const CATEGORIES = new Set([
@@ -197,13 +197,13 @@ function validateVerifiedEntry(item: unknown): VerifiedEntry | null {
     return null;
   }
   return {
-    handle: (v.handle as string).toLowerCase(),
+    handle: v.handle.toLowerCase(),
     x_user_id: typeof v.x_user_id === 'string' ? v.x_user_id : null,
-    rescue_count: v.rescue_count as number,
-    report_count: v.report_count as number,
-    net_votes: v.net_votes as number,
-    first_seen_at: v.first_seen_at as string,
-    updated_at: v.updated_at as string,
+    rescue_count: v.rescue_count,
+    report_count: v.report_count,
+    net_votes: v.net_votes,
+    first_seen_at: v.first_seen_at,
+    updated_at: v.updated_at,
   };
 }
 
@@ -272,12 +272,12 @@ function validateWhitelistEntry(item: unknown): WhitelistEntry | null {
     return null;
   }
   return {
-    handle: (w.handle as string).toLowerCase(),
+    handle: w.handle.toLowerCase(),
     x_user_id: typeof w.x_user_id === 'string' ? w.x_user_id : null,
     name: typeof w.name === 'string' ? w.name : null,
     avatar_url: typeof w.avatar_url === 'string' ? w.avatar_url : null,
-    note: (w.note as string).trim(),
-    added_at: w.added_at as string,
+    note: w.note.trim(),
+    added_at: w.added_at,
   };
 }
 
@@ -464,11 +464,11 @@ function validateEntry(item: unknown): import('./types').CommunityEntry | null {
     return null;
   }
   // v0.4 内容证据：字段存在但内容非法 → 整条丢弃（防脏数据进索引）
-  const fingerprints = validEvidenceList(e.fingerprints, (item) => FINGERPRINT_RE.test(item));
+  const fingerprints = validEvidenceList(e.fingerprints, (value) => FINGERPRINT_RE.test(value));
   if (e.fingerprints != null && fingerprints === null) {
     return null;
   }
-  const domains = validEvidenceList(e.domains, (item) => HOSTNAME_RE.test(item.toLowerCase()));
+  const domains = validEvidenceList(e.domains, (value) => HOSTNAME_RE.test(value.toLowerCase()));
   if (e.domains != null && domains === null) {
     return null;
   }
@@ -495,10 +495,10 @@ function validateEntry(item: unknown): import('./types').CommunityEntry | null {
     category: e.category,
     sources,
     ...(typeof e.maintainer_note === 'string' ? { maintainer_note: e.maintainer_note.trim() } : {}),
-    community_score: e.community_score as number,
+    community_score: e.community_score,
     report_count: e.report_count,
     rescue_count: e.rescue_count,
-    net_votes: e.net_votes as number,
+    net_votes: e.net_votes,
     ...(Array.isArray(e.aliases)
       ? { aliases: e.aliases.map((a) => (a as string).toLowerCase()) }
       : {}),

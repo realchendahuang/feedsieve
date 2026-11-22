@@ -37,6 +37,10 @@ export interface SampleReview {
   tags: string[];
   note: string;
 }
+function isSampleId(x: unknown): boolean {
+  return typeof x === 'string' && /^[a-z0-9][a-z0-9:_-]{0,159}$/.test(x);
+}
+
 export function parseTrainingSample(raw: unknown): TrainingSample | null {
   if (!raw || typeof raw !== 'object') return null;
   const r = raw as Record<string, unknown>;
@@ -79,13 +83,12 @@ export function parseTrainingSample(raw: unknown): TrainingSample | null {
     return null;
   if (!r.detection || typeof r.detection !== 'object') return null;
   const d = r.detection as Record<string, unknown>;
-  const id = (x: unknown) => typeof x === 'string' && /^[a-z0-9][a-z0-9:_-]{0,159}$/.test(x);
   if (
-    (d.source !== undefined && !id(d.source)) ||
-    (d.ruleId !== undefined && !id(d.ruleId)) ||
+    (d.source !== undefined && !isSampleId(d.source)) ||
+    (d.ruleId !== undefined && !isSampleId(d.ruleId)) ||
     !Array.isArray(d.signalIds) ||
     d.signalIds.length > 24 ||
-    !d.signalIds.every(id)
+    !d.signalIds.every(isSampleId)
   )
     return null;
   return {

@@ -70,9 +70,9 @@ export function createWorkersAiProvider(model = DEFAULT_JUDGE_MODEL): JudgeProvi
         // Cloudflare 自家模型（@cf/*）直连 Workers AI：不经 AI Gateway，不进第三方 credits 计费，
         // 也没有网关的 200 次/分钟限流。只有第三方模型（如 typesafe/jev-1.14.0）才必须经网关。
         if (model.startsWith('@cf/')) {
-          json = (await ai.run(model, body)) as Record<string, unknown>;
+          json = await ai.run(model, body);
         } else {
-          json = (await ai.run(model, body, {
+          json = await ai.run(model, body, {
             gateway: {
               id: gatewayId(env),
               requestTimeoutMs: REQUEST_TIMEOUT_MS,
@@ -81,7 +81,7 @@ export function createWorkersAiProvider(model = DEFAULT_JUDGE_MODEL): JudgeProvi
               // 只对瞬时错误重试一次；最终失败由熔断记一次
               retries: { maxAttempts: 2, backoff: 'linear', retryDelayMs: 300 },
             },
-          })) as Record<string, unknown>;
+          });
         }
       } catch (error) {
         await recordVendor(env, vendor, false);

@@ -82,7 +82,9 @@ if (existing) {
 corpus.cases.push(testCase);
 
 writeFileSync(casesPath, `${JSON.stringify(corpus, null, 2)}\n`);
-console.log(`已添加用例 ${id} → ${testCase.expected ?? 'null'}（cases.json 共 ${corpus.cases.length} 条）`);
+console.log(
+  `已添加用例 ${id} → ${testCase.expected ?? 'null'}（cases.json 共 ${corpus.cases.length} 条）`,
+);
 if (!json) {
   console.log('下一步：跑 `pnpm test` 确认金标用例通过后一并提交');
 }

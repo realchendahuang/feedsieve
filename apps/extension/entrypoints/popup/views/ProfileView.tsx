@@ -1,3 +1,15 @@
+import {
+  accountFlags,
+  accountTier,
+  analyzeProfile,
+  followRatio,
+  highLikesThreshold,
+  HEATMAP_SLOT_HOURS,
+  OUTLIER_MULTIPLE,
+  PROFILE_MIN_SAMPLE,
+  TIER_NAMES,
+  type ProfileAnalysis,
+} from '@feedsieve/metrics';
 /**
  * 「主页」视图：跟随当前标签页，显示这个博主的账号卡、基线、爆款列表和规律。
  *
@@ -14,36 +26,23 @@ import {
   type MouseEvent,
   type ReactNode,
 } from 'react';
-import {
-  accountFlags,
-  accountTier,
-  analyzeProfile,
-  followRatio,
-  highLikesThreshold,
-  HEATMAP_SLOT_HOURS,
-  OUTLIER_MULTIPLE,
-  PROFILE_MIN_SAMPLE,
-  TIER_NAMES,
-  type ProfileAnalysis,
-} from '@feedsieve/metrics';
-import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
-import { formatCount } from '../../../src/lib/insight/format';
-import { drawProfileShareCard, pickSharePosts } from '../../../src/lib/insight/share-card';
-import { canvasToBlob } from '../../../src/lib/share/canvas-kit';
-import { INSIGHT_COPY } from '../../../src/lib/insight/copy';
-import { INSIGHT_READ_MESSAGE } from '../../../src/lib/insight/read-tracker';
 import { PROFILE_FILL_UPDATED_MESSAGE } from '../../../src/lib/content/profile-fill';
-import {
-  PROFILE_UPDATED_MESSAGE,
-  type CatalogEntry,
-  type CatalogPost,
-} from '../../../src/lib/insight/profile-catalog';
+import { INSIGHT_COPY } from '../../../src/lib/insight/copy';
+import { formatCount } from '../../../src/lib/insight/format';
 import {
   getProfileLineEnabled,
   setProfileLineEnabled,
   subscribeProfileLineEnabled,
 } from '../../../src/lib/insight/insight-settings';
-import { AppIcon, EmptyState, HelpIcon, IconButton, SkeletonList, Toggle, useTip } from './shared';
+import {
+  PROFILE_UPDATED_MESSAGE,
+  type CatalogEntry,
+  type CatalogPost,
+} from '../../../src/lib/insight/profile-catalog';
+import { INSIGHT_READ_MESSAGE } from '../../../src/lib/insight/read-tracker';
+import { drawProfileShareCard, pickSharePosts } from '../../../src/lib/insight/share-card';
+import { UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
+import { canvasToBlob } from '../../../src/lib/share/canvas-kit';
 import { Avatar, PostActions, readableText, shortAgo, VerifiedMark } from './post-parts';
 import {
   asCatalogEntry,
@@ -64,6 +63,7 @@ import {
   type ProfileRange,
   type ProfileSort,
 } from './profile-model';
+import { AppIcon, EmptyState, HelpIcon, IconButton, SkeletonList, Toggle, useTip } from './shared';
 import { useListPosition } from './use-list-position';
 
 const PAGE_SIZE = 20;
@@ -91,7 +91,9 @@ interface ProfileViewProps {
 
 /** 内容脚本对补全消息的响应（profile-fill.ts 的 ProfileFillResult）。 */
 type FillReply =
-  { ok?: boolean; added?: number; stopped?: string; retryAfterMs?: number } | null | undefined;
+  | { ok?: boolean; added?: number; stopped?: string; retryAfterMs?: number }
+  | null
+  | undefined;
 
 /** 当前标签页的博主：切到别的页面（帖子详情、首页）时保留上一个，面板不闪。 */
 function useActiveHandle(): string | null {
@@ -434,6 +436,23 @@ function Patterns({
   );
 }
 
+function save(key: string, value: unknown): void {
+  void browser.storage.local.set({ [key]: value }).catch(() => undefined);
+}
+
+async function openTab(url: string): Promise<void> {
+  try {
+    const [current] = await browser.tabs.query({ active: true, currentWindow: true });
+    await browser.tabs.create({
+      url,
+      active: true,
+      ...(current?.index !== undefined ? { index: current.index + 1 } : {}),
+    });
+  } catch {
+    window.open(url, '_blank', 'noopener');
+  }
+}
+
 export default function ProfileView({
   language,
   notify,
@@ -482,12 +501,11 @@ export default function ProfileView({
         if (active) setProfileLine(enabled);
       })
       .catch(() => undefined);
-    const unsub =
-      browser.storage?.onChanged
-        ? subscribeProfileLineEnabled((enabled) => {
-            if (active) setProfileLine(enabled);
-          })
-        : () => undefined;
+    const unsub = browser.storage?.onChanged
+      ? subscribeProfileLineEnabled((enabled) => {
+          if (active) setProfileLine(enabled);
+        })
+      : () => undefined;
     return () => {
       active = false;
       unsub();
@@ -574,10 +592,6 @@ export default function ProfileView({
     minCount: PAGE_SIZE,
   });
 
-  function save(key: string, value: unknown): void {
-    void browser.storage.local.set({ [key]: value }).catch(() => undefined);
-  }
-
   async function openPost(event: MouseEvent<HTMLAnchorElement>, post: CatalogPost): Promise<void> {
     if (!handle) return;
     setVisited((prev) => new Set(prev).add(post.postId));
@@ -607,19 +621,6 @@ export default function ProfileView({
   const searchQuery = handle
     ? `from:${handle} min_faves:${highLikesThreshold(analysis.baseline)}`
     : '';
-
-  async function openTab(url: string): Promise<void> {
-    try {
-      const [current] = await browser.tabs.query({ active: true, currentWindow: true });
-      await browser.tabs.create({
-        url,
-        active: true,
-        ...(current?.index !== undefined ? { index: current.index + 1 } : {}),
-      });
-    } catch {
-      window.open(url, '_blank', 'noopener');
-    }
-  }
 
   function searchHighLikes(): void {
     void openTab(`https://x.com/search?q=${encodeURIComponent(searchQuery)}&src=typed_query&f=top`);

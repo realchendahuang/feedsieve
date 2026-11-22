@@ -7,8 +7,8 @@ import {
   type TrustedKey,
 } from './signing';
 import { syncCommunitySnapshot, workerSource, type SnapshotStore, type SyncSource } from './sync';
-import { parseSnapshotBody } from './validate';
 import type { StoredSnapshot } from './types';
+import { parseSnapshotBody } from './validate';
 
 const API = 'https://api.example.com';
 const VERSION = '2026.08.28.1';
@@ -23,11 +23,10 @@ interface TestKey {
 
 /** 用 WebCrypto 生成 —— 与 Worker 侧 signManifestMessage 走同一套实现。 */
 async function testKey(keyId = 'test-1'): Promise<TestKey> {
-  const { publicKey, privateKey } = await crypto.subtle.generateKey(
-    { name: 'Ed25519' },
-    true,
-    ['sign', 'verify'],
-  );
+  const { publicKey, privateKey } = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, [
+    'sign',
+    'verify',
+  ]);
   const pubRaw = new Uint8Array(await crypto.subtle.exportKey('raw', publicKey));
   return {
     keyId,
@@ -104,7 +103,7 @@ function manifest(overrides: Record<string, unknown> = {}, key: TestKey = TEST_K
 function memoryStore(initial: StoredSnapshot | null = null): SnapshotStore & {
   readonly data: StoredSnapshot | null;
 } {
-  const impl = { data: initial } as { data: StoredSnapshot | null };
+  const impl = { data: initial };
   return {
     get: async () => impl.data,
     set: async (v: StoredSnapshot) => {
@@ -135,7 +134,9 @@ describe('syncCommunitySnapshot', () => {
     const store = memoryStore();
     const fetchImpl = okFetch(
       body,
-      await manifest({ files: [{ path: 'official.json', sha256: await realSha(body), entries: 0 }] }),
+      await manifest({
+        files: [{ path: 'official.json', sha256: await realSha(body), entries: 0 }],
+      }),
     );
 
     const outcome = await syncCommunitySnapshot({
@@ -197,10 +198,7 @@ describe('syncCommunitySnapshot', () => {
   it('rejects a manifest signed with an unknown key', async () => {
     const store = memoryStore();
     const otherKey = await testKey('other-1');
-    const fetchImpl = okFetch(
-      snapshotBodyText(),
-      await manifest({}, otherKey),
-    );
+    const fetchImpl = okFetch(snapshotBodyText(), await manifest({}, otherKey));
 
     const outcome = await syncCommunitySnapshot({
       sources: [workerSource(API)],
@@ -312,7 +310,9 @@ describe('syncCommunitySnapshot', () => {
       }
       if (url === mirror.manifestUrl) {
         return jsonResponse(
-          await manifest({ files: [{ path: 'official.json', sha256: await realSha(body), entries: 0 }] }),
+          await manifest({
+            files: [{ path: 'official.json', sha256: await realSha(body), entries: 0 }],
+          }),
         );
       }
       return new Response(body, { status: 200 });
@@ -355,7 +355,9 @@ describe('syncCommunitySnapshot', () => {
     });
     const fetchImpl = okFetch(
       body,
-      await manifest({ files: [{ path: 'official.json', sha256: await realSha(body), entries: 0 }] }),
+      await manifest({
+        files: [{ path: 'official.json', sha256: await realSha(body), entries: 0 }],
+      }),
     );
 
     const outcome = await syncCommunitySnapshot({
@@ -494,9 +496,10 @@ describe('parseSnapshotBody: kill_switch（官方暂停开关）', () => {
   });
 
   it('畸形 kill_switch 使整份快照失败（保持 last-known-good）', () => {
-    expect(parseSnapshotBody(bodyWithKillSwitch({ destructive_actions_disabled: false }))).toEqual(
-      { ok: false, error: 'invalid_kill_switch' },
-    );
+    expect(parseSnapshotBody(bodyWithKillSwitch({ destructive_actions_disabled: false }))).toEqual({
+      ok: false,
+      error: 'invalid_kill_switch',
+    });
     expect(parseSnapshotBody(bodyWithKillSwitch('yes'))).toEqual({
       ok: false,
       error: 'invalid_kill_switch',
@@ -546,9 +549,7 @@ describe('parseSnapshotBody: verified（社区白名单）', () => {
   });
 
   it('net_votes invariant 不符（rescue - report）整份拒绝', () => {
-    const result = parseSnapshotBody(
-      bodyWithVerified([{ ...validEntry, net_votes: 9 }]),
-    );
+    const result = parseSnapshotBody(bodyWithVerified([{ ...validEntry, net_votes: 9 }]));
     expect(result).toEqual({ ok: false, error: 'invalid_verified_list' });
   });
 
@@ -590,7 +591,9 @@ describe('parseSnapshotBody: verified（社区白名单）', () => {
       ok: false,
       error: 'invalid_verified_list',
     });
-    expect(parseSnapshotBody(bodyWithVerified([{ ...validEntry, handle: 'TOO_LONG_HANDLE!!!!' }]))).toEqual({
+    expect(
+      parseSnapshotBody(bodyWithVerified([{ ...validEntry, handle: 'TOO_LONG_HANDLE!!!!' }])),
+    ).toEqual({
       ok: false,
       error: 'invalid_verified_list',
     });
@@ -664,7 +667,9 @@ describe('parseSnapshotBody: whitelist（推荐白名单）', () => {
       ok: false,
       error: 'invalid_whitelist_list',
     });
-    expect(parseSnapshotBody(bodyWithWhitelist([{ ...validEntry, added_at: 'not-a-date' }]))).toEqual({
+    expect(
+      parseSnapshotBody(bodyWithWhitelist([{ ...validEntry, added_at: 'not-a-date' }])),
+    ).toEqual({
       ok: false,
       error: 'invalid_whitelist_list',
     });

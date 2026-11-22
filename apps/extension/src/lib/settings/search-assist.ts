@@ -32,13 +32,8 @@ function subscribeFlag(
     if (areaName !== 'local' || !changes[key]) return;
     onChange(read((changes[key] as { newValue?: unknown }).newValue));
   };
-  browser.storage.onChanged.addListener(
-    listener as Parameters<typeof browser.storage.onChanged.addListener>[0],
-  );
-  return () =>
-    browser.storage.onChanged.removeListener(
-      listener as Parameters<typeof browser.storage.onChanged.removeListener>[0],
-    );
+  browser.storage.onChanged.addListener(listener);
+  return () => browser.storage.onChanged.removeListener(listener);
 }
 
 export async function getSearchAssistEnabled(): Promise<boolean> {

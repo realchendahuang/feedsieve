@@ -1,3 +1,6 @@
+import { env } from 'cloudflare:workers';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { getAiSquareDetail, listAiSquare } from '../src/ai-accounts/square';
 /**
  * AI 号广场（/ai）的查询口径：可公示范围、kind、主页画像、样本排序与截断。
  * 契约见 docs/internal/21-AI号广场-接口契约.md §2–§3.2；
@@ -11,9 +14,6 @@ import {
   aiAccountVotes,
   profileAccounts,
 } from '../src/db/schema';
-import { env } from 'cloudflare:workers';
-import { beforeEach, describe, expect, it } from 'vitest';
-import { getAiSquareDetail, listAiSquare } from '../src/ai-accounts/square';
 
 const NOW = Date.parse('2026-11-07T08:00:00Z');
 const NOW_S = Math.floor(NOW / 1000);
@@ -308,9 +308,9 @@ describe('AI 号广场：回复样本', () => {
       gapSeconds: 42,
       url: 'https://x.com/bot/status/tlong',
     });
-    expect([...(long?.text ?? '')]).toHaveLength(120);
+    expect(Array.from(long?.text ?? '')).toHaveLength(120);
     // 多字节字符按码点截，不出现半个字符
-    expect([...(emoji?.text ?? '')]).toHaveLength(120);
+    expect(Array.from(emoji?.text ?? '')).toHaveLength(120);
     expect(emoji?.text).toBe('😀'.repeat(120));
   });
 

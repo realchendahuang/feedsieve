@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
 import { useRouterState } from '@tanstack/react-router';
+import { useEffect, useState } from 'react';
 
 /** 路由 pending 顶部加载条（纯 CSS 动画，少一个 motion 依赖） */
 export function TopLoadingBar() {

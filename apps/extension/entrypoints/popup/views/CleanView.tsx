@@ -1,7 +1,9 @@
-import { createTrainingSample } from '../../../src/lib/community/training-samples';
-import { syncLocalLabels } from '../../../src/lib/community/contribute';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CommunityEntry } from '@feedsieve/community-lists';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { addAllowlist } from '../../../src/lib/community/allowlist';
+import { syncLocalLabels } from '../../../src/lib/community/contribute';
+import { createTrainingSample } from '../../../src/lib/community/training-samples';
+import { categoryLabel, UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
 import {
   blockQueueProgress,
   getPersistentBlockQueue,
@@ -16,8 +18,7 @@ import {
   usedInWindow,
   type SafetyLedger,
 } from '../../../src/lib/queue/block-safety';
-import { addAllowlist } from '../../../src/lib/community/allowlist';
-import { categoryLabel, UI_COPY, type UiLanguage } from '../../../src/lib/platform/i18n';
+import QueuePanel from './QueuePanel';
 import {
   AppIcon,
   EmptyState,
@@ -30,7 +31,6 @@ import {
   type PageMarkedItem,
 } from './shared';
 import { useListPosition } from './use-list-position';
-import QueuePanel from './QueuePanel';
 
 interface PageBlockResult {
   blocked: string[];

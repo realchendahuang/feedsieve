@@ -31,7 +31,8 @@ function createFakeContext() {
   let path: PathCommand[] = [];
 
   const fontSize = (font: string): number => Number(/(\d+(?:\.\d+)?)px/.exec(font)?.[1] ?? 16);
-  const widthOf = (text: string, font: string): number => [...text].length * fontSize(font) * 0.6;
+  const widthOf = (text: string, font: string): number =>
+    Array.from(text).length * fontSize(font) * 0.6;
 
   const gradient = () => ({ addColorStop: () => undefined });
 

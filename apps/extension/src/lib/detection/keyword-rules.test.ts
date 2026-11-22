@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { BUNDLED_KEYWORD_PACK_CATALOG, type KeywordPackCatalog } from './keyword-packs';
 import {
   activeKeywordRules,
   addCustomKeywordRule,
@@ -12,16 +13,15 @@ import {
   setOfficialKeywordRuleEnabled,
   type KeywordRuleSettings,
 } from './keyword-rules';
-import { BUNDLED_KEYWORD_PACK_CATALOG, type KeywordPackCatalog } from './keyword-packs';
 
 /** 全量官方规则数（从随包目录直接算，测试里 Node 态已同步装入） */
 const OFFICIAL_RULE_COUNT = BUNDLED_KEYWORD_PACK_CATALOG.packs.reduce(
   (count, pack) => count + pack.rules.length,
   0,
-) as number;
-const ADULT_OFFICIAL_RULE_COUNT = (BUNDLED_KEYWORD_PACK_CATALOG.packs.find(
-  (pack) => pack.id === 'adult_gray_traffic',
-)?.rules.length ?? 0) as number;
+);
+const ADULT_OFFICIAL_RULE_COUNT =
+  BUNDLED_KEYWORD_PACK_CATALOG.packs.find((pack) => pack.id === 'adult_gray_traffic')?.rules
+    .length ?? 0;
 
 let storage: Record<string, unknown>;
 
@@ -105,13 +105,17 @@ describe('本地关键词规则', () => {
     await setOfficialKeywordRuleEnabled('adult-profile-collect-benefits', false);
     let settings = await getKeywordRuleSettings();
     expect(
-      createKeywordHeuristics(settings).some((rule) => rule.id.includes('adult-profile-collect-benefits')),
+      createKeywordHeuristics(settings).some((rule) =>
+        rule.id.includes('adult-profile-collect-benefits'),
+      ),
     ).toBe(false);
 
     await setOfficialKeywordRuleEnabled('adult-profile-collect-benefits', true);
     settings = await getKeywordRuleSettings();
     expect(
-      createKeywordHeuristics(settings).some((rule) => rule.id.includes('adult-profile-collect-benefits')),
+      createKeywordHeuristics(settings).some((rule) =>
+        rule.id.includes('adult-profile-collect-benefits'),
+      ),
     ).toBe(true);
   });
 

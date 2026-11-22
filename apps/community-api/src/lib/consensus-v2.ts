@@ -13,10 +13,10 @@
  */
 
 import { and, asc, count, eq, inArray, isNotNull, sql } from 'drizzle-orm';
-import { collateC } from './sql';
 import type { CategoryVoteRow } from '../category-inference';
 import { getDb } from '../db/client';
 import { activeLabels, installations, reports } from '../db/schema';
+import { collateC } from './sql';
 
 export const CONSENSUS_V2_POLICY = {
   /** 新安装观察期天数：此期内投票权重从 minWeight 向 1 线性爬升 */
@@ -438,10 +438,10 @@ export async function loadCommunityAggregates(env: Cloudflare.Env): Promise<Comm
   for (const [handle, byDomain] of domainCounts) {
     const top = [...byDomain.entries()]
       .filter(([, installs]) => installs >= SNAPSHOT_EVIDENCE.minInstalls)
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .toSorted((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
       .slice(0, SNAPSHOT_EVIDENCE.maxPerEntry)
       .map(([domain]) => domain)
-      .sort();
+      .toSorted();
     if (top.length > 0) domainsByHandle.set(handle, top);
   }
 

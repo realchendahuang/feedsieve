@@ -1,8 +1,5 @@
 import { createSearchAssistDialog } from './search-assist-dialog';
-import {
-  SEARCH_ASSIST_BACKDROP_CLASS,
-  SEARCH_ASSIST_TRIGGER_CLASS,
-} from './search-assist-shared';
+import { SEARCH_ASSIST_BACKDROP_CLASS, SEARCH_ASSIST_TRIGGER_CLASS } from './search-assist-shared';
 import {
   createSearchAssistTrigger,
   type SearchAssist,

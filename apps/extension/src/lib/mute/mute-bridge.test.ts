@@ -11,11 +11,11 @@ function createMockRuntime(options: {
   cached?: Record<string, { exports?: Record<string, unknown> }>;
   factories?: Record<string, (mod: { exports: Record<string, unknown> }) => void>;
 }) {
-  const cache: Record<string, { exports?: Record<string, unknown> }> = { ...(options.cached ?? {}) };
+  const cache: Record<string, { exports?: Record<string, unknown> }> = { ...options.cached };
   const factories = options.factories ?? {};
   const req = ((id: number | string) => {
     const key = String(id);
-    if (cache[key]?.exports) return cache[key]!.exports;
+    if (cache[key]?.exports) return cache[key].exports;
     const fn = factories[key];
     if (!fn) throw new TypeError('missing webpack module');
     const mod = { exports: {} as Record<string, unknown> };
@@ -31,10 +31,10 @@ function createMockRuntime(options: {
   req.m = factories as unknown as Record<string, (...args: unknown[]) => unknown>;
 
   const chunks: Array<[unknown, unknown, (r: unknown) => void]> = [];
-  chunks.push = ((...items: Array<[unknown, unknown, (r: unknown) => void]>) => {
+  chunks.push = (...items: Array<[unknown, unknown, (r: unknown) => void]>) => {
     for (const item of items) item[2]?.(req);
     return Array.prototype.push.apply(chunks, items);
-  }) as typeof chunks.push;
+  };
   return { chunks, cache };
 }
 
